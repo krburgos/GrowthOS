@@ -2,14 +2,11 @@ import { Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
+import { ContactsTable } from "@/components/contacts/contacts-table";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SortableHeader } from "@/components/ui/sortable-header";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import type { ContactListRow } from "@/lib/contacts/types";
-import { statusBadgeVariant } from "@/lib/contacts/status-badge";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Contacts — GrowthOS" };
@@ -97,46 +94,7 @@ export default async function ContactsListPage({
       {contacts.length === 0 ? (
         <EmptyState icon={Users} />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead><SortableHeader field="name" label="Name" /></TableHead>
-              <TableHead><SortableHeader field="company" label="Company" /></TableHead>
-              <TableHead><SortableHeader field="status" label="Status" /></TableHead>
-              <TableHead><SortableHeader field="owner" label="Owner" /></TableHead>
-              <TableHead><SortableHeader field="employee_size" label="Employee Size" /></TableHead>
-              <TableHead>Last Activity Date</TableHead>
-              <TableHead><SortableHeader field="city" label="Company City" /></TableHead>
-              <TableHead><SortableHeader field="state" label="Company State" /></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {contacts.map((c) => (
-              <TableRow key={c.id} className="cursor-pointer">
-                <TableCell className="font-medium text-neutral-800">
-                  <Link href={`/contacts/${c.id}`} className="block">
-                    {c.full_name}
-                  </Link>
-                </TableCell>
-                <TableCell>{c.companies?.name ?? "—"}</TableCell>
-                <TableCell>
-                  {c.contact_statuses && (
-                    <Badge variant={statusBadgeVariant(c.contact_statuses.name)}>
-                      {c.contact_statuses.name}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>{c.users?.full_name ?? "Unassigned"}</TableCell>
-                <TableCell>{c.companies?.company_size ?? "—"}</TableCell>
-                <TableCell>
-                  {c.last_activity_at ? new Date(c.last_activity_at).toLocaleDateString() : "—"}
-                </TableCell>
-                <TableCell>{c.companies?.city ?? "—"}</TableCell>
-                <TableCell>{c.companies?.state ?? "—"}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <ContactsTable contacts={contacts} accountId={user.account_id!} />
       )}
     </main>
   );
