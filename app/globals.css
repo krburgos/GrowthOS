@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+@theme {
+  /* Primary (Navy) */
+  --color-primary-50: #f5f7f9;
+  --color-primary-100: #e7ecf3;
+  --color-primary-200: #cbd8ec;
+  --color-primary-300: #9fbbe5;
+  --color-primary-400: #6597e2;
+  --color-primary-500: #2873e1;
+  --color-primary-600: #1a5cbc;
+  --color-primary-700: #113c7b;
+  --color-primary-800: #133972;
+  --color-primary-900: #022a66;
+  --color-primary-950: #0a192e;
+
+  /* Secondary / Info (Cyan) */
+  --color-secondary-50: #f5f9fa;
+  --color-secondary-100: #e5f2f5;
+  --color-secondary-200: #c6e9f0;
+  --color-secondary-300: #95dfee;
+  --color-secondary-400: #53d8f4;
+  --color-secondary-500: #03b8de;
+  --color-secondary-600: #03afd3;
+  --color-secondary-700: #028eab;
+  --color-secondary-800: #056a80;
+  --color-secondary-900: #064856;
+  --color-secondary-950: #052b33;
+
+  /* Success (Green) */
+  --color-success-50: #f7f9f6;
+  --color-success-100: #ebf2e8;
+  --color-success-200: #d6e9ce;
+  --color-success-300: #b6dfa5;
+  --color-success-400: #7ed957;
+  --color-success-500: #66d237;
+  --color-success-600: #50af28;
+  --color-success-700: #418d20;
+  --color-success-800: #326a1b;
+  --color-success-900: #234814;
+  --color-success-950: #162b0d;
+
+  /* Warning (Yellow) */
+  --color-warning-50: #faf9f5;
+  --color-warning-100: #f5f3e5;
+  --color-warning-200: #f1ebc6;
+  --color-warning-300: #f0e494;
+  --color-warning-400: #ffde00;
+  --color-warning-500: #ffdf0a;
+  --color-warning-600: #d6ba00;
+  --color-warning-700: #ad9700;
+  --color-warning-800: #817103;
+  --color-warning-900: #574d05;
+  --color-warning-950: #342e04;
+
+  /* Error / Danger (Coral Red) */
+  --color-error-50: #faf5f5;
+  --color-error-100: #f5e5e5;
+  --color-error-200: #f1c6c6;
+  --color-error-300: #f09494;
+  --color-error-400: #f65151;
+  --color-error-500: #ff5757;
+  --color-error-600: #d60000;
+  --color-error-700: #ad0000;
+  --color-error-800: #810303;
+  --color-error-900: #570505;
+  --color-error-950: #340404;
+
+  /* Neutral — Tailwind's built-in slate scale, aliased for semantic use */
+  --color-neutral-50: oklch(98.4% 0.003 247.858);
+  --color-neutral-100: oklch(96.8% 0.007 247.896);
+  --color-neutral-200: oklch(92.9% 0.013 255.508);
+  --color-neutral-300: oklch(86.9% 0.022 252.894);
+  --color-neutral-400: oklch(70.4% 0.04 256.788);
+  --color-neutral-500: oklch(55.4% 0.046 257.417);
+  --color-neutral-600: oklch(44.6% 0.043 257.281);
+  --color-neutral-700: oklch(37.2% 0.044 257.287);
+  --color-neutral-800: oklch(27.9% 0.041 260.031);
+  --color-neutral-900: oklch(20.8% 0.042 265.755);
+  --color-neutral-950: oklch(12.9% 0.042 264.695);
+
+  /* Typography */
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+
+  /* Type scale (Design System §4) — not enumerated as tokens in §9's raw
+     block, so mirrored here from the §4 table verbatim rather than left as
+     scattered arbitrary values in every component. */
+  --text-display: 2.25rem;
+  --text-display--line-height: 2.75rem;
+  --text-display--font-weight: 600;
+  --text-h1: 1.75rem;
+  --text-h1--line-height: 2.25rem;
+  --text-h1--font-weight: 600;
+  --text-h2: 1.375rem;
+  --text-h2--line-height: 1.875rem;
+  --text-h2--font-weight: 600;
+  --text-h3: 1.125rem;
+  --text-h3--line-height: 1.625rem;
+  --text-h3--font-weight: 600;
+  --text-h4: 1rem;
+  --text-h4--line-height: 1.5rem;
+  --text-h4--font-weight: 600;
+  --text-body-lg: 1rem;
+  --text-body-lg--line-height: 1.5rem;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.25rem;
+  --text-body-sm: 0.8125rem;
+  --text-body-sm--line-height: 1.125rem;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-caption--font-weight: 500;
+  --text-button: 0.875rem;
+  --text-button--line-height: 1.25rem;
+  --text-button--font-weight: 500;
+
+  /* Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+
+  /* Layout */
+  --sidebar-width-expanded: 15rem;
+  --sidebar-width-collapsed: 4rem;
+  --topbar-height: 3.5rem;
+  --banner-height: 2.5rem;
+}
+
+body {
+  font-family: var(--font-sans);
+}
