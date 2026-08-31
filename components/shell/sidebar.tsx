@@ -1,0 +1,101 @@
+"use client";
+
+import {
+  BarChart3,
+  LayoutDashboard,
+  ListChecks,
+  Mail,
+  Settings,
+  Target,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import type { ComponentType } from "react";
+
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { NavAccess, NavSection } from "@/lib/auth/nav-permissions";
+import { cn } from "@/lib/utils";
+
+interface NavItem {
+  section: NavSection | "dashboard";
+  label: string;
+  href: string;
+  /** Path prefix used to compute the active state, when it differs from
+   * `href` itself (e.g. Settings links to one sub-page but should stay
+   * highlighted across all of them). */
+  matchPrefix?: string;
+  icon: ComponentType<{ className?: string }>;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { section: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { section: "contacts", label: "Contacts", href: "/contacts", icon: Users },
+  { section: "opportunities", label: "Opportunities", href: "/opportunities", icon: Target },
+  { section: "lists", label: "Lists", href: "/lists", icon: ListChecks },
+  { section: "campaigns", label: "Campaigns", href: "/campaigns", icon: Mail },
+  { section: "reports", label: "Reports", href: "/reports", icon: BarChart3 },
+  {
+    section: "settings",
+    label: "Settings",
+    href: "/settings/users",
+    matchPrefix: "/settings",
+    icon: Settings,
+  },
+];
+
+/**
+ * Design System §8.9 — Sidebar Navigation. primary-900 background, 70%
+ * white text default, active pill (100% opacity + primary-800 bg,
+ * radius-md, 8px inset), disabled items at 30% opacity. Collapses to
+ * icon-only below lg (App Flow §2.2, Design System §5.4) via CSS, not a
+ * user toggle.
+ */
+export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
+  const pathname = usePathname();
+
+  return (
+    <aside className="flex w-[var(--sidebar-width-collapsed)] shrink-0 flex-col bg-primary-900 py-4 lg:w-[var(--sidebar-width-expanded)]">
+      <nav className="flex flex-col gap-1 px-2">
+        {NAV_ITEMS.map((item) => {
+          const itemAccess: NavAccess = item.section === "dashboard" ? "full" : access[item.section];
+          const disabled = itemAccess === "disabled";
+          const matchAgainst = item.matchPrefix ?? item.href;
+          const active = pathname === matchAgainst || pathname.startsWith(`${matchAgainst}/`);
+          const Icon = item.icon;
+
+          const content = (
+            <span
+              className={cn(
+                "flex h-10 items-center gap-3 rounded-md px-3 text-body transition-colors",
+                disabled
+                  ? "cursor-not-allowed text-white/30"
+                  : active
+                    ? "bg-primary-800 text-white"
+                    : "text-white/70 hover:text-white"
+              )}
+            >
+              <Icon className="size-5 shrink-0" />
+              <span className="hidden lg:inline">{item.label}</span>
+            </span>
+          );
+
+          return (
+            <Tooltip key={item.section}>
+              <TooltipTrigger asChild>
+                {disabled ? (
+                  <span aria-disabled="true">{content}</span>
+                ) : (
+                  <Link href={item.href} aria-current={active ? "page" : undefined}>
+                    {content}
+                  </Link>
+                )}
+              </TooltipTrigger>
+              <TooltipContent side="right">{item.label}</TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}
