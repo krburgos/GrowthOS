@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ActivityTimeline, type ActivityRow } from "@/components/activities/activity-timeline";
+import { LogActivityDialog } from "@/components/activities/log-activity-dialog";
 import { ContactOverviewForm } from "@/components/contacts/contact-overview-form";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { STAGE_LABELS, stageGroup, type OpportunityStage } from "@/lib/opportunities/stages";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Contact — GrowthOS" };
@@ -11,9 +17,9 @@ export const metadata: Metadata = { title: "Contact — GrowthOS" };
 const CAN_EDIT_ROLES = ["msp_owner", "msp_admin", "msp_sales", "msp_marketing", "cro_admin", "cro_advisor"];
 
 /**
- * App Flow §4.4, D2 — Contact Detail. Overview is fully built here;
- * Activity/Opportunities/Emails are structural placeholders until
- * Milestone 8 builds the real activity timeline and opportunity linking.
+ * App Flow §4.4, D2 — Contact Detail. The unified activity timeline
+ * (PRD §6.5) is the same component mounted on Opportunity Detail;
+ * Emails is a filtered view of the same Activity data (App Flow §4.4).
  */
 export default async function ContactDetailPage({
   params,
@@ -37,20 +43,32 @@ export default async function ContactDetailPage({
 
   if (!contact) notFound();
 
-  const [{ data: statuses }, { data: owners }] = await Promise.all([
-    supabase
-      .from("contact_statuses")
-      .select("id, name")
-      .eq("account_id", user.account_id)
-      .is("archived_at", null)
-      .order("sort_order"),
-    supabase
-      .from("users")
-      .select("id, full_name")
-      .eq("account_id", user.account_id)
-      .is("archived_at", null)
-      .order("full_name"),
-  ]);
+  const [{ data: statuses }, { data: owners }, { data: activityRows }, { data: opportunityRows }] =
+    await Promise.all([
+      supabase
+        .from("contact_statuses")
+        .select("id, name")
+        .eq("account_id", user.account_id)
+        .is("archived_at", null)
+        .order("sort_order"),
+      supabase
+        .from("users")
+        .select("id, full_name")
+        .eq("account_id", user.account_id)
+        .is("archived_at", null)
+        .order("full_name"),
+      supabase
+        .from("activities")
+        .select("id, type, subject, body, occurred_at, due_at, completed_at, users(full_name)")
+        .eq("contact_id", id)
+        .is("archived_at", null)
+        .order("occurred_at", { ascending: false }),
+      supabase
+        .from("opportunities")
+        .select("id, name, stage, value")
+        .eq("contact_id", id)
+        .order("created_at", { ascending: false }),
+    ]);
 
   type CompanyFields = {
     name: string;
@@ -64,6 +82,9 @@ export default async function ContactDetailPage({
   const company = (Array.isArray(companiesField) ? companiesField[0] : companiesField) as
     | CompanyFields
     | undefined;
+
+  const activities = (activityRows ?? []) as ActivityRow[];
+  const emailActivities = activities.filter((a) => a.type === "email");
 
   return (
     <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
@@ -104,22 +125,44 @@ export default async function ContactDetailPage({
         </TabsContent>
 
         <TabsContent value="activity">
-          <p className="text-body text-neutral-500">
-            The unified activity timeline (calls, emails, meetings, tasks, notes) arrives in
-            Milestone 8.
-          </p>
+          <div className="mb-4 flex justify-end">
+            <LogActivityDialog accountId={user.account_id!} contactId={contact.id} />
+          </div>
+          <ActivityTimeline activities={activities} />
         </TabsContent>
 
         <TabsContent value="opportunities">
-          <p className="text-body text-neutral-500">
-            Opportunities linked to this contact arrive in Milestone 8.
-          </p>
+          <div className="mb-4 flex justify-end">
+            <Button asChild size="sm">
+              <Link href={`/opportunities/new?contact_id=${contact.id}`}>Create Opportunity</Link>
+            </Button>
+          </div>
+          {(opportunityRows ?? []).length === 0 ? (
+            <p className="text-body text-neutral-500">No opportunities yet</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {(opportunityRows ?? []).map((o) => {
+                const stage = o.stage as OpportunityStage;
+                return (
+                  <li key={o.id}>
+                    <Link
+                      href={`/opportunities/${o.id}`}
+                      className="flex items-center justify-between rounded-md border border-neutral-200 px-4 py-3 hover:bg-neutral-100"
+                    >
+                      <span className="text-body text-neutral-800">{o.name || "Untitled opportunity"}</span>
+                      <Badge variant={stageGroup(stage) === "won" ? "success" : stageGroup(stage) === "lost" ? "neutral" : "info"}>
+                        {STAGE_LABELS[stage]}
+                      </Badge>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </TabsContent>
 
         <TabsContent value="emails">
-          <p className="text-body text-neutral-500">
-            Email correspondence history arrives with campaign sending in Milestone 10.
-          </p>
+          <ActivityTimeline activities={emailActivities} />
         </TabsContent>
       </Tabs>
     </main>
