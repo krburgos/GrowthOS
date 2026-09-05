@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { DeleteListButton } from "@/components/lists/delete-list-button";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -98,7 +97,6 @@ export default async function ListsIndexPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Type</TableHead>
               <TableHead>Contacts</TableHead>
               <TableHead>Date Added</TableHead>
               <TableHead>Bounced</TableHead>
@@ -114,11 +112,6 @@ export default async function ListsIndexPage() {
                   <Link href={`/lists/${list.id}`} className="block">
                     {list.name}
                   </Link>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={list.type === "smart" ? "info" : "neutral"}>
-                    {list.type === "smart" ? "Smart" : "Static"}
-                  </Badge>
                 </TableCell>
                 <TableCell>{list.memberCount}</TableCell>
                 <TableCell>{new Date(list.created_at).toLocaleDateString()}</TableCell>
