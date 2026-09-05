@@ -256,7 +256,7 @@ create table list_members (
 create index list_members_contact_id_idx on list_members(contact_id);
 ```
 
-list_members only ever holds rows for static lists — a smart list's members are computed live by compute_smart_list_members() (§7) and never stored. The criteria JSONB schema is defined precisely in §7 alongside the function that evaluates it.
+**Client-confirmed hybrid smart lists (deviation from the original design below):** list_members no longer holds rows for static lists exclusively — a smart list's members are still computed live from its criteria by compute_smart_list_members() (§7), but that computation now also folds in manual list_members additions (a contact added on top of the criteria, even if they don't match) and subtracts list_exclusions rows (a contact manually excluded, even if they do match). The `smart_list_manual_overrides` migration removed the trigger that previously blocked list_members inserts for smart lists and added the list_exclusions table. The criteria JSONB schema is defined precisely in §7 alongside the function that evaluates it.
 
 ### 5.5 opportunities, activities
 
@@ -832,7 +832,9 @@ $$;
 
 match_or_create_company and merge_companies both run security invoker — RLS on contacts, opportunities, and companies still applies under the caller's own session, so a caller can only merge or reassign records they already have edit rights to.
 
-### 7.4 Opportunity/list mechanics: sync_opportunity_company, enforce_static_list_membership, compute_smart_list_members
+### 7.4 Opportunity/list mechanics: sync_opportunity_company, compute_smart_list_members
+
+**enforce_static_list_membership() has been removed** by the `smart_list_manual_overrides` migration — it existed specifically to block list_members inserts for smart lists, which is now the opposite of what's needed for the client-confirmed manual-override behavior described above and in App Flow §4.6.
 
 ```
 create or replace function sync_opportunity_company()

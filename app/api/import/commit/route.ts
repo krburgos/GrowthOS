@@ -53,12 +53,12 @@ export async function POST(request: NextRequest) {
   if (listId) {
     const { data: list } = await supabase
       .from("lists")
-      .select("id, type")
+      .select("id")
       .eq("id", listId)
       .eq("account_id", profile.account_id)
       .is("archived_at", null)
       .single();
-    if (!list || list.type !== "static") {
+    if (!list) {
       return NextResponse.json({ error: "That list isn't available to upload contacts into." }, { status: 400 });
     }
   }
@@ -181,6 +181,10 @@ export async function POST(request: NextRequest) {
     if (listMembersError) {
       return NextResponse.json({ error: listMembersError.message }, { status: 400 });
     }
+    // Re-adding overrides any earlier exclusion on a smart list (Backend
+    // Schema §7.4, smart_list_manual_overrides migration) — a no-op for
+    // static lists, which never have exclusion rows.
+    await supabase.from("list_exclusions").delete().eq("list_id", listId).in("contact_id", listContactIds);
   }
 
   return NextResponse.json({ imported, addedToList: listContactIds.length });

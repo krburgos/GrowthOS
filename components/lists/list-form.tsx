@@ -110,7 +110,7 @@ export function ListForm({
         <p className="mt-2 text-body-sm text-neutral-500">
           {type === "static"
             ? "Manually add contacts — membership only changes when you add or remove them."
-            : "Built from filter criteria — membership updates automatically as contacts match."}
+            : "Built from filter criteria — membership updates automatically as contacts match. You can still manually add or remove individual contacts on top of that."}
         </p>
       </div>
 

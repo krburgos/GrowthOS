@@ -25,11 +25,12 @@ import {
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * App Flow §4.6/§4.4 — static list management via bulk-select from the
- * Contacts table (Milestone 6/7). Only static lists accept direct
- * membership inserts — enforced server-side by
- * trg_enforce_static_list_membership (Backend Schema §7.4) — so this
- * dialog only offers static lists.
+ * App Flow §4.6/§4.4 — list management via bulk-select from the
+ * Contacts table (Milestone 6/7). Client-confirmed hybrid smart lists:
+ * both list types now accept a manual list_members addition (Backend
+ * Schema §7.4, smart_list_manual_overrides migration) — added to a
+ * smart list, a contact counts as a member regardless of whether they
+ * match its criteria.
  */
 export function AddToListDialog({
   open,
@@ -56,7 +57,6 @@ export function AddToListDialog({
       .from("lists")
       .select("id, name")
       .eq("account_id", accountId)
-      .eq("type", "static")
       .is("archived_at", null)
       .order("name")
       .then(({ data }) => setLists(data ?? []));
@@ -101,6 +101,10 @@ export function AddToListDialog({
         { onConflict: "list_id,contact_id", ignoreDuplicates: true }
       );
 
+    if (!error) {
+      // Re-adding overrides any earlier exclusion on a smart list.
+      await supabase.from("list_exclusions").delete().eq("list_id", listId).in("contact_id", contactIds);
+    }
     setPending(false);
 
     if (error) {

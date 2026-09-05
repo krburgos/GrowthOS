@@ -19,7 +19,10 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro
 /**
  * App Flow §4.6, F2 — List Detail. Smart list membership is computed
  * live via compute_smart_list_members() on every view (Backend Schema
- * §7.4) — never cached.
+ * §7.4, updated by the smart_list_manual_overrides migration) — never
+ * cached, but client-confirmed to now also fold in manual list_members
+ * additions and list_exclusions, so Upload/Add/Move/Remove all work on
+ * smart lists too, not just static ones.
  */
 export default async function ListDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -106,7 +109,7 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
         <p className="text-body text-neutral-500">
           {members.length} member{members.length === 1 ? "" : "s"}
         </p>
-        {canEdit && list.type === "static" && (
+        {canEdit && (
           <div className="flex gap-2">
             <Button asChild size="sm" variant="secondary">
               <Link href={`/lists/${list.id}/upload`}>Upload Contacts</Link>
@@ -120,7 +123,7 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
         <EmptyState
           icon={Users}
           action={
-            canEdit && list.type === "static" ? (
+            canEdit ? (
               <Button asChild size="sm">
                 <Link href={`/lists/${list.id}/upload`}>Upload Contacts</Link>
               </Button>
@@ -131,9 +134,9 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
         <ListMembersTable
           members={members}
           listId={list.id}
+          listType={list.type}
           accountId={user.account_id!}
           canEdit={canEdit}
-          isStatic={list.type === "static"}
         />
       )}
     </main>

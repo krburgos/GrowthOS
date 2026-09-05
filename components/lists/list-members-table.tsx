@@ -24,29 +24,31 @@ export interface ListMemberRow {
 /**
  * App Flow §4.6, F2 — List Detail. "The list's member contacts as a
  * table (reusing the Contacts List columns), plus add/remove actions."
- * Remove, bulk-select, and Move/Copy are only offered for static lists
- * — smart list membership is computed, not stored (Backend Schema
- * §7.4), so there's nothing to manually add/remove/move there.
+ * Client-confirmed hybrid smart lists: Remove, bulk-select, and
+ * Move/Copy now work on both list types. For a static list, Remove is
+ * a plain list_members delete. For a smart list, "removing" a contact
+ * means excluding them (list_exclusions insert) since they might be a
+ * live criteria match with no list_members row to delete — the exclude
+ * always applies regardless of whether they were a manual add or a
+ * natural match (Backend Schema §7.4, compute_smart_list_members).
  */
 export function ListMembersTable({
   members,
   listId,
+  listType,
   accountId,
   canEdit,
-  isStatic,
 }: {
   members: ListMemberRow[];
   listId: string;
+  listType: "static" | "smart";
   accountId: string;
   canEdit: boolean;
-  isStatic: boolean;
 }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [moveOpen, setMoveOpen] = useState(false);
-
-  const canBulk = canEdit && isStatic;
 
   const toggleAll = (checked: boolean) => {
     setSelected(checked ? new Set(members.map((m) => m.id)) : new Set());
@@ -66,11 +68,22 @@ export function ListMembersTable({
   const handleRemove = async (contactId: string) => {
     setPendingId(contactId);
     const supabase = createClient();
-    const { error } = await supabase
-      .from("list_members")
-      .delete()
-      .eq("list_id", listId)
-      .eq("contact_id", contactId);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    let error;
+    if (listType === "smart") {
+      ({ error } = await supabase.from("list_exclusions").upsert(
+        { list_id: listId, contact_id: contactId, excluded_by: user!.id },
+        { onConflict: "list_id,contact_id", ignoreDuplicates: true }
+      ));
+      if (!error) {
+        await supabase.from("list_members").delete().eq("list_id", listId).eq("contact_id", contactId);
+      }
+    } else {
+      ({ error } = await supabase.from("list_members").delete().eq("list_id", listId).eq("contact_id", contactId));
+    }
     setPendingId(null);
 
     if (error) {
@@ -82,7 +95,7 @@ export function ListMembersTable({
 
   return (
     <div className="flex flex-col gap-3">
-      {canBulk && selected.size > 0 && (
+      {canEdit && selected.size > 0 && (
         <div className="flex items-center justify-between rounded-md border border-secondary-200 bg-secondary-50 px-4 py-2">
           <span className="text-body-sm text-secondary-800">{selected.size} selected</span>
           <Button size="sm" onClick={() => setMoveOpen(true)}>
@@ -94,7 +107,7 @@ export function ListMembersTable({
       <Table>
         <TableHeader>
           <TableRow>
-            {canBulk && (
+            {canEdit && (
               <TableHead className="w-10">
                 <Checkbox checked={allSelected} onCheckedChange={(c) => toggleAll(!!c)} aria-label="Select all" />
               </TableHead>
@@ -103,13 +116,13 @@ export function ListMembersTable({
             <TableHead>Email</TableHead>
             <TableHead>Company</TableHead>
             <TableHead>Status</TableHead>
-            {canEdit && isStatic && <TableHead>Actions</TableHead>}
+            {canEdit && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {members.map((m) => (
             <TableRow key={m.id} selected={selected.has(m.id)}>
-              {canBulk && (
+              {canEdit && (
                 <TableCell>
                   <Checkbox
                     checked={selected.has(m.id)}
@@ -126,7 +139,7 @@ export function ListMembersTable({
               <TableCell>
                 {m.status_name && <Badge variant={statusBadgeVariant(m.status_name)}>{m.status_name}</Badge>}
               </TableCell>
-              {canEdit && isStatic && (
+              {canEdit && (
                 <TableCell>
                   <Button
                     variant="ghost"
@@ -143,11 +156,12 @@ export function ListMembersTable({
         </TableBody>
       </Table>
 
-      {canBulk && (
+      {canEdit && (
         <MoveOrCopyDialog
           open={moveOpen}
           onOpenChange={setMoveOpen}
           currentListId={listId}
+          currentListType={listType}
           accountId={accountId}
           selectedContactIds={[...selected]}
           onDone={() => setSelected(new Set())}
