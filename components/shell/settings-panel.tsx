@@ -22,10 +22,9 @@ interface Row {
 }
 
 const MY_PROFILE_ROWS: Row[] = [
-  { label: "Contact Information", href: "/settings/profile#contact-information" },
+  { label: "Contact Information", href: "/settings/profile" },
   { label: "Email Signature" },
-  { label: "WOLI AI Helper" },
-  { label: "Password", href: "/settings/profile#password" },
+  { label: "Password", href: "/settings/profile/password" },
   { label: "Two Factor Auth" },
   { label: "Phone Numbers" },
   { label: "Notifications" },
@@ -147,15 +146,8 @@ function NavColumn({
 export function SettingsPanel() {
   const pathname = usePathname();
 
-  if (pathname === "/settings/profile") {
-    return (
-      <NavColumn
-        title="My Profile"
-        rows={MY_PROFILE_ROWS}
-        activeHref="/settings/profile#contact-information"
-        backHref="/settings"
-      />
-    );
+  if (pathname === "/settings/profile" || pathname === "/settings/profile/password") {
+    return <NavColumn title="My Profile" rows={MY_PROFILE_ROWS} activeHref={pathname} backHref="/settings" />;
   }
 
   const accountSub = ACCOUNT_SUB_BY_PATH[pathname];
