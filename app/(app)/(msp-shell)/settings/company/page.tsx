@@ -1,6 +1,6 @@
-import { Building2 } from "lucide-react";
 import type { Metadata } from "next";
 
+import { CompanyLogoUpload } from "@/components/settings/company-logo-upload";
 import { CompanyProfileForm } from "@/components/settings/company-profile-form";
 import { ProfileBanner } from "@/components/settings/profile-banner";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
@@ -34,14 +34,7 @@ export default async function CompanyProfilePage() {
     <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
       <ProfileBanner
         title={account.name}
-        avatar={
-          account.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={account.logo_url} alt="" className="size-full object-cover" />
-          ) : (
-            <Building2 className="size-7 text-neutral-400" />
-          )
-        }
+        avatar={<CompanyLogoUpload accountId={account.id} logoUrl={account.logo_url} canEdit={canEdit} />}
       />
       <CompanyProfileForm
         accountId={account.id}
@@ -50,7 +43,6 @@ export default async function CompanyProfilePage() {
           name: account.name,
           website: account.website ?? "",
           industry: account.industry ?? "",
-          logo_url: account.logo_url ?? "",
           address_city: account.address_city ?? "",
           address_state: account.address_state ?? "",
         }}

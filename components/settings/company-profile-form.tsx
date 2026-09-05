@@ -1,6 +1,6 @@
 "use client";
 
-import { Briefcase, Building2, Globe, ImageIcon, MapPin, Pencil } from "lucide-react";
+import { Briefcase, Building2, Globe, MapPin, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -13,7 +13,6 @@ interface Values {
   name: string;
   website: string;
   industry: string;
-  logo_url: string;
   address_city: string;
   address_state: string;
 }
@@ -24,8 +23,8 @@ interface Values {
  * editable inline form. Client-confirmed gap-fill (App Flow §4.9 never
  * listed a Company Profile screen even though Backend Schema §2 already
  * grants Owner/Admin edit rights on "Accounts (own account settings)").
- * logo_url is a pasted link, not a file upload — Backend Schema §12
- * keeps file attachments out of Phase 1 scope.
+ * The logo itself is uploaded from the banner above (CompanyLogoUpload),
+ * not edited as a field here.
  */
 export function CompanyProfileForm({
   accountId,
@@ -58,7 +57,6 @@ export function CompanyProfileForm({
         name: values.name,
         website: values.website || null,
         industry: values.industry || null,
-        logo_url: values.logo_url || null,
         address_city: values.address_city || null,
         address_state: values.address_state || null,
       })
@@ -80,7 +78,6 @@ export function CompanyProfileForm({
     { icon: Building2, label: "Company Name", field: "name", value: values.name },
     { icon: Globe, label: "Website", field: "website", value: values.website },
     { icon: Briefcase, label: "Industry", field: "industry", value: values.industry },
-    { icon: ImageIcon, label: "Logo URL", field: "logo_url", value: values.logo_url },
   ];
 
   return (

@@ -40,19 +40,7 @@ const ACCOUNT_SETTINGS_ROWS: (Row & { sub?: AccountSub })[] = [
   { label: "Customizations", href: "/settings/statuses", sub: "customizations" },
 ];
 
-const ACCOUNT_SUB_ROWS: Record<AccountSub, Row[]> = {
-  company: [
-    { label: "Company Profile", href: "/settings/company" },
-    { label: "Company Details" },
-    { label: "Branding" },
-    { label: "Quotas" },
-    { label: "Individual Quotas" },
-    { label: "Opportunities" },
-    { label: "Extreme Actions" },
-    { label: "Preferred Currency" },
-    { label: "WOLI AI Helper" },
-    { label: "Account Privacy" },
-  ],
+const ACCOUNT_SUB_ROWS: Partial<Record<AccountSub, Row[]>> = {
   users: [{ label: "Users & Roles", href: "/settings/users" }],
   email: [{ label: "Connected Email Accounts", href: "/settings/email" }],
   customizations: [
@@ -152,6 +140,7 @@ export function SettingsPanel() {
 
   const accountSub = ACCOUNT_SUB_BY_PATH[pathname];
   if (accountSub) {
+    const subRows = ACCOUNT_SUB_ROWS[accountSub];
     return (
       <>
         <NavColumn
@@ -160,7 +149,7 @@ export function SettingsPanel() {
           activeHref={ACCOUNT_SETTINGS_ROWS.find((r) => r.sub === accountSub)?.href}
           backHref="/settings"
         />
-        <NavColumn title={ACCOUNT_SUB_TITLE[accountSub]} rows={ACCOUNT_SUB_ROWS[accountSub]} activeHref={pathname} />
+        {subRows && <NavColumn title={ACCOUNT_SUB_TITLE[accountSub]} rows={subRows} activeHref={pathname} />}
       </>
     );
   }
