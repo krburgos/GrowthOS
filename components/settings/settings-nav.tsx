@@ -9,11 +9,11 @@ import { cn } from "@/lib/utils";
  * App Flow §4.9 lists Users & Roles (I1), Connected Email Accounts (I2),
  * Custom Statuses (I3), and My Profile (I4) as separate screens but
  * doesn't specify how a user moves between them — this sub-nav is a
- * reasonable gap-fill, not a spec'd component. Connected Email Accounts
- * is omitted until Milestone 9 builds it.
+ * reasonable gap-fill, not a spec'd component.
  */
 const ITEMS = [
   { href: "/settings/users", label: "Users & Roles" },
+  { href: "/settings/email", label: "Connected Email Accounts" },
   { href: "/settings/statuses", label: "Custom Statuses" },
   { href: "/settings/profile", label: "My Profile" },
 ];

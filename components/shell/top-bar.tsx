@@ -67,6 +67,9 @@ export function TopBar({ fullName }: { fullName: string }) {
             <DropdownMenuItem asChild>
               <Link href="/settings/profile">My Profile</Link>
             </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/settings/email">Connected Email Accounts</Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={handleLogout}>Log Out</DropdownMenuItem>
           </DropdownMenuContent>
