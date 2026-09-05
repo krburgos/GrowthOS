@@ -39,8 +39,8 @@ export function TopBar({ fullName }: { fullName: string }) {
   return (
     <header className="flex h-[var(--topbar-height)] shrink-0 items-center gap-4 border-b border-neutral-200 bg-white px-4">
       <Link href="/dashboard" className="shrink-0">
-        <span className="text-h4 text-primary-900">Growth</span>
-        <span className="text-h4 text-secondary-500">OS</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/growthos-logo.png" alt="GrowthOS" className="h-10 w-auto" />
       </Link>
 
       <div className="relative max-w-sm flex-1">
