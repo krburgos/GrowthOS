@@ -76,7 +76,7 @@ export function ProfileForm({ userId, fullName, email, roleLabel }: { userId: st
 
   return (
     <div className="flex max-w-xl flex-col gap-8">
-      <div className="rounded-lg border border-neutral-200 bg-white">
+      <div id="contact-information" className="scroll-mt-6 rounded-lg border border-neutral-200 bg-white">
         <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-4">
           <h2 className="text-h4 text-primary-900">Contact Information</h2>
           {!editing && (
@@ -139,7 +139,7 @@ export function ProfileForm({ userId, fullName, email, roleLabel }: { userId: st
         </form>
       </div>
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-6">
+      <div id="password" className="scroll-mt-6 rounded-lg border border-neutral-200 bg-white p-6">
         <h2 className="mb-4 text-h4 text-primary-900">Change password</h2>
         <form onSubmit={passwordForm.handleSubmit(onChangePassword)} noValidate className="flex flex-col gap-4">
           <div>

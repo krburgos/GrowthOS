@@ -38,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     section: "settings",
     label: "Settings",
-    href: "/settings/users",
+    href: "/settings",
     matchPrefix: "/settings",
     icon: Settings,
   },
