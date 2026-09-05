@@ -24,7 +24,7 @@ export default async function CompanyProfilePage() {
   const supabase = await createClient();
   const { data: account } = await supabase
     .from("accounts")
-    .select("id, name, website, industry, logo_url, address_city, address_state")
+    .select("id, name, website, linkedin_url, logo_url, address_city, address_state")
     .eq("id", user.account_id)
     .single();
 
@@ -42,7 +42,7 @@ export default async function CompanyProfilePage() {
         defaults={{
           name: account.name,
           website: account.website ?? "",
-          industry: account.industry ?? "",
+          linkedin_url: account.linkedin_url ?? "",
           address_city: account.address_city ?? "",
           address_state: account.address_state ?? "",
         }}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Briefcase, Building2, Globe, MapPin, Pencil } from "lucide-react";
+import { Building2, Globe, Link as LinkIcon, MapPin, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 interface Values {
   name: string;
   website: string;
-  industry: string;
+  linkedin_url: string;
   address_city: string;
   address_state: string;
 }
@@ -24,7 +24,10 @@ interface Values {
  * listed a Company Profile screen even though Backend Schema §2 already
  * grants Owner/Admin edit rights on "Accounts (own account settings)").
  * The logo itself is uploaded from the banner above (CompanyLogoUpload),
- * not edited as a field here.
+ * not edited as a field here. Company LinkedIn replaced the original
+ * Industry field per client direction — accounts.industry was dropped,
+ * not left unused (the separate industry field on the companies table,
+ * for CRM company records under Contacts, is untouched).
  */
 export function CompanyProfileForm({
   accountId,
@@ -56,7 +59,7 @@ export function CompanyProfileForm({
       .update({
         name: values.name,
         website: values.website || null,
-        industry: values.industry || null,
+        linkedin_url: values.linkedin_url || null,
         address_city: values.address_city || null,
         address_state: values.address_state || null,
       })
@@ -77,7 +80,7 @@ export function CompanyProfileForm({
   const rows: { icon: typeof Building2; label: string; field: keyof Values; value: string; isCity?: boolean }[] = [
     { icon: Building2, label: "Company Name", field: "name", value: values.name },
     { icon: Globe, label: "Website", field: "website", value: values.website },
-    { icon: Briefcase, label: "Industry", field: "industry", value: values.industry },
+    { icon: LinkIcon, label: "Company LinkedIn", field: "linkedin_url", value: values.linkedin_url },
   ];
 
   return (
@@ -99,7 +102,7 @@ export function CompanyProfileForm({
             <span className="w-32 shrink-0 text-body text-neutral-800">{row.label}</span>
             {editing ? (
               <Input value={row.value} onChange={set(row.field)} className="flex-1" />
-            ) : row.field === "website" && row.value ? (
+            ) : (row.field === "website" || row.field === "linkedin_url") && row.value ? (
               <a href={row.value} target="_blank" rel="noreferrer" className="flex-1 text-body text-primary-700 hover:underline">
                 {row.value}
               </a>
