@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { ProfileAvatarUpload } from "@/components/settings/profile-avatar-upload";
 import { ProfileBanner } from "@/components/settings/profile-banner";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
@@ -25,7 +26,7 @@ export default async function ProfilePage() {
   const supabase = await createClient();
   const { data: profile } = await supabase
     .from("users")
-    .select("phone, job_title, linkedin_url")
+    .select("phone, job_title, linkedin_url, avatar_url")
     .eq("id", user.id)
     .single();
 
@@ -33,7 +34,13 @@ export default async function ProfilePage() {
     <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
       <ProfileBanner
         title={user.full_name}
-        avatar={<span className="text-body-sm font-medium text-neutral-500">{initials(user.full_name)}</span>}
+        avatar={
+          <ProfileAvatarUpload
+            userId={user.id}
+            avatarUrl={profile?.avatar_url ?? null}
+            fallbackText={initials(user.full_name)}
+          />
+        }
       />
       <ProfileForm
         userId={user.id}

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 
 import { PasswordForm } from "@/components/settings/password-form";
+import { ProfileAvatarUpload } from "@/components/settings/profile-avatar-upload";
 import { ProfileBanner } from "@/components/settings/profile-banner";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Password — GrowthOS" };
 
@@ -19,11 +21,20 @@ export default async function PasswordPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
+  const supabase = await createClient();
+  const { data: profile } = await supabase.from("users").select("avatar_url").eq("id", user.id).single();
+
   return (
     <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
       <ProfileBanner
         title={user.full_name}
-        avatar={<span className="text-body-sm font-medium text-neutral-500">{initials(user.full_name)}</span>}
+        avatar={
+          <ProfileAvatarUpload
+            userId={user.id}
+            avatarUrl={profile?.avatar_url ?? null}
+            fallbackText={initials(user.full_name)}
+          />
+        }
       />
       <PasswordForm />
     </main>
