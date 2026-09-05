@@ -6,6 +6,7 @@ import { ActivityTimeline, type ActivityRow } from "@/components/activities/acti
 import { LogActivityDialog } from "@/components/activities/log-activity-dialog";
 import { OpportunityOverviewForm } from "@/components/opportunities/opportunity-overview-form";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import type { OpportunityStageRow } from "@/lib/opportunities/stages";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Opportunity — GrowthOS" };
@@ -26,18 +27,28 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
 
   const { data: opportunity } = await supabase
     .from("opportunities")
-    .select("id, name, stage, value, notes, contact_id, contacts(full_name), companies(name)")
+    .select("id, name, stage_id, value, notes, contact_id, account_id, contacts(full_name), companies(name)")
     .eq("id", id)
     .single();
 
   if (!opportunity) notFound();
 
-  const { data: activityRows } = await supabase
-    .from("activities")
-    .select("id, type, subject, body, occurred_at, due_at, completed_at, users(full_name)")
-    .eq("opportunity_id", id)
-    .is("archived_at", null)
-    .order("occurred_at", { ascending: false });
+  const [{ data: activityRows }, { data: stageRows }] = await Promise.all([
+    supabase
+      .from("activities")
+      .select("id, type, subject, body, occurred_at, due_at, completed_at, users(full_name)")
+      .eq("opportunity_id", id)
+      .is("archived_at", null)
+      .order("occurred_at", { ascending: false }),
+    supabase
+      .from("opportunity_stages")
+      .select("id, name, stage_group, sort_order")
+      .eq("account_id", opportunity.account_id)
+      .is("archived_at", null)
+      .order("sort_order"),
+  ]);
+
+  const stages = (stageRows ?? []) as OpportunityStageRow[];
 
   const contact = Array.isArray(opportunity.contacts) ? opportunity.contacts[0] : opportunity.contacts;
   const company = Array.isArray(opportunity.companies) ? opportunity.companies[0] : opportunity.companies;
@@ -61,9 +72,10 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
         <OpportunityOverviewForm
           opportunityId={opportunity.id}
           canEdit={canEdit}
+          stages={stages}
           defaults={{
             name: opportunity.name ?? "",
-            stage: opportunity.stage,
+            stage: opportunity.stage_id,
             value: opportunity.value != null ? String(opportunity.value) : "",
             notes: opportunity.notes ?? "",
           }}

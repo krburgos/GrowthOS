@@ -1,0 +1,305 @@
+"use client";
+
+import { ArrowDown, ArrowUp, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { STAGE_GROUP_BADGE_VARIANT, STAGE_GROUP_LABELS, type StageGroup } from "@/lib/opportunities/stages";
+import { createClient } from "@/lib/supabase/client";
+
+export interface StageRow {
+  id: string;
+  name: string;
+  stage_group: StageGroup;
+  sort_order: number;
+  is_default: boolean;
+}
+
+const GROUPS: StageGroup[] = ["open", "won", "lost"];
+
+/**
+ * Settings → Opportunity Stages. Client-confirmed deviation from the
+ * Backend Schema's fixed 13-stage enum — customizable per account, same
+ * add/rename/reorder/retire shape as Contact Statuses, plus a Group
+ * (Open/Won/Lost) every stage must carry for the Kanban board's column
+ * coloring and closed_at logic. Owner/Admin only, mirroring the exact
+ * same restriction Contact Statuses already uses.
+ */
+export function StagesManager({
+  stages,
+  canEdit,
+  accountId,
+}: {
+  stages: StageRow[];
+  canEdit: boolean;
+  accountId: string;
+}) {
+  const router = useRouter();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<StageRow | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editGroup, setEditGroup] = useState<StageGroup>("open");
+  const [addOpen, setAddOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newGroup, setNewGroup] = useState<StageGroup>("open");
+  const [retireTarget, setRetireTarget] = useState<StageRow | null>(null);
+
+  const sorted = [...stages].sort((a, b) => a.sort_order - b.sort_order);
+
+  const move = async (index: number, direction: -1 | 1) => {
+    const other = sorted[index + direction];
+    const current = sorted[index];
+    if (!other) return;
+
+    setPendingId(current.id);
+    const supabase = createClient();
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
+      supabase.from("opportunity_stages").update({ sort_order: other.sort_order }).eq("id", current.id),
+      supabase.from("opportunity_stages").update({ sort_order: current.sort_order }).eq("id", other.id),
+    ]);
+    setPendingId(null);
+
+    if (e1 || e2) {
+      toast.error(e1?.message ?? e2?.message ?? "Couldn't reorder.");
+      return;
+    }
+    router.refresh();
+  };
+
+  const handleAdd = async () => {
+    if (!newName.trim()) return;
+    setPendingId("new");
+    const supabase = createClient();
+    const nextSortOrder = sorted.length > 0 ? Math.max(...sorted.map((s) => s.sort_order)) + 1 : 0;
+    const { error } = await supabase.from("opportunity_stages").insert({
+      account_id: accountId,
+      name: newName.trim(),
+      stage_group: newGroup,
+      sort_order: nextSortOrder,
+    });
+    setPendingId(null);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Stage added.");
+    setNewName("");
+    setNewGroup("open");
+    setAddOpen(false);
+    router.refresh();
+  };
+
+  const handleEdit = async () => {
+    if (!editTarget || !editName.trim()) return;
+    setPendingId(editTarget.id);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("opportunity_stages")
+      .update({ name: editName.trim(), stage_group: editGroup })
+      .eq("id", editTarget.id);
+    setPendingId(null);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Stage updated.");
+    setEditTarget(null);
+    router.refresh();
+  };
+
+  const handleRetire = async () => {
+    if (!retireTarget) return;
+    setPendingId(retireTarget.id);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("opportunity_stages")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", retireTarget.id);
+    setPendingId(null);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`${retireTarget.name} retired.`);
+    setRetireTarget(null);
+    router.refresh();
+  };
+
+  return (
+    <div className="flex max-w-xl flex-col gap-4">
+      {canEdit && (
+        <Button size="sm" className="self-start" onClick={() => setAddOpen(true)}>
+          <Plus className="mr-1.5 size-4" />
+          Add Stage
+        </Button>
+      )}
+
+      <ul className="flex flex-col divide-y divide-neutral-100 rounded-md border border-neutral-200">
+        {sorted.map((stage, index) => (
+          <li key={stage.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-body text-neutral-800">{stage.name}</span>
+              <Badge variant={STAGE_GROUP_BADGE_VARIANT[stage.stage_group]}>
+                {STAGE_GROUP_LABELS[stage.stage_group]}
+              </Badge>
+            </div>
+            {canEdit && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={index === 0 || pendingId === stage.id}
+                  onClick={() => move(index, -1)}
+                  className="flex size-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 disabled:opacity-30"
+                  aria-label={`Move ${stage.name} up`}
+                >
+                  <ArrowUp className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={index === sorted.length - 1 || pendingId === stage.id}
+                  onClick={() => move(index, 1)}
+                  className="flex size-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 disabled:opacity-30"
+                  aria-label={`Move ${stage.name} down`}
+                >
+                  <ArrowDown className="size-4" />
+                </button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditTarget(stage);
+                    setEditName(stage.name);
+                    setEditGroup(stage.stage_group);
+                  }}
+                >
+                  Edit
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setRetireTarget(stage)}>
+                  Retire
+                </Button>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add a stage</DialogTitle>
+          </DialogHeader>
+          <div>
+            <Label htmlFor="new-stage-name" required>
+              Name
+            </Label>
+            <Input id="new-stage-name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="new-stage-group" required>
+              Group
+            </Label>
+            <Select value={newGroup} onValueChange={(v) => setNewGroup(v as StageGroup)}>
+              <SelectTrigger id="new-stage-group">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GROUPS.map((g) => (
+                  <SelectItem key={g} value={g}>
+                    {STAGE_GROUP_LABELS[g]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAddOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAdd} disabled={pendingId === "new"}>
+              Add
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit stage</DialogTitle>
+          </DialogHeader>
+          <div>
+            <Label htmlFor="edit-stage-name" required>
+              Name
+            </Label>
+            <Input id="edit-stage-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="edit-stage-group" required>
+              Group
+            </Label>
+            <Select value={editGroup} onValueChange={(v) => setEditGroup(v as StageGroup)}>
+              <SelectTrigger id="edit-stage-group">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GROUPS.map((g) => (
+                  <SelectItem key={g} value={g}>
+                    {STAGE_GROUP_LABELS[g]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditTarget(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEdit} disabled={pendingId === editTarget?.id}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!retireTarget} onOpenChange={(o) => !o && setRetireTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Retire stage</DialogTitle>
+          </DialogHeader>
+          <p className="text-body text-neutral-600">
+            {retireTarget?.name} will no longer be available to assign to opportunities. Existing
+            opportunities keep this stage until changed.
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRetireTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRetire}
+              disabled={pendingId === retireTarget?.id}
+            >
+              Retire
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

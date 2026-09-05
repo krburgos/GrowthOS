@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { OPPORTUNITY_STAGES, STAGE_LABELS } from "@/lib/opportunities/stages";
+import type { OpportunityStageRow } from "@/lib/opportunities/stages";
 import { createClient } from "@/lib/supabase/client";
 
 const schema = z.object({
@@ -33,10 +33,12 @@ export function OpportunityOverviewForm({
   opportunityId,
   canEdit,
   defaults,
+  stages,
 }: {
   opportunityId: string;
   canEdit: boolean;
   defaults: Values;
+  stages: OpportunityStageRow[];
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -50,15 +52,19 @@ export function OpportunityOverviewForm({
 
   const onSubmit = async (values: Values) => {
     setError(null);
+    const selectedStage = stages.find((s) => s.id === values.stage);
     const supabase = createClient();
     const { error: updateError } = await supabase
       .from("opportunities")
       .update({
         name: values.name || null,
-        stage: values.stage,
+        stage_id: values.stage,
         value: values.value ? Number(values.value) : null,
         notes: values.notes || null,
-        closed_at: values.stage === "closed_won" || values.stage === "closed_lost" ? new Date().toISOString() : null,
+        closed_at:
+          selectedStage?.stage_group === "won" || selectedStage?.stage_group === "lost"
+            ? new Date().toISOString()
+            : null,
       })
       .eq("id", opportunityId);
 
@@ -88,11 +94,13 @@ export function OpportunityOverviewForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {OPPORTUNITY_STAGES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {STAGE_LABELS[s]}
-                  </SelectItem>
-                ))}
+                {[...stages]
+                  .sort((a, b) => a.sort_order - b.sort_order)
+                  .map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

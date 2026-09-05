@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { STAGE_LABELS, stageGroup, type OpportunityStage } from "@/lib/opportunities/stages";
+import { STAGE_GROUP_BADGE_VARIANT, type StageGroup } from "@/lib/opportunities/stages";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Contact — GrowthOS" };
@@ -65,7 +65,7 @@ export default async function ContactDetailPage({
         .order("occurred_at", { ascending: false }),
       supabase
         .from("opportunities")
-        .select("id, name, stage, value")
+        .select("id, name, value, opportunity_stages(name, stage_group)")
         .eq("contact_id", id)
         .order("created_at", { ascending: false }),
     ]);
@@ -142,7 +142,10 @@ export default async function ContactDetailPage({
           ) : (
             <ul className="flex flex-col gap-2">
               {(opportunityRows ?? []).map((o) => {
-                const stage = o.stage as OpportunityStage;
+                const stageField = o.opportunity_stages as unknown;
+                const stage = (Array.isArray(stageField) ? stageField[0] : stageField) as
+                  | { name: string; stage_group: StageGroup }
+                  | undefined;
                 return (
                   <li key={o.id}>
                     <Link
@@ -150,9 +153,9 @@ export default async function ContactDetailPage({
                       className="flex items-center justify-between rounded-md border border-neutral-200 px-4 py-3 hover:bg-neutral-100"
                     >
                       <span className="text-body text-neutral-800">{o.name || "Untitled opportunity"}</span>
-                      <Badge variant={stageGroup(stage) === "won" ? "success" : stageGroup(stage) === "lost" ? "neutral" : "info"}>
-                        {STAGE_LABELS[stage]}
-                      </Badge>
+                      {stage && (
+                        <Badge variant={STAGE_GROUP_BADGE_VARIANT[stage.stage_group]}>{stage.name}</Badge>
+                      )}
                     </Link>
                   </li>
                 );
