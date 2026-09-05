@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, Pencil, Shield, User as UserIcon } from "lucide-react";
+import { Briefcase, Link as LinkIcon, Mail, Pencil, Phone, Shield, User as UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -15,6 +15,9 @@ import { createClient } from "@/lib/supabase/client";
 
 const profileSchema = z.object({
   full_name: z.string().min(1, "Enter your name."),
+  phone: z.string().optional(),
+  job_title: z.string().optional(),
+  linkedin_url: z.string().optional(),
 });
 type ProfileValues = z.infer<typeof profileSchema>;
 
@@ -29,26 +32,45 @@ const passwordSchema = z
   });
 type PasswordValues = z.infer<typeof passwordSchema>;
 
+interface ProfileFormProps {
+  userId: string;
+  fullName: string;
+  email: string;
+  roleLabel: string;
+  phone: string;
+  jobTitle: string;
+  linkedinUrl: string;
+}
+
 /**
  * Design System §8.9 "Profile-style content card" — icon-label-value
- * rows with an "Update Info" toggle for the editable field (Full Name);
- * Email and Role stay read-only display rows. Password change is a
+ * rows with an "Update Info" toggle. Full Name/Phone/Job Title/LinkedIn
+ * are editable; Email and Role stay read-only (role changes go through
+ * Users & Roles, not a user's own profile). Phone/Job Title/LinkedIn are
+ * a client-confirmed gap-fill, same shape as Company Profile's earlier
+ * additions — not the "custom fields" concept Backend Schema §12
+ * excludes, just a few specific named columns. Password change is a
  * separate card below since it has no "current value" to display.
  */
-export function ProfileForm({ userId, fullName, email, roleLabel }: { userId: string; fullName: string; email: string; roleLabel: string }) {
+export function ProfileForm({ userId, fullName, email, roleLabel, phone, jobTitle, linkedinUrl }: ProfileFormProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
 
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { full_name: fullName },
+    defaultValues: { full_name: fullName, phone, job_title: jobTitle, linkedin_url: linkedinUrl },
   });
 
   const onSaveProfile = async (values: ProfileValues) => {
     const supabase = createClient();
     const { error } = await supabase
       .from("users")
-      .update({ full_name: values.full_name })
+      .update({
+        full_name: values.full_name,
+        phone: values.phone || null,
+        job_title: values.job_title || null,
+        linkedin_url: values.linkedin_url || null,
+      })
       .eq("id", userId);
 
     if (error) {
@@ -118,6 +140,37 @@ export function ProfileForm({ userId, fullName, email, roleLabel }: { userId: st
             <span className="w-24 shrink-0 text-body text-neutral-800">Role</span>
             <span className="flex-1 text-body text-neutral-600">{roleLabel}</span>
           </div>
+          <div className="flex items-center gap-4 px-6 py-4">
+            <Phone className="size-5 shrink-0 text-neutral-500" />
+            <span className="w-24 shrink-0 text-body text-neutral-800">Phone Number</span>
+            {editing ? (
+              <Input className="flex-1" {...profileForm.register("phone")} />
+            ) : (
+              <span className="flex-1 text-body text-neutral-600">{phone || "—"}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-4 px-6 py-4">
+            <Briefcase className="size-5 shrink-0 text-neutral-500" />
+            <span className="w-24 shrink-0 text-body text-neutral-800">Job Title</span>
+            {editing ? (
+              <Input className="flex-1" {...profileForm.register("job_title")} />
+            ) : (
+              <span className="flex-1 text-body text-neutral-600">{jobTitle || "—"}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-4 px-6 py-4">
+            <LinkIcon className="size-5 shrink-0 text-neutral-500" />
+            <span className="w-24 shrink-0 text-body text-neutral-800">LinkedIn</span>
+            {editing ? (
+              <Input className="flex-1" placeholder="https://linkedin.com/in/…" {...profileForm.register("linkedin_url")} />
+            ) : linkedinUrl ? (
+              <a href={linkedinUrl} target="_blank" rel="noreferrer" className="flex-1 text-body text-primary-700 hover:underline">
+                {linkedinUrl}
+              </a>
+            ) : (
+              <span className="flex-1 text-body text-neutral-600">—</span>
+            )}
+          </div>
 
           {editing && (
             <div className="flex justify-end gap-3 px-6 py-4">
@@ -125,7 +178,7 @@ export function ProfileForm({ userId, fullName, email, roleLabel }: { userId: st
                 type="button"
                 variant="ghost"
                 onClick={() => {
-                  profileForm.reset({ full_name: fullName });
+                  profileForm.reset({ full_name: fullName, phone, job_title: jobTitle, linkedin_url: linkedinUrl });
                   setEditing(false);
                 }}
               >
