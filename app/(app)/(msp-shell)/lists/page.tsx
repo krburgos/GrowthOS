@@ -2,6 +2,7 @@ import { ListChecks } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { DeleteListButton } from "@/components/lists/delete-list-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -18,6 +19,14 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro
  * (static/smart). Smart list counts are computed live
  * (compute_smart_list_members(), Backend Schema §7.4) rather than
  * stored, matching how List Detail (F2) is required to work.
+ *
+ * Client-confirmed additions: Bounced/Unsubscribed/Active columns
+ * (matching a reference CRM's layout) ahead of Campaigns (Milestone 10)
+ * existing. Unsubscribed is real today — contacts.email_opt_out already
+ * exists — it's just always 0 in practice until something sets it
+ * (the campaign unsubscribe link). Bounced has no data source at all
+ * without campaign send history, so it's a hardcoded 0 placeholder
+ * until that milestone is built.
  */
 export default async function ListsIndexPage() {
   const user = await getCurrentUser();
@@ -28,22 +37,41 @@ export default async function ListsIndexPage() {
 
   const { data: lists } = await supabase
     .from("lists")
-    .select("id, name, type")
+    .select("id, name, type, created_at")
     .eq("account_id", user.account_id)
     .is("archived_at", null)
-    .order("name");
+    .order("created_at", { ascending: false });
 
   const listsWithCounts = await Promise.all(
     (lists ?? []).map(async (list) => {
+      let contactIds: string[];
       if (list.type === "static") {
-        const { count } = await supabase
-          .from("list_members")
-          .select("*", { count: "exact", head: true })
-          .eq("list_id", list.id);
-        return { ...list, memberCount: count ?? 0 };
+        const { data } = await supabase.from("list_members").select("contact_id").eq("list_id", list.id);
+        contactIds = (data ?? []).map((r) => r.contact_id);
+      } else {
+        const { data } = await supabase.rpc("compute_smart_list_members", { p_list_id: list.id });
+        contactIds = (data ?? []).map((r: { contact_id: string }) => r.contact_id);
       }
-      const { data } = await supabase.rpc("compute_smart_list_members", { p_list_id: list.id });
-      return { ...list, memberCount: data?.length ?? 0 };
+
+      let unsubscribed = 0;
+      if (contactIds.length > 0) {
+        const { count } = await supabase
+          .from("contacts")
+          .select("*", { count: "exact", head: true })
+          .in("id", contactIds)
+          .eq("email_opt_out", true);
+        unsubscribed = count ?? 0;
+      }
+
+      const bounced = 0; // No data source until Campaigns (Milestone 10) exists.
+
+      return {
+        ...list,
+        memberCount: contactIds.length,
+        bounced,
+        unsubscribed,
+        active: contactIds.length - bounced - unsubscribed,
+      };
     })
   );
 
@@ -52,9 +80,14 @@ export default async function ListsIndexPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-h1 text-primary-900">Lists</h1>
         {canEdit && (
-          <Button asChild>
-            <Link href="/lists/new">Create List</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="secondary">
+              <Link href="/lists/upload">Upload List</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/lists/new">Create List</Link>
+            </Button>
+          </div>
         )}
       </div>
 
@@ -66,7 +99,12 @@ export default async function ListsIndexPage() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Members</TableHead>
+              <TableHead>Contacts</TableHead>
+              <TableHead>Date Added</TableHead>
+              <TableHead>Bounced</TableHead>
+              <TableHead>Unsubscribed</TableHead>
+              <TableHead>Active</TableHead>
+              {canEdit && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -83,6 +121,15 @@ export default async function ListsIndexPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>{list.memberCount}</TableCell>
+                <TableCell>{new Date(list.created_at).toLocaleDateString()}</TableCell>
+                <TableCell>{list.bounced}</TableCell>
+                <TableCell>{list.unsubscribed}</TableCell>
+                <TableCell>{list.active}</TableCell>
+                {canEdit && (
+                  <TableCell>
+                    <DeleteListButton listId={list.id} listName={list.name} />
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

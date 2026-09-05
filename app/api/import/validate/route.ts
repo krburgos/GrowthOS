@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get("file");
   const mappingRaw = formData.get("mapping");
+  const listId = formData.get("list_id");
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
@@ -51,7 +52,9 @@ export async function POST(request: NextRequest) {
     typeof mappingRaw === "string" && mappingRaw ? JSON.parse(mappingRaw) : guessMapping(parsed.headers);
 
   const mappedRows = applyMapping(parsed.rows, mapping);
-  const errors = await validateRows(mappedRows, supabase, profile.account_id);
+  const errors = await validateRows(mappedRows, supabase, profile.account_id, {
+    allowExistingEmails: typeof listId === "string" && listId.length > 0,
+  });
 
   return NextResponse.json({
     headers: parsed.headers,

@@ -38,8 +38,12 @@ type Step = "upload" | "map" | "validate" | "confirm";
  * App Flow §4.4, D4 — Import Contacts. Upload → Map Columns → Validate
  * → Confirm. Any validation failure blocks the entire import (§6); the
  * user fixes the file and re-uploads, or adjusts the mapping.
+ *
+ * Client-confirmed list-upload mode (targetListId set): an existing
+ * email is matched to that contact and added to the list rather than
+ * blocking the file — see lib/import/validate.ts and the commit route.
  */
-export function ImportWizard() {
+export function ImportWizard({ targetListId, listName }: { targetListId?: string; listName?: string } = {}) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>("upload");
@@ -47,12 +51,14 @@ export function ImportWizard() {
   const [result, setResult] = useState<ValidateResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [importedCount, setImportedCount] = useState<number | null>(null);
+  const [addedToListCount, setAddedToListCount] = useState<number | null>(null);
 
   const runValidate = async (selectedFile: File, mapping?: ImportMapping) => {
     setLoading(true);
     const formData = new FormData();
     formData.append("file", selectedFile);
     if (mapping) formData.append("mapping", JSON.stringify(mapping));
+    if (targetListId) formData.append("list_id", targetListId);
 
     const res = await fetch("/api/import/validate", { method: "POST", body: formData });
     const body = await res.json();
@@ -90,6 +96,7 @@ export function ImportWizard() {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("mapping", JSON.stringify(result.mapping));
+    if (targetListId) formData.append("list_id", targetListId);
 
     const res = await fetch("/api/import/commit", { method: "POST", body: formData });
     const body = await res.json();
@@ -100,13 +107,19 @@ export function ImportWizard() {
       return;
     }
     setImportedCount(body.imported);
-    toast.success(`${body.imported} contacts imported.`);
+    if (targetListId) {
+      setAddedToListCount(body.addedToList);
+      toast.success(`${body.addedToList} contact${body.addedToList === 1 ? "" : "s"} added to ${listName ?? "the list"}.`);
+    } else {
+      toast.success(`${body.imported} contacts imported.`);
+    }
   };
 
   const reset = () => {
     setFile(null);
     setResult(null);
     setImportedCount(null);
+    setAddedToListCount(null);
     setStep("upload");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -115,10 +128,14 @@ export function ImportWizard() {
     return (
       <div className="flex flex-col gap-4">
         <p className="text-body text-neutral-800">
-          {importedCount} contact{importedCount === 1 ? "" : "s"} imported successfully.
+          {targetListId
+            ? `${addedToListCount} contact${addedToListCount === 1 ? "" : "s"} added to ${listName ?? "the list"}.`
+            : `${importedCount} contact${importedCount === 1 ? "" : "s"} imported successfully.`}
         </p>
         <div className="flex gap-3">
-          <Button onClick={() => router.push("/contacts")}>Back to Contacts</Button>
+          <Button onClick={() => router.push(targetListId ? `/lists/${targetListId}` : "/contacts")}>
+            {targetListId ? "Back to List" : "Back to Contacts"}
+          </Button>
           <Button variant="secondary" onClick={reset}>
             Import Another File
           </Button>

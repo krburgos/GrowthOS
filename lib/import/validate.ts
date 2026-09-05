@@ -54,11 +54,19 @@ export function applyMapping(rows: Record<string, string>[], mapping: ImportMapp
  * import: missing required fields, duplicate emails against existing
  * contacts, and (a mechanical necessity the doc doesn't call out
  * separately) duplicate emails within the file itself.
+ *
+ * Client-confirmed exception for uploading a list (lib/import/commit's
+ * list_id path): an email matching an existing contact is expected and
+ * useful there — that row gets matched to the existing contact and
+ * added to the list rather than blocking the whole file. Pass
+ * `allowExistingEmails: true` to skip that one check; everything else
+ * (required fields, format, in-file duplicates) still applies.
  */
 export async function validateRows(
   mappedRows: MappedRow[],
   supabase: SupabaseClient,
-  accountId: string
+  accountId: string,
+  options?: { allowExistingEmails?: boolean }
 ): Promise<ImportError[]> {
   const errors: ImportError[] = [];
   const seenInFile = new Map<string, number>();
@@ -84,7 +92,7 @@ export async function validateRows(
     }
   }
 
-  const emailsToCheck = mappedRows.some((r) => r.email && EMAIL_RE.test(r.email));
+  const emailsToCheck = !options?.allowExistingEmails && mappedRows.some((r) => r.email && EMAIL_RE.test(r.email));
 
   if (emailsToCheck) {
     // contacts_account_email_unique (Backend Schema §5.3) is

@@ -14,6 +14,12 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_sales", "msp_marketing", "cro
  * company via match_or_create_company() (§7.3) and honoring the
  * contacts dedup index (§5.3). Any row failing validation blocks the
  * entire import (App Flow §6) — nothing is written.
+ *
+ * Client-confirmed list-upload path: when `list_id` is present, an
+ * existing-email row is matched to that contact (not rejected) and
+ * every row — matched or newly created — is added as a member of the
+ * list. Without `list_id`, behavior is unchanged from plain Import
+ * Contacts.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -37,9 +43,24 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get("file");
   const mappingRaw = formData.get("mapping");
+  const listIdRaw = formData.get("list_id");
+  const listId = typeof listIdRaw === "string" && listIdRaw.length > 0 ? listIdRaw : null;
 
   if (!(file instanceof File) || typeof mappingRaw !== "string") {
     return NextResponse.json({ error: "Missing file or column mapping." }, { status: 400 });
+  }
+
+  if (listId) {
+    const { data: list } = await supabase
+      .from("lists")
+      .select("id, type")
+      .eq("id", listId)
+      .eq("account_id", profile.account_id)
+      .is("archived_at", null)
+      .single();
+    if (!list || list.type !== "static") {
+      return NextResponse.json({ error: "That list isn't available to upload contacts into." }, { status: 400 });
+    }
   }
 
   const mapping: ImportMapping = JSON.parse(mappingRaw);
@@ -52,7 +73,7 @@ export async function POST(request: NextRequest) {
   }
 
   const mappedRows = applyMapping(parsed.rows, mapping);
-  const errors = await validateRows(mappedRows, supabase, profile.account_id);
+  const errors = await validateRows(mappedRows, supabase, profile.account_id, { allowExistingEmails: !!listId });
 
   if (errors.length > 0) {
     return NextResponse.json({ error: "Import blocked — some rows failed validation.", errors }, { status: 400 });
@@ -69,8 +90,28 @@ export async function POST(request: NextRequest) {
     .filter((s) => s.is_default)
     .sort((a, b) => a.sort_order - b.sort_order)[0];
 
+  // Only fetched for the list-upload path — plain Import Contacts
+  // already rejected any existing email during validation above.
+  let existingByEmail = new Map<string, string>();
+  if (listId) {
+    const { data: existing } = await supabase
+      .from("contacts")
+      .select("id, email")
+      .eq("account_id", profile.account_id)
+      .is("archived_at", null);
+    existingByEmail = new Map((existing ?? []).map((c) => [c.email.toLowerCase(), c.id]));
+  }
+
   let imported = 0;
+  const listContactIds: string[] = [];
+
   for (const row of mappedRows as MappedRow[]) {
+    const matchedContactId = existingByEmail.get(row.email.toLowerCase());
+    if (matchedContactId) {
+      listContactIds.push(matchedContactId);
+      continue;
+    }
+
     let companyId: string | null = null;
     if (row.company_name) {
       const { data: matchedCompanyId, error: matchError } = await supabase.rpc(
@@ -106,26 +147,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: insertError } = await supabase.from("contacts").insert({
-      account_id: profile.account_id,
-      full_name: row.full_name,
-      title: row.title || null,
-      email: row.email,
-      phone: row.phone || null,
-      status_id: statusId,
-      company_id: companyId,
-      notes: row.notes || null,
-      source: "import",
-    });
+    const { data: createdContact, error: insertError } = await supabase
+      .from("contacts")
+      .insert({
+        account_id: profile.account_id,
+        full_name: row.full_name,
+        title: row.title || null,
+        email: row.email,
+        phone: row.phone || null,
+        status_id: statusId,
+        company_id: companyId,
+        notes: row.notes || null,
+        source: "import",
+      })
+      .select("id")
+      .single();
 
-    if (insertError) {
+    if (insertError || !createdContact) {
       return NextResponse.json(
-        { error: `Import failed at row ${row.rowNumber}: ${insertError.message}`, importedSoFar: imported },
+        { error: `Import failed at row ${row.rowNumber}: ${insertError?.message}`, importedSoFar: imported },
         { status: 400 }
       );
     }
     imported += 1;
+    listContactIds.push(createdContact.id);
   }
 
-  return NextResponse.json({ imported });
+  if (listId && listContactIds.length > 0) {
+    const { error: listMembersError } = await supabase.from("list_members").upsert(
+      listContactIds.map((contactId) => ({ list_id: listId, contact_id: contactId, added_by: user.id })),
+      { onConflict: "list_id,contact_id", ignoreDuplicates: true }
+    );
+    if (listMembersError) {
+      return NextResponse.json({ error: listMembersError.message }, { status: 400 });
+    }
+  }
+
+  return NextResponse.json({ imported, addedToList: listContactIds.length });
 }

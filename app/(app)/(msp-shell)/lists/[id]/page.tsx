@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AddContactsButton } from "@/components/lists/add-contacts-button";
+import { DeleteListButton } from "@/components/lists/delete-list-button";
 import { ListMembersTable, type ListMemberRow } from "@/components/lists/list-members-table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
@@ -90,27 +93,45 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
-      <div className="mb-2 flex items-center gap-3">
-        <h1 className="text-h1 text-primary-900">{list.name}</h1>
-        <Badge variant={list.type === "smart" ? "info" : "neutral"}>
-          {list.type === "smart" ? "Smart" : "Static"}
-        </Badge>
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h1 className="text-h1 text-primary-900">{list.name}</h1>
+          <Badge variant={list.type === "smart" ? "info" : "neutral"}>
+            {list.type === "smart" ? "Smart" : "Static"}
+          </Badge>
+        </div>
+        {canEdit && <DeleteListButton listId={list.id} listName={list.name} redirectTo="/lists" />}
       </div>
       <div className="mb-6 flex items-center justify-between">
         <p className="text-body text-neutral-500">
           {members.length} member{members.length === 1 ? "" : "s"}
         </p>
         {canEdit && list.type === "static" && (
-          <AddContactsButton listId={list.id} accountId={user.account_id!} />
+          <div className="flex gap-2">
+            <Button asChild size="sm" variant="secondary">
+              <Link href={`/lists/${list.id}/upload`}>Upload Contacts</Link>
+            </Button>
+            <AddContactsButton listId={list.id} accountId={user.account_id!} />
+          </div>
         )}
       </div>
 
       {members.length === 0 ? (
-        <EmptyState icon={Users} />
+        <EmptyState
+          icon={Users}
+          action={
+            canEdit && list.type === "static" ? (
+              <Button asChild size="sm">
+                <Link href={`/lists/${list.id}/upload`}>Upload Contacts</Link>
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <ListMembersTable
           members={members}
           listId={list.id}
+          accountId={user.account_id!}
           canEdit={canEdit}
           isStatic={list.type === "static"}
         />

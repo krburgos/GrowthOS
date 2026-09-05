@@ -146,8 +146,8 @@ Prospects and contacts are **one merged section** — every record is a person, 
 
 ### 4.6 Lists (F1–F3)
 
-**Lists Index (F1).** A clean card or table listing every list with name, member count, and type (static/smart). "Create List" button top-right.
-**List Detail (F2).** The list's member contacts as a table (reusing the Contacts List columns), plus add/remove actions.
+**Lists Index (F1).** A table listing every list with name, type (static/smart), contact count, date added, and (client-confirmed, modeled on a reference CRM) Bounced/Unsubscribed/Active columns — Bounced is a placeholder 0 until Campaigns (Milestone 10) exists to produce that data; Unsubscribed reads the real `contacts.email_opt_out` flag. "Upload List" and "Create List" buttons top-right; a per-row "Delete" (soft-delete via `archived_at`, not a real delete — lists aren't the one exception to that rule, Opportunities is).
+**List Detail (F2).** The list's member contacts as a table (reusing the Contacts List columns), plus add/remove actions. For static lists: "Upload Contacts" (same CSV/XLSX pipeline as Import Contacts, except a row matching an existing contact's email is added to the list instead of blocking the whole file — client-confirmed, since a real list upload will usually overlap with existing contacts) and "Add Contacts" (search existing contacts). Bulk-select + **Move / Copy to List**: Move removes the selected contacts from the current list and adds them to the chosen destination; Copy adds them to the destination while leaving the current list's membership untouched (a contact can belong to multiple lists). Both are static-list-only — smart list membership is computed live (§7.4), never stored, so it's neither a valid source nor destination for manual membership changes.
 **Create/Edit List (F3).** Two modes, chosen at creation — left as a design decision per the client's "make it clean" direction:
 - **Static list** — manually add contacts, membership doesn't change on its own
 - **Smart list** — built from saved filter criteria (e.g., industry + geography + status); membership updates automatically as contacts match or stop matching
