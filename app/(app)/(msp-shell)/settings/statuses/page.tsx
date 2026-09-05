@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { SettingsNav } from "@/components/settings/settings-nav";
 import { StatusesManager } from "@/components/settings/statuses-manager";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
@@ -30,7 +29,6 @@ export default async function StatusesPage() {
 
   return (
     <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
-      <SettingsNav />
       <h1 className="mb-6 text-h1 text-primary-900">Contact Statuses</h1>
       <StatusesManager statuses={statuses ?? []} canEdit={canEdit} accountId={user.account_id!} />
     </main>

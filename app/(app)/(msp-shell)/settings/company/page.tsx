@@ -1,7 +1,8 @@
+import { Building2 } from "lucide-react";
 import type { Metadata } from "next";
 
 import { CompanyProfileForm } from "@/components/settings/company-profile-form";
-import { SettingsNav } from "@/components/settings/settings-nav";
+import { ProfileBanner } from "@/components/settings/profile-banner";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
@@ -31,11 +32,17 @@ export default async function CompanyProfilePage() {
 
   return (
     <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
-      <SettingsNav />
-      <h1 className="mb-2 text-h1 text-primary-900">Company Profile</h1>
-      <p className="mb-6 text-body text-neutral-500">
-        This is your MSP's account — one company, many users with different roles.
-      </p>
+      <ProfileBanner
+        title={account.name}
+        avatar={
+          account.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={account.logo_url} alt="" className="size-full object-cover" />
+          ) : (
+            <Building2 className="size-7 text-neutral-400" />
+          )
+        }
+      />
       <CompanyProfileForm
         accountId={account.id}
         canEdit={canEdit}

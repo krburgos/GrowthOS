@@ -19,7 +19,7 @@ Journeys and cross-screen flows are written as **arrow chains** (Screen A → ac
 
 ### 2.1 Layout
 
-Every authenticated screen shares one shell: a **left sidebar** for primary navigation and a **persistent top bar**. Only the content area to the right of the sidebar and below the top bar changes between screens.
+Every authenticated screen shares one shell: a **left sidebar** for primary navigation and a **persistent top bar**. Only the content area to the right of the sidebar and below the top bar changes between screens. **Client-confirmed addition:** while inside Settings specifically, a second docked panel appears between the sidebar and the content area, listing Settings' own sub-pages (Company Profile, Users & Roles, Connected Email Accounts, Contact Statuses, Opportunity Stages, My Profile) — see Design System §8.9. No other section has this second panel in Phase 1.
 **Left sidebar — top-level items (MSP view):**
 - Dashboard
 - Contacts _(prospects and contacts are one merged section — see §4.4)_
@@ -37,7 +37,7 @@ Every authenticated screen shares one shell: a **left sidebar** for primary navi
 
 ### 2.2 Responsive Behavior
 
-The sidebar collapses automatically to icon-only at narrower window widths (no user setting) and expands back at wider widths. Per the PRD, GrowthOS Phase 1 is desktop-first with no other tablet-specific redesign — the collapsing sidebar is the one responsive behavior in scope.
+**Client-confirmed redesign:** the sidebar is now icon-only at every window width, not just narrower ones — labels are dropped in favor of a hover tooltip (Design System §8.9). This replaces the originally-spec'd width-based collapse/expand behavior. Per the PRD, GrowthOS Phase 1 is desktop-first with no other tablet-specific redesign.
 
 ### 2.3 Search
 

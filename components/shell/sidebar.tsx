@@ -45,17 +45,19 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 /**
- * Design System §8.9 — Sidebar Navigation. primary-900 background, 70%
- * white text default, active pill (100% opacity + primary-800 bg,
- * radius-md, 8px inset), disabled items at 30% opacity. Collapses to
- * icon-only below lg (App Flow §2.2, Design System §5.4) via CSS, not a
- * user toggle.
+ * Design System §8.9 — Sidebar Navigation. Client-confirmed redesign:
+ * icon-only at every width now (not just below lg), modeled on
+ * reference screenshots of another CRM's icon-rail nav — colors stay
+ * GrowthOS's own. primary-900 background, 70% white icon default,
+ * active pill (100% opacity + primary-800 bg, radius-md, 8px inset),
+ * disabled items at 30% opacity. The label now only ever appears in the
+ * hover/focus tooltip, so it's load-bearing for accessibility.
  */
 export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-[var(--sidebar-width-collapsed)] shrink-0 flex-col bg-primary-900 py-4 lg:w-[var(--sidebar-width-expanded)]">
+    <aside className="flex w-[var(--sidebar-width-collapsed)] shrink-0 flex-col bg-primary-900 py-4">
       <nav className="flex flex-col gap-1 px-2">
         {NAV_ITEMS.map((item) => {
           const itemAccess: NavAccess = item.section === "dashboard" ? "full" : access[item.section];
@@ -67,7 +69,7 @@ export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
           const content = (
             <span
               className={cn(
-                "flex h-10 items-center gap-3 rounded-md px-3 text-body transition-colors",
+                "flex h-10 w-10 items-center justify-center rounded-md transition-colors",
                 disabled
                   ? "cursor-not-allowed text-white/30"
                   : active
@@ -76,7 +78,6 @@ export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
               )}
             >
               <Icon className="size-5 shrink-0" />
-              <span className="hidden lg:inline">{item.label}</span>
             </span>
           );
 

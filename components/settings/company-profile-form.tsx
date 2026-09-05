@@ -1,32 +1,31 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Briefcase, Building2, Globe, ImageIcon, MapPin, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
-const schema = z.object({
-  name: z.string().min(1, "Enter a company name."),
-  website: z.string().optional(),
-  industry: z.string().optional(),
-  logo_url: z.string().optional(),
-  address_city: z.string().optional(),
-  address_state: z.string().optional(),
-});
-type Values = z.infer<typeof schema>;
+interface Values {
+  name: string;
+  website: string;
+  industry: string;
+  logo_url: string;
+  address_city: string;
+  address_state: string;
+}
 
 /**
- * Client-confirmed gap-fill (App Flow §4.9 never listed a Company
- * Profile screen even though Backend Schema §2 already grants Owner/
- * Admin edit rights on "Accounts (own account settings)"). logo_url is
- * a link to an already-hosted image, not a file upload — Backend Schema
- * §12 keeps file attachments out of Phase 1 scope.
+ * Design System §8.9 "Profile-style content card" — icon-label-value
+ * rows with an "Update Info" toggle, replacing the previous always-
+ * editable inline form. Client-confirmed gap-fill (App Flow §4.9 never
+ * listed a Company Profile screen even though Backend Schema §2 already
+ * grants Owner/Admin edit rights on "Accounts (own account settings)").
+ * logo_url is a pasted link, not a file upload — Backend Schema §12
+ * keeps file attachments out of Phase 1 scope.
  */
 export function CompanyProfileForm({
   accountId,
@@ -38,13 +37,20 @@ export function CompanyProfileForm({
   defaults: Values;
 }) {
   const router = useRouter();
-  const {
-    register,
-    handleSubmit,
-    formState: { isSubmitting },
-  } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: defaults });
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [values, setValues] = useState(defaults);
 
-  const onSubmit = async (values: Values) => {
+  const set = (field: keyof Values) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setValues((v) => ({ ...v, [field]: e.target.value }));
+
+  const handleCancel = () => {
+    setValues(defaults);
+    setEditing(false);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
     const supabase = createClient();
     const { error } = await supabase
       .from("accounts")
@@ -57,52 +63,79 @@ export function CompanyProfileForm({
         address_state: values.address_state || null,
       })
       .eq("id", accountId);
+    setSaving(false);
 
     if (error) {
       toast.error(error.message);
       return;
     }
     toast.success("Company profile updated.");
+    setEditing(false);
     router.refresh();
   };
 
+  const location = [values.address_city, values.address_state].filter(Boolean).join(", ");
+
+  const rows: { icon: typeof Building2; label: string; field: keyof Values; value: string; isCity?: boolean }[] = [
+    { icon: Building2, label: "Company Name", field: "name", value: values.name },
+    { icon: Globe, label: "Website", field: "website", value: values.website },
+    { icon: Briefcase, label: "Industry", field: "industry", value: values.industry },
+    { icon: ImageIcon, label: "Logo URL", field: "logo_url", value: values.logo_url },
+  ];
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex max-w-md flex-col gap-4">
-      <fieldset disabled={!canEdit} className="flex flex-col gap-4">
-        <div>
-          <Label htmlFor="company-name" required>
-            Company name
-          </Label>
-          <Input id="company-name" {...register("name")} />
-        </div>
-        <div>
-          <Label htmlFor="company-website">Website</Label>
-          <Input id="company-website" {...register("website")} />
-        </div>
-        <div>
-          <Label htmlFor="company-industry">Industry</Label>
-          <Input id="company-industry" {...register("industry")} />
-        </div>
-        <div>
-          <Label htmlFor="company-logo">Logo URL</Label>
-          <Input id="company-logo" placeholder="https://…" {...register("logo_url")} />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="company-city">City</Label>
-            <Input id="company-city" {...register("address_city")} />
-          </div>
-          <div>
-            <Label htmlFor="company-state">State</Label>
-            <Input id="company-state" {...register("address_state")} />
-          </div>
-        </div>
-        {canEdit && (
-          <Button type="submit" size="sm" className="self-start" disabled={isSubmitting}>
-            Save
+    <div className="max-w-xl rounded-lg border border-neutral-200 bg-white">
+      <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-4">
+        <h2 className="text-h4 text-primary-900">Company Profile</h2>
+        {canEdit && !editing && (
+          <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+            <Pencil className="mr-1.5 size-4" />
+            Update Info
           </Button>
         )}
-      </fieldset>
-    </form>
+      </div>
+
+      <div className="flex flex-col divide-y divide-neutral-100">
+        {rows.map((row) => (
+          <div key={row.field} className="flex items-center gap-4 px-6 py-4">
+            <row.icon className="size-5 shrink-0 text-neutral-500" />
+            <span className="w-32 shrink-0 text-body text-neutral-800">{row.label}</span>
+            {editing ? (
+              <Input value={row.value} onChange={set(row.field)} className="flex-1" />
+            ) : row.field === "website" && row.value ? (
+              <a href={row.value} target="_blank" rel="noreferrer" className="flex-1 text-body text-primary-700 hover:underline">
+                {row.value}
+              </a>
+            ) : (
+              <span className="flex-1 text-body text-neutral-600">{row.value || "—"}</span>
+            )}
+          </div>
+        ))}
+
+        <div className="flex items-center gap-4 px-6 py-4">
+          <MapPin className="size-5 shrink-0 text-neutral-500" />
+          <span className="w-32 shrink-0 text-body text-neutral-800">Location</span>
+          {editing ? (
+            <div className="flex flex-1 gap-2">
+              <Input value={values.address_city} onChange={set("address_city")} placeholder="City" className="flex-1" />
+              <Input value={values.address_state} onChange={set("address_state")} placeholder="State" className="flex-1" />
+            </div>
+          ) : (
+            <span className="flex-1 text-body text-neutral-600">{location || "—"}</span>
+          )}
+        </div>
+      </div>
+
+      {editing && (
+        <div className="flex justify-end gap-3 border-t border-neutral-200 px-6 py-4">
+          <Button variant="ghost" onClick={handleCancel} disabled={saving}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            Save
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

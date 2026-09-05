@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 
+import { ProfileBanner } from "@/components/settings/profile-banner";
 import { ProfileForm } from "@/components/settings/profile-form";
-import { SettingsNav } from "@/components/settings/settings-nav";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { ROLE_LABELS } from "@/lib/auth/role-labels";
 
 export const metadata: Metadata = { title: "My Profile — GrowthOS" };
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
+}
 
 /**
  * App Flow §4.9, I4 — My Profile. All MSP roles, own profile only. Role
@@ -18,12 +23,11 @@ export default async function ProfilePage() {
 
   return (
     <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
-      <SettingsNav />
-      <h1 className="mb-2 text-h1 text-primary-900">My Profile</h1>
-      <p className="mb-6 text-body text-neutral-500">
-        {user.email} · {ROLE_LABELS[user.role]}
-      </p>
-      <ProfileForm userId={user.id} fullName={user.full_name} />
+      <ProfileBanner
+        title={user.full_name}
+        avatar={<span className="text-body-sm font-medium text-neutral-500">{initials(user.full_name)}</span>}
+      />
+      <ProfileForm userId={user.id} fullName={user.full_name} email={user.email} roleLabel={ROLE_LABELS[user.role]} />
     </main>
   );
 }
