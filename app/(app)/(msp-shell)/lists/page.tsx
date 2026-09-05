@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DeleteListButton } from "@/components/lists/delete-list-button";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SortableHeader } from "@/components/ui/sortable-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
@@ -19,15 +20,26 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro
  * (compute_smart_list_members(), Backend Schema §7.4) rather than
  * stored, matching how List Detail (F2) is required to work.
  *
- * Client-confirmed additions: Bounced/Unsubscribed/Active columns
- * (matching a reference CRM's layout) ahead of Campaigns (Milestone 10)
- * existing. Unsubscribed is real today — contacts.email_opt_out already
- * exists — it's just always 0 in practice until something sets it
- * (the campaign unsubscribe link). Bounced has no data source at all
- * without campaign send history, so it's a hardcoded 0 placeholder
- * until that milestone is built.
+ * Client-confirmed additions: Bounced/Unsubscribed columns (matching a
+ * reference CRM's layout) ahead of Campaigns (Milestone 10) existing.
+ * Unsubscribed is real today — contacts.email_opt_out already exists —
+ * it's just always 0 in practice until something sets it (the campaign
+ * unsubscribe link). Bounced has no data source at all without
+ * campaign send history, so it's a hardcoded 0 placeholder until that
+ * milestone is built. Type and Active columns were both removed per
+ * client feedback (Type badge stays on List Detail).
+ *
+ * Sorting is applied in JS after the per-list counts are computed,
+ * rather than a SQL ORDER BY — those counts come from a follow-up
+ * Promise.all, not a plain column, and a handful of lists per account
+ * doesn't carry the same "tens of thousands of rows" scale concern
+ * that drove Contacts' server-side sort (PRD §6.1).
  */
-export default async function ListsIndexPage() {
+export default async function ListsIndexPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sort?: string; dir?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) return null;
 
@@ -38,8 +50,7 @@ export default async function ListsIndexPage() {
     .from("lists")
     .select("id, name, type, created_at")
     .eq("account_id", user.account_id)
-    .is("archived_at", null)
-    .order("created_at", { ascending: false });
+    .is("archived_at", null);
 
   const listsWithCounts = await Promise.all(
     (lists ?? []).map(async (list) => {
@@ -64,15 +75,27 @@ export default async function ListsIndexPage() {
 
       const bounced = 0; // No data source until Campaigns (Milestone 10) exists.
 
-      return {
-        ...list,
-        memberCount: contactIds.length,
-        bounced,
-        unsubscribed,
-        active: contactIds.length - bounced - unsubscribed,
-      };
+      return { ...list, memberCount: contactIds.length, bounced, unsubscribed };
     })
   );
+
+  const { sort, dir } = await searchParams;
+  const ascending = dir !== "desc";
+  const sortAccessors: Record<string, (l: (typeof listsWithCounts)[number]) => string | number> = {
+    name: (l) => l.name.toLowerCase(),
+    contacts: (l) => l.memberCount,
+    created_at: (l) => l.created_at,
+    bounced: (l) => l.bounced,
+    unsubscribed: (l) => l.unsubscribed,
+  };
+  const accessor = sortAccessors[sort ?? "created_at"] ?? sortAccessors.created_at;
+  listsWithCounts.sort((a, b) => {
+    const av = accessor(a);
+    const bv = accessor(b);
+    if (av < bv) return ascending ? -1 : 1;
+    if (av > bv) return ascending ? 1 : -1;
+    return 0;
+  });
 
   return (
     <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
@@ -96,12 +119,11 @@ export default async function ListsIndexPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Contacts</TableHead>
-              <TableHead>Date Added</TableHead>
-              <TableHead>Bounced</TableHead>
-              <TableHead>Unsubscribed</TableHead>
-              <TableHead>Active</TableHead>
+              <TableHead><SortableHeader field="name" label="Name" /></TableHead>
+              <TableHead><SortableHeader field="contacts" label="Contacts" /></TableHead>
+              <TableHead><SortableHeader field="created_at" label="Date Added" /></TableHead>
+              <TableHead><SortableHeader field="bounced" label="Bounced" /></TableHead>
+              <TableHead><SortableHeader field="unsubscribed" label="Unsubscribed" /></TableHead>
               {canEdit && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
@@ -117,7 +139,6 @@ export default async function ListsIndexPage() {
                 <TableCell>{new Date(list.created_at).toLocaleDateString()}</TableCell>
                 <TableCell>{list.bounced}</TableCell>
                 <TableCell>{list.unsubscribed}</TableCell>
-                <TableCell>{list.active}</TableCell>
                 {canEdit && (
                   <TableCell>
                     <DeleteListButton listId={list.id} listName={list.name} />
