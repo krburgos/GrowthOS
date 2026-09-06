@@ -225,6 +225,7 @@ Use Tailwind's built-in shadow scale directly — no custom shadow values:
 | shadow-lg | Modals/dialogs |
 | shadow-xl | Toast notifications (they float above everything, including modals) |
 
+**Bug fix, not a new decision (2026-09-06):** the shared `Select` component's dropdown had no height limit, so a long option list rendered past the bottom of the viewport instead of scrolling within itself whenever its trigger sat low on a page — first noticed on Import Contacts' ~19-field mapping dropdown, but it could happen with any `Select` anywhere in the app. Radix's popper positioning already computes a collision-aware `--radix-select-content-available-height` CSS var; it just wasn't applied anywhere. `SelectContent`'s viewport now caps at `max-h-[var(--radix-select-content-available-height)]` with internal scrolling, plus scroll-up/scroll-down chevron buttons at the top/bottom edge when the list overflows — same shadow-md popover, no visual change for any `Select` short enough to already fit.
 
 ### 6.3 Borders
 
