@@ -32,6 +32,19 @@ export interface StageRow {
 
 const GROUPS: StageGroup[] = ["open", "won", "lost"];
 
+/**
+ * Client-confirmed, this screen only: the Lost group's badge reads as
+ * light-error red here instead of the shared neutral-grey
+ * `STAGE_GROUP_BADGE_VARIANT` (§8.4) uses elsewhere — the client wants
+ * "Lost" to visually read as a dead end on this management screen,
+ * while the Kanban board's "Lost/Stalled" column headers deliberately
+ * stay neutral so a stalled deal doesn't read as alarming there.
+ */
+const SETTINGS_STAGE_GROUP_BADGE_VARIANT: Record<StageGroup, "success" | "neutral" | "info" | "error"> = {
+  ...STAGE_GROUP_BADGE_VARIANT,
+  lost: "error",
+};
+
 /** Clamps free-typed probability input to a valid 0-100 integer, same
  * range the `opportunity_stages_win_probability_range` check enforces
  * in the database. */
@@ -161,7 +174,7 @@ export function StagesManager({
   };
 
   return (
-    <div className="flex max-w-xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       {canEdit && (
         <Button size="sm" className="self-start" onClick={() => setAddOpen(true)}>
           <Plus className="mr-1.5 size-4" />
@@ -172,9 +185,9 @@ export function StagesManager({
       <ul className="flex flex-col divide-y divide-neutral-100 rounded-md border border-neutral-200">
         {sorted.map((stage, index) => (
           <li key={stage.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <span className="text-body text-neutral-800">{stage.name}</span>
-              <Badge variant={STAGE_GROUP_BADGE_VARIANT[stage.stage_group]}>
+              <Badge variant={SETTINGS_STAGE_GROUP_BADGE_VARIANT[stage.stage_group]}>
                 {STAGE_GROUP_LABELS[stage.stage_group]}
               </Badge>
               <span className="text-body-sm tabular-nums text-neutral-500">{stage.win_probability}%</span>

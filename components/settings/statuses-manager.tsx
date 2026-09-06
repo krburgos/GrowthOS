@@ -130,7 +130,7 @@ export function StatusesManager({
   };
 
   return (
-    <div className="flex max-w-xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       {canEdit && (
         <Button size="sm" className="self-start" onClick={() => setAddOpen(true)}>
           <Plus className="mr-1.5 size-4" />
