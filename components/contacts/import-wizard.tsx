@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle, Check, ChevronDown, Minus } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -30,6 +31,7 @@ interface ValidateResponse {
   validRowCount: number;
   errors: ImportError[];
   preview: Record<string, string>[];
+  rawSamples: Record<string, string>[];
 }
 
 type Step = "upload" | "map" | "validate" | "confirm";
@@ -49,6 +51,8 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
   const [step, setStep] = useState<Step>("upload");
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ValidateResponse | null>(null);
+  const [autoMatchedHeaders, setAutoMatchedHeaders] = useState<Set<string>>(new Set());
+  const [autoBankOpen, setAutoBankOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [importedCount, setImportedCount] = useState<number | null>(null);
   const [updatedCount, setUpdatedCount] = useState<number>(0);
@@ -70,6 +74,18 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
       return;
     }
     setResult(body);
+    if (!mapping) {
+      // First pass only: freeze which headers the auto-guesser matched,
+      // so the Map Columns screen's grouping doesn't jump around as the
+      // user edits individual selections afterward.
+      const matched = new Set<string>();
+      for (const field of body.fields as ImportField[]) {
+        const header = body.mapping[field.key];
+        if (header) matched.add(header);
+      }
+      setAutoMatchedHeaders(matched);
+      setAutoBankOpen(false);
+    }
     setStep(mapping ? "validate" : "map");
   };
 
@@ -81,9 +97,19 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
     await runValidate(selected);
   };
 
-  const handleMappingChange = (fieldKey: string, header: string) => {
+  /** A column (source header) can map to at most one GrowthOS field.
+   * Clears whichever field previously pointed at this header before
+   * assigning the new one — the field the user picks may also have
+   * pointed at a different header before, which a plain object-key
+   * assignment already overwrites. */
+  const handleColumnFieldChange = (header: string, newFieldKey: string | null) => {
     if (!result) return;
-    setResult({ ...result, mapping: { ...result.mapping, [fieldKey]: header === "__none__" ? null : header } });
+    const nextMapping: ImportMapping = { ...result.mapping };
+    for (const key of Object.keys(nextMapping)) {
+      if (nextMapping[key] === header) nextMapping[key] = null;
+    }
+    if (newFieldKey) nextMapping[newFieldKey] = header;
+    setResult({ ...result, mapping: nextMapping });
   };
 
   const handleContinueFromMap = async () => {
@@ -124,6 +150,8 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
   const reset = () => {
     setFile(null);
     setResult(null);
+    setAutoMatchedHeaders(new Set());
+    setAutoBankOpen(false);
     setImportedCount(null);
     setAddedToListCount(null);
     setStep("upload");
@@ -151,6 +179,22 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
       </div>
     );
   }
+
+  // Which GrowthOS field (if any) each source header currently maps
+  // to — recomputed live from `result.mapping` on every render, unlike
+  // `autoMatchedHeaders` (frozen at first parse; decides section
+  // placement, not current mapping state).
+  const headerToField: Record<string, string | null> = {};
+  if (result) {
+    for (const header of result.headers) headerToField[header] = null;
+    for (const field of result.fields) {
+      const mappedHeader = result.mapping[field.key];
+      if (mappedHeader) headerToField[mappedHeader] = field.key;
+    }
+  }
+  const autoHeaders = result ? result.headers.filter((h) => autoMatchedHeaders.has(h)) : [];
+  const reviewHeaders = result ? result.headers.filter((h) => !autoMatchedHeaders.has(h)) : [];
+  const rawSamplesFor = (header: string) => (result?.rawSamples ?? []).map((row) => row[header] ?? "");
 
   return (
     <div className="flex flex-col gap-6">
@@ -183,34 +227,104 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
 
       {step === "map" && result && (
         <div className="flex flex-col gap-4">
-          <p className="text-body text-neutral-600">
-            Best-guess mapping shown below — adjust anything that&apos;s wrong before continuing.
-          </p>
-          <div className="grid max-w-xl grid-cols-2 gap-4">
-            {result.fields.map((field) => (
-              <div key={field.key}>
-                <Label htmlFor={`map-${field.key}`} required={field.required}>
-                  {field.label}
-                </Label>
-                <Select
-                  value={result.mapping[field.key] ?? "__none__"}
-                  onValueChange={(value) => handleMappingChange(field.key, value)}
-                >
-                  <SelectTrigger id={`map-${field.key}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Don&apos;t import</SelectItem>
-                    {result.headers.map((header) => (
-                      <SelectItem key={header} value={header}>
-                        {header}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 bg-secondary-50 px-5 py-3">
+              <p className="flex items-center gap-2 text-body-sm text-secondary-800">
+                <Check className="size-4 shrink-0" />
+                {result.headers.length} column{result.headers.length === 1 ? "" : "s"} found
+                {autoHeaders.length > 0 && ` — ${autoHeaders.length} auto-matched`}
+                {reviewHeaders.length > 0 &&
+                  `, ${reviewHeaders.length} need${reviewHeaders.length === 1 ? "s" : ""} a quick look`}
+                .
+              </p>
+              <div className="flex gap-2">
+                {result.fields
+                  .filter((f) => f.required)
+                  .map((f) => {
+                    const ok = !!result.mapping[f.key];
+                    return (
+                      <span
+                        key={f.key}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-caption font-semibold",
+                          ok ? "bg-success-100 text-success-800" : "bg-error-100 text-error-700"
+                        )}
+                      >
+                        {ok ? <Check className="size-3" /> : <AlertTriangle className="size-3" />}
+                        {f.label}
+                      </span>
+                    );
+                  })}
               </div>
-            ))}
+            </div>
+
+            {autoHeaders.length > 0 && (
+              <div className="border-b border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setAutoBankOpen((o) => !o)}
+                  aria-expanded={autoBankOpen}
+                  className="flex w-full items-center justify-between gap-3 bg-success-50 px-5 py-3 text-left hover:bg-success-100/70"
+                >
+                  <span className="flex min-w-0 items-center gap-2 text-body-sm font-semibold text-success-800">
+                    <Check className="size-4 shrink-0" />
+                    {autoHeaders.length} column{autoHeaders.length === 1 ? "" : "s"} auto-matched
+                    <span className="truncate font-normal text-success-700">
+                      — {autoHeaders.map((h) => result.fields.find((f) => f.key === headerToField[h])?.label ?? h).join(", ")}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={cn("size-4 shrink-0 text-success-700 transition-transform", autoBankOpen && "rotate-180")}
+                  />
+                </button>
+                {autoBankOpen && (
+                  <div className="grid gap-px bg-neutral-100 [grid-template-columns:repeat(auto-fill,minmax(190px,1fr))]">
+                    {autoHeaders.map((header) => (
+                      <ColumnCard
+                        key={header}
+                        header={header}
+                        index={result.headers.indexOf(header)}
+                        fields={result.fields}
+                        fieldKey={headerToField[header]}
+                        bucket="auto"
+                        samples={rawSamplesFor(header)}
+                        onChange={(v) => handleColumnFieldChange(header, v)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {reviewHeaders.length > 0 ? (
+              <>
+                <div className="flex items-center gap-2 px-5 pb-1 pt-4 text-body-sm font-semibold text-warning-800">
+                  <AlertTriangle className="size-3.5" />
+                  {reviewHeaders.length} column{reviewHeaders.length === 1 ? "" : "s"} need
+                  {reviewHeaders.length === 1 ? "s" : ""} a quick look
+                </div>
+                <div className="grid gap-px bg-neutral-100 pb-px [grid-template-columns:repeat(auto-fill,minmax(190px,1fr))]">
+                  {reviewHeaders.map((header) => (
+                    <ColumnCard
+                      key={header}
+                      header={header}
+                      index={result.headers.indexOf(header)}
+                      fields={result.fields}
+                      fieldKey={headerToField[header]}
+                      bucket="review"
+                      samples={rawSamplesFor(header)}
+                      onChange={(v) => handleColumnFieldChange(header, v)}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="px-5 py-4 text-body-sm text-neutral-500">
+                Nothing else to check — every column was matched automatically.
+              </p>
+            )}
           </div>
+
           <div className="flex gap-3">
             <Button variant="ghost" onClick={reset}>
               Start Over
@@ -295,6 +409,80 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
             </>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Design System §8.9-adjacent, client-confirmed Map Columns redesign
+ * ("Concept A — Spreadsheet-style column cards", refined for wide
+ * files with a wrap grid + collapsible auto-matched bank): one card
+ * per source column, showing its raw header and real sample values
+ * from the file next to the field it maps to — so mapping is a
+ * recognition task against your own data, not a recall task against
+ * column names you may not remember.
+ */
+function ColumnCard({
+  header,
+  index,
+  fields,
+  fieldKey,
+  bucket,
+  samples,
+  onChange,
+}: {
+  header: string;
+  index: number;
+  fields: ImportField[];
+  fieldKey: string | null;
+  bucket: "auto" | "review";
+  samples: string[];
+  onChange: (fieldKey: string | null) => void;
+}) {
+  const tag = !fieldKey
+    ? { label: "Not mapped", cls: "bg-neutral-100 text-neutral-500", Icon: Minus }
+    : bucket === "auto"
+      ? { label: "Auto-matched", cls: "bg-success-100 text-success-800", Icon: Check }
+      : { label: "Mapped", cls: "bg-success-100 text-success-800", Icon: Check };
+
+  return (
+    <div className="flex flex-col gap-2 bg-white p-3.5">
+      <span className="text-caption font-semibold uppercase tracking-wide text-neutral-400">Column {index + 1}</span>
+      <span
+        className="w-fit max-w-full truncate rounded bg-neutral-50 px-1.5 py-0.5 font-mono text-caption text-neutral-500"
+        title={header}
+      >
+        &ldquo;{header}&rdquo;
+      </span>
+      <Select value={fieldKey ?? "__none__"} onValueChange={(v) => onChange(v === "__none__" ? null : v)}>
+        <SelectTrigger className="h-9">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none__">Don&apos;t import</SelectItem>
+          {fields.map((f) => (
+            <SelectItem key={f.key} value={f.key}>
+              {f.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <span className={cn("inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-caption font-semibold", tag.cls)}>
+        <tag.Icon className="size-3" />
+        {tag.label}
+      </span>
+      {samples.length > 0 && (
+        <>
+          <span className="mt-1 text-caption uppercase tracking-wide text-neutral-400">In your file</span>
+          <div className="flex flex-col gap-1">
+            {samples.map((v, i) => (
+              <div key={i} className="truncate rounded bg-neutral-50 px-2 py-1 text-body-sm text-neutral-600">
+                {v || "—"}
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

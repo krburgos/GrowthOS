@@ -61,5 +61,9 @@ export async function POST(request: NextRequest) {
     validRowCount: mappedRows.length - new Set(errors.map((e) => e.row)).size,
     errors,
     preview: mappedRows.slice(0, 10),
+    // Raw, per-original-header sample values (client-confirmed Map
+    // Columns redesign) — lets the mapping step show real file content
+    // next to each column instead of just its header name.
+    rawSamples: parsed.rows.slice(0, 2),
   });
 }
