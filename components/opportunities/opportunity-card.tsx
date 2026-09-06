@@ -24,6 +24,12 @@ const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "
  * Client-confirmed modernization pass (approved mockup): a hover-lift
  * (subtle -translate-y + deeper shadow) so the board reads as
  * interactive even before a drag starts.
+ *
+ * Impeccable critique finding (2026-09-06, P3): dnd-kit's `attributes`
+ * spread already makes this focusable and keyboard-draggable, but with
+ * no visible focus state a keyboard user had no way to see which card
+ * was focused — `focus-visible:ring` closes that gap with the app's
+ * standard ring treatment (§7).
  */
 export function OpportunityCard({ opportunity }: { opportunity: OpportunityCardData }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -39,7 +45,7 @@ export function OpportunityCard({ opportunity }: { opportunity: OpportunityCardD
       {...listeners}
       {...attributes}
       className={cn(
-        "flex w-[280px] shrink-0 cursor-grab flex-col gap-1 rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing",
+        "flex w-[280px] shrink-0 cursor-grab flex-col gap-1 rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 focus-visible:ring-offset-2",
         isDragging && "z-10 -translate-y-0.5 shadow-md"
       )}
     >

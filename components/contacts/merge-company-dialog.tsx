@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -72,7 +73,7 @@ export function MergeCompanyDialog({
     setPending(false);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getFriendlyErrorMessage(error));
       return;
     }
     toast.success("Companies merged.");

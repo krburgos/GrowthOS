@@ -4,7 +4,9 @@ import Papa from "papaparse";
 import { Download } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
+import { Button } from "@/components/ui/button";
 import { resolveContactIds, type ContactSelectionScope } from "@/lib/contacts/bulk-actions";
 import { createClient } from "@/lib/supabase/client";
 
@@ -31,6 +33,11 @@ function one<T>(value: T | T[] | null): T | null {
  * Client-side export (a plain RLS-scoped read, no secret involved —
  * Backend Schema §11 hybrid access) — resolves the selection to
  * concrete ids, fetches those rows, and triggers a CSV download.
+ *
+ * Built on the shared Button component (radius-md, §8.1) rather than a
+ * hand-rolled `rounded-full` pill, per an Impeccable critique finding
+ * (2026-09-06, P2) that the bulk-toolbar buttons had drifted from the
+ * design system's own button spec.
  */
 export function ExportContactsButton({
   selection,
@@ -62,7 +69,7 @@ export function ExportContactsButton({
     setExporting(false);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getFriendlyErrorMessage(error));
       return;
     }
 
@@ -100,15 +107,16 @@ export function ExportContactsButton({
   };
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={handleExport}
       disabled={exporting}
       aria-label="Export selected contacts"
-      className="flex h-9 items-center gap-2 rounded-full bg-white/10 px-4 text-button text-white transition-colors hover:bg-white/20 active:translate-y-px disabled:opacity-50"
+      className="gap-2 text-white hover:bg-white/20 hover:text-white active:bg-white/30"
     >
       <Download className="size-4" />
       Export
-    </button>
+    </Button>
   );
 }

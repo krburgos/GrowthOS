@@ -3,6 +3,7 @@
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { useState } from "react";
 import { toast } from "sonner";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { KanbanColumn } from "@/components/opportunities/kanban-column";
 import type { OpportunityCardData } from "@/components/opportunities/opportunity-card";
@@ -58,7 +59,7 @@ export function KanbanBoard({
       setOpportunities((prev) =>
         prev.map((o) => (o.id === opportunityId ? { ...o, stage_id: previousStageId } : o))
       );
-      toast.error(error.message);
+      toast.error(getFriendlyErrorMessage(error));
     }
   };
 

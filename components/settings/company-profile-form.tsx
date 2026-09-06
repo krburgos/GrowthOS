@@ -4,6 +4,7 @@ import { Building2, Globe, Link as LinkIcon, MapPin, Pencil } from "lucide-react
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,7 +68,7 @@ export function CompanyProfileForm({
     setSaving(false);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getFriendlyErrorMessage(error));
       return;
     }
     toast.success("Company profile updated.");

@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,7 @@ export function PasswordForm() {
     const { error } = await supabase.auth.updateUser({ password: values.password });
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getFriendlyErrorMessage(error));
       return;
     }
     toast.success("Password updated.");

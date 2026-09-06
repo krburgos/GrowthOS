@@ -332,7 +332,9 @@ The My Profile branch never grows a Level C — its Level B list already points 
 
 Top bar: white background, 1px neutral-200 bottom border, 56px height, logo left, search center-left, notification bell + user menu right. CRO Leader viewing-as banner (§2.5 of the App Flow Document): full-width, warning-400 background with black text (this is the one place warning-yellow is used outside a status badge — deliberately, since it needs to be impossible to miss), 40px height, company name left, "Exit to My Dashboard" ghost-style button right.
 
-**Client-confirmed modernization pass (approved mockup):** the flat 1px bottom border became a layered shadow (a 1px neutral-200 line plus a soft 16px navy-tinted blur) for a touch more depth without a heavier border. The (still-disabled, pending Contacts search wiring) search field's bare bordered box became a borderless neutral-50 fill. The notification bell gained a small error-600 dot (top-right of the icon) since there's no unread-count model yet — a dot signals "there's something" without committing to a number the backend doesn't produce. The avatar menu trigger gained a transparent ring that turns secondary-100/secondary-500 on hover/focus, matching the teal "focus/active" language used throughout this pass.
+**Client-confirmed modernization pass (approved mockup):** the flat 1px bottom border became a layered shadow (a 1px neutral-200 line plus a soft 16px navy-tinted blur) for a touch more depth without a heavier border. The (still-disabled, pending Contacts search wiring) search field's bare bordered box became a borderless neutral-50 fill. The avatar menu trigger gained a transparent ring that turns secondary-100/secondary-500 on hover/focus, matching the teal "focus/active" language used throughout this pass.
+
+**Impeccable critique finding (2026-09-06):** this pass briefly gave the notification bell a hardcoded "unread" dot with no real state behind it. Flagged as a persistently-lying status indicator (P2) and removed — the bell stays plain until a real unread-notifications source exists to drive it honestly.
 
 ### 8.11 Loading & Empty States
 
@@ -350,6 +352,8 @@ Recharts series colors, in order of use: primary-700, secondary-500, success-600
 ### 8.14 Auth Screens & the Opportunities View Toggle
 
 **Client-confirmed modernization pass (approved mockup):** the login/forgot-password/reset-password/accept-invite layout's plain neutral background became a soft radial-gradient ground (secondary-800 glow upper-left, primary-700 glow lower-right, over a primary-950 base) with a deeper card shadow — cosmetic only, no change to the forms themselves. The Opportunities Board/List segmented toggle's flat `primary-700`-fill active state became a light neutral-50 track with a white, shadow-sm "pressed" pill for whichever view is active, consistent with how segmented controls read as a control rather than a badge.
+
+**Impeccable critique finding (2026-09-06, P1) + fix:** this pass originally placed the logo directly on the gradient, above the white card — a direct violation of §2's "white/near-white backgrounds only" logo rule. Fixed by moving the logo inside the white card (above the form), which is spec-compliant with no new logo asset needed.
 
 ## 9. Copy-Ready Design Tokens
 

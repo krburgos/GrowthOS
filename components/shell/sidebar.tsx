@@ -51,7 +51,10 @@ const NAV_ITEMS: NavItem[] = [
  * GrowthOS's own. primary-900 background, 70% white icon default,
  * active pill (100% opacity + primary-800 bg, radius-md, 8px inset),
  * disabled items at 30% opacity. The label now only ever appears in the
- * hover/focus tooltip, so it's load-bearing for accessibility.
+ * hover/focus tooltip; an `aria-label` on the link/disabled span itself
+ * (added after an Impeccable critique flagged the tooltip alone as an
+ * unreliable accessible-name mechanism, 2026-09-06) carries the same
+ * text for assistive tech, independent of the tooltip's own reveal.
  *
  * Client-confirmed modernization pass (approved mockup): a subtle
  * top-to-bottom gradient instead of a flat fill, and the active item
@@ -96,9 +99,11 @@ export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
             <Tooltip key={item.section}>
               <TooltipTrigger asChild>
                 {disabled ? (
-                  <span aria-disabled="true">{content}</span>
+                  <span aria-disabled="true" aria-label={item.label}>
+                    {content}
+                  </span>
                 ) : (
-                  <Link href={item.href} aria-current={active ? "page" : undefined}>
+                  <Link href={item.href} aria-current={active ? "page" : undefined} aria-label={item.label}>
                     {content}
                   </Link>
                 )}

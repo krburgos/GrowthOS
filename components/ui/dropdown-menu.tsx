@@ -1,5 +1,6 @@
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -45,6 +46,37 @@ const DropdownMenuItem = React.forwardRef<
 ));
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
 
+/**
+ * Multi-select menu item (Contacts column picker) — stays open on
+ * click, unlike DropdownMenuItem, since toggling one checkbox
+ * shouldn't dismiss the whole menu.
+ */
+const DropdownMenuCheckboxItem = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.CheckboxItem>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.CheckboxItem>
+>(({ className, children, checked, onSelect, ...props }, ref) => (
+  <DropdownMenuPrimitive.CheckboxItem
+    ref={ref}
+    checked={checked}
+    onSelect={(event) => {
+      event.preventDefault();
+      onSelect?.(event);
+    }}
+    className={cn(
+      "relative flex cursor-pointer select-none items-center gap-2 rounded-md py-2 pl-7 pr-2 text-body text-neutral-800 outline-none",
+      "data-[highlighted]:bg-neutral-100",
+      className
+    )}
+    {...props}
+  >
+    <DropdownMenuPrimitive.ItemIndicator className="absolute left-2 flex size-4 items-center justify-center text-secondary-700">
+      <Check className="size-3.5" />
+    </DropdownMenuPrimitive.ItemIndicator>
+    {children}
+  </DropdownMenuPrimitive.CheckboxItem>
+));
+DropdownMenuCheckboxItem.displayName = DropdownMenuPrimitive.CheckboxItem.displayName;
+
 const DropdownMenuSeparator = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Separator>
@@ -62,5 +94,6 @@ export {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 };

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -64,7 +65,7 @@ export function ProfileForm({ userId, fullName, email, roleLabel, phone, jobTitl
       .eq("id", userId);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getFriendlyErrorMessage(error));
       return;
     }
     toast.success("Profile updated.");

@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -81,7 +82,7 @@ export function StatusesManager({
     setPendingId(null);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getFriendlyErrorMessage(error));
       return;
     }
     toast.success("Status added.");
@@ -101,7 +102,7 @@ export function StatusesManager({
     setPendingId(null);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getFriendlyErrorMessage(error));
       return;
     }
     toast.success("Status renamed.");
@@ -120,7 +121,7 @@ export function StatusesManager({
     setPendingId(null);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getFriendlyErrorMessage(error));
       return;
     }
     toast.success(`${retireTarget.name} retired.`);

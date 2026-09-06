@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +51,7 @@ export function MarkStatusDialog({
       const { error } = await supabase.from("contacts").update({ status_id: statusId }).in("id", batch);
       if (error) {
         setPending(false);
-        toast.error(error.message);
+        toast.error(getFriendlyErrorMessage(error));
         return;
       }
     }

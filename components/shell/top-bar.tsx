@@ -30,6 +30,11 @@ function initials(name: string) {
  * search field instead of a bare bordered box, a subtle shadow instead
  * of a flat border, and a teal avatar ring to match the rest of the
  * app's "teal = focus/active" language.
+ *
+ * Impeccable critique finding (2026-09-06, P2): the bell briefly grew a
+ * hardcoded "unread" dot with no real state behind it — a persistently
+ * lying indicator that would train users to ignore it. Removed until an
+ * actual unread-notifications source exists to drive it honestly.
  */
 export function TopBar({ fullName }: { fullName: string }) {
   const router = useRouter();
@@ -59,11 +64,10 @@ export function TopBar({ fullName }: { fullName: string }) {
       <div className="ml-auto flex items-center gap-2">
         <button
           type="button"
-          className="relative flex size-9 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
+          className="flex size-9 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
           aria-label="Notifications"
         >
           <Bell className="size-5" />
-          <span className="absolute right-1.5 top-1.5 size-2 rounded-full border border-white bg-error-600" />
         </button>
 
         <DropdownMenu>

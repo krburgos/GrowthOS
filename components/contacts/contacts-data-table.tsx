@@ -3,6 +3,8 @@
 import {
   Briefcase,
   Building2,
+  ChevronDown,
+  Columns3,
   ListChecks,
   Link2,
   Mail,
@@ -15,15 +17,103 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { ContactsBulkToolbar, type ContactSelectionState } from "@/components/contacts/contacts-bulk-toolbar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { ContactSelectionScope } from "@/lib/contacts/bulk-actions";
 import { statusBadgeVariant } from "@/lib/contacts/status-badge";
 import type { ContactListRow } from "@/lib/contacts/types";
 import { cn } from "@/lib/utils";
+
+/**
+ * Impeccable critique finding (2026-09-06, P1): every role saw all 18
+ * columns unconditionally, with no way to trim the table to what a
+ * given role actually uses. Full Name and Email stay permanently
+ * visible (Full Name is also the sticky/pinned column); everything
+ * else is toggleable via the Columns menu below, persisted per browser
+ * in localStorage so nobody re-configures it every session.
+ */
+type ColumnKey =
+  | "title"
+  | "status"
+  | "score"
+  | "temp"
+  | "employees"
+  | "lists"
+  | "company"
+  | "cphone"
+  | "mobile"
+  | "linkedin"
+  | "addr"
+  | "city"
+  | "state"
+  | "subscribed"
+  | "bounced";
+
+const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }[] }[] = [
+  {
+    label: "Contact",
+    columns: [
+      { key: "title", label: "Title" },
+      { key: "status", label: "Contact Status" },
+      { key: "score", label: "Score" },
+      { key: "temp", label: "Temp" },
+      { key: "lists", label: "Lists" },
+      { key: "mobile", label: "Mobile Phone" },
+      { key: "linkedin", label: "LinkedIn" },
+    ],
+  },
+  {
+    label: "Company",
+    columns: [
+      { key: "employees", label: "Employees" },
+      { key: "company", label: "Company" },
+      { key: "cphone", label: "Company Phone" },
+      { key: "addr", label: "Company Address 1" },
+      { key: "city", label: "Company City" },
+      { key: "state", label: "Company State" },
+    ],
+  },
+  {
+    label: "Marketing",
+    columns: [
+      { key: "subscribed", label: "Subscribed" },
+      { key: "bounced", label: "Bounced" },
+    ],
+  },
+];
+
+const ALL_COLUMN_KEYS = COLUMN_GROUPS.flatMap((g) => g.columns.map((c) => c.key));
+
+const PRESETS: Record<"all" | "compact" | "sales", ColumnKey[]> = {
+  all: ALL_COLUMN_KEYS,
+  compact: ["title", "status"],
+  sales: ["title", "status", "score", "temp", "company"],
+};
+
+const COLUMNS_STORAGE_KEY = "growthos.contacts.visibleColumns";
+
+function loadVisibleColumns(): Set<ColumnKey> {
+  if (typeof window === "undefined") return new Set(ALL_COLUMN_KEYS);
+  try {
+    const raw = window.localStorage.getItem(COLUMNS_STORAGE_KEY);
+    if (!raw) return new Set(ALL_COLUMN_KEYS);
+    const parsed = JSON.parse(raw) as string[];
+    const valid = parsed.filter((k): k is ColumnKey => (ALL_COLUMN_KEYS as string[]).includes(k));
+    return new Set(valid);
+  } catch {
+    return new Set(ALL_COLUMN_KEYS);
+  }
+}
 
 /**
  * Client-confirmed redesign, modeled on a reference CRM's Contacts
@@ -44,6 +134,13 @@ import { cn } from "@/lib/utils";
  * change. Custom markup rather than the shared Table primitives — this
  * table's density/pinning needs are specific to it; the shared
  * components (Lists, Users & Roles, etc.) are untouched.
+ *
+ * Impeccable critique finding (2026-09-06, P1) + fix: every role saw
+ * all 18 columns unconditionally, with no way to trim them to what a
+ * given role actually needs. The Columns menu + All/Compact/Sales
+ * presets above the table let a user hide any column but Full Name and
+ * Email; the choice persists per browser via localStorage (Phase 1 —
+ * a real per-user settings row is a natural follow-up once one exists).
  */
 export function ContactsDataTable({
   contacts,
@@ -68,6 +165,29 @@ export function ContactsDataTable({
     selectedIds: new Set(),
     selectAllMatching: false,
   });
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(() => new Set(ALL_COLUMN_KEYS));
+  const [columnsHydrated, setColumnsHydrated] = useState(false);
+
+  useEffect(() => {
+    setVisibleColumns(loadVisibleColumns());
+    setColumnsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!columnsHydrated) return;
+    window.localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify([...visibleColumns]));
+  }, [visibleColumns, columnsHydrated]);
+
+  const show = (key: ColumnKey) => visibleColumns.has(key);
+  const toggleColumn = (key: ColumnKey, checked: boolean) => {
+    setVisibleColumns((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  };
+  const applyPreset = (preset: keyof typeof PRESETS) => setVisibleColumns(new Set(PRESETS[preset]));
 
   const toggleAll = (checked: boolean) => {
     setSelection({
@@ -105,8 +225,66 @@ export function ContactsDataTable({
         onActionComplete={clear}
       />
 
+      <div className="flex items-center gap-2">
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => applyPreset("all")}
+            className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-caption font-medium text-neutral-600 transition-colors hover:border-primary-700 hover:text-primary-800"
+          >
+            All columns
+          </button>
+          <button
+            type="button"
+            onClick={() => applyPreset("compact")}
+            className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-caption font-medium text-neutral-600 transition-colors hover:border-primary-700 hover:text-primary-800"
+          >
+            Compact
+          </button>
+          <button
+            type="button"
+            onClick={() => applyPreset("sales")}
+            className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-caption font-medium text-neutral-600 transition-colors hover:border-primary-700 hover:text-primary-800"
+          >
+            Sales
+          </button>
+        </div>
+        <div className="ml-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="secondary" size="sm" className="gap-1.5">
+                <Columns3 className="size-4" />
+                Columns
+                <ChevronDown className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              {COLUMN_GROUPS.map((group) => (
+                <div key={group.label} className="mb-1 last:mb-0">
+                  <p className="px-2 pb-1 pt-2 text-caption font-semibold uppercase tracking-wide text-neutral-400">
+                    {group.label}
+                  </p>
+                  {group.columns.map((col) => (
+                    <DropdownMenuCheckboxItem
+                      key={col.key}
+                      checked={show(col.key)}
+                      onCheckedChange={(checked) => toggleColumn(col.key, checked)}
+                    >
+                      {col.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </div>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
       <div className="overflow-x-auto rounded-lg border border-neutral-200 shadow-sm">
-        <table className="w-full min-w-[1400px] border-collapse text-body">
+        <table
+          className="w-full border-collapse text-body"
+          style={{ minWidth: `${560 + visibleColumns.size * 130}px` }}
+        >
           <thead>
             <tr>
               <Th sticky="left-0" className="w-11">
@@ -123,47 +301,73 @@ export function ContactsDataTable({
               <Th>
                 <Mail className="size-3.5" /> Email
               </Th>
-              <Th>
-                <Briefcase className="size-3.5" /> Title
-              </Th>
-              <Th>
-                <Tag className="size-3.5" /> Contact Status
-              </Th>
-              <Th>
-                <Star className="size-3.5" /> Score
-              </Th>
-              <Th>
-                <Thermometer className="size-3.5" /> Temp
-              </Th>
-              <Th>
-                <Users className="size-3.5" /> Employees
-              </Th>
-              <Th>
-                <ListChecks className="size-3.5" /> Lists
-              </Th>
-              <Th>
-                <Building2 className="size-3.5" /> Company
-              </Th>
-              <Th>
-                <Phone className="size-3.5" /> Company Phone
-              </Th>
-              <Th>
-                <Phone className="size-3.5" /> Mobile Phone
-              </Th>
-              <Th>
-                <Link2 className="size-3.5" /> LinkedIn
-              </Th>
-              <Th>
-                <MapPin className="size-3.5" /> Company Address 1
-              </Th>
-              <Th>
-                <MapPin className="size-3.5" /> Company City
-              </Th>
-              <Th>
-                <MapPin className="size-3.5" /> Company State
-              </Th>
-              <Th>Subscribed</Th>
-              <Th>Bounced</Th>
+              {show("title") && (
+                <Th>
+                  <Briefcase className="size-3.5" /> Title
+                </Th>
+              )}
+              {show("status") && (
+                <Th>
+                  <Tag className="size-3.5" /> Contact Status
+                </Th>
+              )}
+              {show("score") && (
+                <Th>
+                  <Star className="size-3.5" /> Score
+                </Th>
+              )}
+              {show("temp") && (
+                <Th>
+                  <Thermometer className="size-3.5" /> Temp
+                </Th>
+              )}
+              {show("employees") && (
+                <Th>
+                  <Users className="size-3.5" /> Employees
+                </Th>
+              )}
+              {show("lists") && (
+                <Th>
+                  <ListChecks className="size-3.5" /> Lists
+                </Th>
+              )}
+              {show("company") && (
+                <Th>
+                  <Building2 className="size-3.5" /> Company
+                </Th>
+              )}
+              {show("cphone") && (
+                <Th>
+                  <Phone className="size-3.5" /> Company Phone
+                </Th>
+              )}
+              {show("mobile") && (
+                <Th>
+                  <Phone className="size-3.5" /> Mobile Phone
+                </Th>
+              )}
+              {show("linkedin") && (
+                <Th>
+                  <Link2 className="size-3.5" /> LinkedIn
+                </Th>
+              )}
+              {show("addr") && (
+                <Th>
+                  <MapPin className="size-3.5" /> Company Address 1
+                </Th>
+              )}
+              {show("city") && (
+                <Th>
+                  <MapPin className="size-3.5" /> Company City
+                </Th>
+              )}
+              {show("state") && (
+                <Th>
+                  <MapPin className="size-3.5" /> Company State
+                </Th>
+              )}
+              {show("subscribed") && <Th>Subscribed</Th>}
+              {show("bounced") && <Th>Bounced</Th>}
             </tr>
           </thead>
           <tbody>
@@ -197,82 +401,96 @@ export function ContactsDataTable({
                       {c.email}
                     </div>
                   </Td>
-                  <Td className="whitespace-nowrap">{c.title ?? "—"}</Td>
-                  <Td>
-                    {c.contact_statuses && (
-                      <Badge variant={statusBadgeVariant(c.contact_statuses.name)}>{c.contact_statuses.name}</Badge>
-                    )}
-                  </Td>
-                  <Td>
-                    {c.score != null ? (
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold tabular-nums text-primary-900">{c.score}</span>
-                        <span className="h-1.5 w-11 overflow-hidden rounded-full bg-neutral-200">
-                          <span
-                            className="block h-full rounded-full bg-secondary-500"
-                            style={{ width: `${Math.max(0, Math.min(100, c.score))}%` }}
-                          />
+                  {show("title") && <Td className="whitespace-nowrap">{c.title ?? "—"}</Td>}
+                  {show("status") && (
+                    <Td>
+                      {c.contact_statuses && (
+                        <Badge variant={statusBadgeVariant(c.contact_statuses.name)}>{c.contact_statuses.name}</Badge>
+                      )}
+                    </Td>
+                  )}
+                  {show("score") && (
+                    <Td>
+                      {c.score != null ? (
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold tabular-nums text-primary-900">{c.score}</span>
+                          <span className="h-1.5 w-11 overflow-hidden rounded-full bg-neutral-200">
+                            <span
+                              className="block h-full rounded-full bg-secondary-500"
+                              style={{ width: `${Math.max(0, Math.min(100, c.score))}%` }}
+                            />
+                          </span>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </Td>
+                  )}
+                  {show("temp") && (
+                    <Td>
+                      {c.temperature ? (
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1.5 text-body-sm font-semibold",
+                            c.temperature === "hot" ? "text-error-600" : "text-primary-500"
+                          )}
+                        >
+                          <Thermometer className="size-3.5" />
+                          {c.temperature === "hot" ? "Hot" : "Cold"}
                         </span>
-                      </div>
-                    ) : (
-                      "—"
-                    )}
-                  </Td>
-                  <Td>
-                    {c.temperature ? (
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1.5 text-body-sm font-semibold",
-                          c.temperature === "hot" ? "text-error-600" : "text-primary-500"
-                        )}
-                      >
-                        <Thermometer className="size-3.5" />
-                        {c.temperature === "hot" ? "Hot" : "Cold"}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </Td>
-                  <Td>{c.companies?.company_size ?? "—"}</Td>
-                  <Td className="whitespace-nowrap">
-                    {c.list_names && c.list_names.length > 0 ? c.list_names.join(", ") : "—"}
-                  </Td>
-                  <Td className="whitespace-nowrap">
-                    {c.companies?.name ? (
-                      <div className="flex items-center gap-2">
-                        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-neutral-100 text-neutral-500">
-                          <Building2 className="size-3.5" />
-                        </span>
-                        {c.companies.name}
-                      </div>
-                    ) : (
-                      "—"
-                    )}
-                  </Td>
-                  <Td className="whitespace-nowrap">{c.companies?.phone ?? "—"}</Td>
-                  <Td className="whitespace-nowrap">{c.phone ?? "—"}</Td>
-                  <Td>
-                    {c.linkedin_url ? (
-                      <a
-                        href={c.linkedin_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label={`${c.full_name}'s LinkedIn`}
-                        className="flex size-7 items-center justify-center rounded-full bg-secondary-50 text-secondary-700 transition-colors hover:bg-secondary-700 hover:text-white"
-                      >
-                        <Link2 className="size-3.5" />
-                      </a>
-                    ) : (
-                      "—"
-                    )}
-                  </Td>
-                  <Td className="whitespace-nowrap">{c.companies?.address_line1 ?? "—"}</Td>
-                  <Td className="whitespace-nowrap">{c.companies?.city ?? "—"}</Td>
-                  <Td className="whitespace-nowrap">{c.companies?.state ?? "—"}</Td>
-                  <Td>
-                    <Badge variant={c.email_opt_out ? "neutral" : "success"}>{c.email_opt_out ? "No" : "Yes"}</Badge>
-                  </Td>
-                  <Td className="text-neutral-400">0</Td>
+                      ) : (
+                        "—"
+                      )}
+                    </Td>
+                  )}
+                  {show("employees") && <Td>{c.companies?.company_size ?? "—"}</Td>}
+                  {show("lists") && (
+                    <Td className="whitespace-nowrap">
+                      {c.list_names && c.list_names.length > 0 ? c.list_names.join(", ") : "—"}
+                    </Td>
+                  )}
+                  {show("company") && (
+                    <Td className="whitespace-nowrap">
+                      {c.companies?.name ? (
+                        <div className="flex items-center gap-2">
+                          <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-neutral-100 text-neutral-500">
+                            <Building2 className="size-3.5" />
+                          </span>
+                          {c.companies.name}
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </Td>
+                  )}
+                  {show("cphone") && <Td className="whitespace-nowrap">{c.companies?.phone ?? "—"}</Td>}
+                  {show("mobile") && <Td className="whitespace-nowrap">{c.phone ?? "—"}</Td>}
+                  {show("linkedin") && (
+                    <Td>
+                      {c.linkedin_url ? (
+                        <a
+                          href={c.linkedin_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`${c.full_name}'s LinkedIn`}
+                          className="flex size-7 items-center justify-center rounded-full bg-secondary-50 text-secondary-700 transition-colors hover:bg-secondary-700 hover:text-white"
+                        >
+                          <Link2 className="size-3.5" />
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </Td>
+                  )}
+                  {show("addr") && <Td className="whitespace-nowrap">{c.companies?.address_line1 ?? "—"}</Td>}
+                  {show("city") && <Td className="whitespace-nowrap">{c.companies?.city ?? "—"}</Td>}
+                  {show("state") && <Td className="whitespace-nowrap">{c.companies?.state ?? "—"}</Td>}
+                  {show("subscribed") && (
+                    <Td>
+                      <Badge variant={c.email_opt_out ? "neutral" : "success"}>{c.email_opt_out ? "No" : "Yes"}</Badge>
+                    </Td>
+                  )}
+                  {show("bounced") && <Td className="text-neutral-400">0</Td>}
                 </tr>
               );
             })}

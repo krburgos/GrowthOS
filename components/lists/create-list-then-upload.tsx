@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { ImportWizard } from "@/components/contacts/import-wizard";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ export function CreateListThenUpload({ accountId }: { accountId: string }) {
     setPending(false);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getFriendlyErrorMessage(error));
       return;
     }
     setList(created);

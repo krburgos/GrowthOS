@@ -3,6 +3,7 @@
 import { Calendar, CheckSquare, Mail, Phone, StickyNote, Users as UsersIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
@@ -41,7 +42,7 @@ export function ActivityTimeline({ activities }: { activities: ActivityRow[] }) 
       .eq("id", activity.id);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getFriendlyErrorMessage(error));
       return;
     }
     router.refresh();
