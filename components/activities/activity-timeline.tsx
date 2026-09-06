@@ -46,7 +46,7 @@ const TYPE_FILTERS: { value: "all" | ActivityRow["type"]; label: string }[] = [
   { value: "note", label: "Notes" },
 ];
 
-function dayLabel(dateStr: string): string {
+export function dayLabel(dateStr: string): string {
   const date = new Date(dateStr);
   const today = new Date();
   const yesterday = new Date();

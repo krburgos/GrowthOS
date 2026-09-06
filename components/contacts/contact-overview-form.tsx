@@ -59,6 +59,7 @@ const schema = z.object({
 });
 
 type Values = z.infer<typeof schema>;
+export type ContactOverviewDefaults = Values & { email: string };
 
 type Option = { id: string; label: string };
 
@@ -97,7 +98,7 @@ export function ContactOverviewForm({
   canEdit: boolean;
   statuses: Option[];
   owners: Option[];
-  defaults: Values & { email: string };
+  defaults: ContactOverviewDefaults;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
