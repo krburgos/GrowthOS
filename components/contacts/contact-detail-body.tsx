@@ -65,6 +65,10 @@ function initials(name: string) {
  * previously here resolved against this row's own (indefinite) box
  * rather than the viewport, producing extra blank scrollable space
  * below short tab content — see the msp-shell layout's sizing note.
+ * The content column also carries `min-w-0`, the same layout's width
+ * note: without it, wide content on a tab (e.g. the Opportunities
+ * table) would refuse to shrink below its own intrinsic width and
+ * overflow the page instead of scrolling within its own bordered box.
  */
 export function ContactDetailBody({
   contactId,
@@ -243,7 +247,7 @@ export function ContactDetailBody({
       </aside>
 
       {/* ---- Main content ---- */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <div className="max-w-4xl flex-1 p-6 md:p-8">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row">
             <div className="flex-1 rounded-lg border border-neutral-200 bg-white p-3.5">

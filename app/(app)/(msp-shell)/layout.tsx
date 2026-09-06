@@ -23,6 +23,16 @@ import { SIDEBAR_ACCESS } from "@/lib/auth/nav-permissions";
  * the viewport, which was producing extra blank scrollable space on
  * short-content pages (Settings, Contact Detail) — removing the
  * percentage math instead of trying to anchor it correctly everywhere.
+ *
+ * Width note: the content column also needs `min-w-0`. A flex item's
+ * default `min-width` is `auto`, which resolves to its content's
+ * intrinsic width — so without this, a wide table inside `{children}`
+ * would refuse to shrink below its own natural width no matter how
+ * much room `Sidebar` took, and the whole row would overflow the
+ * viewport instead of the table's own `overflow-x-auto` wrapper
+ * catching it. This is the same fix, on the width axis, applied
+ * wherever a fixed-width rail sits next to a flex-1 content column
+ * (Settings' `SettingsPanel`, Contact Detail's record rail).
  */
 export default async function MspShellLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -34,7 +44,7 @@ export default async function MspShellLayout({ children }: { children: React.Rea
   return (
     <div className="flex flex-1">
       <Sidebar access={SIDEBAR_ACCESS[user.role]} />
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <TopBar fullName={user.full_name} access={SIDEBAR_ACCESS[user.role]} accountId={user.account_id!} />
         {children}
       </div>
