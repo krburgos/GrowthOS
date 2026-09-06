@@ -33,17 +33,22 @@ export interface StageRow {
 const GROUPS: StageGroup[] = ["open", "won", "lost"];
 
 /**
- * Client-confirmed, this screen only: the Lost group's badge reads as
- * light-error red here instead of the shared neutral-grey
- * `STAGE_GROUP_BADGE_VARIANT` (§8.4) uses elsewhere — the client wants
- * "Lost" to visually read as a dead end on this management screen,
- * while the Kanban board's "Lost/Stalled" column headers deliberately
- * stay neutral so a stalled deal doesn't read as alarming there.
+ * Client-confirmed, this screen only, this exact stage only: the
+ * "Lost" stage's badge reads as light-error red here instead of the
+ * shared neutral-grey `STAGE_GROUP_BADGE_VARIANT` (§8.4) uses elsewhere
+ * — the client wants "Lost" specifically to visually read as a dead
+ * end on this management screen. This is keyed by name, not by group:
+ * "Lost Resurrected" shares the same Lost group (so the board still
+ * treats it as closed) but stays neutral-grey, since the client
+ * confirmed only the literal "Lost" stage should turn red. The Kanban
+ * board's "Lost/Stalled" column headers are untouched either way and
+ * deliberately stay neutral so a stalled deal doesn't read as alarming
+ * there.
  */
-const SETTINGS_STAGE_GROUP_BADGE_VARIANT: Record<StageGroup, "success" | "neutral" | "info" | "error"> = {
-  ...STAGE_GROUP_BADGE_VARIANT,
-  lost: "error",
-};
+function settingsBadgeVariant(stage: Pick<StageRow, "name" | "stage_group">): "success" | "neutral" | "info" | "error" {
+  if (stage.name.trim().toLowerCase() === "lost") return "error";
+  return STAGE_GROUP_BADGE_VARIANT[stage.stage_group];
+}
 
 /** Clamps free-typed probability input to a valid 0-100 integer, same
  * range the `opportunity_stages_win_probability_range` check enforces
@@ -187,7 +192,7 @@ export function StagesManager({
           <li key={stage.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
             <div className="flex items-center gap-3">
               <span className="text-body text-neutral-800">{stage.name}</span>
-              <Badge variant={SETTINGS_STAGE_GROUP_BADGE_VARIANT[stage.stage_group]}>
+              <Badge variant={settingsBadgeVariant(stage)}>
                 {STAGE_GROUP_LABELS[stage.stage_group]}
               </Badge>
               <span className="text-body-sm tabular-nums text-neutral-500">{stage.win_probability}%</span>
