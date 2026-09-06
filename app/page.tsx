@@ -39,10 +39,10 @@ export default function Home() {
       <section className="flex flex-col gap-3">
         <h2 className="text-h3 text-primary-900">Badges</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="neutral">Suspect</Badge>
-          <Badge variant="info">Contacted</Badge>
-          <Badge variant="success">Client Won</Badge>
-          <Badge variant="error">Lost</Badge>
+          <Badge variant="neutral">Internal</Badge>
+          <Badge variant="info">Engaged</Badge>
+          <Badge variant="success">Existing Client</Badge>
+          <Badge variant="error">Not a Fit</Badge>
         </div>
       </section>
 

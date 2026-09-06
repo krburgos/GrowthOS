@@ -113,7 +113,7 @@ Two secrets are generated, not issued by a vendor — Claude Code can generate b
 ## 9. Milestone 6 — Companies, Contact Statuses & Contacts (Core CRM)
 
 **Goal:** the heart of the CRM — prospect/contact data entry, import, and the status pipeline — matching PRD §6.1–6.2 and App Flow Document's Contacts screens.
-- Build the contact statuses management screen (Owner/Admin/CRO Admin/CRO Advisor only) — list, reorder, rename, add custom, archive. Seed verification: confirm the 14 defaults from Backend Schema §7.5 appear automatically for the test account created in Milestone 4.
+- Build the contact statuses management screen (Owner/Admin/CRO Admin/CRO Advisor only) — list, reorder, rename, add custom, archive. Seed verification: confirm the defaults from Backend Schema §7.5 appear automatically for the test account created in Milestone 4 (originally 14 defaults; the client replaced that list with a new 8-item one — 2026-09-06).
 - Build the companies list/detail screens, including the merge-companies flow (Backend Schema §7.3's merge_companies function) as a deliberate user action, not automatic.
 - Build the contacts list (sortable/filterable table, per PRD §6.1) and detail screen, with the unified activity timeline placeholder (populated fully in Milestone 8).
 - Build the contact create/edit form (react-hook-form + zod, Tech Stack Lockfile §3.4) calling match_or_create_company() (Backend Schema §7.3) when a domain is supplied.

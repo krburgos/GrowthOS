@@ -26,10 +26,20 @@ export interface StageRow {
   name: string;
   stage_group: StageGroup;
   sort_order: number;
+  win_probability: number;
   is_default: boolean;
 }
 
 const GROUPS: StageGroup[] = ["open", "won", "lost"];
+
+/** Clamps free-typed probability input to a valid 0-100 integer, same
+ * range the `opportunity_stages_win_probability_range` check enforces
+ * in the database. */
+function parseProbability(value: string): number {
+  const n = Math.round(Number(value));
+  if (Number.isNaN(n)) return 0;
+  return Math.min(100, Math.max(0, n));
+}
 
 /**
  * Settings → Opportunity Stages. Client-confirmed deviation from the
@@ -38,6 +48,10 @@ const GROUPS: StageGroup[] = ["open", "won", "lost"];
  * (Open/Won/Lost) every stage must carry for the Kanban board's column
  * coloring and closed_at logic. Owner/Admin only, mirroring the exact
  * same restriction Contact Statuses already uses.
+ *
+ * Client-confirmed addition: every stage also carries an editable Win
+ * Probability (0-100%) — the client's own pipeline forecast weighting,
+ * not derived from anything else in the schema.
  */
 export function StagesManager({
   stages,
@@ -53,9 +67,11 @@ export function StagesManager({
   const [editTarget, setEditTarget] = useState<StageRow | null>(null);
   const [editName, setEditName] = useState("");
   const [editGroup, setEditGroup] = useState<StageGroup>("open");
+  const [editProbability, setEditProbability] = useState("0");
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newGroup, setNewGroup] = useState<StageGroup>("open");
+  const [newProbability, setNewProbability] = useState("0");
   const [retireTarget, setRetireTarget] = useState<StageRow | null>(null);
 
   const sorted = [...stages].sort((a, b) => a.sort_order - b.sort_order);
@@ -90,6 +106,7 @@ export function StagesManager({
       name: newName.trim(),
       stage_group: newGroup,
       sort_order: nextSortOrder,
+      win_probability: parseProbability(newProbability),
     });
     setPendingId(null);
 
@@ -100,6 +117,7 @@ export function StagesManager({
     toast.success("Stage added.");
     setNewName("");
     setNewGroup("open");
+    setNewProbability("0");
     setAddOpen(false);
     router.refresh();
   };
@@ -110,7 +128,7 @@ export function StagesManager({
     const supabase = createClient();
     const { error } = await supabase
       .from("opportunity_stages")
-      .update({ name: editName.trim(), stage_group: editGroup })
+      .update({ name: editName.trim(), stage_group: editGroup, win_probability: parseProbability(editProbability) })
       .eq("id", editTarget.id);
     setPendingId(null);
 
@@ -159,6 +177,7 @@ export function StagesManager({
               <Badge variant={STAGE_GROUP_BADGE_VARIANT[stage.stage_group]}>
                 {STAGE_GROUP_LABELS[stage.stage_group]}
               </Badge>
+              <span className="text-body-sm tabular-nums text-neutral-500">{stage.win_probability}%</span>
             </div>
             {canEdit && (
               <div className="flex items-center gap-1">
@@ -187,6 +206,7 @@ export function StagesManager({
                     setEditTarget(stage);
                     setEditName(stage.name);
                     setEditGroup(stage.stage_group);
+                    setEditProbability(String(stage.win_probability));
                   }}
                 >
                   Edit
@@ -228,6 +248,25 @@ export function StagesManager({
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <Label htmlFor="new-stage-probability" required>
+              Win Probability
+            </Label>
+            <div className="relative">
+              <Input
+                id="new-stage-probability"
+                type="number"
+                min={0}
+                max={100}
+                className="pr-7"
+                value={newProbability}
+                onChange={(e) => setNewProbability(e.target.value)}
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-body-sm text-neutral-400">
+                %
+              </span>
+            </div>
+          </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setAddOpen(false)}>
               Cancel
@@ -266,6 +305,25 @@ export function StagesManager({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <Label htmlFor="edit-stage-probability" required>
+              Win Probability
+            </Label>
+            <div className="relative">
+              <Input
+                id="edit-stage-probability"
+                type="number"
+                min={0}
+                max={100}
+                className="pr-7"
+                value={editProbability}
+                onChange={(e) => setEditProbability(e.target.value)}
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-body-sm text-neutral-400">
+                %
+              </span>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEditTarget(null)}>

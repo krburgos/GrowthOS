@@ -267,23 +267,27 @@ Text inputs, selects, textareas share one spec: 36px height (textarea: 3-line mi
 Used for prospect statuses (§6.2 of the PRD) and custom statuses. radius-full, Caption-level text, 4px vertical / 10px horizontal padding.
 | **Status category** | **Fill** | **Text** |
 | --- | --- | --- |
-| Neutral (Suspect, Nurture) | neutral-100 | neutral-700 |
-| In progress (Prospect, Contacted, Engaged, Appointment Scheduled) | secondary-50 (generated the same way as §3.2's lighter steps) | secondary-800 |
-| Positive (Client Won) | success-50-equivalent light fill | success-800 |
-| Negative (Lost, Ghosted) | error-50-equivalent light fill | error-700 |
+| Neutral (Internal) | neutral-100 | neutral-700 |
+| In progress (MQC, MQL, Engaged) | secondary-50 (generated the same way as §3.2's lighter steps) | secondary-800 |
+| Positive (Existing Client) | success-50-equivalent light fill | success-800 |
+| Negative (Scrub, Not a Fit, UnSub - Call Only) | error-50-equivalent light fill | error-700 |
 
 Custom statuses an MSP creates default to the **Neutral** treatment above — Phase 1 does not let users pick a custom badge color (that's a real feature decision, not a styling gap; flagged in §10).
+
+**Client-confirmed content update (2026-09-06):** the default Contact Statuses list changed (§7.5 of the Backend Schema); the table above reflects the new names. "Scrub" is grouped with the negative/red treatment as a judgment call (not specified by the client) — it reads like a dead-end status (an invalid or disqualified contact) the same way "Not a Fit" and "UnSub - Call Only" do; revisit if that reads wrong in practice.
 
 ### 8.4 Opportunity Kanban Board
 
 Per the confirmed direction: **cards stay neutral, only column headers carry color**, grouped into four semantic buckets rather than thirteen unique hues:
 | **Stage group** | **Stages** | **Header color** |
 | --- | --- | --- |
-| Open/Active | Identified Interest, Discovery Scheduled, Discovery Completed, Solution Alignment, Proposal Development, Proposal Delivered, Negotiation, Verbal Commitment, Contract Sent | secondary-800 text on secondary-50-equivalent fill |
-| Won | Closed Won | success-800 text on light success fill |
-| Lost/Stalled | Closed Lost, Ghosted, On Hold | neutral-600 text on neutral-100 fill |
+| Open/Active | Showing Interest, FME Scheduled, FME Attended Opportunity Identified, 2nd Meeting Scheduled, 2nd Meeting Conducted, Quote/Solution Prepared, Proposal Emailed, Proposal Presented, Pondering Decision, Verbal, Ghosted | secondary-800 text on secondary-50-equivalent fill |
+| Won | Won | success-800 text on light success fill |
+| Lost/Stalled | Lost, Lost Resurrected | neutral-600 text on neutral-100 fill |
 
 **Card:** white background, radius-md, shadow-sm at rest, shadow-md while dragging, 16px padding, 1px neutral-200 border. Contains: contact name (Body, neutral-800, weight 500), company name (Body Small, neutral-500), value (Body Small, neutral-700, right-aligned). Column width: 280px, fixed; the board scrolls horizontally per the App Flow Document.
+
+**Client-confirmed content update (2026-09-06):** the default Opportunity Stages list and grouping changed (§7.5 of the Backend Schema); the table above reflects the new 14-stage pipeline. Two groupings are notable because they don't follow "win probability > 0 implies Open" mechanically: **Ghosted** moved into Open (it now carries a 25% probability, so it stays part of the active pipeline instead of auto-closing); **Lost Resurrected** — a new stage, replacing "On Hold" — stays in Lost/Stalled despite also carrying a nonzero probability, per explicit client direction. Every stage also carries an editable **Win Probability** (0-100%, shown next to its Group badge in Settings → Opportunity Stages) — a forecast-weighting input for the MSP to tune, not currently displayed anywhere else (not on the Kanban card or column header) since nothing in Phase 1 consumes it yet.
 
 **Client-confirmed modernization pass (approved mockup):** cards lift slightly on hover (-2px translate + shadow-md) so the board reads as interactive before a drag starts, matching the same hover-lift shadow-md they already got mid-drag. Column headers gained a pill-shaped count badge (white 70%-opacity fill, the stage's own text color, tabular-nums) in place of the old plain "12" appended after the name, and the drop target now also gets a thin secondary-200 inset ring in addition to the secondary-50 fill while a card is dragged over it.
 

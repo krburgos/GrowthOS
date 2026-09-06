@@ -13,7 +13,7 @@
 | Email delivery | Nodemailer over SendGrid SMTP relay (Tech Stack Lockfile §3.8), triggered by that API route — Postgres never sends email directly |
 
 Two extensions beyond the Postgres defaults are required: pg_cron and pg_net. Both must be turned on from the Supabase dashboard (Database → Extensions) before running the migration in §5 — create extension can fail silently on hosted Supabase if the extension isn't allow-listed for the project tier, so this is called out here rather than assumed.
-Twelve database tables cover Phase 1 in full: accounts, users, email_connections, companies, contact_statuses, contacts, lists, list_members, opportunities, activities, campaigns, campaign_recipients, campaign_events — thirteen, including the event log. No table exists for file attachments, custom fields, audit logging, or a client portal; §12 records why each of those is deliberately absent.
+Thirteen database tables cover Phase 1 in full: accounts, users, email_connections, companies, contact_statuses, contacts, lists, list_members, opportunity_stages, opportunities, activities, campaigns, campaign_recipients, campaign_events — fourteen, including the event log. (opportunity_stages was added after this document's first pass, by the `customizable_opportunity_stages` migration — see §5.5, §7.5.) No table exists for file attachments, custom fields, audit logging, or a client portal; §12 records why each of those is deliberately absent.
 
 ## 2. Multi-Tenancy & Data Access Model
 
@@ -59,7 +59,8 @@ GrowthOS uses **one shared schema with application-level isolation enforced by R
 | contacts | accounts | companies, contact_statuses, users (owner) |
 | lists | accounts | users (created_by) |
 | list_members | lists, contacts (join table) | users (added_by) |
-| opportunities | accounts | contacts, companies (denormalized), users (owner) |
+| opportunity_stages | accounts | — |
+| opportunities | accounts | contacts, companies (denormalized), users (owner), opportunity_stages |
 | activities | accounts | contacts, opportunities (at least one required), users |
 | campaigns | accounts | lists, email_connections, users (created_by) |
 | campaign_recipients | campaigns | contacts |
@@ -91,12 +92,16 @@ create type connection_status as enum ('connected', 'error', 'disconnected');
 
 create type activity_type as enum ('call', 'email', 'meeting', 'task', 'note');
 
--- Order matters: this is the literal left-to-right pipeline from the Developer Brief §16.4.
-create type opportunity_stage as enum (
-  'identified_interest', 'discovery_scheduled', 'discovery_completed', 'solution_alignment',
-  'proposal_development', 'proposal_delivered', 'negotiation', 'verbal_commitment',
-  'contract_sent', 'closed_won', 'closed_lost', 'ghosted', 'on_hold'
-);
+-- Client-confirmed deviation (`customizable_opportunity_stages` migration):
+-- this fixed enum was dropped and replaced with a per-account
+-- opportunity_stages table (§5.5, §7.5) — the client wanted stages
+-- customizable the same way contact_statuses already was. Kept here,
+-- struck through in spirit, only so the original left-to-right pipeline
+-- from the Developer Brief §16.4 stays on record: identified_interest,
+-- discovery_scheduled, discovery_completed, solution_alignment,
+-- proposal_development, proposal_delivered, negotiation,
+-- verbal_commitment, contract_sent, closed_won, closed_lost, ghosted,
+-- on_hold.
 
 create type list_type as enum ('static', 'smart');
 
@@ -266,7 +271,29 @@ create index list_members_contact_id_idx on list_members(contact_id);
 
 **Client-confirmed hybrid smart lists (deviation from the original design below):** list_members no longer holds rows for static lists exclusively — a smart list's members are still computed live from its criteria by compute_smart_list_members() (§7), but that computation now also folds in manual list_members additions (a contact added on top of the criteria, even if they don't match) and subtracts list_exclusions rows (a contact manually excluded, even if they do match). The `smart_list_manual_overrides` migration removed the trigger that previously blocked list_members inserts for smart lists and added the list_exclusions table. The criteria JSONB schema is defined precisely in §7 alongside the function that evaluates it.
 
-### 5.5 opportunities, activities
+### 5.5 opportunity_stages, opportunities, activities
+
+**Client-confirmed deviation (`customizable_opportunity_stages` migration):** replaces the fixed `opportunity_stage` enum struck through in §5.1 with a per-account table, the same customizable shape as `contact_statuses` (§5.3).
+
+```
+create type opportunity_stage_group as enum ('open', 'won', 'lost');
+
+create table opportunity_stages (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references accounts(id),
+  name text not null,
+  stage_group opportunity_stage_group not null default 'open',
+  sort_order integer not null default 0,
+  win_probability smallint not null default 0 check (win_probability between 0 and 100), -- added by stage_probability_and_pipeline_rename, §7.5
+  is_default boolean not null default false,
+  archived_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index opportunity_stages_account_id_idx on opportunity_stages(account_id);
+create unique index opportunity_stages_account_name_unique
+  on opportunity_stages(account_id, lower(name)) where archived_at is null;
+```
 
 ```
 create table opportunities (
@@ -275,7 +302,7 @@ create table opportunities (
   contact_id uuid not null references contacts(id),
   company_id uuid references companies(id),
   owner_id uuid references users(id),
-  stage opportunity_stage not null default 'identified_interest',
+  stage_id uuid not null references opportunity_stages(id), -- see §7.5 deviation note below; was `stage opportunity_stage not null default 'identified_interest'`
   name text,
   value numeric(12,2),
   source text,
@@ -288,7 +315,7 @@ create table opportunities (
 create index opportunities_account_id_idx on opportunities(account_id);
 create index opportunities_contact_id_idx on opportunities(contact_id);
 create index opportunities_company_id_idx on opportunities(company_id);
-create index opportunities_stage_idx on opportunities(account_id, stage);
+create index opportunities_stage_idx on opportunities(account_id, stage_id);
 
 create table activities (
   id uuid primary key default gen_random_uuid(),
@@ -516,7 +543,7 @@ create policy contacts_update on contacts for update
 
 No table in this section grants delete — every removal is an update that sets archived_at.
 
-### 6.5 lists, list_members, opportunities, activities
+### 6.5 lists, list_members, opportunity_stages, opportunities, activities
 
 ```
 alter table lists enable row level security;
@@ -570,6 +597,25 @@ create policy list_members_delete on list_members for delete
   );
 -- list_members is the one join table that DOES get a delete policy: removing a contact from a
 -- static list is a real removal (no soft-delete concept applies to list membership), not an archive.
+
+alter table opportunity_stages enable row level security;
+
+create policy opportunity_stages_select on opportunity_stages for select
+  using (account_id = auth_account_id() or is_cro_leader());
+
+-- Owner/Admin only, matching contact_statuses — pipeline configuration,
+-- not per-record CRUD every sales-facing role touches.
+create policy opportunity_stages_insert on opportunity_stages for insert
+  with check (
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner', 'msp_admin'))
+    or auth_has_any_role('cro_admin', 'cro_advisor')
+  );
+
+create policy opportunity_stages_update on opportunity_stages for update
+  using (
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner', 'msp_admin'))
+    or auth_has_any_role('cro_admin', 'cro_advisor')
+  );
 
 alter table opportunities enable row level security;
 
@@ -976,7 +1022,7 @@ $$;
 
 This function does build and execute a dynamic query, but it's safe: v_sql_field and v_sql_op only ever come from the two case whitelists above, never directly from the caller's field/op text, and every user-supplied value is passed through %L, which format() escapes as a properly quoted literal. Called security invoker, so it only ever returns contacts the calling user could already see under §6.4's RLS.
 
-### 7.5 Account setup: seed_default_contact_statuses
+### 7.5 Account setup: seed_default_contact_statuses, seed_default_opportunity_stages
 
 ```
 create or replace function seed_default_contact_statuses()
@@ -985,9 +1031,7 @@ language plpgsql security definer set search_path = public
 as $$
 declare
   defaults text[] := array[
-    'Suspect', 'Prospect', 'Market Qualified Contact', 'Contacted', 'Engaged',
-    'Appointment Scheduled', 'Discovery Completed', 'Opportunity Created',
-    'Proposal Delivered', 'Negotiation', 'Client Won', 'Lost', 'Ghosted', 'Nurture'
+    'MQC', 'MQL', 'Scrub', 'Existing Client', 'Engaged', 'Not a Fit', 'Internal', 'UnSub - Call Only'
   ];
   status_name text;
   i integer := 0;
@@ -1006,7 +1050,36 @@ create trigger trg_seed_default_contact_statuses
   for each row execute function seed_default_contact_statuses();
 ```
 
-The fourteen defaults are the literal list from the Developer Brief §16.2. MSPs can rename, reorder, or add to these afterward (PRD §6.2); this trigger only seeds them once, at account creation.
+**Client-confirmed content update (2026-09-06):** the original fourteen defaults (the literal list from the Developer Brief §16.2) were replaced with this new eight-item list. MSPs can still rename, reorder, add to, or retire these afterward (PRD §6.2); this trigger only seeds them once, at account creation. Any account already sitting on an original default name was renamed in place to the closest new equivalent (`stage_probability_and_pipeline_rename` migration); an account that had already customized a status away from the original default was left untouched.
+
+```
+create or replace function seed_default_opportunity_stages(p_account_id uuid)
+returns void
+language plpgsql security definer set search_path = public
+as $$
+begin
+  insert into public.opportunity_stages (account_id, name, stage_group, sort_order, win_probability, is_default) values
+    (p_account_id, 'Showing Interest', 'open', 1, 5, true),
+    (p_account_id, 'FME Scheduled', 'open', 2, 10, true),
+    (p_account_id, 'FME Attended Opportunity Identified', 'open', 3, 30, true),
+    (p_account_id, '2nd Meeting Scheduled', 'open', 4, 35, true),
+    (p_account_id, '2nd Meeting Conducted', 'open', 5, 40, true),
+    (p_account_id, 'Quote/Solution Prepared', 'open', 6, 45, true),
+    (p_account_id, 'Proposal Emailed', 'open', 7, 55, true),
+    (p_account_id, 'Proposal Presented', 'open', 8, 80, true),
+    (p_account_id, 'Pondering Decision', 'open', 9, 50, true),
+    (p_account_id, 'Verbal', 'open', 10, 90, true),
+    (p_account_id, 'Ghosted', 'open', 11, 25, true),
+    (p_account_id, 'Won', 'won', 12, 100, true),
+    (p_account_id, 'Lost', 'lost', 13, 0, true),
+    (p_account_id, 'Lost Resurrected', 'lost', 14, 25, true);
+end;
+$$;
+```
+
+Called by the `trg_seed_default_opportunity_stages` trigger on `accounts` insert (§5.5 deviation notes, `customizable_opportunity_stages` migration). Owner/Admin can rename, reorder, add, or retire these the same way as Contact Statuses (§8.9 of the Design System).
+
+**Client-confirmed addition (2026-09-06):** `opportunity_stages.win_probability` (`smallint`, `check (win_probability between 0 and 100)`, added by the `stage_probability_and_pipeline_rename` migration) is an MSP-editable win-probability percentage per stage — the client's own forecast weighting, with no other consumer in Phase 1 (it is not yet read by Reports or the Kanban board; if a weighted-pipeline metric is wanted later, that is a Reports feature to design, not implied by this column existing). Two grouping decisions the client made explicitly, since they otherwise contradict the probability's face value: **Ghosted** moved from the `lost` group into `open` (so it no longer auto-closes the opportunity per the `closed_at`-on-close logic in `components/opportunities/kanban-board.tsx`) despite previously being treated as a dead end, because it now carries a live 25% probability; **Lost Resurrected** (a new stage, replacing the old "On Hold") stays in the `lost` group despite also carrying a nonzero 25% probability.
 
 ### 7.6 Campaign tracking: record_campaign_event, send_due_campaigns
 

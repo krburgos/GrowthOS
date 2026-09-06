@@ -22,7 +22,7 @@ export default async function OpportunityStagesPage() {
   const supabase = await createClient();
   const { data: stages } = await supabase
     .from("opportunity_stages")
-    .select("id, name, stage_group, sort_order, is_default")
+    .select("id, name, stage_group, sort_order, win_probability, is_default")
     .eq("account_id", user.account_id)
     .is("archived_at", null)
     .order("sort_order");
@@ -32,7 +32,7 @@ export default async function OpportunityStagesPage() {
       <h1 className="mb-2 text-h1 text-primary-900">Opportunity Stages</h1>
       <p className="mb-6 text-body text-neutral-500">
         Every stage needs a Group so the board knows how to color it and when to mark an
-        opportunity closed.
+        opportunity closed, and a Win Probability you can tune for your own forecasting.
       </p>
       <StagesManager stages={stages ?? []} canEdit={canEdit} accountId={user.account_id!} />
     </main>
