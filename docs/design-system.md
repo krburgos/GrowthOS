@@ -362,6 +362,8 @@ Top bar: white background, 1px neutral-200 bottom border, 56px height, logo left
 
 **Impeccable critique finding (2026-09-06):** this pass briefly gave the notification bell a hardcoded "unread" dot with no real state behind it. Flagged as a persistently-lying status indicator (P2) and removed — the bell stays plain until a real unread-notifications source exists to drive it honestly.
 
+**Client-confirmed alignment fix:** the logo previously sat in a shrink-to-content cell, so the command palette's left edge landed a few pixels short of the Settings nav column's 192px width (§8.9) one row down — a small stray gap between the search field and the nav column beneath it. The logo now sits in a fixed 176px cell (plus the top bar's own 16px left padding = 192px), so the palette's left edge lines up exactly with the Settings nav column's right edge / main content's left edge on every page.
+
 ### 8.11 Loading & Empty States
 
 **Spinner** (per the confirmed direction, not skeleton screens): a circular spinner in primary-700, 24px for inline/button contexts, 40px centered in a content area for full-page loads.

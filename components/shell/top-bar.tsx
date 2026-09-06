@@ -42,6 +42,16 @@ function initials(name: string) {
  * grew from h-10 to h-12 (client feedback: wanted more visible/
  * prominent branding in the one place the full wordmark appears, since
  * the sidebar is icon-only).
+ *
+ * Client-confirmed alignment fix: the logo used to sit in a shrink-to-
+ * content cell, so the command palette's left edge landed wherever the
+ * logo's own rendered width happened to end — a few pixels short of
+ * the Settings nav column's 192px width (§8.9) one row down, reading
+ * as a small stray gap between the search field and the "My Profile"
+ * panel beneath it. The logo now sits in a fixed 176px cell (+ the
+ * header's own 16px left padding = 192px), so the palette's left edge
+ * lines up exactly with the Settings nav column's right edge / main
+ * content's left edge on every page, not just approximately.
  */
 export function TopBar({
   fullName,
@@ -66,8 +76,8 @@ export function TopBar({
   };
 
   return (
-    <header className="flex h-[var(--topbar-height)] shrink-0 items-center gap-4 bg-white px-4 shadow-[0_1px_0_var(--color-neutral-200),0_6px_16px_-12px_rgba(10,25,46,0.15)]">
-      <Link href="/dashboard" className="shrink-0">
+    <header className="flex h-[var(--topbar-height)] shrink-0 items-center bg-white px-4 shadow-[0_1px_0_var(--color-neutral-200),0_6px_16px_-12px_rgba(10,25,46,0.15)]">
+      <Link href="/dashboard" className="flex w-44 shrink-0 items-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/growthos-logo.png" alt="GrowthOS" className="h-12 w-auto" />
       </Link>
