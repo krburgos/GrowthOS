@@ -13,7 +13,7 @@
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="flex min-h-full flex-1 items-center justify-center px-4 py-12"
+      className="flex flex-1 items-center justify-center px-4 py-12"
       style={{
         background:
           "radial-gradient(1100px circle at 15% 10%, var(--color-secondary-800) 0%, transparent 45%), radial-gradient(1100px circle at 85% 90%, var(--color-primary-700) 0%, transparent 45%), var(--color-primary-950)",

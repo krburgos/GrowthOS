@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 import { ProfileAvatarUpload } from "@/components/settings/profile-avatar-upload";
-import { ProfileBanner } from "@/components/settings/profile-banner";
 import { ProfileForm } from "@/components/settings/profile-form";
+import { ProfileHeader } from "@/components/settings/profile-header";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { ROLE_LABELS } from "@/lib/auth/role-labels";
 import { createClient } from "@/lib/supabase/server";
@@ -32,13 +32,16 @@ export default async function ProfilePage() {
 
   return (
     <main className="w-full max-w-[1440px] flex-1 p-6 md:p-8">
-      <ProfileBanner
+      <ProfileHeader
         title={user.full_name}
+        subtitle={profile?.job_title || undefined}
+        badge={ROLE_LABELS[user.role]}
         avatar={
           <ProfileAvatarUpload
             userId={user.id}
             avatarUrl={profile?.avatar_url ?? null}
             fallbackText={initials(user.full_name)}
+            compact
           />
         }
       />

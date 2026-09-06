@@ -2,7 +2,7 @@
 
 import { Building2, Globe, Link as LinkIcon, MapPin, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { toast } from "sonner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
@@ -19,12 +19,14 @@ interface Values {
 }
 
 /**
- * Design System §8.9 "Profile-style content card" — icon-label-value
- * rows with an "Update Info" toggle, replacing the previous always-
- * editable inline form. Client-confirmed gap-fill (App Flow §4.9 never
+ * Design System §8.9 "Profile-style content card," Concept B (approved
+ * mockup): a two-column sectioned grid with small teal icon chips,
+ * replacing the original single-column icon-label-value list —
+ * matches ProfileForm's identical redesign, since both screens share
+ * this card pattern. Client-confirmed gap-fill (App Flow §4.9 never
  * listed a Company Profile screen even though Backend Schema §2 already
  * grants Owner/Admin edit rights on "Accounts (own account settings)").
- * The logo itself is uploaded from the banner above (CompanyLogoUpload),
+ * The logo itself is uploaded from the header above (CompanyLogoUpload),
  * not edited as a field here. Company LinkedIn replaced the original
  * Industry field per client direction — accounts.industry was dropped,
  * not left unused (the separate industry field on the companies table,
@@ -78,16 +80,10 @@ export function CompanyProfileForm({
 
   const location = [values.address_city, values.address_state].filter(Boolean).join(", ");
 
-  const rows: { icon: typeof Building2; label: string; field: keyof Values; value: string; isCity?: boolean }[] = [
-    { icon: Building2, label: "Company Name", field: "name", value: values.name },
-    { icon: Globe, label: "Website", field: "website", value: values.website },
-    { icon: LinkIcon, label: "Company LinkedIn", field: "linkedin_url", value: values.linkedin_url },
-  ];
-
   return (
-    <div className="max-w-xl rounded-lg border border-neutral-200 bg-white">
-      <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-4">
-        <h2 className="text-h4 text-primary-900">Company Profile</h2>
+    <div className="rounded-lg border border-neutral-200 bg-white">
+      <div className="flex items-center justify-between px-5 pt-4">
+        <h2 className="text-caption font-semibold uppercase tracking-wide text-neutral-500">Company Profile</h2>
         {canEdit && !editing && (
           <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
             <Pencil className="mr-1.5 size-4" />
@@ -96,39 +92,46 @@ export function CompanyProfileForm({
         )}
       </div>
 
-      <div className="flex flex-col divide-y divide-neutral-100">
-        {rows.map((row) => (
-          <div key={row.field} className="flex items-center gap-4 px-6 py-4">
-            <row.icon className="size-5 shrink-0 text-neutral-500" />
-            <span className="w-32 shrink-0 text-body text-neutral-800">{row.label}</span>
-            {editing ? (
-              <Input value={row.value} onChange={set(row.field)} className="flex-1" />
-            ) : (row.field === "website" || row.field === "linkedin_url") && row.value ? (
-              <a href={row.value} target="_blank" rel="noreferrer" className="flex-1 text-body text-primary-700 hover:underline">
-                {row.value}
-              </a>
-            ) : (
-              <span className="flex-1 text-body text-neutral-600">{row.value || "—"}</span>
-            )}
-          </div>
-        ))}
-
-        <div className="flex items-center gap-4 px-6 py-4">
-          <MapPin className="size-5 shrink-0 text-neutral-500" />
-          <span className="w-32 shrink-0 text-body text-neutral-800">Location</span>
+      <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg bg-neutral-100 p-5 pt-3 sm:grid-cols-2">
+        <Cell icon={Building2} label="Company Name" fieldId="company_name">
+          {editing ? <Input id="company_name" value={values.name} onChange={set("name")} /> : <Value>{values.name}</Value>}
+        </Cell>
+        <Cell icon={Globe} label="Website" fieldId="company_website">
           {editing ? (
-            <div className="flex flex-1 gap-2">
-              <Input value={values.address_city} onChange={set("address_city")} placeholder="City" className="flex-1" />
-              <Input value={values.address_state} onChange={set("address_state")} placeholder="State" className="flex-1" />
+            <Input id="company_website" value={values.website} onChange={set("website")} />
+          ) : values.website ? (
+            <a href={values.website} target="_blank" rel="noreferrer" className="truncate text-body font-medium text-primary-700 hover:underline">
+              {values.website}
+            </a>
+          ) : (
+            <Value />
+          )}
+        </Cell>
+        <Cell icon={LinkIcon} label="Company LinkedIn" fieldId="company_linkedin">
+          {editing ? (
+            <Input id="company_linkedin" value={values.linkedin_url} onChange={set("linkedin_url")} />
+          ) : values.linkedin_url ? (
+            <a href={values.linkedin_url} target="_blank" rel="noreferrer" className="truncate text-body font-medium text-primary-700 hover:underline">
+              {values.linkedin_url}
+            </a>
+          ) : (
+            <Value />
+          )}
+        </Cell>
+        <Cell icon={MapPin} label="Location" fieldId="company_city">
+          {editing ? (
+            <div className="flex gap-2">
+              <Input id="company_city" value={values.address_city} onChange={set("address_city")} placeholder="City" />
+              <Input value={values.address_state} onChange={set("address_state")} placeholder="State" aria-label="State" />
             </div>
           ) : (
-            <span className="flex-1 text-body text-neutral-600">{location || "—"}</span>
+            <Value>{location}</Value>
           )}
-        </div>
+        </Cell>
       </div>
 
       {editing && (
-        <div className="flex justify-end gap-3 border-t border-neutral-200 px-6 py-4">
+        <div className="flex justify-end gap-3 border-t border-neutral-200 px-5 py-4">
           <Button variant="ghost" onClick={handleCancel} disabled={saving}>
             Cancel
           </Button>
@@ -139,4 +142,34 @@ export function CompanyProfileForm({
       )}
     </div>
   );
+}
+
+function Cell({
+  icon: Icon,
+  label,
+  fieldId,
+  children,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  fieldId: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 bg-white p-4">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary-50 text-secondary-700">
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <label htmlFor={fieldId} className="text-caption text-neutral-400">
+          {label}
+        </label>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Value({ children }: { children?: ReactNode }) {
+  return <p className="truncate text-body font-medium text-neutral-800">{children || "—"}</p>;
 }

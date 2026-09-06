@@ -12,6 +12,17 @@ import { SIDEBAR_ACCESS } from "@/lib/auth/nav-permissions";
  * Milestone 11 wires the "enter an MSP account" flow that gives it
  * something to show — this layout doesn't render it yet since there's
  * no "viewing as" state to reflect.
+ *
+ * Sizing note: every level here uses plain `flex`/`flex-1`/`flex-col`,
+ * not `min-h-full`. `flex-1` (flex-grow) and the default
+ * `align-items: stretch` size these boxes off the flex layout itself —
+ * no percentage-height resolution needed anywhere below `<body>`
+ * (which is the one place that actually needs an explicit `h-full`,
+ * app/layout.tsx). A `min-h-full` on an intermediate flex item resolves
+ * against that item's own (indefinite, content-driven) box rather than
+ * the viewport, which was producing extra blank scrollable space on
+ * short-content pages (Settings, Contact Detail) — removing the
+ * percentage math instead of trying to anchor it correctly everywhere.
  */
 export default async function MspShellLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -21,9 +32,9 @@ export default async function MspShellLayout({ children }: { children: React.Rea
   if (isCroLeaderRole(user.role) && !user.account_id) redirect("/cro");
 
   return (
-    <div className="flex min-h-full flex-1">
+    <div className="flex flex-1">
       <Sidebar access={SIDEBAR_ACCESS[user.role]} />
-      <div className="flex min-h-full flex-1 flex-col">
+      <div className="flex flex-1 flex-col">
         <TopBar fullName={user.full_name} access={SIDEBAR_ACCESS[user.role]} accountId={user.account_id!} />
         {children}
       </div>

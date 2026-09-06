@@ -13,10 +13,12 @@ export function ProfileAvatarUpload({
   userId,
   avatarUrl,
   fallbackText,
+  compact,
 }: {
   userId: string;
   avatarUrl: string | null;
   fallbackText: string;
+  compact?: boolean;
 }) {
   return (
     <ImageUploadCircle
@@ -28,12 +30,15 @@ export function ProfileAvatarUpload({
       urlColumn="avatar_url"
       currentUrl={avatarUrl}
       canEdit
+      compact={compact}
       ariaLabel="Upload profile picture"
       fallback={
         fallbackText ? (
-          <span className="text-h3 font-medium text-neutral-500">{fallbackText}</span>
+          <span className={compact ? "text-body-sm font-semibold text-white" : "text-h3 font-medium text-neutral-500"}>
+            {fallbackText}
+          </span>
         ) : (
-          <User className="size-1/2 text-neutral-400" />
+          <User className={compact ? "size-1/2 text-white/70" : "size-1/2 text-neutral-400"} />
         )
       }
     />

@@ -16,10 +16,12 @@ export function CompanyLogoUpload({
   accountId,
   logoUrl,
   canEdit,
+  compact,
 }: {
   accountId: string;
   logoUrl: string | null;
   canEdit: boolean;
+  compact?: boolean;
 }) {
   return (
     <ImageUploadCircle
@@ -31,8 +33,9 @@ export function CompanyLogoUpload({
       urlColumn="logo_url"
       currentUrl={logoUrl}
       canEdit={canEdit}
+      compact={compact}
       ariaLabel="Upload company logo"
-      fallback={<Building2 className="size-1/2 text-neutral-400" />}
+      fallback={<Building2 className={compact ? "size-1/2 text-white/70" : "size-1/2 text-neutral-400"} />}
     />
   );
 }

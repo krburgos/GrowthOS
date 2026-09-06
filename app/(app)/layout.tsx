@@ -15,5 +15,5 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/login");
   }
 
-  return <div className="flex min-h-full flex-1 flex-col">{children}</div>;
+  return <div className="flex flex-1 flex-col">{children}</div>;
 }

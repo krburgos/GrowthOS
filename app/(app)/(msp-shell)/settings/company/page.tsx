@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { CompanyLogoUpload } from "@/components/settings/company-logo-upload";
 import { CompanyProfileForm } from "@/components/settings/company-profile-form";
-import { ProfileBanner } from "@/components/settings/profile-banner";
+import { ProfileHeader } from "@/components/settings/profile-header";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,9 +32,10 @@ export default async function CompanyProfilePage() {
 
   return (
     <main className="w-full max-w-[1440px] flex-1 p-6 md:p-8">
-      <ProfileBanner
+      <ProfileHeader
         title={account.name}
-        avatar={<CompanyLogoUpload accountId={account.id} logoUrl={account.logo_url} canEdit={canEdit} />}
+        subtitle={[account.address_city, account.address_state].filter(Boolean).join(", ") || undefined}
+        avatar={<CompanyLogoUpload accountId={account.id} logoUrl={account.logo_url} canEdit={canEdit} compact />}
       />
       <CompanyProfileForm
         accountId={account.id}

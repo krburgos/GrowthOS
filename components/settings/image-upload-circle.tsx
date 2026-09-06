@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB, matches each storage bucket's file_size_limit
@@ -30,6 +31,7 @@ export function ImageUploadCircle({
   canEdit,
   fallback,
   ariaLabel,
+  compact,
 }: {
   bucket: string;
   folder: string;
@@ -41,6 +43,10 @@ export function ImageUploadCircle({
   canEdit: boolean;
   fallback: ReactNode;
   ariaLabel: string;
+  /** Shrinks the camera button for smaller circles (Concept B's 56px
+   * compact profile header) — the default size-9 button was sized for
+   * the 96-128px circles elsewhere and would swallow a 56px one. */
+  compact?: boolean;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -116,9 +122,12 @@ export function ImageUploadCircle({
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
             aria-label={ariaLabel}
-            className="absolute bottom-0 right-0 flex size-9 items-center justify-center rounded-full bg-primary-700 text-white shadow-sm hover:bg-primary-800 disabled:opacity-50"
+            className={cn(
+              "absolute bottom-0 right-0 flex items-center justify-center rounded-full bg-primary-700 text-white shadow-sm hover:bg-primary-800 disabled:opacity-50",
+              compact ? "size-5" : "size-9"
+            )}
           >
-            <Camera className="size-5" />
+            <Camera className={compact ? "size-3" : "size-5"} />
           </button>
         </>
       )}

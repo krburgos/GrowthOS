@@ -57,6 +57,14 @@ function initials(name: string) {
  * unchanged. The right side gets a stat row (open pipeline, lifetime
  * won value, last activity — all derived from data already fetched,
  * no new queries) above the tabs.
+ *
+ * Sizing: rail and content are plain `flex`/`flex-1` flex items, no
+ * `min-h-full` and no internal `overflow-y-auto` — the whole page
+ * scrolls together, same as everywhere else in the shell, rather than
+ * carving out an independently-scrolling region here. A `min-h-full`
+ * previously here resolved against this row's own (indefinite) box
+ * rather than the viewport, producing extra blank scrollable space
+ * below short tab content — see the msp-shell layout's sizing note.
  */
 export function ContactDetailBody({
   contactId,
@@ -116,9 +124,9 @@ export function ContactDetailBody({
   const lastActivityLabel = activities.length > 0 ? dayLabel(activities[0].occurred_at) : "No activity yet";
 
   return (
-    <div className="flex min-h-full flex-1">
+    <div className="flex flex-1">
       {/* ---- Record rail ---- */}
-      <aside className="flex w-72 shrink-0 flex-col gap-5 overflow-y-auto border-r border-neutral-200 bg-neutral-50 p-5">
+      <aside className="flex w-72 shrink-0 flex-col gap-5 border-r border-neutral-200 bg-neutral-50 p-5">
         <div className="flex flex-col items-center gap-2 text-center">
           <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 shadow-sm">
             <ContactAvatarUpload
@@ -235,7 +243,7 @@ export function ContactDetailBody({
       </aside>
 
       {/* ---- Main content ---- */}
-      <div className="flex min-h-full flex-1 flex-col overflow-x-auto">
+      <div className="flex flex-1 flex-col">
         <div className="max-w-4xl flex-1 p-6 md:p-8">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row">
             <div className="flex-1 rounded-lg border border-neutral-200 bg-white p-3.5">

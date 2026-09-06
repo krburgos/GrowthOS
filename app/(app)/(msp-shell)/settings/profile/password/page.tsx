@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { PasswordForm } from "@/components/settings/password-form";
 import { ProfileAvatarUpload } from "@/components/settings/profile-avatar-upload";
-import { ProfileBanner } from "@/components/settings/profile-banner";
+import { ProfileHeader } from "@/components/settings/profile-header";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,13 +26,14 @@ export default async function PasswordPage() {
 
   return (
     <main className="w-full max-w-[1440px] flex-1 p-6 md:p-8">
-      <ProfileBanner
+      <ProfileHeader
         title={user.full_name}
         avatar={
           <ProfileAvatarUpload
             userId={user.id}
             avatarUrl={profile?.avatar_url ?? null}
             fallbackText={initials(user.full_name)}
+            compact
           />
         }
       />

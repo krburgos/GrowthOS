@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Briefcase, Link as LinkIcon, Mail, Pencil, Phone, Shield, User as UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
@@ -32,16 +32,15 @@ interface ProfileFormProps {
 }
 
 /**
- * Design System §8.9 "Profile-style content card" — icon-label-value
- * rows with an "Update Info" toggle. Full Name/Phone/Job Title/LinkedIn
- * are editable; Email and Role stay read-only (role changes go through
- * Users & Roles, not a user's own profile). Phone/Job Title/LinkedIn are
- * a client-confirmed gap-fill, same shape as Company Profile's earlier
- * additions — not the "custom fields" concept Backend Schema §12
- * excludes, just a few specific named columns. Password change lives on
- * its own page (/settings/profile/password), not stacked here — the two
- * are separate destinations in the Settings panel, not sections of one
- * scrollable page.
+ * Design System §8.9 "Profile-style content card," Concept B (approved
+ * mockup): a two-column sectioned grid with small teal icon chips,
+ * replacing the original single-column icon-label-value list — all 6
+ * fields visible without scrolling, closer to Contact Overview's own
+ * Contact/Company card language than a standalone "profile hero"
+ * style. Full Name/Phone/Job Title/LinkedIn are editable; Email and
+ * Role stay read-only (role changes go through Users & Roles, not a
+ * user's own profile). Password change lives on its own page
+ * (/settings/profile/password), not stacked here.
  */
 export function ProfileForm({ userId, fullName, email, roleLabel, phone, jobTitle, linkedinUrl }: ProfileFormProps) {
   const router = useRouter();
@@ -74,9 +73,9 @@ export function ProfileForm({ userId, fullName, email, roleLabel, phone, jobTitl
   };
 
   return (
-    <div className="max-w-xl rounded-lg border border-neutral-200 bg-white">
-      <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-4">
-        <h2 className="text-h4 text-primary-900">Contact Information</h2>
+    <div className="rounded-lg border border-neutral-200 bg-white">
+      <div className="flex items-center justify-between px-5 pt-4">
+        <h2 className="text-caption font-semibold uppercase tracking-wide text-neutral-500">Contact Information</h2>
         {!editing && (
           <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
             <Pencil className="mr-1.5 size-4" />
@@ -85,71 +84,53 @@ export function ProfileForm({ userId, fullName, email, roleLabel, phone, jobTitl
         )}
       </div>
 
-      <form onSubmit={profileForm.handleSubmit(onSaveProfile)} noValidate className="flex flex-col divide-y divide-neutral-100">
-        <div className="flex items-center gap-4 px-6 py-4">
-          <UserIcon className="size-5 shrink-0 text-neutral-500" />
-          <span className="w-24 shrink-0 text-body text-neutral-800">Full Name</span>
-          {editing ? (
-            <div className="flex-1">
-              <Input
-                id="full_name"
-                error={!!profileForm.formState.errors.full_name}
-                {...profileForm.register("full_name")}
-              />
-              {profileForm.formState.errors.full_name && (
-                <p className="mt-1 text-body-sm text-error-600">
-                  {profileForm.formState.errors.full_name.message}
-                </p>
-              )}
-            </div>
-          ) : (
-            <span className="flex-1 text-body text-neutral-600">{fullName}</span>
-          )}
-        </div>
-        <div className="flex items-center gap-4 px-6 py-4">
-          <Mail className="size-5 shrink-0 text-neutral-500" />
-          <span className="w-24 shrink-0 text-body text-neutral-800">Email</span>
-          <span className="flex-1 text-body text-neutral-600">{email}</span>
-        </div>
-        <div className="flex items-center gap-4 px-6 py-4">
-          <Shield className="size-5 shrink-0 text-neutral-500" />
-          <span className="w-24 shrink-0 text-body text-neutral-800">Role</span>
-          <span className="flex-1 text-body text-neutral-600">{roleLabel}</span>
-        </div>
-        <div className="flex items-center gap-4 px-6 py-4">
-          <Phone className="size-5 shrink-0 text-neutral-500" />
-          <span className="w-24 shrink-0 text-body text-neutral-800">Phone Number</span>
-          {editing ? (
-            <Input className="flex-1" {...profileForm.register("phone")} />
-          ) : (
-            <span className="flex-1 text-body text-neutral-600">{phone || "—"}</span>
-          )}
-        </div>
-        <div className="flex items-center gap-4 px-6 py-4">
-          <Briefcase className="size-5 shrink-0 text-neutral-500" />
-          <span className="w-24 shrink-0 text-body text-neutral-800">Job Title</span>
-          {editing ? (
-            <Input className="flex-1" {...profileForm.register("job_title")} />
-          ) : (
-            <span className="flex-1 text-body text-neutral-600">{jobTitle || "—"}</span>
-          )}
-        </div>
-        <div className="flex items-center gap-4 px-6 py-4">
-          <LinkIcon className="size-5 shrink-0 text-neutral-500" />
-          <span className="w-24 shrink-0 text-body text-neutral-800">LinkedIn</span>
-          {editing ? (
-            <Input className="flex-1" placeholder="https://linkedin.com/in/…" {...profileForm.register("linkedin_url")} />
-          ) : linkedinUrl ? (
-            <a href={linkedinUrl} target="_blank" rel="noreferrer" className="flex-1 text-body text-primary-700 hover:underline">
-              {linkedinUrl}
-            </a>
-          ) : (
-            <span className="flex-1 text-body text-neutral-600">—</span>
-          )}
+      <form onSubmit={profileForm.handleSubmit(onSaveProfile)} noValidate>
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg bg-neutral-100 p-5 pt-3 sm:grid-cols-2">
+          <Cell icon={UserIcon} label="Full Name" fieldId="full_name">
+            {editing ? (
+              <>
+                <Input
+                  id="full_name"
+                  error={!!profileForm.formState.errors.full_name}
+                  {...profileForm.register("full_name")}
+                />
+                {profileForm.formState.errors.full_name && (
+                  <p className="mt-1 text-body-sm text-error-600">
+                    {profileForm.formState.errors.full_name.message}
+                  </p>
+                )}
+              </>
+            ) : (
+              <Value>{fullName}</Value>
+            )}
+          </Cell>
+          <Cell icon={Mail} label="Email" fieldId="email">
+            <Value>{email}</Value>
+          </Cell>
+          <Cell icon={Shield} label="Role" fieldId="role">
+            <Value>{roleLabel}</Value>
+          </Cell>
+          <Cell icon={Phone} label="Phone Number" fieldId="phone">
+            {editing ? <Input id="phone" {...profileForm.register("phone")} /> : <Value>{phone}</Value>}
+          </Cell>
+          <Cell icon={Briefcase} label="Job Title" fieldId="job_title">
+            {editing ? <Input id="job_title" {...profileForm.register("job_title")} /> : <Value>{jobTitle}</Value>}
+          </Cell>
+          <Cell icon={LinkIcon} label="LinkedIn" fieldId="linkedin_url">
+            {editing ? (
+              <Input id="linkedin_url" placeholder="https://linkedin.com/in/…" {...profileForm.register("linkedin_url")} />
+            ) : linkedinUrl ? (
+              <a href={linkedinUrl} target="_blank" rel="noreferrer" className="truncate text-body font-medium text-primary-700 hover:underline">
+                {linkedinUrl}
+              </a>
+            ) : (
+              <Value />
+            )}
+          </Cell>
         </div>
 
         {editing && (
-          <div className="flex justify-end gap-3 px-6 py-4">
+          <div className="flex justify-end gap-3 border-t border-neutral-200 px-5 py-4">
             <Button
               type="button"
               variant="ghost"
@@ -168,4 +149,37 @@ export function ProfileForm({ userId, fullName, email, roleLabel, phone, jobTitl
       </form>
     </div>
   );
+}
+
+function Cell({
+  icon: Icon,
+  label,
+  fieldId,
+  children,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  /** Associates the label with the field's input in edit mode — see
+   * ContactOverviewForm's identical `Row` component for why a `label`
+   * with no matching `id` in view mode is harmless. */
+  fieldId: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 bg-white p-4">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary-50 text-secondary-700">
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <label htmlFor={fieldId} className="text-caption text-neutral-400">
+          {label}
+        </label>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Value({ children }: { children?: ReactNode }) {
+  return <p className="truncate text-body font-medium text-neutral-800">{children || "—"}</p>;
 }

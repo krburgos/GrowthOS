@@ -6,7 +6,7 @@ export default async function CroLayout({ children }: { children: React.ReactNod
   if (!user) return null;
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
+    <div className="flex flex-1 flex-col">
       <TopBar fullName={user.full_name} />
       {children}
     </div>
