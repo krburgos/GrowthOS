@@ -31,7 +31,7 @@ export const IMPORT_FIELDS: ImportField[] = [
   { key: "company_industry", label: "Company Industry", required: false, synonyms: ["industry"] },
   { key: "company_size", label: "Employee Size", required: false, synonyms: ["employee size", "company size", "employees"] },
   { key: "company_phone", label: "Company Phone", required: false, synonyms: ["company phone", "company phone number"] },
-  { key: "company_address_line1", label: "Company Address 1", required: false, synonyms: ["company address", "company address 1", "address", "address 1"] },
+  { key: "company_address_line1", label: "Company Address", required: false, synonyms: ["company address", "company address 1", "address", "address 1"] },
   { key: "company_city", label: "Company City", required: false, synonyms: ["city", "company city"] },
   { key: "company_state", label: "Company State", required: false, synonyms: ["state", "company state"] },
   { key: "notes", label: "Notes", required: false, synonyms: ["notes"] },

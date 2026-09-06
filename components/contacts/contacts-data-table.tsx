@@ -83,7 +83,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
       // visible under the "All columns" preset like every other column.
       { key: "companyLinkedin", label: "Company LinkedIn" },
       { key: "cphone", label: "Company Phone" },
-      { key: "addr", label: "Company Address 1" },
+      { key: "addr", label: "Company Address" },
       { key: "city", label: "Company City" },
       { key: "state", label: "Company State" },
     ],
@@ -363,7 +363,7 @@ export function ContactsDataTable({
               )}
               {show("addr") && (
                 <Th>
-                  <MapPin className="size-3.5" /> Company Address 1
+                  <MapPin className="size-3.5" /> Company Address
                 </Th>
               )}
               {show("city") && (

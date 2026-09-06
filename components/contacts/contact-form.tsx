@@ -329,7 +329,7 @@ export function ContactForm({
             <Input id="company_phone" {...register("company_phone")} />
           </div>
           <div>
-            <Label htmlFor="company_address_line1">Address 1</Label>
+            <Label htmlFor="company_address_line1">Address</Label>
             <Input id="company_address_line1" {...register("company_address_line1")} />
           </div>
           <div>

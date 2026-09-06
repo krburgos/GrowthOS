@@ -104,7 +104,7 @@ export function ExportContactsButton({
         "Company LinkedIn": company?.linkedin_url ?? "",
         "Company Phone": company?.phone ?? "",
         "Mobile Phone": c.phone ?? "",
-        "Company Address 1": company?.address_line1 ?? "",
+        "Company Address": company?.address_line1 ?? "",
         "Company City": company?.city ?? "",
         "Company State": company?.state ?? "",
         Employees: company?.company_size ?? "",

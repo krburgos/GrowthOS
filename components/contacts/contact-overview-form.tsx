@@ -375,7 +375,7 @@ export function ContactOverviewForm({
                 <Value>{values.company_phone}</Value>
               )}
             </Row>
-            <Row icon={MapPin} label="Address 1" fieldId="company_address_line1">
+            <Row icon={MapPin} label="Address" fieldId="company_address_line1">
               {editing ? (
                 <Input id="company_address_line1" {...register("company_address_line1")} className="flex-1" />
               ) : (
