@@ -19,27 +19,42 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { MergeCompanyDialog } from "@/components/contacts/merge-company-dialog";
-import type { ContactFormOption } from "@/components/contacts/contact-form";
 import { createClient } from "@/lib/supabase/client";
 
 const schema = z.object({
-  full_name: z.string().min(1, "Enter a name."),
+  first_name: z.string().min(1, "Enter a first name."),
+  last_name: z.string().optional(),
   title: z.string().optional(),
   email: z.string().email("Enter a valid email address."),
   phone: z.string().optional(),
   status_id: z.string().min(1, "Choose a status."),
   owner_id: z.string().optional(),
+  score: z.string().optional(),
+  temperature: z.string().optional(),
+  linkedin_url: z.string().optional(),
   notes: z.string().optional(),
   company_name: z.string().optional(),
   company_website: z.string().optional(),
   company_industry: z.string().optional(),
   company_size: z.string().optional(),
+  company_phone: z.string().optional(),
+  company_address_line1: z.string().optional(),
   company_city: z.string().optional(),
   company_state: z.string().optional(),
 });
 
 type Values = z.infer<typeof schema>;
 
+/**
+ * Client-confirmed additions: First/Last Name split, Score, Temp,
+ * contact-level LinkedIn, Company Phone/Address 1 — same shape as
+ * ContactForm and the import pipeline. Editing an existing contact's
+ * email into collision with a *different* existing contact still
+ * blocks (unlike import/add) — that's reconciling two already-
+ * established records' activities/opportunities, a bigger operation
+ * than the "update this row's fields on a matching email" rule scoped
+ * to import/create.
+ */
 export function ContactOverviewForm({
   contactId,
   accountId,
@@ -53,9 +68,9 @@ export function ContactOverviewForm({
   accountId: string;
   companyId: string | null;
   canEdit: boolean;
-  statuses: ContactFormOption[];
-  owners: ContactFormOption[];
-  defaults: Values;
+  statuses: import("@/components/contacts/contact-form").ContactFormOption[];
+  owners: import("@/components/contacts/contact-form").ContactFormOption[];
+  defaults: Values & { email: string };
 }) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -107,6 +122,8 @@ export function ContactOverviewForm({
             website: values.company_website || null,
             industry: values.company_industry || null,
             company_size: values.company_size || null,
+            phone: values.company_phone || null,
+            address_line1: values.company_address_line1 || null,
             city: values.company_city || null,
             state: values.company_state || null,
           })
@@ -117,12 +134,16 @@ export function ContactOverviewForm({
     const { error } = await supabase
       .from("contacts")
       .update({
-        full_name: values.full_name,
+        first_name: values.first_name,
+        last_name: values.last_name || null,
         title: values.title || null,
         email: values.email,
         phone: values.phone || null,
         status_id: values.status_id,
         owner_id: values.owner_id || null,
+        score: values.score ? Number(values.score) : null,
+        temperature: values.temperature || null,
+        linkedin_url: values.linkedin_url || null,
         notes: values.notes || null,
         company_id: nextCompanyId,
       })
@@ -146,13 +167,17 @@ export function ContactOverviewForm({
           <h2 className="text-h4 text-primary-900">Contact</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="full_name" required>
-                Full name
+              <Label htmlFor="first_name" required>
+                First name
               </Label>
-              <Input id="full_name" error={!!errors.full_name} {...register("full_name")} />
-              {errors.full_name && (
-                <p className="mt-1 text-body-sm text-error-600">{errors.full_name.message}</p>
+              <Input id="first_name" error={!!errors.first_name} {...register("first_name")} />
+              {errors.first_name && (
+                <p className="mt-1 text-body-sm text-error-600">{errors.first_name.message}</p>
               )}
+            </div>
+            <div>
+              <Label htmlFor="last_name">Last name</Label>
+              <Input id="last_name" {...register("last_name")} />
             </div>
             <div>
               <Label htmlFor="title">Title</Label>
@@ -166,8 +191,12 @@ export function ContactOverviewForm({
               {errors.email && <p className="mt-1 text-body-sm text-error-600">{errors.email.message}</p>}
             </div>
             <div>
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="phone">Mobile phone</Label>
               <Input id="phone" {...register("phone")} />
+            </div>
+            <div>
+              <Label htmlFor="linkedin_url">LinkedIn</Label>
+              <Input id="linkedin_url" placeholder="https://linkedin.com/in/…" {...register("linkedin_url")} />
             </div>
             <div>
               <Label htmlFor="status_id" required>
@@ -201,6 +230,22 @@ export function ContactOverviewForm({
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label htmlFor="score">Score</Label>
+              <Input id="score" type="number" {...register("score")} />
+            </div>
+            <div>
+              <Label htmlFor="temperature">Temp</Label>
+              <Select value={watch("temperature")} onValueChange={(v) => setValue("temperature", v)}>
+                <SelectTrigger id="temperature">
+                  <SelectValue placeholder="Not set" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hot">Hot</SelectItem>
+                  <SelectItem value="cold">Cold</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </section>
 
@@ -229,6 +274,14 @@ export function ContactOverviewForm({
             <div>
               <Label htmlFor="company_size">Employee size</Label>
               <Input id="company_size" {...register("company_size")} />
+            </div>
+            <div>
+              <Label htmlFor="company_phone">Company phone</Label>
+              <Input id="company_phone" {...register("company_phone")} />
+            </div>
+            <div>
+              <Label htmlFor="company_address_line1">Address 1</Label>
+              <Input id="company_address_line1" {...register("company_address_line1")} />
             </div>
             <div>
               <Label htmlFor="company_city">City</Label>

@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { resolveContactIds, type ContactSelectionScope } from "@/lib/contacts/bulk-actions";
 import { createClient } from "@/lib/supabase/client";
 
 type Action = "move" | "copy";
@@ -27,7 +28,10 @@ type Action = "move" | "copy";
  * any list_exclusions row (in case the contact had been previously
  * excluded from a smart list); removing from a smart list means the
  * reverse — an exclusion insert, since the contact might be a live
- * criteria match with nothing in list_members to delete.
+ * criteria match with nothing in list_members to delete. Only shown
+ * inside a specific list's detail page — on the All Contacts view
+ * there's no single "current list" to move out of (client-confirmed
+ * "Add-only" there instead).
  */
 export function MoveOrCopyDialog({
   open,
@@ -35,7 +39,8 @@ export function MoveOrCopyDialog({
   currentListId,
   currentListType,
   accountId,
-  selectedContactIds,
+  selection,
+  selectedCount,
   onDone,
 }: {
   open: boolean;
@@ -43,7 +48,8 @@ export function MoveOrCopyDialog({
   currentListId: string;
   currentListType: "static" | "smart";
   accountId: string;
-  selectedContactIds: string[];
+  selection: { selectAllMatching: boolean; selectedIds: string[] };
+  selectedCount: number;
   onDone: () => void;
 }) {
   const router = useRouter();
@@ -75,6 +81,9 @@ export function MoveOrCopyDialog({
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
+    const scope: ContactSelectionScope = { mode: "list", listId: currentListId, listType: currentListType };
+    const selectedContactIds = await resolveContactIds(supabase, selection, scope);
 
     const { error: insertError } = await supabase.from("list_members").upsert(
       selectedContactIds.map((contactId) => ({
@@ -142,8 +151,8 @@ export function MoveOrCopyDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {action === "move" ? "Move" : "Copy"} {selectedContactIds.length} contact
-            {selectedContactIds.length === 1 ? "" : "s"}
+            {action === "move" ? "Move" : "Copy"} {selectedCount} contact
+            {selectedCount === 1 ? "" : "s"}
           </DialogTitle>
         </DialogHeader>
 

@@ -15,11 +15,13 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_sales", "msp_marketing", "cro
  * contacts dedup index (§5.3). Any row failing validation blocks the
  * entire import (App Flow §6) — nothing is written.
  *
- * Client-confirmed list-upload path: when `list_id` is present, an
- * existing-email row is matched to that contact (not rejected) and
- * every row — matched or newly created — is added as a member of the
- * list. Without `list_id`, behavior is unchanged from plain Import
- * Contacts.
+ * Client-confirmed change: a row whose email matches an existing
+ * contact updates that contact's fields (name, title, phone, score,
+ * temperature, LinkedIn, status, company) rather than being rejected
+ * (the old plain-import behavior) or silently left untouched (the old
+ * list-upload behavior) — one consistent rule everywhere. When list_id
+ * is present, every row — matched or newly created — is also added as
+ * a member of that list.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
   }
 
   const mappedRows = applyMapping(parsed.rows, mapping);
-  const errors = await validateRows(mappedRows, supabase, profile.account_id, { allowExistingEmails: !!listId });
+  const errors = await validateRows(mappedRows, supabase, profile.account_id);
 
   if (errors.length > 0) {
     return NextResponse.json({ error: "Import blocked — some rows failed validation.", errors }, { status: 400 });
@@ -90,28 +92,18 @@ export async function POST(request: NextRequest) {
     .filter((s) => s.is_default)
     .sort((a, b) => a.sort_order - b.sort_order)[0];
 
-  // Only fetched for the list-upload path — plain Import Contacts
-  // already rejected any existing email during validation above.
-  let existingByEmail = new Map<string, string>();
-  if (listId) {
-    const { data: existing } = await supabase
-      .from("contacts")
-      .select("id, email")
-      .eq("account_id", profile.account_id)
-      .is("archived_at", null);
-    existingByEmail = new Map((existing ?? []).map((c) => [c.email.toLowerCase(), c.id]));
-  }
+  const { data: existing } = await supabase
+    .from("contacts")
+    .select("id, email")
+    .eq("account_id", profile.account_id)
+    .is("archived_at", null);
+  const existingByEmail = new Map((existing ?? []).map((c) => [c.email.toLowerCase(), c.id]));
 
-  let imported = 0;
+  let created = 0;
+  let updated = 0;
   const listContactIds: string[] = [];
 
   for (const row of mappedRows as MappedRow[]) {
-    const matchedContactId = existingByEmail.get(row.email.toLowerCase());
-    if (matchedContactId) {
-      listContactIds.push(matchedContactId);
-      continue;
-    }
-
     let companyId: string | null = null;
     if (row.company_name) {
       const { data: matchedCompanyId, error: matchError } = await supabase.rpc(
@@ -124,13 +116,23 @@ export async function POST(request: NextRequest) {
       );
       if (!matchError && matchedCompanyId) {
         companyId = matchedCompanyId;
-        if (row.company_website || row.company_industry || row.company_size || row.company_city || row.company_state) {
+        if (
+          row.company_website ||
+          row.company_industry ||
+          row.company_size ||
+          row.company_phone ||
+          row.company_address_line1 ||
+          row.company_city ||
+          row.company_state
+        ) {
           await supabase
             .from("companies")
             .update({
               website: row.company_website || null,
               industry: row.company_industry || null,
               company_size: row.company_size || null,
+              phone: row.company_phone || null,
+              address_line1: row.company_address_line1 || null,
               city: row.company_city || null,
               state: row.company_state || null,
             })
@@ -139,8 +141,42 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const statusId = statusByName.get(row.status.toLowerCase()) ?? defaultStatus?.id;
-    if (!statusId) {
+    const statusId = row.status ? statusByName.get(row.status.toLowerCase()) ?? defaultStatus?.id : undefined;
+    const score = row.score ? Number(row.score) : null;
+    const temperature = row.temperature ? (row.temperature.toLowerCase() as "hot" | "cold") : null;
+
+    const matchedContactId = existingByEmail.get(row.email.toLowerCase());
+
+    if (matchedContactId) {
+      const { error: updateError } = await supabase
+        .from("contacts")
+        .update({
+          first_name: row.first_name,
+          last_name: row.last_name || null,
+          title: row.title || null,
+          phone: row.phone || null,
+          score,
+          temperature,
+          linkedin_url: row.linkedin_url || null,
+          company_id: companyId ?? undefined,
+          notes: row.notes || null,
+          ...(statusId ? { status_id: statusId } : {}),
+        })
+        .eq("id", matchedContactId);
+
+      if (updateError) {
+        return NextResponse.json(
+          { error: `Import failed at row ${row.rowNumber}: ${updateError.message}` },
+          { status: 400 }
+        );
+      }
+      updated += 1;
+      listContactIds.push(matchedContactId);
+      continue;
+    }
+
+    const resolvedStatusId = statusId ?? defaultStatus?.id;
+    if (!resolvedStatusId) {
       return NextResponse.json(
         { error: "No contact status available for this account — add one in Custom Statuses first." },
         { status: 400 }
@@ -151,11 +187,15 @@ export async function POST(request: NextRequest) {
       .from("contacts")
       .insert({
         account_id: profile.account_id,
-        full_name: row.full_name,
+        first_name: row.first_name,
+        last_name: row.last_name || null,
         title: row.title || null,
         email: row.email,
         phone: row.phone || null,
-        status_id: statusId,
+        score,
+        temperature,
+        linkedin_url: row.linkedin_url || null,
+        status_id: resolvedStatusId,
         company_id: companyId,
         notes: row.notes || null,
         source: "import",
@@ -165,11 +205,12 @@ export async function POST(request: NextRequest) {
 
     if (insertError || !createdContact) {
       return NextResponse.json(
-        { error: `Import failed at row ${row.rowNumber}: ${insertError?.message}`, importedSoFar: imported },
+        { error: `Import failed at row ${row.rowNumber}: ${insertError?.message}`, importedSoFar: created },
         { status: 400 }
       );
     }
-    imported += 1;
+    created += 1;
+    existingByEmail.set(row.email.toLowerCase(), createdContact.id);
     listContactIds.push(createdContact.id);
   }
 
@@ -181,11 +222,8 @@ export async function POST(request: NextRequest) {
     if (listMembersError) {
       return NextResponse.json({ error: listMembersError.message }, { status: 400 });
     }
-    // Re-adding overrides any earlier exclusion on a smart list (Backend
-    // Schema §7.4, smart_list_manual_overrides migration) — a no-op for
-    // static lists, which never have exclusion rows.
     await supabase.from("list_exclusions").delete().eq("list_id", listId).in("contact_id", listContactIds);
   }
 
-  return NextResponse.json({ imported, addedToList: listContactIds.length });
+  return NextResponse.json({ imported: created, updated, addedToList: listContactIds.length });
 }

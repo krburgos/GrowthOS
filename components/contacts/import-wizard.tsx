@@ -51,6 +51,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
   const [result, setResult] = useState<ValidateResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [importedCount, setImportedCount] = useState<number | null>(null);
+  const [updatedCount, setUpdatedCount] = useState<number>(0);
   const [addedToListCount, setAddedToListCount] = useState<number | null>(null);
 
   const runValidate = async (selectedFile: File, mapping?: ImportMapping) => {
@@ -107,11 +108,16 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
       return;
     }
     setImportedCount(body.imported);
+    setUpdatedCount(body.updated ?? 0);
     if (targetListId) {
       setAddedToListCount(body.addedToList);
       toast.success(`${body.addedToList} contact${body.addedToList === 1 ? "" : "s"} added to ${listName ?? "the list"}.`);
     } else {
-      toast.success(`${body.imported} contacts imported.`);
+      toast.success(
+        `${body.imported} contact${body.imported === 1 ? "" : "s"} imported${
+          body.updated ? `, ${body.updated} updated` : ""
+        }.`
+      );
     }
   };
 
@@ -130,7 +136,9 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
         <p className="text-body text-neutral-800">
           {targetListId
             ? `${addedToListCount} contact${addedToListCount === 1 ? "" : "s"} added to ${listName ?? "the list"}.`
-            : `${importedCount} contact${importedCount === 1 ? "" : "s"} imported successfully.`}
+            : `${importedCount} contact${importedCount === 1 ? "" : "s"} imported${
+                updatedCount ? `, ${updatedCount} existing contact${updatedCount === 1 ? "" : "s"} updated` : ""
+              }.`}
         </p>
         <div className="flex gap-3">
           <Button onClick={() => router.push(targetListId ? `/lists/${targetListId}` : "/contacts")}>
@@ -268,7 +276,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
                   <TableBody>
                     {result.preview.map((row, i) => (
                       <TableRow key={i}>
-                        <TableCell>{row.full_name}</TableCell>
+                        <TableCell>{[row.first_name, row.last_name].filter(Boolean).join(" ")}</TableCell>
                         <TableCell>{row.email}</TableCell>
                         <TableCell>{row.company_name || "—"}</TableCell>
                       </TableRow>

@@ -35,7 +35,7 @@ export default async function ContactDetailPage({
   const { data: contact } = await supabase
     .from("contacts")
     .select(
-      "id, full_name, title, email, phone, status_id, owner_id, notes, company_id, companies(name, website, industry, company_size, city, state)"
+      "id, first_name, last_name, full_name, title, email, phone, status_id, owner_id, notes, score, temperature, linkedin_url, company_id, companies(name, website, industry, company_size, phone, address_line1, city, state)"
     )
     .eq("id", id)
     .is("archived_at", null)
@@ -75,6 +75,8 @@ export default async function ContactDetailPage({
     website: string | null;
     industry: string | null;
     company_size: string | null;
+    phone: string | null;
+    address_line1: string | null;
     city: string | null;
     state: string | null;
   };
@@ -107,17 +109,23 @@ export default async function ContactDetailPage({
             statuses={(statuses ?? []).map((s) => ({ id: s.id, label: s.name }))}
             owners={(owners ?? []).map((o) => ({ id: o.id, label: o.full_name }))}
             defaults={{
-              full_name: contact.full_name,
+              first_name: contact.first_name,
+              last_name: contact.last_name ?? "",
               title: contact.title ?? "",
               email: contact.email,
               phone: contact.phone ?? "",
               status_id: contact.status_id,
               owner_id: contact.owner_id ?? "",
+              score: contact.score != null ? String(contact.score) : "",
+              temperature: contact.temperature ?? "",
+              linkedin_url: contact.linkedin_url ?? "",
               notes: contact.notes ?? "",
               company_name: company?.name ?? "",
               company_website: company?.website ?? "",
               company_industry: company?.industry ?? "",
               company_size: company?.company_size ?? "",
+              company_phone: company?.phone ?? "",
+              company_address_line1: company?.address_line1 ?? "",
               company_city: company?.city ?? "",
               company_state: company?.state ?? "",
             }}

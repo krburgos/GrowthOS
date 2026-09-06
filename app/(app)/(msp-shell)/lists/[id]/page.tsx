@@ -3,18 +3,22 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AddContactsButton } from "@/components/lists/add-contacts-button";
+import { ContactsDataTable } from "@/components/contacts/contacts-data-table";
 import { DeleteListButton } from "@/components/lists/delete-list-button";
-import { ListMembersTable, type ListMemberRow } from "@/components/lists/list-members-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import type { ContactListRow } from "@/lib/contacts/types";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "List — GrowthOS" };
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
+
+const CONTACT_FIELDS =
+  "id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, status_id, contact_statuses(name), company_id, companies(name, phone, address_line1, city, state, company_size)";
 
 /**
  * App Flow §4.6, F2 — List Detail. Smart list membership is computed
@@ -22,7 +26,10 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro
  * §7.4, updated by the smart_list_manual_overrides migration) — never
  * cached, but client-confirmed to now also fold in manual list_members
  * additions and list_exclusions, so Upload/Add/Move/Remove all work on
- * smart lists too, not just static ones.
+ * smart lists too, not just static ones. Client-confirmed redesign:
+ * shares ContactsDataTable's full column set with the All Contacts
+ * view; the extra Move-to/Remove-from-list actions come from passing
+ * currentListId/currentListType.
  */
 export default async function ListDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -41,58 +48,62 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
   if (!list) notFound();
 
   const canEdit = EDIT_ROLES.includes(user.role);
-  let members: ListMemberRow[] = [];
+  let contacts: ContactListRow[] = [];
 
   if (list.type === "static") {
-    const { data } = await supabase
-      .from("list_members")
-      .select("contacts(id, full_name, email, companies(name), contact_statuses(name))")
-      .eq("list_id", id);
-
-    members = (data ?? [])
+    const { data } = await supabase.from("list_members").select(`contacts(${CONTACT_FIELDS})`).eq("list_id", id);
+    contacts = (data ?? [])
       .map((row) => {
-        const c = row.contacts as unknown as {
-          id: string;
-          full_name: string;
-          email: string;
-          companies: { name: string } | { name: string }[] | null;
-          contact_statuses: { name: string } | { name: string }[] | null;
-        } | null;
-        if (!c) return null;
-        const company = Array.isArray(c.companies) ? c.companies[0] : c.companies;
-        const status = Array.isArray(c.contact_statuses) ? c.contact_statuses[0] : c.contact_statuses;
-        return {
-          id: c.id,
-          full_name: c.full_name,
-          email: c.email,
-          company_name: company?.name ?? null,
-          status_name: status?.name ?? null,
-        };
+        const c = row.contacts as unknown as ContactListRow | ContactListRow[] | null;
+        return Array.isArray(c) ? c[0] : c;
       })
-      .filter((m): m is ListMemberRow => m !== null);
+      .filter((c): c is ContactListRow => !!c);
   } else {
     const { data: memberIds } = await supabase.rpc("compute_smart_list_members", { p_list_id: id });
     const ids = (memberIds ?? []).map((r: { contact_id: string }) => r.contact_id);
 
     if (ids.length > 0) {
-      const { data } = await supabase
-        .from("contacts")
-        .select("id, full_name, email, companies(name), contact_statuses(name)")
-        .in("id", ids);
-
-      members = (data ?? []).map((c) => {
-        const company = Array.isArray(c.companies) ? c.companies[0] : c.companies;
-        const status = Array.isArray(c.contact_statuses) ? c.contact_statuses[0] : c.contact_statuses;
-        return {
-          id: c.id,
-          full_name: c.full_name,
-          email: c.email,
-          company_name: (company as { name: string } | undefined)?.name ?? null,
-          status_name: (status as { name: string } | undefined)?.name ?? null,
-        };
-      });
+      const { data } = await supabase.from("contacts").select(CONTACT_FIELDS).in("id", ids);
+      contacts = (data ?? []) as unknown as ContactListRow[];
     }
   }
+
+  if (contacts.length > 0) {
+    const { data: listRows } = await supabase
+      .from("list_members")
+      .select("contact_id, lists(name)")
+      .in("contact_id", contacts.map((c) => c.id));
+
+    const listNamesByContact = new Map<string, string[]>();
+    for (const row of (listRows ?? []) as unknown as {
+      contact_id: string;
+      lists: { name: string } | { name: string }[] | null;
+    }[]) {
+      const l = Array.isArray(row.lists) ? row.lists[0] : row.lists;
+      if (!l) continue;
+      const existing = listNamesByContact.get(row.contact_id) ?? [];
+      existing.push(l.name);
+      listNamesByContact.set(row.contact_id, existing);
+    }
+    for (const c of contacts) {
+      c.list_names = listNamesByContact.get(c.id) ?? [];
+    }
+  }
+
+  const [{ data: statuses }, { data: owners }] = await Promise.all([
+    supabase
+      .from("contact_statuses")
+      .select("id, name")
+      .eq("account_id", user.account_id)
+      .is("archived_at", null)
+      .order("sort_order"),
+    supabase
+      .from("users")
+      .select("id, full_name")
+      .eq("account_id", user.account_id)
+      .is("archived_at", null)
+      .order("full_name"),
+  ]);
 
   return (
     <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
@@ -107,7 +118,7 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
       </div>
       <div className="mb-6 flex items-center justify-between">
         <p className="text-body text-neutral-500">
-          {members.length} member{members.length === 1 ? "" : "s"}
+          {contacts.length} member{contacts.length === 1 ? "" : "s"}
         </p>
         {canEdit && (
           <div className="flex gap-2">
@@ -119,7 +130,7 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
         )}
       </div>
 
-      {members.length === 0 ? (
+      {contacts.length === 0 ? (
         <EmptyState
           icon={Users}
           action={
@@ -131,12 +142,15 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
           }
         />
       ) : (
-        <ListMembersTable
-          members={members}
-          listId={list.id}
-          listType={list.type}
+        <ContactsDataTable
+          contacts={contacts}
+          totalCount={contacts.length}
           accountId={user.account_id!}
-          canEdit={canEdit}
+          statuses={(statuses ?? []).map((s) => ({ id: s.id, label: s.name }))}
+          owners={(owners ?? []).map((o) => ({ id: o.id, label: o.full_name }))}
+          scope={{ mode: "list", listId: list.id, listType: list.type }}
+          currentListId={list.id}
+          currentListType={list.type}
         />
       )}
     </main>

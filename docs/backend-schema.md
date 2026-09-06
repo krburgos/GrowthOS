@@ -225,6 +225,12 @@ create unique index contacts_account_email_unique
   on contacts(account_id, lower(email)) where archived_at is null;
 ```
 
+**Client-confirmed deviations (the `contact_fields_expansion` migration), applied after the DDL above ran:**
+- `full_name` split into `first_name` (required) and `last_name` (optional) — CSV files usually carry these separately. `full_name` still exists as a generated column (`first_name || ' ' || last_name`, trimmed), so every read path (sort, search, display) is unaffected; only the write paths (Add Contact, Contact Detail edit, import) changed.
+- Added `score integer` (a plain manually-entered number, not a scoring engine — no automatic calculation), `temperature` (new enum `contact_temperature`, values `hot`/`cold`), and `linkedin_url text` (the contact's own personal LinkedIn, distinct from the company's).
+- `companies` gained `phone text` and `address_line1 text`.
+- **Duplicate-email handling changed everywhere a contact is created**: a row/submission whose email matches an existing (non-archived) contact now *updates* that contact's fields instead of being rejected (Import Contacts' old behavior) or silently left untouched (the original list-upload behavior). This applies to Import Contacts, List Upload, and the manual Add Contact form alike — one consistent rule.
+
 email_opt_out is this document's one addition to the field list in PRD §6.1 — it's required to honor unsubscribes (§9) and isn't a design decision so much as a mechanical necessity of that flow; flagged in §12.
 
 ### 5.4 lists, list_members

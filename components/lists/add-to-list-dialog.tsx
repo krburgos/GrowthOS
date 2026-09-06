@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { resolveContactIds, type ContactSelectionScope } from "@/lib/contacts/bulk-actions";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -30,17 +31,23 @@ import { createClient } from "@/lib/supabase/client";
  * both list types now accept a manual list_members addition (Backend
  * Schema §7.4, smart_list_manual_overrides migration) — added to a
  * smart list, a contact counts as a member regardless of whether they
- * match its criteria.
+ * match its criteria. `selection`/`scope` resolve to a concrete id
+ * array at submit time, same as the other bulk dialogs — this is what
+ * makes "Select all N items" (a true cross-query selection) work here.
  */
 export function AddToListDialog({
   open,
   onOpenChange,
-  contactIds,
+  selection,
+  scope,
+  selectedCount,
   accountId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  contactIds: string[];
+  selection: { selectAllMatching: boolean; selectedIds: string[] };
+  scope: ContactSelectionScope;
+  selectedCount: number;
   accountId: string;
 }) {
   const router = useRouter();
@@ -94,6 +101,8 @@ export function AddToListDialog({
       return;
     }
 
+    const contactIds = await resolveContactIds(supabase, selection, scope);
+
     const { error } = await supabase
       .from("list_members")
       .upsert(
@@ -124,7 +133,7 @@ export function AddToListDialog({
         <DialogHeader>
           <DialogTitle>Add to list</DialogTitle>
           <DialogDescription>
-            {contactIds.length} contact{contactIds.length === 1 ? "" : "s"} selected.
+            {selectedCount} contact{selectedCount === 1 ? "" : "s"} selected.
           </DialogDescription>
         </DialogHeader>
 
