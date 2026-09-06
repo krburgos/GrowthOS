@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Plus } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, MoreVertical, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
@@ -167,19 +168,35 @@ export function StatusesManager({
                 >
                   <ArrowDown className="size-4" />
                 </button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setRenameTarget(status);
-                    setRenameValue(status.name);
-                  }}
-                >
-                  Rename
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setRetireTarget(status)}>
-                  Retire
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex size-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100"
+                      aria-label={`More actions for ${status.name}`}
+                    >
+                      <MoreVertical className="size-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setRenameTarget(status);
+                        setRenameValue(status.name);
+                      }}
+                    >
+                      <Pencil className="mr-2 size-4 text-neutral-400" />
+                      Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-error-700 data-[highlighted]:bg-error-50"
+                      onSelect={() => setRetireTarget(status)}
+                    >
+                      <Archive className="mr-2 size-4" />
+                      Retire
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
           </li>
