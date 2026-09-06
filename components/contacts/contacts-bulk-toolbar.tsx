@@ -100,33 +100,35 @@ export function ContactsBulkToolbar({
   if (selectedCount === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-primary-800 bg-primary-900 p-2">
+    <div className="flex flex-col gap-3 rounded-lg bg-gradient-to-b from-primary-800 to-primary-900 p-3 shadow-sm">
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => toast("Email requires Campaigns (Milestone 10), not set up yet.")}
           aria-label="Email selected contacts"
-          className="flex size-9 items-center justify-center rounded-full bg-secondary-500 text-white hover:bg-secondary-600"
+          className="flex h-9 items-center gap-2 rounded-full bg-white/10 px-4 text-button text-white transition-colors hover:bg-white/20 active:translate-y-px"
         >
           <Mail className="size-4" />
+          Email
         </button>
         <ExportContactsButton selection={selectionArg} scope={scope} />
         <button
           type="button"
           onClick={() => setDeleteOpen(true)}
           aria-label="Delete selected contacts"
-          className="flex size-9 items-center justify-center rounded-full bg-error-600 text-white hover:bg-error-700"
+          className="flex h-9 items-center gap-2 rounded-full bg-error-600/90 px-4 text-button text-white transition-colors hover:bg-error-600 active:translate-y-px"
         >
           <Trash2 className="size-4" />
+          Delete
         </button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="flex h-9 items-center rounded-md bg-white px-4 text-button text-primary-900 hover:bg-neutral-100"
+              className="flex h-9 items-center rounded-md bg-white px-4 text-button text-primary-900 transition-colors hover:bg-neutral-100 active:translate-y-px"
             >
-              More Actions
+              More Actions ▾
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
@@ -146,16 +148,16 @@ export function ContactsBulkToolbar({
       </div>
 
       <div className="flex items-center justify-between px-1">
-        <span className="text-body-sm text-white">
+        <span className="text-body-sm font-medium text-white/90">
           {selectedCount} item{selectedCount === 1 ? "" : "s"} selected.
         </span>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {!selection.selectAllMatching && totalCount > selection.selectedIds.size && (
-            <button type="button" onClick={onSelectAllMatching} className="text-body-sm text-secondary-400 hover:underline">
+            <button type="button" onClick={onSelectAllMatching} className="text-body-sm font-medium text-secondary-400 hover:underline">
               Select all {totalCount} items
             </button>
           )}
-          <button type="button" onClick={onClear} className="text-body-sm text-error-400 hover:underline">
+          <button type="button" onClick={onClear} className="text-body-sm font-medium text-white/60 hover:text-white hover:underline">
             Clear selection
           </button>
         </div>

@@ -286,6 +286,12 @@ Per the confirmed direction: **cards stay neutral, only column headers carry col
 
 Header row: neutral-50 background, Caption-level text in neutral-700, uppercase, 1px neutral-200 bottom border, sort-arrow icon (neutral-400, secondary-800 when the column is the active sort) right of the column label. Body rows: white background, neutral-100 on hover, secondary-50-equivalent fill when a row is selected (with a secondary-800 checkbox), 1px neutral-100 row divider. Row height and padding per §5.2. No zebra-striping — the hover and selected states carry enough distinction at this density without it.
 
+**Client-confirmed exception — Contacts table only** (both the All Contacts view and a list's Detail page; every other table in the app keeps the treatment above unchanged). Reviewed as mockups first ("Concept A — Navy Command Bar") before implementing:
+- Header: solid primary-900 fill, white text, a small neutral-tone icon per column (matching what the column holds — a mail icon for Email, a building for Company, etc.), 16px vertical padding (up from the compact default) since 18 columns made the header feel cramped.
+- Full Name and the row checkbox are pinned (`position: sticky`) to the left edge while the remaining columns scroll horizontally underneath — with this many columns, losing track of which row you're looking at was a real problem.
+- Selected rows get both the secondary-50 tint *and* a 3px secondary-500 rail at the table's left edge (rendered on the pinned checkbox column, so it stays visible no matter how far right you've scrolled) — a plain background tint alone got lost against the wide row.
+- Score renders as a number plus a small filled track (secondary-500 fill); Temp renders as an icon + colored word (error-600 for Hot, primary-500 for Cold) rather than a badge pill, to stay visually distinct from the Contact Status badge in the row next to it.
+
 ### 8.6 Tabs (Contact Detail)
 
 Underline style, not pill style. Inactive tab: neutral-500 text. Active tab: primary-700 text, 2px primary-700 underline. Tab bar sits on a 1px neutral-200 bottom border spanning the full width. 16px horizontal padding per tab, 40px tab height.

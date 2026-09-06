@@ -105,9 +105,10 @@ export function ExportContactsButton({
       onClick={handleExport}
       disabled={exporting}
       aria-label="Export selected contacts"
-      className="flex size-9 items-center justify-center rounded-full bg-secondary-500 text-white hover:bg-secondary-600 disabled:opacity-50"
+      className="flex h-9 items-center gap-2 rounded-full bg-white/10 px-4 text-button text-white transition-colors hover:bg-white/20 active:translate-y-px disabled:opacity-50"
     >
       <Download className="size-4" />
+      Export
     </button>
   );
 }
