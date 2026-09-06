@@ -6,7 +6,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { AddToListDialog } from "@/components/lists/add-to-list-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/client";
@@ -14,22 +13,15 @@ import { createClient } from "@/lib/supabase/client";
 export interface ContactListMembership {
   id: string;
   name: string;
-  type: "static" | "smart";
 }
 
 /**
  * Client-confirmed (Contact Detail redesign, follow-up): a contact can
  * belong to multiple lists, so this card shows every list it's
- * currently a member of — static assignments *and* live smart-list
- * criteria matches, resolved server-side in the page component, since
- * a single contact's membership is cheap to check per-list (unlike the
- * Contacts table's dense per-row rendering, which stays static-only for
- * that performance reason). Add reuses AddToListDialog as-is (it
- * already works from a plain `{selectedIds: [contactId]}` selection).
- * Removing from a static list deletes the list_members row; removing
- * from a smart list writes a list_exclusions row instead, since the
- * contact may be a live criteria match with nothing in list_members to
- * delete — the same hybrid mechanism the bulk toolbar already uses.
+ * currently a member of, resolved server-side in the page component.
+ * Add reuses AddToListDialog as-is (it already works from a plain
+ * `{selectedIds: [contactId]}` selection). Removing deletes the
+ * `list_members` row.
  */
 export function ContactListsCard({
   contactId,
@@ -47,29 +39,11 @@ export function ContactListsCard({
   const handleRemove = async (list: ContactListMembership) => {
     setRemovingId(list.id);
     const supabase = createClient();
-
-    if (list.type === "smart") {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from("list_exclusions")
-        .upsert(
-          { list_id: list.id, contact_id: contactId, excluded_by: user!.id },
-          { onConflict: "list_id,contact_id", ignoreDuplicates: true }
-        );
-      setRemovingId(null);
-      if (error) {
-        toast.error(getFriendlyErrorMessage(error));
-        return;
-      }
-    } else {
-      const { error } = await supabase.from("list_members").delete().eq("list_id", list.id).eq("contact_id", contactId);
-      setRemovingId(null);
-      if (error) {
-        toast.error(getFriendlyErrorMessage(error));
-        return;
-      }
+    const { error } = await supabase.from("list_members").delete().eq("list_id", list.id).eq("contact_id", contactId);
+    setRemovingId(null);
+    if (error) {
+      toast.error(getFriendlyErrorMessage(error));
+      return;
     }
 
     toast.success(`Removed from ${list.name}.`);
@@ -96,9 +70,6 @@ export function ContactListsCard({
           {memberships.map((list) => (
             <li key={list.id} className="flex items-center gap-3 px-4 py-2.5">
               <span className="flex-1 truncate text-body text-neutral-800">{list.name}</span>
-              <Badge variant={list.type === "smart" ? "info" : "neutral"}>
-                {list.type === "smart" ? "Smart" : "Static"}
-              </Badge>
               <button
                 type="button"
                 onClick={() => handleRemove(list)}

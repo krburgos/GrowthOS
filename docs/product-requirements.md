@@ -90,7 +90,9 @@ Prospects move through a status pipeline (Suspect, Prospect, Contacted, Engaged,
 
 ### 6.3 Lists & Segmentation
 
-A prospect can belong to multiple lists at once (e.g., "Manufacturing Prospects," "Q1 Webinar Invite List"). Lists support manual add/remove and criteria-based (saved-filter) population, so MSPs can build outreach strategies around shared characteristics.
+A prospect can belong to multiple lists at once (e.g., "Manufacturing Prospects," "Q1 Webinar Invite List"). Lists support manual add/remove, so MSPs can build outreach strategies around shared characteristics.
+
+**Client-confirmed removal (2026-09-06):** this section originally also called for criteria-based (saved-filter) population — a "smart list" whose membership updated automatically as contacts matched or stopped matching a saved rule. That was built (App Flow §4.6, Backend Schema §5.4/§7.4) and then removed entirely per explicit client direction: "My customers want to manually add contacts to a list," not even as an option alongside manual lists. Flagged as a direct contradiction of this section's original wording before proceeding; the client confirmed the removal anyway. Lists are now exclusively the manual kind.
 
 ### 6.4 Opportunity Management
 

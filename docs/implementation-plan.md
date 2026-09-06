@@ -40,7 +40,7 @@ Two secrets are generated, not issued by a vendor — Claude Code can generate b
 | 4 | Authentication & User Management | Milestone 3 | Invite → set password → login works for every role |
 | 5 | Global App Shell & Navigation | Milestone 4 | Nav matches the Backend Schema §2 permission matrix per role |
 | 6 | Companies, Contact Statuses & Contacts (Core CRM) | Milestone 5 | Import a real CSV; dedup and domain-match both fire correctly |
-| 7 | Lists & Segmentation | Milestone 6 | A smart list's live membership matches its criteria |
+| 7 | Lists & Segmentation | Milestone 6 | Adding/removing a contact from a list updates its membership (Smart Lists superseded 2026-09-06 — see §10) |
 | 8 | Opportunities & Activity Timeline | Milestone 6 | Dragging a card across the board persists the new stage |
 | 9 | Email Connections (OAuth) | Milestones 4, 7–8 | A real Google and a real Microsoft mailbox both connect successfully |
 | 10 | Campaigns, Scheduled Sending & Tracking | Milestones 7, 9 | A real test campaign sends, and open/click/bounce/unsubscribe all record |
@@ -124,6 +124,8 @@ Two secrets are generated, not issued by a vendor — Claude Code can generate b
 - Human verification: log in as an msp_read_only test user and confirm every edit control is disabled/hidden, and as msp_sales and confirm edit works — spot-checking the RLS write-role matrix (Backend Schema §6.4) against real UI, not just the policy SQL.
 
 ## 10. Milestone 7 — Lists & Segmentation
+
+**Superseded (2026-09-06):** Smart Lists — everything below describing them, and the checkpoint that verified them — were removed entirely per explicit client direction ("My customers want to manually add contacts to a list"), a deliberate deviation from PRD §6.3 flagged before proceeding. Lists are now exclusively the manual (formerly "static") kind; see Backend Schema §5.4/§7.4 and App Flow §4.6 for the removal. Left below for history rather than deleted.
 
 **Goal:** static and smart lists, per PRD §6.3 and the criteria schema defined in Backend Schema §7.4.
 - Build the lists screen: create/rename/archive, static vs. smart toggle.
@@ -224,11 +226,10 @@ Run this in full during Milestone 12, and again as the Milestone 13 smoke test (
 - Importing a row whose domain matches an existing company auto-links to it rather than creating a duplicate.
 - Manual entry enforces the same dedup rule as import.
 - merge_companies correctly reassigns every affected contact and opportunity, and the losing company record disappears from active lists everywhere.
-- Every one of the 14 default contact statuses is present on a new account; a custom status can be added, renamed, and archived.
-**Lists & segmentation** (PRD §6.3)
-- A static list's membership only changes via explicit add/remove.
-- A smart list's membership updates correctly when a matching field changes on a contact, with no manual refresh action needed beyond reloading the view.
-- Every field/operator combination the UI exposes actually filters correctly — spot-check at least one of each of the five operators (eq, neq, contains, before, after).
+- Every one of the 8 default contact statuses (Backend Schema §7.5) is present on a new account; a custom status can be added, renamed, and archived.
+**Lists & segmentation** (PRD §6.3; Smart Lists removed 2026-09-06, see Milestone 7's superseded note)
+- A list's membership only changes via explicit add/remove (individually, via bulk-select, via Upload, or via Move/Copy).
+- Rename and Delete both work from the Lists Index row menu and from List Detail's header.
 **Opportunities & activities** (PRD §6.4–6.5)
 - All 13 stage columns render in the correct left-to-right order on the board.
 - Dragging a card to a new column persists after a full page reload.

@@ -28,13 +28,10 @@ import { createClient } from "@/lib/supabase/client";
 
 /**
  * App Flow §4.6/§4.4 — list management via bulk-select from the
- * Contacts table (Milestone 6/7). Client-confirmed hybrid smart lists:
- * both list types now accept a manual list_members addition (Backend
- * Schema §7.4, smart_list_manual_overrides migration) — added to a
- * smart list, a contact counts as a member regardless of whether they
- * match its criteria. `selection`/`scope` resolve to a concrete id
- * array at submit time, same as the other bulk dialogs — this is what
- * makes "Select all N items" (a true cross-query selection) work here.
+ * Contacts table (Milestone 6/7). `selection`/`scope` resolve to a
+ * concrete id array at submit time, same as the other bulk dialogs —
+ * this is what makes "Select all N items" (a true cross-query
+ * selection) work here.
  */
 export function AddToListDialog({
   open,
@@ -86,7 +83,7 @@ export function AddToListDialog({
       }
       const { data: created, error: createError } = await supabase
         .from("lists")
-        .insert({ account_id: accountId, name: newListName.trim(), type: "static", created_by: user!.id })
+        .insert({ account_id: accountId, name: newListName.trim(), created_by: user!.id })
         .select("id")
         .single();
       if (createError) {
@@ -111,10 +108,6 @@ export function AddToListDialog({
         { onConflict: "list_id,contact_id", ignoreDuplicates: true }
       );
 
-    if (!error) {
-      // Re-adding overrides any earlier exclusion on a smart list.
-      await supabase.from("list_exclusions").delete().eq("list_id", listId).in("contact_id", contactIds);
-    }
     setPending(false);
 
     if (error) {

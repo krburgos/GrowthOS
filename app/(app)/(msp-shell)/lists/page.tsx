@@ -13,10 +13,7 @@ export const metadata: Metadata = { title: "Lists — GrowthOS" };
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 
 /**
- * App Flow §4.6, F1 — Lists Index. Name, member count, type
- * (static/smart). Smart list counts are computed live
- * (compute_smart_list_members(), Backend Schema §7.4) rather than
- * stored, matching how List Detail (F2) is required to work.
+ * App Flow §4.6, F1 — Lists Index. Name, member count, date added.
  *
  * Client-confirmed additions: Bounced/Unsubscribed columns (matching a
  * reference CRM's layout) ahead of Campaigns (Milestone 10) existing.
@@ -25,7 +22,7 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro
  * unsubscribe link). Bounced has no data source at all without
  * campaign send history, so it's a hardcoded 0 placeholder until that
  * milestone is built. Type and Active columns were both removed per
- * client feedback (Type badge stays on List Detail).
+ * client feedback.
  *
  * Sorting is applied in JS after the per-list counts are computed,
  * rather than a SQL ORDER BY — those counts come from a follow-up
@@ -46,20 +43,14 @@ export default async function ListsIndexPage({
 
   const { data: lists } = await supabase
     .from("lists")
-    .select("id, name, type, created_at")
+    .select("id, name, created_at")
     .eq("account_id", user.account_id)
     .is("archived_at", null);
 
   const listsWithCounts = await Promise.all(
     (lists ?? []).map(async (list) => {
-      let contactIds: string[];
-      if (list.type === "static") {
-        const { data } = await supabase.from("list_members").select("contact_id").eq("list_id", list.id);
-        contactIds = (data ?? []).map((r) => r.contact_id);
-      } else {
-        const { data } = await supabase.rpc("compute_smart_list_members", { p_list_id: list.id });
-        contactIds = (data ?? []).map((r: { contact_id: string }) => r.contact_id);
-      }
+      const { data: memberRows } = await supabase.from("list_members").select("contact_id").eq("list_id", list.id);
+      const contactIds = (memberRows ?? []).map((r) => r.contact_id);
 
       let unsubscribed = 0;
       if (contactIds.length > 0) {

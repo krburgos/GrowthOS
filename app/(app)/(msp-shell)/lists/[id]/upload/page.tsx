@@ -13,10 +13,7 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro
  * Uploads into a list's membership rather than the general Contacts
  * pool — reuses the same Import Contacts pipeline, but an existing
  * email is matched and added rather than rejected (client-confirmed,
- * see lib/import/validate.ts). Client-confirmed hybrid smart lists:
- * works for both list types now — an upload into a smart list is a
- * manual addition on top of its live criteria (Backend Schema §7.4,
- * smart_list_manual_overrides migration).
+ * see lib/import/validate.ts).
  */
 export default async function UploadContactsToListPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -27,7 +24,7 @@ export default async function UploadContactsToListPage({ params }: { params: Pro
   const supabase = await createClient();
   const { data: list } = await supabase
     .from("lists")
-    .select("id, name, type")
+    .select("id, name")
     .eq("id", id)
     .is("archived_at", null)
     .single();

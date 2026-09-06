@@ -103,7 +103,10 @@ create type activity_type as enum ('call', 'email', 'meeting', 'task', 'note');
 -- verbal_commitment, contract_sent, closed_won, closed_lost, ghosted,
 -- on_hold.
 
-create type list_type as enum ('static', 'smart');
+-- Client-confirmed removal (2026-09-06, `remove_smart_lists`
+-- migration): this enum, and Smart Lists entirely, were dropped — see
+-- §5.4's deviation note. Every list is now the plain, manually-curated
+-- kind ("static" in this enum's old terms); there is no other kind.
 
 create type campaign_status as enum ('draft', 'scheduled', 'sending', 'sent', 'failed', 'cancelled');
 
@@ -247,15 +250,10 @@ create table lists (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id),
   name text not null,
-  type list_type not null default 'static',
-  criteria jsonb,
   created_by uuid references users(id),
   archived_at timestamptz,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint lists_criteria_only_for_smart check (
-    (type = 'smart' and criteria is not null) or (type = 'static' and criteria is null)
-  )
+  updated_at timestamptz not null default now()
 );
 create index lists_account_id_idx on lists(account_id);
 
@@ -269,7 +267,7 @@ create table list_members (
 create index list_members_contact_id_idx on list_members(contact_id);
 ```
 
-**Client-confirmed hybrid smart lists (deviation from the original design below):** list_members no longer holds rows for static lists exclusively — a smart list's members are still computed live from its criteria by compute_smart_list_members() (§7), but that computation now also folds in manual list_members additions (a contact added on top of the criteria, even if they don't match) and subtracts list_exclusions rows (a contact manually excluded, even if they do match). The `smart_list_manual_overrides` migration removed the trigger that previously blocked list_members inserts for smart lists and added the list_exclusions table. The criteria JSONB schema is defined precisely in §7 alongside the function that evaluates it.
+**Client-confirmed removal — Smart Lists (2026-09-06, `remove_smart_lists` migration):** this table originally carried a `type` (`list_type` enum: `static`/`smart`) and `criteria jsonb` column, and a hybrid smart-list system briefly existed on top of that — see the git history of this section, or the App Flow Document's own superseded text, for the mechanism that was removed. The client's direction: "My customers want to manually add contacts to a list" — no criteria-based/auto-updating list at all, not even as an option. This is a deliberate deviation from PRD §6.3 ("Lists support manual add/remove **and** criteria-based (saved-filter) population") — flagged to the client as a spec contradiction before removing it; they confirmed the removal anyway. `list_members` is now the *only* thing that determines a list's membership, for every list, unconditionally. The migration dropped `compute_smart_list_members()`, the `list_exclusions` table, the `criteria`/`type` columns, and the `list_type` enum, archiving the one existing smart list (a Milestone 7 QA fixture, not real data) rather than converting it.
 
 ### 5.5 opportunity_stages, opportunities, activities
 
@@ -886,9 +884,9 @@ $$;
 
 match_or_create_company and merge_companies both run security invoker — RLS on contacts, opportunities, and companies still applies under the caller's own session, so a caller can only merge or reassign records they already have edit rights to.
 
-### 7.4 Opportunity/list mechanics: sync_opportunity_company, compute_smart_list_members
+### 7.4 Opportunity mechanics: sync_opportunity_company
 
-**enforce_static_list_membership() has been removed** by the `smart_list_manual_overrides` migration — it existed specifically to block list_members inserts for smart lists, which is now the opposite of what's needed for the client-confirmed manual-override behavior described above and in App Flow §4.6.
+**Client-confirmed removal — Smart Lists (2026-09-06):** this section originally documented `compute_smart_list_members()`, the smart-list criteria JSONB schema, and `enforce_static_list_membership()`. All three are gone — see §5.4's deviation note for why. `list_members` is a plain join table now; no function computes membership, so there's nothing left here to enforce or evaluate.
 
 ```
 create or replace function sync_opportunity_company()
@@ -904,123 +902,7 @@ $$;
 create trigger trg_sync_opportunity_company
   before insert or update of contact_id on opportunities
   for each row execute function sync_opportunity_company();
-
-create or replace function enforce_static_list_membership()
-returns trigger
-language plpgsql
-as $$
-declare
-  v_type list_type;
-begin
-  select type into v_type from lists where id = new.list_id;
-  if v_type <> 'static' then
-    raise exception 'Contacts can only be added directly to static lists; smart lists compute their members live.';
-  end if;
-  return new;
-end;
-$$;
-
-create trigger trg_enforce_static_list_membership
-  before insert on list_members
-  for each row execute function enforce_static_list_membership();
 ```
-
-**Smart list criteria schema.** A smart list's criteria column holds a small, fixed-shape JSON object — never raw SQL or free text — so it can be evaluated safely:
-```
-{
-  "match": "all",
-  "conditions": [
-    { "field": "status_id", "op": "eq", "value": "3fae2b10-9c2e-4b1a-8e2a-2f6b4a1c9d10" },
-    { "field": "title", "op": "contains", "value": "CTO" },
-    { "field": "created_at", "op": "after", "value": "2026-01-01" }
-  ]
-}
-```
-
-match is "all" (AND) or "any" (OR). Each condition's field must be one of status_id, owner_id, company_id, source, title, email, created_at; op must be one of eq, neq, contains (text only), before, after (timestamps only). Both lists are enforced as whitelists inside the function below — an unrecognized field or operator raises an exception rather than being passed through, and only the condition's value is ever interpolated into the generated query, always through format()'s %L (literal-escaping) placeholder.
-```
-create or replace function compute_smart_list_members(p_list_id uuid)
-returns table(contact_id uuid)
-language plpgsql security invoker
-as $$
-declare
-  v_criteria jsonb;
-  v_account_id uuid;
-  v_match text;
-  v_condition jsonb;
-  v_field text;
-  v_op text;
-  v_value text;
-  v_sql_field text;
-  v_sql_op text;
-  v_clause text;
-  v_clauses text[] := array[]::text[];
-  v_join_word text;
-  v_where text;
-begin
-  select criteria, account_id into v_criteria, v_account_id from lists where id = p_list_id and type = 'smart';
-  if v_criteria is null then
-    raise exception 'List % is not a smart list or has no criteria', p_list_id;
-  end if;
-
-  v_match := coalesce(v_criteria->>'match', 'all');
-  v_join_word := case when v_match = 'any' then ' or ' else ' and ' end;
-
-  for v_condition in select * from jsonb_array_elements(v_criteria->'conditions') loop
-    v_field := v_condition->>'field';
-    v_op := v_condition->>'op';
-    v_value := v_condition->>'value';
-
-    v_sql_field := case v_field
-      when 'status_id' then 'status_id'
-      when 'owner_id' then 'owner_id'
-      when 'company_id' then 'company_id'
-      when 'source' then 'source::text'
-      when 'title' then 'title'
-      when 'email' then 'email'
-      when 'created_at' then 'created_at'
-      else null
-    end;
-    if v_sql_field is null then
-      raise exception 'Smart list condition references an unsupported field: %', v_field;
-    end if;
-
-    v_sql_op := case v_op
-      when 'eq' then '='
-      when 'neq' then '<>'
-      when 'contains' then 'ilike'
-      when 'before' then '<'
-      when 'after' then '>'
-      else null
-    end;
-    if v_sql_op is null then
-      raise exception 'Smart list condition uses an unsupported operator: %', v_op;
-    end if;
-
-    if v_op = 'contains' then
-      v_clause := format('%s %s %L', v_sql_field, v_sql_op, '%' || v_value || '%');
-    else
-      v_clause := format('%s %s %L', v_sql_field, v_sql_op, v_value);
-    end if;
-
-    v_clauses := array_append(v_clauses, v_clause);
-  end loop;
-
-  if array_length(v_clauses, 1) is null then
-    v_where := 'true';
-  else
-    v_where := array_to_string(v_clauses, v_join_word);
-  end if;
-
-  return query execute format(
-    'select id from contacts where account_id = %L and archived_at is null and (%s)',
-    v_account_id, v_where
-  );
-end;
-$$;
-```
-
-This function does build and execute a dynamic query, but it's safe: v_sql_field and v_sql_op only ever come from the two case whitelists above, never directly from the caller's field/op text, and every user-supplied value is passed through %L, which format() escapes as a properly quoted literal. Called security invoker, so it only ever returns contacts the calling user could already see under §6.4's RLS.
 
 ### 7.5 Account setup: seed_default_contact_statuses, seed_default_opportunity_stages
 
@@ -1226,7 +1108,7 @@ Judgment calls made while turning the PRD, App Flow Document, and prior Q&A into
 - **View vs. edit interpretation (§2).** The PRD's role table gives one combined description per role rather than separate view/edit columns. This document reads "view" as broad (any role with account access can see all of that account's CRM data) and "edit" as the PRD's literal per-role list. If the client intended narrower viewing rights per role, only the _select policies in §6 need to change — nothing else in the schema depends on this assumption.
 - **email_opt_out**** on ****contacts**** (§5.3)** wasn't listed as a PRD field. It's required to make unsubscribe (§9) and CAN-SPAM compliance (PRD §6.6) actually work, so it's added here as a mechanical necessity rather than a scope addition.
 - **get_users_with_last_login()**** instead of a stored ****last_login_at**** column (§3, §7.2)** — reads auth.users.last_sign_in_at live instead of duplicating it, since Supabase already maintains that value and a copy would just be one more place for it to drift out of sync.
-- **Smart list criteria schema (§7.4)** is this document's own design — the PRD and App Flow Document call for "criteria-based" list population (PRD §6.3) but don't specify a structure. The seven whitelisted fields cover what the App Flow Document's contact/opportunity screens actually expose as filters; extending the whitelist later only means adding a case branch in compute_smart_list_members(), not a schema change.
+- **Smart list criteria schema (formerly §7.4)** — moot as of the 2026-09-06 removal (§5.4). This item is left here only as a pointer: if criteria-based lists are ever revisited, this document's original approach (a small whitelisted-field/whitelisted-operator JSONB shape, evaluated by a security-invoker function via safely-escaped dynamic SQL) is recoverable from git history rather than needing to be redesigned from scratch.
 - **merge_companies()**** (§7.3)** is a minimal reassign-and-archive implementation of "manual merge otherwise" — it doesn't attempt to reconcile conflicting field values between the two company records (name, industry, etc.); the surviving record simply keeps its own values. A more opinionated merge UI can layer on top of this function without changing it.
 - **No audit log table.** PRD §6.9 explicitly limits Phase 1 to a last-login timestamp, with no full audit trail — confirmed out of scope, not an oversight.
 - **No file attachments table, no custom fields/pipelines, no client portal tables.** All three were explicitly confirmed out of scope for Phase 1 in this document's clarifying questions and the PRD itself (PRD §6.8, §10) — none of the tables above make any provision for them, so adding any later is a genuine schema change, not a toggle. **Client-confirmed exception:** three Supabase Storage buckets (`company-logos`, `avatars`, `contact-avatars`) were added for the company logo, user profile picture, and (as of the Contact Detail redesign) a per-contact profile picture — no new Postgres table, and no general-purpose attachments feature; each just backs a single image field (`accounts.logo_url`, `users.avatar_url`, `contacts.avatar_url`) that already existed or was added for this purpose. `contact-avatars` objects are namespaced by `account_id` (matching `company-logos`) rather than by contact owner, since any of a contact's edit-capable roles may upload its photo, not just one user.

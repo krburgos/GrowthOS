@@ -50,7 +50,6 @@ export function ContactsBulkToolbar({
   statuses,
   owners,
   currentListId,
-  currentListType,
   onClear,
   onSelectAllMatching,
   onActionComplete,
@@ -62,7 +61,6 @@ export function ContactsBulkToolbar({
   statuses: { id: string; label: string }[];
   owners: { id: string; label: string }[];
   currentListId?: string;
-  currentListType?: "static" | "smart";
   onClear: () => void;
   onSelectAllMatching: () => void;
   onActionComplete: () => void;
@@ -79,20 +77,11 @@ export function ContactsBulkToolbar({
   const selectionArg = { selectAllMatching: selection.selectAllMatching, selectedIds: [...selection.selectedIds] };
 
   const handleRemoveFromList = async () => {
-    if (!currentListId || !currentListType) return;
+    if (!currentListId) return;
     setRemoving(true);
     const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
     const ids = await resolveContactIds(supabase, selectionArg, scope);
 
-    if (currentListType === "smart") {
-      await supabase.from("list_exclusions").upsert(
-        ids.map((contactId) => ({ list_id: currentListId, contact_id: contactId, excluded_by: user!.id })),
-        { onConflict: "list_id,contact_id", ignoreDuplicates: true }
-      );
-    }
     const { error } = await supabase.from("list_members").delete().eq("list_id", currentListId).in("contact_id", ids);
     setRemoving(false);
 
@@ -143,7 +132,7 @@ export function ContactsBulkToolbar({
             <DropdownMenuItem onSelect={() => setAssignOpen(true)}>Assign</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setMarkStatusOpen(true)}>Mark as</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setAddToListOpen(true)}>Add to</DropdownMenuItem>
-            {currentListId && currentListType && (
+            {currentListId && (
               <>
                 <DropdownMenuItem onSelect={() => setMoveOpen(true)}>Move to</DropdownMenuItem>
                 <DropdownMenuItem onSelect={handleRemoveFromList} disabled={removing}>
@@ -197,12 +186,11 @@ export function ContactsBulkToolbar({
         selectedCount={selectedCount}
         accountId={accountId}
       />
-      {currentListId && currentListType && (
+      {currentListId && (
         <MoveOrCopyDialog
           open={moveOpen}
           onOpenChange={setMoveOpen}
           currentListId={currentListId}
-          currentListType={currentListType}
           accountId={accountId}
           selection={selectionArg}
           selectedCount={selectedCount}

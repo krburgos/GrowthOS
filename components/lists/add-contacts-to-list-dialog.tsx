@@ -75,11 +75,6 @@ export function AddContactsToListDialog({
         { onConflict: "list_id,contact_id", ignoreDuplicates: true }
       );
 
-    if (!error) {
-      // Re-adding overrides any earlier exclusion on a smart list
-      // (Backend Schema §7.4) — a no-op for static lists.
-      await supabase.from("list_exclusions").delete().eq("list_id", listId).in("contact_id", [...selected]);
-    }
     setPending(false);
 
     if (error) {

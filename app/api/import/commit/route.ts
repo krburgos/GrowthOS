@@ -224,7 +224,6 @@ export async function POST(request: NextRequest) {
     if (listMembersError) {
       return NextResponse.json({ error: listMembersError.message }, { status: 400 });
     }
-    await supabase.from("list_exclusions").delete().eq("list_id", listId).in("contact_id", listContactIds);
   }
 
   return NextResponse.json({ imported: created, updated, addedToList: listContactIds.length });

@@ -81,7 +81,7 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 | E3 | Opportunities | Opportunity Detail | All MSP roles (edit: Owner/Admin/Sales) |
 | F1 | Lists | Lists Index | All MSP roles |
 | F2 | Lists | List Detail (members) | All MSP roles |
-| F3 | Lists | Create/Edit List (static or smart) | Owner, Admin, Marketing |
+| F3 | Lists | Create List | Owner, Admin, Marketing |
 | G1 | Campaigns | Campaigns Index | All MSP roles (view only for Read-Only/Sales) |
 | G2 | Campaigns | Campaign Detail (stats) | All MSP roles |
 | G3 | Campaigns | Compose Campaign (compose → select list → preview → send) | Owner, Admin, Marketing |
@@ -129,7 +129,7 @@ Empty and loading states: see §6.
 ### 4.4 Contacts (D1–D4)
 
 Prospects and contacts are **one merged section** — every record is a person, optionally tied to a company; there's no separate "Prospects" area.
-**Contacts List (D1).** **Client-confirmed redesign**, modeled on a reference CRM: a horizontally-scrolling table (no wrapping) with checkboxes, no per-row Actions column, and every mutation happening through a bulk action bar instead. Columns: Email, Full Name (derived from First/Last Name), Title, Contact Status, Score, Temp, Employees, Lists (which lists a contact belongs to — static membership only, smart-list live criteria aren't evaluated per row for performance), Company, Company Phone, Mobile Phone, LinkedIn, Company Address, Company City, Company State, Subscribed, Bounced (a 0 placeholder until Campaigns/Milestone 10 exists). "Add Contact" and "Import Contacts" buttons top-right.
+**Contacts List (D1).** **Client-confirmed redesign**, modeled on a reference CRM: a horizontally-scrolling table (no wrapping) with checkboxes, no per-row Actions column, and every mutation happening through a bulk action bar instead. Columns: Email, Full Name (derived from First/Last Name), Title, Contact Status, Score, Temp, Employees, Lists (which lists a contact belongs to), Company, Company Phone, Mobile Phone, LinkedIn, Company Address, Company City, Company State, Subscribed, Bounced (a 0 placeholder until Campaigns/Milestone 10 exists). "Add Contact" and "Import Contacts" buttons top-right.
 **Bulk action bar** (appears once one or more rows are selected): Email (a stub — real sending needs Campaigns/Milestone 10, not built), Export (CSV, via the selection), Delete (soft-delete/archive with a confirmation prompt — contacts are never hard-deleted), and a More Actions menu with Assign (bulk owner reassignment), Mark as (bulk status change), and Add to (add the selection to a list, any type). "Select all N items" selects every contact matching the current view, not just what's loaded — every bulk action operates on that full set. Merge was considered and dropped (client direction: a duplicate email updates the existing contact instead, so there's nothing separate to merge). Inside a specific list's Detail page, this same bar also gains Move to (moves the selection out of the current list into another) and Remove from this list — All Contacts has no single "current list," so only Add to applies there.
 **Contact Detail (D2).** Tabbed layout:
 - **Overview** — core fields (First Name, Last Name, title, email, Mobile Phone, LinkedIn, status, owner, Score, Temp, and the linked company's fields including Company Phone/Address), edit-in-place
@@ -147,17 +147,21 @@ Prospects and contacts are **one merged section** — every record is a person, 
 
 ### 4.6 Lists (F1–F3)
 
-**Lists Index (F1).** A table listing every list with name, type (static/smart), contact count, date added, and (client-confirmed, modeled on a reference CRM) Bounced/Unsubscribed/Active columns — Bounced is a placeholder 0 until Campaigns (Milestone 10) exists to produce that data; Unsubscribed reads the real `contacts.email_opt_out` flag. "Upload List" and "Create List" buttons top-right; a per-row "Delete" (soft-delete via `archived_at`, not a real delete — lists aren't the one exception to that rule, Opportunities is).
-**List Detail (F2).** The list's member contacts as a table (reusing the Contacts List columns), plus add/remove actions: "Upload Contacts" (same CSV/XLSX pipeline as Import Contacts, except a row matching an existing contact's email is added to the list instead of blocking the whole file — client-confirmed, since a real list upload will usually overlap with existing contacts) and "Add Contacts" (search existing contacts). Bulk-select + **Move / Copy to List**: Move removes the selected contacts from the current list and adds them to the chosen destination; Copy adds them to the destination while leaving the current list's membership untouched (a contact can belong to multiple lists). **Client-confirmed hybrid smart lists** (a further deviation from §7.4's original "smart list membership is never stored" — see Backend Schema §7.4 and the smart_list_manual_overrides migration): all of the above now work on smart lists too, not just static ones. A smart list's members are still its live criteria matches, plus anyone manually added on top (even a non-match), minus anyone manually excluded (even a match) — tracked in a new `list_exclusions` table alongside the existing `list_members`.
-**Create/Edit List (F3).** Two modes, chosen at creation — left as a design decision per the client's "make it clean" direction:
-- **Static list** — manually add contacts, membership doesn't change on its own
-- **Smart list** — built from saved filter criteria (e.g., industry + geography + status); membership updates automatically as contacts match or stop matching, with manual add/remove overrides layered on top (see above)
+**Lists Index (F1).** A table listing every list with name, contact count, date added, and (client-confirmed, modeled on a reference CRM) Bounced/Unsubscribed/Active columns — Bounced is a placeholder 0 until Campaigns (Milestone 10) exists to produce that data; Unsubscribed reads the real `contacts.email_opt_out` flag. "Upload List" and "Create List" buttons top-right; a per-row "Delete" (soft-delete via `archived_at`, not a real delete — lists aren't the one exception to that rule, Opportunities is), and (client-confirmed addition) Rename.
+**List Detail (F2).** The list's member contacts as a table (reusing the Contacts List columns), plus add/remove actions: "Upload Contacts" (same CSV/XLSX pipeline as Import Contacts, except a row matching an existing contact's email is added to the list instead of blocking the whole file — client-confirmed, since a real list upload will usually overlap with existing contacts) and "Add Contacts" (search existing contacts). Bulk-select + **Move / Copy to List**: Move removes the selected contacts from the current list and adds them to the chosen destination; Copy adds them to the destination while leaving the current list's membership untouched (a contact can belong to multiple lists).
+**Create List (F3).** Name only. **Client-confirmed removal (2026-09-06):** this screen originally offered a Static/Smart choice at creation — see below. Every list is now the plain, manually-curated kind; there is no other kind to choose.
+
+**Superseded (2026-09-06) — Smart Lists removed entirely.** This section previously described two list types:
+- Static list — manually add contacts, membership doesn't change on its own
+- Smart list — built from saved filter criteria (e.g., industry + geography + status); membership updated automatically as contacts matched or stopped matching, with manual add/remove overrides layered on top
+
+The client's direction: "My customers want to manually add contacts to a list" — not even Smart as an option. This is a deliberate deviation from PRD §6.3 ("Lists support manual add/remove **and** criteria-based (saved-filter) population") — flagged as a spec contradiction before removing it; the client confirmed removal anyway. See Backend Schema §5.4/§7.4 (`remove_smart_lists` migration) for the schema/function side of this removal.
 
 ### 4.7 Campaigns (G1–G3)
 
 **Campaigns Index (G1).** Table of past and active campaigns: name, list sent to, send date, status (draft/sending/sent), and headline stats. "Create Campaign" button top-right.
 **Campaign Detail (G2).** Recipient list, send status, and full stats: **sent, opened, clicked, bounced, and unsubscribed** — each with timestamps for opens and clicks, per the client's direction and the PRD's tracking requirement.
-**Compose Campaign (G3).** A linear flow: **Compose** (subject, body, sender identity from the user's connected email account) → **Select List** (choose a static or smart list as the recipient set) → **Preview** (rendered preview + a test-send option) → **Send** (immediate or scheduled). If no email account is connected yet, this flow doesn't start — see §5.5 and §6.
+**Compose Campaign (G3).** A linear flow: **Compose** (subject, body, sender identity from the user's connected email account) → **Select List** (choose a list as the recipient set) → **Preview** (rendered preview + a test-send option) → **Send** (immediate or scheduled). If no email account is connected yet, this flow doesn't start — see §5.5 and §6.
 
 ### 4.8 Reports (H1)
 
@@ -204,7 +208,7 @@ Contact Detail (D2), Overview tab → change Status field → saved inline — a
 
 ### 5.5 Build a List and Send a Campaign
 
-Lists Index (F1) → "Create List" → Create/Edit List (F3), choose Static or Smart → Save → List Detail (F2)
+Lists Index (F1) → "Create List" → Create List (F3), name it → Save → List Detail (F2)
 then
 Campaigns Index (G1) → "Create Campaign" → Compose (G3) → Select List (the one just built) → Preview → Send → Campaign Detail (G2), stats begin populating as recipients open/click
 If no email account is connected, Compose Campaign doesn't open — the user is directed to Settings → Connected Email Accounts (§4.7, §6) first.
@@ -246,7 +250,7 @@ Rather than repeating these on every screen in §4, they're defined once here an
 
 Flagged for confirmation before or during build, rather than blocking this document:
 - **Opportunity List/table view (E2)** is my addition alongside the confirmed kanban board, to satisfy the PRD's "sortable/filterable by stage" requirement — confirm this second view is wanted, or that the board's grouping alone is considered sufficient.
-- **List builder (F3)** — the static/smart split is my proposed shape for "make it clean"; happy to revise once there's a visual design pass.
+- **List builder (F3)** — resolved 2026-09-06: the static/smart split proposed here was built, then removed entirely per client direction (§4.6) in favor of a single, always-manual list type.
 - **Onboarding wizard steps (§4.2)** are condensed from the PRD's full onboarding-profile field list into five steps for a Phase 1 "basic version, single pass" — confirm the grouping, or whether any fields should move to a later phase.
 - **Exit-to-dashboard placement (§2.5)** — placed inside the viewing-as banner itself; flag if a top-bar location is preferred instead.
 - This document assumes the same left-sidebar/top-bar shell for CRO Leader users as for MSP users (with the added banner) rather than a visually distinct admin shell — confirm that reads as "light" enough for Phase 1, or if the CRO Leader dashboard should look more clearly separate.

@@ -27,8 +27,6 @@ const SORT_COLUMNS: Record<string, string> = {
  * over a direct RLS-protected query, per Backend Schema §11 (no API
  * route needed for a plain read). Client-confirmed redesign: the full
  * column set now lives in ContactsDataTable (shared with List Detail).
- * "Lists" shows static list_members only (smart-list live criteria
- * matches aren't evaluated per row here, for performance).
  */
 export default async function ContactsListPage({
   searchParams,

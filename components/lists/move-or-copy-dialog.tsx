@@ -22,13 +22,7 @@ type Action = "move" | "copy";
  * Client-defined semantics: Move removes the selected contacts from
  * the current list and adds them to the destination; Copy adds them to
  * the destination while leaving the current list's membership
- * untouched (a contact can belong to multiple lists). Client-confirmed
- * hybrid smart lists: both list types are now valid sources and
- * destinations. Adding to a list means list_members upsert + clearing
- * any list_exclusions row (in case the contact had been previously
- * excluded from a smart list); removing from a smart list means the
- * reverse — an exclusion insert, since the contact might be a live
- * criteria match with nothing in list_members to delete. Only shown
+ * untouched (a contact can belong to multiple lists). Only shown
  * inside a specific list's detail page — on the All Contacts view
  * there's no single "current list" to move out of (client-confirmed
  * "Add-only" there instead).
@@ -37,7 +31,6 @@ export function MoveOrCopyDialog({
   open,
   onOpenChange,
   currentListId,
-  currentListType,
   accountId,
   selection,
   selectedCount,
@@ -46,7 +39,6 @@ export function MoveOrCopyDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentListId: string;
-  currentListType: "static" | "smart";
   accountId: string;
   selection: { selectAllMatching: boolean; selectedIds: string[] };
   selectedCount: number;
@@ -82,7 +74,7 @@ export function MoveOrCopyDialog({
       data: { user },
     } = await supabase.auth.getUser();
 
-    const scope: ContactSelectionScope = { mode: "list", listId: currentListId, listType: currentListType };
+    const scope: ContactSelectionScope = { mode: "list", listId: currentListId };
     const selectedContactIds = await resolveContactIds(supabase, selection, scope);
 
     const { error: insertError } = await supabase.from("list_members").upsert(
@@ -99,29 +91,7 @@ export function MoveOrCopyDialog({
       return;
     }
 
-    // Re-adding to a list overrides any earlier exclusion on it.
-    await supabase
-      .from("list_exclusions")
-      .delete()
-      .eq("list_id", destinationListId)
-      .in("contact_id", selectedContactIds);
-
     if (action === "move") {
-      if (currentListType === "smart") {
-        const { error: excludeError } = await supabase.from("list_exclusions").upsert(
-          selectedContactIds.map((contactId) => ({
-            list_id: currentListId,
-            contact_id: contactId,
-            excluded_by: user!.id,
-          })),
-          { onConflict: "list_id,contact_id", ignoreDuplicates: true }
-        );
-        if (excludeError) {
-          setPending(false);
-          toast.error(excludeError.message);
-          return;
-        }
-      }
       const { error: deleteError } = await supabase
         .from("list_members")
         .delete()

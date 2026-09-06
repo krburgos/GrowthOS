@@ -128,8 +128,8 @@ function loadVisibleColumns(): Set<ColumnKey> {
  * State, Subscribed, Bounced), horizontally scrollable rather than
  * wrapping, no per-row Actions column — every mutation happens through
  * the bulk toolbar instead. Shared between the All Contacts view and a
- * list's Detail page; `currentListId`/`currentListType` being set is
- * what enables Move-to/Remove-from-list there.
+ * list's Detail page; `currentListId` being set is what enables
+ * Move-to/Remove-from-list there.
  *
  * Client-confirmed visual pass ("Concept A — Navy Command Bar" from the
  * mockup review): solid primary-900 header instead of the light
@@ -155,7 +155,6 @@ export function ContactsDataTable({
   owners,
   scope,
   currentListId,
-  currentListType,
 }: {
   contacts: ContactListRow[];
   totalCount: number;
@@ -164,7 +163,6 @@ export function ContactsDataTable({
   owners: { id: string; label: string }[];
   scope: ContactSelectionScope;
   currentListId?: string;
-  currentListType?: "static" | "smart";
 }) {
   const [selection, setSelection] = useState<ContactSelectionState>({
     selectedIds: new Set(),
@@ -224,7 +222,6 @@ export function ContactsDataTable({
         statuses={statuses}
         owners={owners}
         currentListId={currentListId}
-        currentListType={currentListType}
         onClear={clear}
         onSelectAllMatching={() => setSelection((prev) => ({ ...prev, selectAllMatching: true }))}
         onActionComplete={clear}

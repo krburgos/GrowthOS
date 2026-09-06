@@ -49,7 +49,7 @@ export default async function ContactDetailPage({
 
   if (!contact) notFound();
 
-  const [{ data: statuses }, { data: owners }, { data: activityRows }, { data: opportunityRows }, { data: allLists }, { data: memberRows }] =
+  const [{ data: statuses }, { data: owners }, { data: activityRows }, { data: opportunityRows }, { data: memberRows }] =
     await Promise.all([
       supabase
         .from("contact_statuses")
@@ -74,32 +74,15 @@ export default async function ContactDetailPage({
         .select("id, name, value, created_at, opportunity_stages(name, stage_group)")
         .eq("contact_id", id)
         .order("created_at", { ascending: false }),
-      supabase
-        .from("lists")
-        .select("id, name, type")
-        .eq("account_id", user.account_id)
-        .is("archived_at", null)
-        .order("name"),
-      supabase.from("list_members").select("list_id").eq("contact_id", id),
+      supabase.from("list_members").select("list_id, lists(name)").eq("contact_id", id),
     ]);
 
-  // Static lists: membership is the list_members row itself. Smart
-  // lists: compute_smart_list_members already folds in criteria matches,
-  // manual list_members additions, and list_exclusions (Backend Schema
-  // §7.4) — a per-list RPC call is cheap here since it's one contact,
-  // unlike the Contacts table's dense per-row rendering.
-  const staticMemberIds = new Set((memberRows ?? []).map((r) => r.list_id));
-  const smartLists = (allLists ?? []).filter((l) => l.type === "smart");
-  const smartMembership = await Promise.all(
-    smartLists.map(async (list) => {
-      const { data } = await supabase.rpc("compute_smart_list_members", { p_list_id: list.id });
-      return (data ?? []).some((r: { contact_id: string }) => r.contact_id === id);
+  const listMemberships: ContactListMembership[] = (memberRows ?? [])
+    .map((row) => {
+      const l = Array.isArray(row.lists) ? row.lists[0] : row.lists;
+      return l ? { id: row.list_id, name: l.name } : null;
     })
-  );
-  const smartMemberIds = new Set(smartLists.filter((_, i) => smartMembership[i]).map((l) => l.id));
-  const listMemberships: ContactListMembership[] = (allLists ?? [])
-    .filter((l) => (l.type === "static" ? staticMemberIds.has(l.id) : smartMemberIds.has(l.id)))
-    .map((l) => ({ id: l.id, name: l.name, type: l.type as "static" | "smart" }));
+    .filter((l): l is ContactListMembership => !!l);
 
   type CompanyFields = {
     name: string;

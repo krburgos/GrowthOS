@@ -29,10 +29,6 @@ export interface ListRow {
  * of lists per account this doesn't need the server-side sort's
  * "tens of thousands of rows" treatment (PRD §6.1); it filters
  * whatever page of already-sorted rows the server sent down.
- *
- * Explicitly does NOT reintroduce a Smart/Static indicator per row —
- * client direction was to leave that distinction off this page
- * entirely (it stays on List Detail's title, App Flow §4.6).
  */
 export function ListsTable({ lists, canEdit }: { lists: ListRow[]; canEdit: boolean }) {
   const [query, setQuery] = useState("");

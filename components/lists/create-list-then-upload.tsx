@@ -11,10 +11,8 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * "Upload List" — names a new static list, then hands off to the same
- * Import Contacts wizard used everywhere else, targeting that list.
- * Static only: a smart list's membership is computed live from
- * criteria, not something a file upload could populate.
+ * "Upload List" — names a new list, then hands off to the same Import
+ * Contacts wizard used everywhere else, targeting that list.
  */
 export function CreateListThenUpload({ accountId }: { accountId: string }) {
   const [name, setName] = useState("");
@@ -34,7 +32,7 @@ export function CreateListThenUpload({ accountId }: { accountId: string }) {
 
     const { data: created, error } = await supabase
       .from("lists")
-      .insert({ account_id: accountId, name: name.trim(), type: "static", created_by: user!.id })
+      .insert({ account_id: accountId, name: name.trim(), created_by: user!.id })
       .select("id, name")
       .single();
     setPending(false);

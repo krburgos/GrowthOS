@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { AddContactsButton } from "@/components/lists/add-contacts-button";
 import { ContactsDataTable } from "@/components/contacts/contacts-data-table";
 import { ListActionsMenu } from "@/components/lists/list-actions-menu";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Users } from "lucide-react";
@@ -21,15 +20,10 @@ const CONTACT_FIELDS =
   "id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, status_id, contact_statuses(name), company_id, companies(name, phone, address_line1, city, state, company_size, linkedin_url)";
 
 /**
- * App Flow §4.6, F2 — List Detail. Smart list membership is computed
- * live via compute_smart_list_members() on every view (Backend Schema
- * §7.4, updated by the smart_list_manual_overrides migration) — never
- * cached, but client-confirmed to now also fold in manual list_members
- * additions and list_exclusions, so Upload/Add/Move/Remove all work on
- * smart lists too, not just static ones. Client-confirmed redesign:
- * shares ContactsDataTable's full column set with the All Contacts
- * view; the extra Move-to/Remove-from-list actions come from passing
- * currentListId/currentListType.
+ * App Flow §4.6, F2 — List Detail. Client-confirmed redesign: shares
+ * ContactsDataTable's full column set with the All Contacts view; the
+ * extra Move-to/Remove-from-list actions come from passing
+ * currentListId.
  */
 export default async function ListDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -40,7 +34,7 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
 
   const { data: list } = await supabase
     .from("lists")
-    .select("id, name, type")
+    .select("id, name")
     .eq("id", id)
     .is("archived_at", null)
     .single();
@@ -50,23 +44,13 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
   const canEdit = EDIT_ROLES.includes(user.role);
   let contacts: ContactListRow[] = [];
 
-  if (list.type === "static") {
-    const { data } = await supabase.from("list_members").select(`contacts(${CONTACT_FIELDS})`).eq("list_id", id);
-    contacts = (data ?? [])
-      .map((row) => {
-        const c = row.contacts as unknown as ContactListRow | ContactListRow[] | null;
-        return Array.isArray(c) ? c[0] : c;
-      })
-      .filter((c): c is ContactListRow => !!c);
-  } else {
-    const { data: memberIds } = await supabase.rpc("compute_smart_list_members", { p_list_id: id });
-    const ids = (memberIds ?? []).map((r: { contact_id: string }) => r.contact_id);
-
-    if (ids.length > 0) {
-      const { data } = await supabase.from("contacts").select(CONTACT_FIELDS).in("id", ids);
-      contacts = (data ?? []) as unknown as ContactListRow[];
-    }
-  }
+  const { data } = await supabase.from("list_members").select(`contacts(${CONTACT_FIELDS})`).eq("list_id", id);
+  contacts = (data ?? [])
+    .map((row) => {
+      const c = row.contacts as unknown as ContactListRow | ContactListRow[] | null;
+      return Array.isArray(c) ? c[0] : c;
+    })
+    .filter((c): c is ContactListRow => !!c);
 
   if (contacts.length > 0) {
     const { data: listRows } = await supabase
@@ -108,12 +92,7 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
   return (
     <main className="mx-auto w-full max-w-[1800px] flex-1 p-6 md:p-8">
       <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-h1 text-primary-900">{list.name}</h1>
-          <Badge variant={list.type === "smart" ? "info" : "neutral"}>
-            {list.type === "smart" ? "Smart" : "Static"}
-          </Badge>
-        </div>
+        <h1 className="text-h1 text-primary-900">{list.name}</h1>
         {canEdit && <ListActionsMenu listId={list.id} listName={list.name} redirectOnDelete="/lists" />}
       </div>
       <div className="mb-6 flex items-center justify-between">
@@ -148,9 +127,8 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
           accountId={user.account_id!}
           statuses={(statuses ?? []).map((s) => ({ id: s.id, label: s.name }))}
           owners={(owners ?? []).map((o) => ({ id: o.id, label: o.full_name }))}
-          scope={{ mode: "list", listId: list.id, listType: list.type }}
+          scope={{ mode: "list", listId: list.id }}
           currentListId={list.id}
-          currentListType={list.type}
         />
       )}
     </main>

@@ -9,7 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  */
 export type ContactSelectionScope =
   | { mode: "all-contacts"; accountId: string }
-  | { mode: "list"; listId: string; listType: "static" | "smart" };
+  | { mode: "list"; listId: string };
 
 export async function resolveContactIds(
   supabase: SupabaseClient,
@@ -28,13 +28,8 @@ export async function resolveContactIds(
     return (data ?? []).map((r) => r.id);
   }
 
-  if (scope.listType === "static") {
-    const { data } = await supabase.from("list_members").select("contact_id").eq("list_id", scope.listId);
-    return (data ?? []).map((r) => r.contact_id);
-  }
-
-  const { data } = await supabase.rpc("compute_smart_list_members", { p_list_id: scope.listId });
-  return (data ?? []).map((r: { contact_id: string }) => r.contact_id);
+  const { data } = await supabase.from("list_members").select("contact_id").eq("list_id", scope.listId);
+  return (data ?? []).map((r) => r.contact_id);
 }
 
 /** Supabase's .in() has a practical URL-length limit — chunk large id
