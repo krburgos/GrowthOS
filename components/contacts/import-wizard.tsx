@@ -231,7 +231,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
                 validation — nothing has been imported. Fix the file and re-upload, or adjust the
                 mapping.
               </p>
-              <div className="max-h-64 overflow-y-auto rounded-md border border-neutral-200">
+              <div className="max-h-64 overflow-y-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -264,7 +264,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
                 {result.validRowCount} contact{result.validRowCount === 1 ? "" : "s"} ready to
                 import.
               </p>
-              <div className="max-h-64 overflow-y-auto rounded-md border border-neutral-200">
+              <div className="max-h-64 overflow-y-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>

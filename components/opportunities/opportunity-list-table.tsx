@@ -24,12 +24,12 @@ const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "
 export function OpportunityListTable({ opportunities }: { opportunities: OpportunityListRow[] }) {
   return (
     <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead><SortableHeader field="contact" label="Contact" /></TableHead>
-          <TableHead>Company</TableHead>
-          <TableHead><SortableHeader field="stage" label="Stage" /></TableHead>
-          <TableHead><SortableHeader field="value" label="Value" /></TableHead>
+      <TableHeader variant="solid">
+        <TableRow className="border-b-0 hover:bg-transparent">
+          <TableHead variant="solid"><SortableHeader variant="solid" field="contact" label="Contact" /></TableHead>
+          <TableHead variant="solid">Company</TableHead>
+          <TableHead variant="solid"><SortableHeader variant="solid" field="stage" label="Stage" /></TableHead>
+          <TableHead variant="solid"><SortableHeader variant="solid" field="value" label="Value" /></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

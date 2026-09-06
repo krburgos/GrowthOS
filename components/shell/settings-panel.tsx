@@ -98,9 +98,9 @@ function NavColumn({
               key={row.label}
               href={row.href}
               className={cn(
-                "flex h-11 items-center rounded-md px-3 text-body transition-colors",
+                "relative flex h-11 items-center rounded-md px-3 text-body transition-colors",
                 activeHref === row.href
-                  ? "bg-secondary-50 text-primary-700"
+                  ? "bg-secondary-50 font-medium text-primary-700 before:absolute before:-left-2 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-secondary-500"
                   : "text-neutral-700 hover:bg-neutral-50"
               )}
             >

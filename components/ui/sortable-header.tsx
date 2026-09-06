@@ -12,8 +12,20 @@ import { cn } from "@/lib/utils";
  * Server-driven sort via URL search params rather than client-side
  * table state, so it scales to the "tens of thousands of records" per
  * tenant the PRD (§6.1) calls for.
+ *
+ * `variant="solid"` is for use inside a TableHead variant="solid" (navy
+ * fill) — client-confirmed modernization pass — so the label/icon read
+ * against a dark background instead of assuming a light one.
  */
-export function SortableHeader({ field, label }: { field: string; label: string }) {
+export function SortableHeader({
+  field,
+  label,
+  variant = "default",
+}: {
+  field: string;
+  label: string;
+  variant?: "default" | "solid";
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -29,9 +41,23 @@ export function SortableHeader({ field, label }: { field: string; label: string 
   const Icon = isActive ? (activeDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
 
   return (
-    <Link href={`${pathname}?${params.toString()}`} className="flex items-center gap-1 hover:text-neutral-800">
+    <Link
+      href={`${pathname}?${params.toString()}`}
+      className={cn("flex items-center gap-1", variant === "solid" ? "hover:text-white" : "hover:text-neutral-800")}
+    >
       {label}
-      <Icon className={cn("size-3.5", isActive ? "text-secondary-800" : "text-neutral-400")} />
+      <Icon
+        className={cn(
+          "size-3.5",
+          variant === "solid"
+            ? isActive
+              ? "text-secondary-300"
+              : "text-white/50"
+            : isActive
+              ? "text-secondary-800"
+              : "text-neutral-400"
+        )}
+      />
     </Link>
   );
 }

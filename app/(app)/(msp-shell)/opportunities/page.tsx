@@ -73,16 +73,16 @@ export default async function OpportunitiesPage({
   });
 
   return (
-    <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col p-6 md:p-8">
+    <main className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col p-6 md:p-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-h1 text-primary-900">Opportunities</h1>
         <div className="flex items-center gap-3">
-          <div className="flex rounded-md border border-neutral-300 p-0.5">
+          <div className="flex rounded-md border border-neutral-200 bg-neutral-50 p-1 shadow-inner">
             <Link
               href="/opportunities"
               className={cn(
-                "rounded px-3 py-1 text-body-sm",
-                !isListView ? "bg-primary-700 text-white" : "text-neutral-600"
+                "rounded px-3 py-1 text-body-sm font-medium transition-colors",
+                !isListView ? "bg-white text-primary-800 shadow-sm" : "text-neutral-500 hover:text-neutral-800"
               )}
             >
               Board
@@ -90,8 +90,8 @@ export default async function OpportunitiesPage({
             <Link
               href="/opportunities?view=list"
               className={cn(
-                "rounded px-3 py-1 text-body-sm",
-                isListView ? "bg-primary-700 text-white" : "text-neutral-600"
+                "rounded px-3 py-1 text-body-sm font-medium transition-colors",
+                isListView ? "bg-white text-primary-800 shadow-sm" : "text-neutral-500 hover:text-neutral-800"
               )}
             >
               List

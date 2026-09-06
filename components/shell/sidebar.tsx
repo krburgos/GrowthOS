@@ -52,12 +52,18 @@ const NAV_ITEMS: NavItem[] = [
  * active pill (100% opacity + primary-800 bg, radius-md, 8px inset),
  * disabled items at 30% opacity. The label now only ever appears in the
  * hover/focus tooltip, so it's load-bearing for accessibility.
+ *
+ * Client-confirmed modernization pass (approved mockup): a subtle
+ * top-to-bottom gradient instead of a flat fill, and the active item
+ * gets a secondary-500 rail — the same "this is selected" language now
+ * used on table rows and the Settings nav — alongside its existing
+ * filled pill.
  */
 export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-[var(--sidebar-width-collapsed)] shrink-0 flex-col bg-primary-900 py-4">
+    <aside className="flex w-[var(--sidebar-width-collapsed)] shrink-0 flex-col bg-gradient-to-b from-primary-800 to-primary-950 py-4 shadow-[1px_0_0_rgba(255,255,255,0.06)]">
       <nav className="flex flex-col gap-1 px-2">
         {NAV_ITEMS.map((item) => {
           const itemAccess: NavAccess = item.section === "dashboard" ? "full" : access[item.section];
@@ -67,17 +73,22 @@ export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
           const Icon = item.icon;
 
           const content = (
-            <span
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-md transition-colors",
-                disabled
-                  ? "cursor-not-allowed text-white/30"
-                  : active
-                    ? "bg-primary-800 text-white"
-                    : "text-white/70 hover:text-white"
+            <span className="relative flex h-10 w-10 items-center justify-center">
+              {active && (
+                <span className="absolute -left-2 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-secondary-500" />
               )}
-            >
-              <Icon className="size-5 shrink-0" />
+              <span
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-md transition-colors",
+                  disabled
+                    ? "cursor-not-allowed text-white/30"
+                    : active
+                      ? "bg-primary-700 text-white shadow-inner"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
+                )}
+              >
+                <Icon className="size-5 shrink-0" />
+              </span>
             </span>
           );
 

@@ -20,6 +20,10 @@ const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "
  * radius-md, shadow-sm at rest / shadow-md while dragging, 16px
  * padding, 1px neutral-200 border. Cards stay neutral — only column
  * headers carry stage color.
+ *
+ * Client-confirmed modernization pass (approved mockup): a hover-lift
+ * (subtle -translate-y + deeper shadow) so the board reads as
+ * interactive even before a drag starts.
  */
 export function OpportunityCard({ opportunity }: { opportunity: OpportunityCardData }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -35,8 +39,8 @@ export function OpportunityCard({ opportunity }: { opportunity: OpportunityCardD
       {...listeners}
       {...attributes}
       className={cn(
-        "flex w-[280px] shrink-0 cursor-grab flex-col gap-1 rounded-md border border-neutral-200 bg-white p-4 shadow-sm active:cursor-grabbing",
-        isDragging && "z-10 shadow-md"
+        "flex w-[280px] shrink-0 cursor-grab flex-col gap-1 rounded-md border border-neutral-200 bg-white p-4 shadow-sm transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing",
+        isDragging && "z-10 -translate-y-0.5 shadow-md"
       )}
     >
       <Link

@@ -106,7 +106,7 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
+    <main className="mx-auto w-full max-w-[1800px] flex-1 p-6 md:p-8">
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-h1 text-primary-900">{list.name}</h1>

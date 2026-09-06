@@ -92,14 +92,14 @@ export function UsersTable({
   return (
     <>
       <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Last Login</TableHead>
-            <TableHead>Status</TableHead>
-            {canEdit && <TableHead>Actions</TableHead>}
+        <TableHeader variant="solid">
+          <TableRow className="border-b-0 hover:bg-transparent">
+            <TableHead variant="solid">Name</TableHead>
+            <TableHead variant="solid">Email</TableHead>
+            <TableHead variant="solid">Role</TableHead>
+            <TableHead variant="solid">Last Login</TableHead>
+            <TableHead variant="solid">Status</TableHead>
+            {canEdit && <TableHead variant="solid">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -125,7 +125,7 @@ export function UsersTable({
                     </SelectContent>
                   </Select>
                 ) : (
-                  ROLE_LABELS[u.role]
+                  <Badge variant="info">{ROLE_LABELS[u.role]}</Badge>
                 )}
               </TableCell>
               <TableCell>

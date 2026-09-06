@@ -190,8 +190,9 @@ Data-heavy views (Contacts list, Opportunity table) are **compact**:
 | Sidebar width, collapsed (icon-only) | 64px |
 | Top bar height | 56px |
 | CRO Leader "viewing as" banner height | 40px |
-| Max content width (page body) | 1440px, centered, beyond that the layout doesn't stretch further |
+| Max content width (page body) | 1440px, centered, beyond that the layout doesn't stretch further — **except the fluid-width screens below** |
 
+**Client-confirmed width strategy (approved mockup):** the 1440px cap stays the default for single-record and form screens (Contact Detail, Company/My Profile, Create/Edit Opportunity, Import Contacts, etc.) — reading comfort matters more than filling a wide monitor when the content is a form or a record. Table- and board-shaped screens instead go fluid up to **1800px** — Contacts (All Contacts + List Detail), Lists Index, Opportunities (Board and List view), and Users & Roles — since a wider viewport is exactly where "lots of columns feel cramped" was the original complaint driving this whole redesign pass.
 
 ### 5.4 Breakpoints
 
@@ -282,15 +283,19 @@ Per the confirmed direction: **cards stay neutral, only column headers carry col
 
 **Card:** white background, radius-md, shadow-sm at rest, shadow-md while dragging, 16px padding, 1px neutral-200 border. Contains: contact name (Body, neutral-800, weight 500), company name (Body Small, neutral-500), value (Body Small, neutral-700, right-aligned). Column width: 280px, fixed; the board scrolls horizontally per the App Flow Document.
 
+**Client-confirmed modernization pass (approved mockup):** cards lift slightly on hover (-2px translate + shadow-md) so the board reads as interactive before a drag starts, matching the same hover-lift shadow-md they already got mid-drag. Column headers gained a pill-shaped count badge (white 70%-opacity fill, the stage's own text color, tabular-nums) in place of the old plain "12" appended after the name, and the drop target now also gets a thin secondary-200 inset ring in addition to the secondary-50 fill while a card is dragged over it.
+
 ### 8.5 Tables
 
-Header row: neutral-50 background, Caption-level text in neutral-700, uppercase, 1px neutral-200 bottom border, sort-arrow icon (neutral-400, secondary-800 when the column is the active sort) right of the column label. Body rows: white background, neutral-100 on hover, secondary-50-equivalent fill when a row is selected (with a secondary-800 checkbox), 1px neutral-100 row divider. Row height and padding per §5.2. No zebra-striping — the hover and selected states carry enough distinction at this density without it.
+Header row: neutral-50 background, Caption-level text in neutral-700, uppercase, 1px neutral-200 bottom border, sort-arrow icon (neutral-400, secondary-800 when the column is the active sort) right of the column label. Body rows: white background, neutral-100 on hover, secondary-50-equivalent fill when a row is selected (with a secondary-800 checkbox), 1px neutral-100 row divider. Row height and padding per §5.2 (48px as of the modernization pass below). No zebra-striping — the hover and selected states carry enough distinction at this density without it. On Users & Roles specifically, a user's own row (where the role isn't an editable Select, since you can't reassign your own role) now shows the role as an `info`-variant Badge pill rather than plain text, for visual consistency with the editable rows' dropdown.
 
-**Client-confirmed exception — Contacts table only** (both the All Contacts view and a list's Detail page; every other table in the app keeps the treatment above unchanged). Reviewed as mockups first ("Concept A — Navy Command Bar") before implementing:
+**Client-confirmed exception — Contacts table only** (both the All Contacts view and a list's Detail page; a bespoke table, not the shared `Table` primitive below). Reviewed as mockups first ("Concept A — Navy Command Bar") before implementing:
 - Header: solid primary-900 fill, white text, a small neutral-tone icon per column (matching what the column holds — a mail icon for Email, a building for Company, etc.), 16px vertical padding (up from the compact default) since 18 columns made the header feel cramped.
 - Full Name and the row checkbox are pinned (`position: sticky`) to the left edge while the remaining columns scroll horizontally underneath — with this many columns, losing track of which row you're looking at was a real problem.
 - Selected rows get both the secondary-50 tint *and* a 3px secondary-500 rail at the table's left edge (rendered on the pinned checkbox column, so it stays visible no matter how far right you've scrolled) — a plain background tint alone got lost against the wide row.
 - Score renders as a number plus a small filled track (secondary-500 fill); Temp renders as an icon + colored word (error-600 for Hot, primary-500 for Cold) rather than a badge pill, to stay visually distinct from the Contact Status badge in the row next to it.
+
+**Client-confirmed modernization pass, round two (approved mockup) — the shared `Table` component:** the navy-header language above was popular enough on its own that the client asked for it across the other primary data tables too, not just Contacts. `TableHeader`/`TableHead` now take an opt-in `variant="solid"` (primary-900 fill, white/90% text, no uppercase transform) and `SortableHeader` takes a matching `variant="solid"` so its icon/hover states stay legible on the dark fill — applied to Lists Index, Users & Roles, and the Opportunities List view. Tables that omit the prop (the Import Contacts preview/error tables) keep the original neutral-50 header untouched. Every `Table` instance also now sits inside a radius-lg neutral-200 card border, and row height moved from 40px to 48px to match the density this pass settled on elsewhere.
 
 ### 8.6 Tabs (Contact Detail)
 
@@ -306,9 +311,13 @@ Bottom-right of viewport, radius-md, shadow-xl, 16px padding, 360px width. Succe
 
 ### 8.9 Sidebar Navigation
 
-**Client-confirmed redesign, in progress section by section:** the sidebar is now icon-only at every breakpoint (not just below `lg`) — labels are dropped in favor of a tooltip on hover, modeled on reference screenshots of another CRM's icon-rail navigation. Colors stay GrowthOS's own (this was explicitly not a full re-brand): background primary-900, icon at white 70% opacity (default), 100% opacity + primary-800 background pill (radius-md, inset 8px) when active/current section, 100% opacity with no background on hover. Disabled items (§2.4 of the App Flow Document): icon at 30% opacity, no hover treatment, cursor: not-allowed. Icons (lucide-react, §8.13) are 20px, centered, same opacity rules as before. Tooltip (§8.7-adjacent component, existing) shows the section label on hover/focus — this is now the only place the label appears, so the tooltip is load-bearing for accessibility, not decorative.
+**Client-confirmed redesign:** the sidebar is now icon-only at every breakpoint (not just below `lg`) — labels are dropped in favor of a tooltip on hover, modeled on reference screenshots of another CRM's icon-rail navigation. Colors stay GrowthOS's own (this was explicitly not a full re-brand): background primary-900, icon at white 70% opacity (default), 100% opacity + primary-800 background pill (radius-md, inset 8px) when active/current section, 100% opacity with no background on hover. Disabled items (§2.4 of the App Flow Document): icon at 30% opacity, no hover treatment, cursor: not-allowed. Icons (lucide-react, §8.13) are 20px, centered, same opacity rules as before. Tooltip (§8.7-adjacent component, existing) shows the section label on hover/focus — this is now the only place the label appears, so the tooltip is load-bearing for accessibility, not decorative.
+
+**Client-confirmed modernization pass (approved mockup):** the flat primary-900 fill became a top-to-bottom gradient (primary-800 → primary-950) plus a 1px translucent-white right edge, for a touch of depth against the white content area. The active item's filled pill also gained a 3px secondary-500 rail (rendered just left of the pill) — the same "this is selected" language the Contacts table and the Settings nav panels (below) now share, so "what's active" reads the same way everywhere in the shell.
 
 **Settings navigation panels** — client-confirmed, modeled closely on the reference CRM's own drill-down depth rather than the flatter single-list version first tried. Docked columns rendered only while inside `/settings/*`, between the icon rail and the page content, replacing the old horizontal tab bar. Each column: white background, 224px wide, 1px neutral-200 right border, header in H4/primary-900. Item rows: 44px height, radius-md, inactive neutral-700 text on transparent with neutral-50 hover, active state secondary-50 background + primary-700 text (the same "selected" pairing already used for table rows, §8.5). Disabled rows (items with no corresponding GrowthOS page — client-confirmed to render as visible-but-inert rather than be omitted, matching the App Flow §2.4 disabled-nav philosophy already used elsewhere): neutral-300 text, cursor: not-allowed, no hover treatment.
+
+**Client-confirmed modernization pass (approved mockup):** the active row's secondary-50/primary-700 pairing above also gained the same 3px secondary-500 left rail used by the Sidebar and the Contacts table, plus `font-medium`, so "this is the current page" reads identically across all three surfaces in the shell.
 
 Three levels, not one:
 - **Level A** (bare `/settings`): a single column, no "Go Back," two rows — *My Profile*, *Account Settings*.
@@ -323,6 +332,8 @@ The My Profile branch never grows a Level C — its Level B list already points 
 
 Top bar: white background, 1px neutral-200 bottom border, 56px height, logo left, search center-left, notification bell + user menu right. CRO Leader viewing-as banner (§2.5 of the App Flow Document): full-width, warning-400 background with black text (this is the one place warning-yellow is used outside a status badge — deliberately, since it needs to be impossible to miss), 40px height, company name left, "Exit to My Dashboard" ghost-style button right.
 
+**Client-confirmed modernization pass (approved mockup):** the flat 1px bottom border became a layered shadow (a 1px neutral-200 line plus a soft 16px navy-tinted blur) for a touch more depth without a heavier border. The (still-disabled, pending Contacts search wiring) search field's bare bordered box became a borderless neutral-50 fill. The notification bell gained a small error-600 dot (top-right of the icon) since there's no unread-count model yet — a dot signals "there's something" without committing to a number the backend doesn't produce. The avatar menu trigger gained a transparent ring that turns secondary-100/secondary-500 on hover/focus, matching the teal "focus/active" language used throughout this pass.
+
 ### 8.11 Loading & Empty States
 
 **Spinner** (per the confirmed direction, not skeleton screens): a circular spinner in primary-700, 24px for inline/button contexts, 40px centered in a content area for full-page loads.
@@ -335,6 +346,10 @@ Recharts series colors, in order of use: primary-700, secondary-500, success-600
 ### 8.13 Iconography
 
 **Library: ****lucide-react** (already pinned in the Tech Stack Lockfile). Stroke width **1.5px** everywhere (Lucide's default — don't override per-icon). Standard sizes: 16px (inline with Body Small/Caption text), 20px (sidebar nav, table row actions), 24px (empty states, section headers). Icon color always follows the surrounding text color (currentColor) except where a component spec above states otherwise (e.g. the sort-arrow and disabled-nav rules).
+
+### 8.14 Auth Screens & the Opportunities View Toggle
+
+**Client-confirmed modernization pass (approved mockup):** the login/forgot-password/reset-password/accept-invite layout's plain neutral background became a soft radial-gradient ground (secondary-800 glow upper-left, primary-700 glow lower-right, over a primary-950 base) with a deeper card shadow — cosmetic only, no change to the forms themselves. The Opportunities Board/List segmented toggle's flat `primary-700`-fill active state became a light neutral-50 track with a white, shadow-sm "pressed" pill for whichever view is active, consistent with how segmented controls read as a control rather than a badge.
 
 ## 9. Copy-Ready Design Tokens
 

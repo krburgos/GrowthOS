@@ -98,7 +98,7 @@ export default async function ListsIndexPage({
   });
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
+    <main className="mx-auto w-full max-w-[1800px] flex-1 p-6 md:p-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-h1 text-primary-900">Lists</h1>
         {canEdit && (
@@ -117,14 +117,14 @@ export default async function ListsIndexPage({
         <EmptyState icon={ListChecks} />
       ) : (
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead><SortableHeader field="name" label="Name" /></TableHead>
-              <TableHead><SortableHeader field="contacts" label="Contacts" /></TableHead>
-              <TableHead><SortableHeader field="created_at" label="Date Added" /></TableHead>
-              <TableHead><SortableHeader field="bounced" label="Bounced" /></TableHead>
-              <TableHead><SortableHeader field="unsubscribed" label="Unsubscribed" /></TableHead>
-              {canEdit && <TableHead>Actions</TableHead>}
+          <TableHeader variant="solid">
+            <TableRow className="border-b-0 hover:bg-transparent">
+              <TableHead variant="solid"><SortableHeader variant="solid" field="name" label="Name" /></TableHead>
+              <TableHead variant="solid"><SortableHeader variant="solid" field="contacts" label="Contacts" /></TableHead>
+              <TableHead variant="solid"><SortableHeader variant="solid" field="created_at" label="Date Added" /></TableHead>
+              <TableHead variant="solid"><SortableHeader variant="solid" field="bounced" label="Bounced" /></TableHead>
+              <TableHead variant="solid"><SortableHeader variant="solid" field="unsubscribed" label="Unsubscribed" /></TableHead>
+              {canEdit && <TableHead variant="solid">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>

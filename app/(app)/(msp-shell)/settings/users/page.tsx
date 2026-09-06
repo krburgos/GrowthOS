@@ -21,7 +21,7 @@ export default async function UsersRolesPage() {
 
   if (isCroLeaderRole(user.role) && !user.account_id) {
     return (
-      <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
+      <main className="mx-auto w-full max-w-[1800px] flex-1 p-6 md:p-8">
         <h1 className="mb-2 text-h1 text-primary-900">Users & Roles</h1>
         <p className="text-body text-neutral-500">
           Select an MSP account from the CRO Leader Dashboard to manage its users.
@@ -55,7 +55,7 @@ export default async function UsersRolesPage() {
   }));
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
+    <main className="mx-auto w-full max-w-[1800px] flex-1 p-6 md:p-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-h1 text-primary-900">Users & Roles</h1>
         {canEdit && <InviteUserDialog inviteableRoles={user.role === "cro_admin" ? [...MSP_ROLES, ...CRO_LEADER_ROLES] : MSP_ROLES} />}

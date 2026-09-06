@@ -5,10 +5,17 @@ import { cn } from "@/lib/utils";
 /**
  * Design System §8.5 — Tables + §5.2 density (40px row height, 8px/12px
  * cell padding, 36px header height). No zebra-striping.
+ *
+ * Client-confirmed modernization pass (approved mockup): an opt-in
+ * `variant="solid"` header (navy fill, white text) and a teal left-rail
+ * on selected/active rows, matching the language established on the
+ * Contacts table — used on Lists Index and Users & Roles. Plain tables
+ * elsewhere (e.g. the Import Contacts preview) keep the original
+ * neutral-50 header by omitting the prop.
  */
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full overflow-x-auto rounded-lg border border-neutral-200">
       <table ref={ref} className={cn("w-full caption-bottom text-body", className)} {...props} />
     </div>
   )
@@ -17,11 +24,14 @@ Table.displayName = "Table";
 
 const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
-  React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
+  React.HTMLAttributes<HTMLTableSectionElement> & { variant?: "default" | "solid" }
+>(({ className, variant = "default", ...props }, ref) => (
   <thead
     ref={ref}
-    className={cn("bg-neutral-50 border-b border-neutral-200", className)}
+    className={cn(
+      variant === "solid" ? "bg-primary-900" : "border-b border-neutral-200 bg-neutral-50",
+      className
+    )}
     {...props}
   />
 ));
@@ -43,7 +53,7 @@ const TableRow = React.forwardRef<
     ref={ref}
     data-state={selected ? "selected" : undefined}
     className={cn(
-      "h-10 border-b border-neutral-100 transition-colors hover:bg-neutral-100 data-[state=selected]:bg-secondary-50",
+      "group relative h-12 border-b border-neutral-100 transition-colors last:border-b-0 hover:bg-neutral-50 data-[state=selected]:bg-secondary-50",
       className
     )}
     {...props}
@@ -53,12 +63,13 @@ TableRow.displayName = "TableRow";
 
 const TableHead = React.forwardRef<
   HTMLTableCellElement,
-  React.ThHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
+  React.ThHTMLAttributes<HTMLTableCellElement> & { variant?: "default" | "solid" }
+>(({ className, variant = "default", ...props }, ref) => (
   <th
     ref={ref}
     className={cn(
-      "h-9 px-3 text-left align-middle text-caption uppercase text-neutral-700",
+      "h-11 px-4 text-left align-middle text-caption font-semibold tracking-wide",
+      variant === "solid" ? "text-white/90" : "uppercase text-neutral-700",
       className
     )}
     {...props}

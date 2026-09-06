@@ -113,7 +113,7 @@ export default async function ContactsListPage({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col p-6 md:p-8">
+    <main className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col p-6 md:p-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-h1 text-primary-900">Contacts</h1>
         <div className="flex gap-3">
