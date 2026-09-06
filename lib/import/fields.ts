@@ -24,7 +24,7 @@ export const IMPORT_FIELDS: ImportField[] = [
   { key: "status", label: "Status", required: false, synonyms: ["status"] },
   { key: "score", label: "Score", required: false, synonyms: ["score"] },
   { key: "temperature", label: "Temp", required: false, synonyms: ["temp", "temperature"] },
-  { key: "linkedin_url", label: "LinkedIn", required: false, synonyms: ["linkedin", "linkedin url", "linkedin link"] },
+  { key: "linkedin_url", label: "Person LinkedIn", required: false, synonyms: ["linkedin", "linkedin url", "linkedin link", "person linkedin"] },
   { key: "company_name", label: "Company Name", required: false, synonyms: ["company", "company name", "account"] },
   { key: "company_website", label: "Company Website", required: false, synonyms: ["website", "company website", "domain"] },
   { key: "company_linkedin_url", label: "Company LinkedIn", required: false, synonyms: ["company linkedin", "company linkedin url", "company linkedin link"] },

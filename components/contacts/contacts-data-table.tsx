@@ -70,7 +70,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
       { key: "temp", label: "Temp" },
       { key: "lists", label: "Lists" },
       { key: "mobile", label: "Mobile Phone" },
-      { key: "linkedin", label: "LinkedIn" },
+      { key: "linkedin", label: "Person LinkedIn" },
     ],
   },
   {
@@ -355,7 +355,7 @@ export function ContactsDataTable({
               )}
               {show("linkedin") && (
                 <Th>
-                  <Link2 className="size-3.5" /> LinkedIn
+                  <Link2 className="size-3.5" /> Person LinkedIn
                 </Th>
               )}
               {show("addr") && (

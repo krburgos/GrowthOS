@@ -247,7 +247,7 @@ export function ContactForm({
             <Input id="phone" {...register("phone")} />
           </div>
           <div>
-            <Label htmlFor="linkedin_url">LinkedIn</Label>
+            <Label htmlFor="linkedin_url">Person LinkedIn</Label>
             <Input id="linkedin_url" placeholder="https://linkedin.com/in/…" {...register("linkedin_url")} />
           </div>
           <div>

@@ -202,7 +202,7 @@ export function ContactDetailBody({
                 target="_blank"
                 rel="noreferrer"
                 aria-label={`${fullName}'s LinkedIn`}
-                title={`${fullName}'s LinkedIn`}
+                title="Person LinkedIn"
                 className="flex size-7 items-center justify-center rounded-full bg-secondary-50 text-secondary-700 transition-colors hover:bg-secondary-700 hover:text-white"
               >
                 <Link2 className="size-3.5" />

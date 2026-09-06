@@ -299,7 +299,7 @@ export function ContactOverviewForm({
                 <Value>{tempLabel}</Value>
               )}
             </Row>
-            <Row icon={Link2} label="LinkedIn" fieldId="linkedin_url">
+            <Row icon={Link2} label="Person LinkedIn" fieldId="linkedin_url">
               {editing ? (
                 <Input id="linkedin_url" placeholder="https://linkedin.com/in/…" {...register("linkedin_url")} className="flex-1" />
               ) : values.linkedin_url ? (
