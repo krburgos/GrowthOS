@@ -1,9 +1,10 @@
 "use client";
 
-import { Bell, Search } from "lucide-react";
+import { Bell } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { CommandPalette } from "@/components/shell/command-palette";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -12,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import type { NavAccess, NavSection } from "@/lib/auth/nav-permissions";
 import { createClient } from "@/lib/supabase/client";
 
 function initials(name: string) {
@@ -22,21 +23,39 @@ function initials(name: string) {
 
 /**
  * Design System §8.10 — Top Bar. White bg, 1px neutral-200 bottom
- * border, 56px height, logo left, search center-left, bell + user menu
- * right. Search is Contacts-only (App Flow §2.3) — visually in place now,
- * wired once Contacts (Milestone 6) exists to search against.
+ * border, 56px height, logo left, bell + user menu right.
  *
- * Client-confirmed modernization pass (approved mockup): a filled
- * search field instead of a bare bordered box, a subtle shadow instead
- * of a flat border, and a teal avatar ring to match the rest of the
- * app's "teal = focus/active" language.
+ * Client-confirmed modernization pass (approved mockup): a subtle
+ * shadow instead of a flat border, and a teal avatar ring to match the
+ * rest of the app's "teal = focus/active" language.
  *
  * Impeccable critique finding (2026-09-06, P2): the bell briefly grew a
  * hardcoded "unread" dot with no real state behind it — a persistently
  * lying indicator that would train users to ignore it. Removed until an
  * actual unread-notifications source exists to drive it honestly.
+ *
+ * Client-confirmed redesign, round two (approved mockup, "Concept B —
+ * Command Palette"): the disabled Contacts-search field — dead chrome
+ * for a feature that was never wired up — is replaced by
+ * `CommandPalette`, a Cmd/Ctrl+K launcher that jumps to recent
+ * contacts, quick actions, and app sections instead. The logo also
+ * grew from h-10 to h-12 (client feedback: wanted more visible/
+ * prominent branding in the one place the full wordmark appears, since
+ * the sidebar is icon-only).
  */
-export function TopBar({ fullName }: { fullName: string }) {
+export function TopBar({
+  fullName,
+  access,
+  accountId,
+}: {
+  fullName: string;
+  /** Omitted on the CRO Leader's lightweight header (App Flow §4.10) —
+   * a CRO Leader who hasn't entered an MSP account yet has no account
+   * context for the palette's contacts search or "Go to" section
+   * access to run against, so it's simply not rendered there. */
+  access?: Record<NavSection, NavAccess>;
+  accountId?: string;
+}) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -50,16 +69,14 @@ export function TopBar({ fullName }: { fullName: string }) {
     <header className="flex h-[var(--topbar-height)] shrink-0 items-center gap-4 bg-white px-4 shadow-[0_1px_0_var(--color-neutral-200),0_6px_16px_-12px_rgba(10,25,46,0.15)]">
       <Link href="/dashboard" className="shrink-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/growthos-logo.png" alt="GrowthOS" className="h-10 w-auto" />
+        <img src="/growthos-logo.png" alt="GrowthOS" className="h-12 w-auto" />
       </Link>
 
-      <div className="relative max-w-sm flex-1">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-        {/* Disabled until Contacts search is wired up — the softer fill
-            is cosmetic only here since focus/hover can't trigger on a
-            disabled field, kept simple rather than styling unreachable states. */}
-        <Input placeholder="Search contacts…" disabled className="border-transparent bg-neutral-50 pl-9" />
-      </div>
+      {access && accountId && (
+        <div className="flex-1">
+          <CommandPalette access={access} accountId={accountId} />
+        </div>
+      )}
 
       <div className="ml-auto flex items-center gap-2">
         <button

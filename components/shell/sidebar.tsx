@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { NavAccess, NavSection } from "@/lib/auth/nav-permissions";
 import { cn } from "@/lib/utils";
 
-interface NavItem {
+export interface NavItem {
   section: NavSection | "dashboard";
   label: string;
   href: string;
@@ -29,7 +29,9 @@ interface NavItem {
   icon: ComponentType<{ className?: string }>;
 }
 
-const NAV_ITEMS: NavItem[] = [
+/** Exported so the command palette (§8.10) can reuse the exact same
+ * destination list rather than maintaining a second, drift-prone copy. */
+export const NAV_ITEMS: NavItem[] = [
   { section: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { section: "contacts", label: "Contacts", href: "/contacts", icon: Users },
   { section: "opportunities", label: "Opportunities", href: "/opportunities", icon: Target },
