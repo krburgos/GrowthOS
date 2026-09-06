@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { AddContactsButton } from "@/components/lists/add-contacts-button";
 import { ContactsDataTable } from "@/components/contacts/contacts-data-table";
-import { DeleteListButton } from "@/components/lists/delete-list-button";
+import { ListActionsMenu } from "@/components/lists/list-actions-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -114,7 +114,7 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
             {list.type === "smart" ? "Smart" : "Static"}
           </Badge>
         </div>
-        {canEdit && <DeleteListButton listId={list.id} listName={list.name} redirectTo="/lists" />}
+        {canEdit && <ListActionsMenu listId={list.id} listName={list.name} redirectOnDelete="/lists" />}
       </div>
       <div className="mb-6 flex items-center justify-between">
         <p className="text-body text-neutral-500">

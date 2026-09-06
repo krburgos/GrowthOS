@@ -2,11 +2,9 @@ import { ListChecks } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { DeleteListButton } from "@/components/lists/delete-list-button";
+import { ListsTable } from "@/components/lists/lists-table";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SortableHeader } from "@/components/ui/sortable-header";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
@@ -116,38 +114,7 @@ export default async function ListsIndexPage({
       {listsWithCounts.length === 0 ? (
         <EmptyState icon={ListChecks} />
       ) : (
-        <Table>
-          <TableHeader variant="solid">
-            <TableRow className="border-b-0 hover:bg-transparent">
-              <TableHead variant="solid"><SortableHeader variant="solid" field="name" label="Name" /></TableHead>
-              <TableHead variant="solid"><SortableHeader variant="solid" field="contacts" label="Contacts" /></TableHead>
-              <TableHead variant="solid"><SortableHeader variant="solid" field="created_at" label="Date Added" /></TableHead>
-              <TableHead variant="solid"><SortableHeader variant="solid" field="bounced" label="Bounced" /></TableHead>
-              <TableHead variant="solid"><SortableHeader variant="solid" field="unsubscribed" label="Unsubscribed" /></TableHead>
-              {canEdit && <TableHead variant="solid">Actions</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {listsWithCounts.map((list) => (
-              <TableRow key={list.id}>
-                <TableCell className="font-medium text-neutral-800">
-                  <Link href={`/lists/${list.id}`} className="block">
-                    {list.name}
-                  </Link>
-                </TableCell>
-                <TableCell>{list.memberCount}</TableCell>
-                <TableCell>{new Date(list.created_at).toLocaleDateString()}</TableCell>
-                <TableCell>{list.bounced}</TableCell>
-                <TableCell>{list.unsubscribed}</TableCell>
-                {canEdit && (
-                  <TableCell>
-                    <DeleteListButton listId={list.id} listName={list.name} />
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <ListsTable lists={listsWithCounts} canEdit={canEdit} />
       )}
     </main>
   );
