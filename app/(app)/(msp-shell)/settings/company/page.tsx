@@ -31,7 +31,7 @@ export default async function CompanyProfilePage() {
   if (!account) return null;
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
+    <main className="w-full max-w-[1440px] flex-1 p-6 md:p-8">
       <ProfileBanner
         title={account.name}
         avatar={<CompanyLogoUpload accountId={account.id} logoUrl={account.logo_url} canEdit={canEdit} />}

@@ -25,7 +25,7 @@ export default async function PasswordPage() {
   const { data: profile } = await supabase.from("users").select("avatar_url").eq("id", user.id).single();
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
+    <main className="w-full max-w-[1440px] flex-1 p-6 md:p-8">
       <ProfileBanner
         title={user.full_name}
         avatar={

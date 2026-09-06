@@ -28,7 +28,7 @@ export default async function StatusesPage() {
     .order("sort_order");
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
+    <main className="w-full max-w-[1440px] flex-1 p-6 md:p-8">
       <h1 className="mb-6 text-h1 text-primary-900">Contact Statuses</h1>
       <StatusesManager statuses={statuses ?? []} canEdit={canEdit} accountId={user.account_id!} />
     </main>

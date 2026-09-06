@@ -24,7 +24,7 @@ export default async function ConnectedEmailAccountsPage() {
     .maybeSingle();
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
+    <main className="w-full max-w-[1440px] flex-1 p-6 md:p-8">
       <h1 className="mb-2 text-h1 text-primary-900">Connected Email Accounts</h1>
       <p className="mb-6 text-body text-neutral-500">
         Connect the mailbox campaigns will send from. This connection is yours alone — no one else on your
