@@ -13,6 +13,7 @@ export interface MappedRow {
   linkedin_url: string;
   company_name: string;
   company_website: string;
+  company_linkedin_url: string;
   company_industry: string;
   company_size: string;
   company_phone: string;
@@ -48,6 +49,7 @@ export function applyMapping(rows: Record<string, string>[], mapping: Record<str
       linkedin_url: get("linkedin_url"),
       company_name: get("company_name"),
       company_website: get("company_website"),
+      company_linkedin_url: get("company_linkedin_url"),
       company_industry: get("company_industry"),
       company_size: get("company_size"),
       company_phone: get("company_phone"),

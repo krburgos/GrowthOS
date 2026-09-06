@@ -96,7 +96,7 @@ export function ContactDetailBody({
   temperature: "hot" | "cold" | null;
   score: number | null;
   linkedinUrl: string | null;
-  company: { name: string; website: string | null; company_size: string | null } | undefined;
+  company: { name: string; website: string | null; linkedinUrl: string | null; company_size: string | null } | undefined;
   statuses: { id: string; label: string }[];
   owners: { id: string; label: string }[];
   overviewDefaults: ContactOverviewDefaults;
@@ -172,13 +172,25 @@ export function ContactDetailBody({
                 <Globe className="size-3.5" />
               </a>
             )}
+            {company?.linkedinUrl && (
+              <a
+                href={company.linkedinUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`${company.name}'s LinkedIn`}
+                title="Company LinkedIn"
+                className="flex size-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-colors hover:bg-primary-700 hover:text-white"
+              >
+                <Link2 className="size-3.5" />
+              </a>
+            )}
             {linkedinUrl && (
               <a
                 href={linkedinUrl}
                 target="_blank"
                 rel="noreferrer"
                 aria-label={`${fullName}'s LinkedIn`}
-                title="LinkedIn"
+                title={`${fullName}'s LinkedIn`}
                 className="flex size-7 items-center justify-center rounded-full bg-secondary-50 text-secondary-700 transition-colors hover:bg-secondary-700 hover:text-white"
               >
                 <Link2 className="size-3.5" />

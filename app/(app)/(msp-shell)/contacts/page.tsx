@@ -47,7 +47,7 @@ export default async function ContactsListPage({
     supabase
       .from("contacts")
       .select(
-        "id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, status_id, contact_statuses(name), company_id, companies(name, phone, address_line1, city, state, company_size), owner_id, users(full_name), updated_at"
+        "id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, status_id, contact_statuses(name), company_id, companies(name, phone, address_line1, city, state, company_size, linkedin_url), owner_id, users(full_name), updated_at"
       )
       .eq("account_id", user.account_id)
       .is("archived_at", null)

@@ -41,7 +41,7 @@ export default async function ContactDetailPage({
   const { data: contact } = await supabase
     .from("contacts")
     .select(
-      "id, first_name, last_name, full_name, title, email, phone, status_id, owner_id, notes, score, temperature, linkedin_url, avatar_url, company_id, contact_statuses(name), companies(name, website, industry, company_size, phone, address_line1, city, state)"
+      "id, first_name, last_name, full_name, title, email, phone, status_id, owner_id, notes, score, temperature, linkedin_url, avatar_url, company_id, contact_statuses(name), companies(name, website, linkedin_url, industry, company_size, phone, address_line1, city, state)"
     )
     .eq("id", id)
     .is("archived_at", null)
@@ -104,6 +104,7 @@ export default async function ContactDetailPage({
   type CompanyFields = {
     name: string;
     website: string | null;
+    linkedin_url: string | null;
     industry: string | null;
     company_size: string | null;
     phone: string | null;
@@ -147,7 +148,11 @@ export default async function ContactDetailPage({
       temperature={contact.temperature}
       score={contact.score}
       linkedinUrl={contact.linkedin_url}
-      company={company ? { name: company.name, website: company.website, company_size: company.company_size } : undefined}
+      company={
+        company
+          ? { name: company.name, website: company.website, linkedinUrl: company.linkedin_url, company_size: company.company_size }
+          : undefined
+      }
       statuses={(statuses ?? []).map((s) => ({ id: s.id, label: s.name }))}
       owners={(owners ?? []).map((o) => ({ id: o.id, label: o.full_name }))}
       overviewDefaults={{
@@ -164,6 +169,7 @@ export default async function ContactDetailPage({
         notes: contact.notes ?? "",
         company_name: company?.name ?? "",
         company_website: company?.website ?? "",
+        company_linkedin_url: company?.linkedin_url ?? "",
         company_industry: company?.industry ?? "",
         company_size: company?.company_size ?? "",
         company_phone: company?.phone ?? "",

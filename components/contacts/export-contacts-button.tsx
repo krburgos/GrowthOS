@@ -20,8 +20,24 @@ interface ExportRow {
   linkedin_url: string | null;
   contact_statuses: { name: string } | { name: string }[] | null;
   companies:
-    | { name: string; phone: string | null; address_line1: string | null; city: string | null; state: string | null; company_size: string | null }
-    | { name: string; phone: string | null; address_line1: string | null; city: string | null; state: string | null; company_size: string | null }[]
+    | {
+        name: string;
+        phone: string | null;
+        address_line1: string | null;
+        city: string | null;
+        state: string | null;
+        company_size: string | null;
+        linkedin_url: string | null;
+      }
+    | {
+        name: string;
+        phone: string | null;
+        address_line1: string | null;
+        city: string | null;
+        state: string | null;
+        company_size: string | null;
+        linkedin_url: string | null;
+      }[]
     | null;
 }
 
@@ -62,7 +78,7 @@ export function ExportContactsButton({
     const { data, error } = await supabase
       .from("contacts")
       .select(
-        "full_name, email, title, phone, score, temperature, linkedin_url, contact_statuses(name), companies(name, phone, address_line1, city, state, company_size)"
+        "full_name, email, title, phone, score, temperature, linkedin_url, contact_statuses(name), companies(name, phone, address_line1, city, state, company_size, linkedin_url)"
       )
       .in("id", ids);
 
@@ -85,6 +101,7 @@ export function ExportContactsButton({
         Temp: c.temperature ?? "",
         LinkedIn: c.linkedin_url ?? "",
         Company: company?.name ?? "",
+        "Company LinkedIn": company?.linkedin_url ?? "",
         "Company Phone": company?.phone ?? "",
         "Mobile Phone": c.phone ?? "",
         "Company Address 1": company?.address_line1 ?? "",

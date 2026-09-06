@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "List — GrowthOS" };
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 
 const CONTACT_FIELDS =
-  "id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, status_id, contact_statuses(name), company_id, companies(name, phone, address_line1, city, state, company_size)";
+  "id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, status_id, contact_statuses(name), company_id, companies(name, phone, address_line1, city, state, company_size, linkedin_url)";
 
 /**
  * App Flow §4.6, F2 — List Detail. Smart list membership is computed

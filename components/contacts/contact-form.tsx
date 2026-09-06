@@ -34,6 +34,7 @@ const schema = z.object({
   notes: z.string().optional(),
   company_name: z.string().optional(),
   company_website: z.string().optional(),
+  company_linkedin_url: z.string().optional(),
   company_industry: z.string().optional(),
   company_size: z.string().optional(),
   company_phone: z.string().optional(),
@@ -118,6 +119,7 @@ export function ContactForm({
 
       if (
         values.company_website ||
+        values.company_linkedin_url ||
         values.company_industry ||
         values.company_size ||
         values.company_phone ||
@@ -129,6 +131,7 @@ export function ContactForm({
           .from("companies")
           .update({
             website: values.company_website || null,
+            linkedin_url: values.company_linkedin_url || null,
             industry: values.company_industry || null,
             company_size: values.company_size || null,
             phone: values.company_phone || null,
@@ -308,6 +311,10 @@ export function ContactForm({
           <div>
             <Label htmlFor="company_website">Website</Label>
             <Input id="company_website" {...register("company_website")} />
+          </div>
+          <div>
+            <Label htmlFor="company_linkedin_url">Company LinkedIn</Label>
+            <Input id="company_linkedin_url" placeholder="https://linkedin.com/company/…" {...register("company_linkedin_url")} />
           </div>
           <div>
             <Label htmlFor="company_industry">Industry</Label>

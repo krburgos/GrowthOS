@@ -53,6 +53,7 @@ type ColumnKey =
   | "cphone"
   | "mobile"
   | "linkedin"
+  | "companyLinkedin"
   | "addr"
   | "city"
   | "state"
@@ -77,6 +78,10 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
     columns: [
       { key: "employees", label: "Employees" },
       { key: "company", label: "Company" },
+      // Client-confirmed addition alongside companies.linkedin_url —
+      // not part of the original 18-column request, but toggleable and
+      // visible under the "All columns" preset like every other column.
+      { key: "companyLinkedin", label: "Company LinkedIn" },
       { key: "cphone", label: "Company Phone" },
       { key: "addr", label: "Company Address 1" },
       { key: "city", label: "Company City" },
@@ -336,6 +341,11 @@ export function ContactsDataTable({
                   <Building2 className="size-3.5" /> Company
                 </Th>
               )}
+              {show("companyLinkedin") && (
+                <Th>
+                  <Link2 className="size-3.5" /> Company LinkedIn
+                </Th>
+              )}
               {show("cphone") && (
                 <Th>
                   <Phone className="size-3.5" /> Company Phone
@@ -458,6 +468,23 @@ export function ContactsDataTable({
                           </span>
                           {c.companies.name}
                         </div>
+                      ) : (
+                        "—"
+                      )}
+                    </Td>
+                  )}
+                  {show("companyLinkedin") && (
+                    <Td>
+                      {c.companies?.linkedin_url ? (
+                        <a
+                          href={c.companies.linkedin_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`${c.companies.name}'s LinkedIn`}
+                          className="flex size-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-colors hover:bg-primary-700 hover:text-white"
+                        >
+                          <Link2 className="size-3.5" />
+                        </a>
                       ) : (
                         "—"
                       )}

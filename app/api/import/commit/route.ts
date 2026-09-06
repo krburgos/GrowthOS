@@ -118,6 +118,7 @@ export async function POST(request: NextRequest) {
         companyId = matchedCompanyId;
         if (
           row.company_website ||
+          row.company_linkedin_url ||
           row.company_industry ||
           row.company_size ||
           row.company_phone ||
@@ -129,6 +130,7 @@ export async function POST(request: NextRequest) {
             .from("companies")
             .update({
               website: row.company_website || null,
+              linkedin_url: row.company_linkedin_url || null,
               industry: row.company_industry || null,
               company_size: row.company_size || null,
               phone: row.company_phone || null,

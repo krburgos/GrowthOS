@@ -50,6 +50,7 @@ const schema = z.object({
   notes: z.string().optional(),
   company_name: z.string().optional(),
   company_website: z.string().optional(),
+  company_linkedin_url: z.string().optional(),
   company_industry: z.string().optional(),
   company_size: z.string().optional(),
   company_phone: z.string().optional(),
@@ -159,6 +160,7 @@ export function ContactOverviewForm({
           .update({
             name: formValues.company_name,
             website: formValues.company_website || null,
+            linkedin_url: formValues.company_linkedin_url || null,
             industry: formValues.company_industry || null,
             company_size: formValues.company_size || null,
             phone: formValues.company_phone || null,
@@ -330,6 +332,27 @@ export function ContactOverviewForm({
               ) : values.company_website ? (
                 <a href={values.company_website} target="_blank" rel="noreferrer" className="flex-1 truncate text-body text-primary-700 hover:underline">
                   {values.company_website}
+                </a>
+              ) : (
+                <Value />
+              )}
+            </Row>
+            <Row icon={Link2} label="Company LinkedIn" fieldId="company_linkedin_url">
+              {editing ? (
+                <Input
+                  id="company_linkedin_url"
+                  placeholder="https://linkedin.com/company/…"
+                  {...register("company_linkedin_url")}
+                  className="flex-1"
+                />
+              ) : values.company_linkedin_url ? (
+                <a
+                  href={values.company_linkedin_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 truncate text-body text-primary-700 hover:underline"
+                >
+                  {values.company_linkedin_url}
                 </a>
               ) : (
                 <Value />

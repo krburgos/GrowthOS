@@ -27,6 +27,7 @@ export const IMPORT_FIELDS: ImportField[] = [
   { key: "linkedin_url", label: "LinkedIn", required: false, synonyms: ["linkedin", "linkedin url", "linkedin link"] },
   { key: "company_name", label: "Company Name", required: false, synonyms: ["company", "company name", "account"] },
   { key: "company_website", label: "Company Website", required: false, synonyms: ["website", "company website", "domain"] },
+  { key: "company_linkedin_url", label: "Company LinkedIn", required: false, synonyms: ["company linkedin", "company linkedin url", "company linkedin link"] },
   { key: "company_industry", label: "Company Industry", required: false, synonyms: ["industry"] },
   { key: "company_size", label: "Employee Size", required: false, synonyms: ["employee size", "company size", "employees"] },
   { key: "company_phone", label: "Company Phone", required: false, synonyms: ["company phone", "company phone number"] },

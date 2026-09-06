@@ -20,6 +20,7 @@ export interface ContactListRow {
     city: string | null;
     state: string | null;
     company_size: string | null;
+    linkedin_url: string | null;
   } | null;
   owner_id: string | null;
   users: { full_name: string } | null;
