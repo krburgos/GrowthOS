@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Globe, Link2 } from "lucide-react";
+
 import { ActivityTimeline, type ActivityRow } from "@/components/activities/activity-timeline";
 import { EmailList } from "@/components/activities/email-list";
 import { LogActivityDialog } from "@/components/activities/log-activity-dialog";
 import { ContactAvatarUpload } from "@/components/contacts/contact-avatar-upload";
+import { ContactListsCard, type ContactListMembership } from "@/components/contacts/contact-lists-card";
 import { ContactOverviewForm } from "@/components/contacts/contact-overview-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,7 +73,7 @@ export default async function ContactDetailPage({
 
   if (!contact) notFound();
 
-  const [{ data: statuses }, { data: owners }, { data: activityRows }, { data: opportunityRows }] =
+  const [{ data: statuses }, { data: owners }, { data: activityRows }, { data: opportunityRows }, { data: allLists }, { data: memberRows }] =
     await Promise.all([
       supabase
         .from("contact_statuses")
@@ -95,7 +98,32 @@ export default async function ContactDetailPage({
         .select("id, name, value, created_at, opportunity_stages(name, stage_group)")
         .eq("contact_id", id)
         .order("created_at", { ascending: false }),
+      supabase
+        .from("lists")
+        .select("id, name, type")
+        .eq("account_id", user.account_id)
+        .is("archived_at", null)
+        .order("name"),
+      supabase.from("list_members").select("list_id").eq("contact_id", id),
     ]);
+
+  // Static lists: membership is the list_members row itself. Smart
+  // lists: compute_smart_list_members already folds in criteria matches,
+  // manual list_members additions, and list_exclusions (Backend Schema
+  // §7.4) — a per-list RPC call is cheap here since it's one contact,
+  // unlike the Contacts table's dense per-row rendering.
+  const staticMemberIds = new Set((memberRows ?? []).map((r) => r.list_id));
+  const smartLists = (allLists ?? []).filter((l) => l.type === "smart");
+  const smartMembership = await Promise.all(
+    smartLists.map(async (list) => {
+      const { data } = await supabase.rpc("compute_smart_list_members", { p_list_id: list.id });
+      return (data ?? []).some((r: { contact_id: string }) => r.contact_id === id);
+    })
+  );
+  const smartMemberIds = new Set(smartLists.filter((_, i) => smartMembership[i]).map((l) => l.id));
+  const listMemberships: ContactListMembership[] = (allLists ?? [])
+    .filter((l) => (l.type === "static" ? staticMemberIds.has(l.id) : smartMemberIds.has(l.id)))
+    .map((l) => ({ id: l.id, name: l.name, type: l.type as "static" | "smart" }));
 
   type CompanyFields = {
     name: string;
@@ -122,8 +150,8 @@ export default async function ContactDetailPage({
 
   return (
     <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
-      <div className="mb-6 flex items-center gap-4">
-        <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-secondary-500">
+      <div className="mb-6 flex items-center gap-5">
+        <div className="flex size-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-secondary-500">
           <ContactAvatarUpload
             contactId={contact.id}
             accountId={user.account_id!}
@@ -141,7 +169,31 @@ export default async function ContactDetailPage({
               {company?.name}
             </p>
           )}
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {company?.website && (
+              <a
+                href={company.website}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`${company.name}'s website`}
+                title="Company website"
+                className="flex size-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-colors hover:bg-primary-700 hover:text-white"
+              >
+                <Globe className="size-3.5" />
+              </a>
+            )}
+            {contact.linkedin_url && (
+              <a
+                href={contact.linkedin_url}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`${contact.full_name}'s LinkedIn`}
+                title="LinkedIn"
+                className="flex size-7 items-center justify-center rounded-full bg-secondary-50 text-secondary-700 transition-colors hover:bg-secondary-700 hover:text-white"
+              >
+                <Link2 className="size-3.5" />
+              </a>
+            )}
             {status && (
               <span className="rounded-full bg-secondary-100 px-2.5 py-1 text-caption font-semibold text-secondary-800">
                 {status.name}
@@ -204,6 +256,9 @@ export default async function ContactDetailPage({
               company_state: company?.state ?? "",
             }}
           />
+          <div className="mt-5 max-w-3xl">
+            <ContactListsCard contactId={contact.id} accountId={user.account_id!} memberships={listMemberships} />
+          </div>
         </TabsContent>
 
         <TabsContent value="activity">
