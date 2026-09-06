@@ -33,7 +33,6 @@ export default async function PasswordPage() {
             userId={user.id}
             avatarUrl={profile?.avatar_url ?? null}
             fallbackText={initials(user.full_name)}
-            compact
           />
         }
       />

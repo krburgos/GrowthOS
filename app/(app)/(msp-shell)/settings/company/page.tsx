@@ -35,7 +35,7 @@ export default async function CompanyProfilePage() {
       <ProfileHeader
         title={account.name}
         subtitle={[account.address_city, account.address_state].filter(Boolean).join(", ") || undefined}
-        avatar={<CompanyLogoUpload accountId={account.id} logoUrl={account.logo_url} canEdit={canEdit} compact />}
+        avatar={<CompanyLogoUpload accountId={account.id} logoUrl={account.logo_url} canEdit={canEdit} />}
       />
       <CompanyProfileForm
         accountId={account.id}

@@ -80,7 +80,7 @@ function NavColumn({
   backHref?: string;
 }) {
   return (
-    <div className="flex w-56 shrink-0 flex-col border-r border-neutral-200 bg-white py-4">
+    <div className="flex w-48 shrink-0 flex-col border-r border-neutral-200 bg-white py-4">
       {backHref ? (
         <Link
           href={backHref}
@@ -97,8 +97,9 @@ function NavColumn({
             <Link
               key={row.label}
               href={row.href}
+              title={row.label}
               className={cn(
-                "relative flex h-11 items-center rounded-md px-3 text-body transition-colors",
+                "relative flex h-11 items-center truncate rounded-md px-3 text-body transition-colors",
                 activeHref === row.href
                   ? "bg-secondary-50 font-medium text-primary-700 before:absolute before:-left-2 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-secondary-500"
                   : "text-neutral-700 hover:bg-neutral-50"
@@ -110,7 +111,8 @@ function NavColumn({
             <span
               key={row.label}
               aria-disabled="true"
-              className="flex h-11 cursor-not-allowed items-center rounded-md px-3 text-body text-neutral-300"
+              title={row.label}
+              className="flex h-11 cursor-not-allowed items-center truncate rounded-md px-3 text-body text-neutral-300"
             >
               {row.label}
             </span>
