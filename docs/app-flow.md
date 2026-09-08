@@ -128,6 +128,8 @@ The landing screen after login, in priority order:
 - **Weekly/monthly KPI snapshot** — leads, opportunities created, meetings, campaign sends (a lighter version of §4.8 Reports)
 Empty and loading states: see §6.
 
+**Client-confirmed layout, "Concept B — Command Center" (approved mockup, 2026-09-08):** built as a KPI strip first (the convention most CRM home screens open with), then Pipeline by Stage and Recent Activity in a wide left column, with Tasks/Follow-ups Due pulled into a permanently visible highlighted rail on the right instead of this section's literal top-of-page slot — still the first thing the eye lands on, via placement/color rather than document order. "This week" is a trailing 7-day window, not a Sunday/Monday calendar week (neither document specifies one). Campaign Sends shows "—" until Campaigns (Milestone 10) exists, the same placeholder convention already used for Bounced on the Contacts table.
+
 ### 4.4 Contacts (D1–D4)
 
 Prospects and contacts are **one merged section** — every record is a person, optionally tied to a company; there's no separate "Prospects" area.

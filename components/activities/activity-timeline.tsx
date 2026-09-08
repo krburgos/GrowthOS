@@ -21,7 +21,7 @@ export interface ActivityRow {
   users: { full_name: string; email?: string } | { full_name: string; email?: string }[] | null;
 }
 
-const TYPE_ICON = {
+export const TYPE_ICON = {
   call: Phone,
   email: Mail,
   meeting: UsersIcon,
@@ -29,7 +29,7 @@ const TYPE_ICON = {
   note: StickyNote,
 } as const;
 
-const TYPE_ICON_BG: Record<ActivityRow["type"], string> = {
+export const TYPE_ICON_BG: Record<ActivityRow["type"], string> = {
   call: "bg-primary-500",
   email: "bg-secondary-500",
   meeting: "bg-success-600",

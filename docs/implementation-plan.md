@@ -177,7 +177,8 @@ Two secrets are generated, not issued by a vendor — Claude Code can generate b
 ## 14. Milestone 11 — Dashboard, Reporting & CRO Leader Admin View
 
 **Goal:** the single reporting view required by PRD §6.7, and the CRO Leader's cross-account admin dashboard required by PRD §6.8.
-- Build the MSP dashboard (App Flow Document §4.3): pipeline summary by stage, recent activity, whatever else the App Flow Document specifies — as a set of direct Supabase aggregate queries under RLS (Backend Schema §11), not a server route, since there's no secret involved.
+- **Done (2026-09-08), out of milestone sequence:** the MSP dashboard (App Flow Document §4.3) was built ahead of the rest of this milestone, at the client's request — "Concept B — Command Center" (see App Flow §4.3's note): KPI strip, Pipeline by Stage, Recent Activity, and a Tasks Due rail, as direct Supabase aggregate queries under RLS, no server route. The Reports screen and CRO Leader admin dashboard below are still not built.
+- ~~Build the MSP dashboard (App Flow Document §4.3): pipeline summary by stage, recent activity, whatever else the App Flow Document specifies — as a set of direct Supabase aggregate queries under RLS (Backend Schema §11), not a server route, since there's no secret involved.~~
 - Build the reports screen and GET /api/reports/export (ExcelJS, Backend Schema §10) for the one Phase 1 reporting view — revenue/ROI calculated from opportunities.value, never self-reported (PRD §6.7).
 - Build the CRO Leader admin dashboard: cross-account visibility, account list/switcher, and POST /api/accounts (new MSP account creation + initial Owner invite, Backend Schema §10) — CRO Admin only, per the permission matrix.
 **Checkpoint:**
