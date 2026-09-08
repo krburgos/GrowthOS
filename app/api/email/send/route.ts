@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
 
   const resend = new Resend(RESEND_API_KEY);
   const { error: sendError } = await resend.emails.send({
-    from: `${fromName} via GrowthOS <${EMAIL_FROM_ADDRESS}>`,
+    from: `${fromName} <${EMAIL_FROM_ADDRESS}>`,
     replyTo: replyToEmail,
     to: contact.email,
     cc: ccList.length > 0 ? ccList : undefined,
