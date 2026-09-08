@@ -142,7 +142,7 @@ export function ContactDetailBody({
   opportunities: OpportunityRow[];
   listMemberships: ContactListMembership[];
 }) {
-  const [activeTab, setActiveTab] = useState("activity");
+  const [activeTab, setActiveTab] = useState("overview");
 
   const openPipeline = opportunities
     .filter((o) => o.stage?.stage_group === "open")

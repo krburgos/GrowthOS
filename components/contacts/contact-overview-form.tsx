@@ -224,6 +224,17 @@ export function ContactOverviewForm({
         </div>
       )}
 
+      <div className="rounded-lg border border-neutral-200 bg-white p-4">
+        <label htmlFor="notes" className="mb-2 block text-caption font-semibold uppercase tracking-wide text-neutral-500">
+          Notes
+        </label>
+        {editing ? (
+          <Textarea id="notes" {...register("notes")} />
+        ) : (
+          <p className="whitespace-pre-wrap text-body text-neutral-700">{values.notes || "—"}</p>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <div className="rounded-lg border border-neutral-200 bg-white">
           <h2 className="border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-caption font-semibold uppercase tracking-wide text-neutral-500">
@@ -395,17 +406,6 @@ export function ContactOverviewForm({
             </Row>
           </div>
         </div>
-      </div>
-
-      <div className="rounded-lg border border-neutral-200 bg-white p-4">
-        <label htmlFor="notes" className="mb-2 block text-caption font-semibold uppercase tracking-wide text-neutral-500">
-          Notes
-        </label>
-        {editing ? (
-          <Textarea id="notes" {...register("notes")} />
-        ) : (
-          <p className="whitespace-pre-wrap text-body text-neutral-700">{values.notes || "—"}</p>
-        )}
       </div>
 
       {formError && <p className="text-body-sm text-error-600">{formError}</p>}
