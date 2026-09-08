@@ -19,19 +19,22 @@ Thirteen database tables cover Phase 1 in full: accounts, users, email_connectio
 
 GrowthOS uses **one shared schema with application-level isolation enforced by Row Level Security** — not a separate database or schema per MSP. The PRD (§5, §9) confirms no compliance driver currently requires stricter isolation than that; if one emerges later, RLS can be tightened without a data migration.
 **Tenant unit.** A tenant is an accounts row — one MSP. Every tenant-scoped table carries an account_id column and an RLS policy that compares it against the caller's own account.
-**Two categories of user:**
+**Three categories of user** (client-confirmed addition of the third, 2026-09-08 — see §12 for the full flag-and-confirm trail):
 - **MSP staff** (msp_owner, msp_admin, msp_sales, msp_marketing, msp_read_only) — always belong to exactly one account; users.account_id is required (not null) for these roles.
-- **CRO Leader staff** (cro_admin, cro_advisor, cro_service_team) — belong to no single account and can act across all of them; users.account_id is required to be null for these roles. This is enforced by a CHECK constraint on users (§5), not left to application code to get right.
+- **CRO Leader staff** (cro_admin, cro_advisor, cro_service_team) — belong to no single account and can act across *all* of them, unconditionally; users.account_id is required to be null for these roles. This is enforced by a CHECK constraint on users (§5), not left to application code to get right.
+- **Partner** — also belongs to no single account (account_id null, same CHECK constraint bucket as CRO Leader), but unlike CRO Leader, a partner can only act on the specific accounts explicitly listed in `partner_account_grants` (§5.2), managed unilaterally by CRO Admin. A vendor/agency relationship, not platform staff.
+**"Viewing as" (also 2026-09-08):** since neither CRO Leader nor partner has a home account, every MSP-shell page (which reads `user.account_id` directly, dozens of call sites) needs *something* to resolve that to once one of them wants to work inside a specific MSP's data. `getCurrentUser()` (`lib/auth/get-current-user.ts`) resolves this from a `growthos_viewing_account_id` cookie set by POST /api/cro/enter (§10) — the cookie is a pure UI convenience for choosing which account to display; it grants nothing by itself; every query is still independently authorized by the RLS policies below (`is_cro_leader()` / `is_partner_for()`), regardless of what the cookie claims.
 **Permission matrix.** The PRD's role table (§4) specifies view/edit access per role but only as a single combined "Own account data" description per row. To turn that into concrete per-table RLS policies, this document treats **view (SELECT) as broad** — any role with access to an account can see all of that account's CRM data, since the App Flow Document already assumes cross-navigation (a Sales user needs to see which list a contact belongs to; Marketing needs to see opportunity outcomes to judge campaign impact) — and treats **edit (INSERT/UPDATE) as the PRD's specific per-role grant, applied literally**. This interpretation is flagged as an assumption in §12 for the client to confirm; if narrower view access turns out to be intended, only the SELECT policies in §6 need to change.
 | **Resource** | **View** | **Edit** |
 | --- | --- | --- |
-| Companies, Contacts, Contact Statuses | All roles in the account; all CRO Leader roles | Owner, Admin, Sales, Marketing (own account) · CRO Admin, CRO Advisor (any account). Contact Statuses management is Owner/Admin/CRO Admin/CRO Advisor only. |
-| Opportunities, Activities | All roles in the account; all CRO Leader roles | Owner, Admin, Sales (own account) · CRO Admin, CRO Advisor (any account) |
-| Lists, List Members, Campaigns, Campaign Recipients | All roles in the account; all CRO Leader roles | Owner, Admin, Marketing (own account) · CRO Admin, CRO Advisor (any account) |
-| Users (own account roster) | All roles in the account; all CRO Leader roles | Owner, Admin (own account, cannot touch CRO Leader-role rows) · CRO Admin (any account) |
-| Accounts (own account settings) | Own account; all CRO Leader roles | Owner, Admin (own account) · CRO Admin, CRO Advisor (any account) |
-| Email Connections | Only the connecting user — no exception, including for CRO Leader roles | Only the connecting user |
-| Campaign Events (tracking log) | All roles in the account; all CRO Leader roles | System only — written exclusively by record_campaign_event() (§7) via the public tracking/webhook routes, never by a client |
+| Companies, Contacts, Contact Statuses | All roles in the account; all CRO Leader roles; a partner, for accounts they're granted | Owner, Admin, Sales, Marketing (own account) · CRO Admin, CRO Advisor (any account) · a partner, for accounts they're granted. Contact Statuses management is Owner/Admin/CRO Admin/CRO Advisor/partner (granted accounts) only. |
+| Opportunities, Activities | All roles in the account; all CRO Leader roles; a partner, for accounts they're granted | Owner, Admin, Sales (own account) · CRO Admin, CRO Advisor (any account) · a partner, for accounts they're granted |
+| Lists, List Members, Campaigns, Campaign Recipients | All roles in the account; all CRO Leader roles; a partner, for accounts they're granted | Owner, Admin, Marketing (own account) · CRO Admin, CRO Advisor (any account) · a partner, for accounts they're granted |
+| Users (own account roster) | All roles in the account; all CRO Leader roles. **Not** a partner — deliberately excluded, a partner never sees an MSP's own staff/user roster, only its CRM data. | Owner, Admin (own account, cannot touch CRO Leader-role rows) · CRO Admin (any account) |
+| Accounts (own account settings) | Own account; all CRO Leader roles; a partner, for accounts they're granted (read-only — see below) | Owner, Admin (own account) · CRO Admin, CRO Advisor (any account). A partner never edits account settings, only CRM data. |
+| Email Connections | Only the connecting user — no exception, including for CRO Leader roles or partner | Only the connecting user |
+| Campaign Events (tracking log) | All roles in the account; all CRO Leader roles; a partner, for accounts they're granted | System only — written exclusively by record_campaign_event() (§7) via the public tracking/webhook routes, never by a client |
+| Partner Account Grants (`partner_account_grants`) | A partner sees their own grant rows; CRO Admin sees all | CRO Admin only — insert/delete; unilateral, no MSP-side consent step (client-confirmed) |
 
 **Soft delete, with one exception.** Per the client's decision, nothing in GrowthOS is hard-deleted — every tenant-scoped table has an archived_at timestamp, no DELETE RLS policy is ever granted, and "delete" in the UI always means "set archived_at." **Opportunities are the one exception:** the PRD (§6.4) requires every opportunity retained permanently, so the opportunities table has **no ****archived_at**** column at all** — there is no way to archive or hide one, by design.
 
@@ -81,7 +84,8 @@ create extension if not exists pg_net;     -- enable via Supabase Dashboard → 
 
 create type user_role as enum (
   'msp_owner', 'msp_admin', 'msp_sales', 'msp_marketing', 'msp_read_only',
-  'cro_admin', 'cro_advisor', 'cro_service_team'
+  'cro_admin', 'cro_advisor', 'cro_service_team',
+  'partner' -- client-confirmed addition, 2026-09-08 — see §2, §5.2, §12
 );
 
 create type contact_source as enum ('import', 'manual');
@@ -142,7 +146,7 @@ create table users (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint users_account_id_matches_role check (
-    (role in ('cro_admin','cro_advisor','cro_service_team') and account_id is null)
+    (role in ('cro_admin','cro_advisor','cro_service_team','partner') and account_id is null) -- 'partner' added 2026-09-08, §2/§12
     or
     (role in ('msp_owner','msp_admin','msp_sales','msp_marketing','msp_read_only') and account_id is not null)
   )
@@ -166,6 +170,22 @@ create table email_connections (
 -- Only one active mailbox connection per user in Phase 1.
 create unique index email_connections_one_active_per_user
   on email_connections(user_id) where archived_at is null;
+
+-- Client-confirmed addition (2026-09-08, §2/§12) — scopes a partner
+-- user's access to specific MSP accounts, unlike CRO Leader roles
+-- (unconditional access via is_cro_leader(), no grants table needed).
+-- CRO Admin manages this unilaterally; no MSP-side consent/approval
+-- flow exists for a company being added to a partner's grant list.
+create table partner_account_grants (
+  id uuid primary key default gen_random_uuid(),
+  partner_user_id uuid not null references users(id) on delete cascade,
+  account_id uuid not null references accounts(id) on delete cascade,
+  granted_by uuid references users(id),
+  created_at timestamptz not null default now(),
+  unique (partner_user_id, account_id)
+);
+create index partner_account_grants_partner_user_id_idx on partner_account_grants(partner_user_id);
+create index partner_account_grants_account_id_idx on partner_account_grants(account_id);
 ```
 
 Tokens are encrypted application-side (AES-256-GCM, Node.js crypto, key from the TOKEN_ENCRYPTION_KEY environment variable — §12) before being written to access_token_encrypted / refresh_token_encrypted. Postgres never sees a plaintext token; there's no pgsodium/Vault dependency because these tokens are only ever consumed by the Node.js server, never by a database function.
@@ -408,7 +428,7 @@ campaign_recipients carries denormalized counters (open_count, click_count, firs
 
 ### 6.1 Helper Functions
 
-Every policy below is built from four small helpers, so the account-scoping and role-checking logic exists in exactly one place each rather than being re-typed into every policy.
+Every policy below is built from five small helpers, so the account-scoping and role-checking logic exists in exactly one place each rather than being re-typed into every policy.
 ```
 create or replace function auth_account_id()
 returns uuid
@@ -431,6 +451,22 @@ as $$
   select auth_role() in ('cro_admin', 'cro_advisor', 'cro_service_team');
 $$;
 
+-- Client-confirmed addition (2026-09-08, §2/§12) — the partner
+-- equivalent of is_cro_leader(), but scoped: true only for the
+-- specific account_id being checked, and only if a matching
+-- partner_account_grants row exists. Unlike is_cro_leader(), this
+-- takes an argument, since "is this user a partner" alone says
+-- nothing about *which* accounts they can touch.
+create or replace function is_partner_for(p_account_id uuid)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1 from partner_account_grants
+    where partner_user_id = auth.uid() and account_id = p_account_id
+  );
+$$;
+
 create or replace function auth_has_any_role(variadic roles user_role[])
 returns boolean
 language sql stable security definer set search_path = public
@@ -441,13 +477,15 @@ $$;
 
 These are security definer so they can read public.users (itself RLS-protected) without triggering recursive policy evaluation — the standard Supabase pattern for role-lookup helpers.
 
+**Client-confirmed pattern (2026-09-08):** every SELECT policy below that reads `... or is_cro_leader()` now also reads `... or is_partner_for(account_id)` (or `is_partner_for(id)` on accounts itself) — companies, contact_statuses, contacts, lists, list_members, opportunity_stages, opportunities, activities, campaigns, campaign_recipients, campaign_events, and accounts. The matching INSERT/UPDATE policies gained the same `or is_partner_for(account_id)` clause everywhere CRO Admin/CRO Advisor already had edit rights. To avoid reprinting ~26 nearly-identical policies here, the individual snippets below are **not** all re-shown with the addition — the literal SQL is in `supabase/migrations/20260908000004_partner_role_and_account_grants.sql`, which is the source of truth for the exact wording. `email_connections` is the one deliberate, unchanged exception (§2's permission matrix) — no partner (or CRO Leader) bypass exists there at all.
+
 ### 6.2 accounts, users
 
 ```
 alter table accounts enable row level security;
 
 create policy accounts_select on accounts for select
-  using (id = auth_account_id() or is_cro_leader());
+  using (id = auth_account_id() or is_cro_leader() or is_partner_for(id));
 
 create policy accounts_update on accounts for update
   using (
@@ -1112,6 +1150,10 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | POST /api/users/invite | Session (Owner/Admin/CRO Admin) | Calls auth.admin.inviteUserByEmail() with account_id/role metadata (§3) |
 | POST /api/users/[id]/deactivate | Session (Owner/Admin/CRO Admin) | Sets archived_at and revokes the target user's active sessions via the Auth Admin API |
 | POST /api/accounts | Session (CRO Admin only) | Creates a new MSP accounts row and invites its initial Owner in one multi-step call |
+| POST /api/cro/enter | Session (CRO Leader or partner) | Client-confirmed addition (2026-09-08) — sets the `growthos_viewing_account_id` cookie (§2) after verifying a partner actually has a grant for that account; RLS still independently authorizes every subsequent query regardless |
+| POST /api/cro/exit | Session (CRO Leader or partner) | Clears the viewing-as cookie, returns to /cro — what the CroLeaderBanner's "Exit to My Dashboard" actually calls |
+| POST /api/cro/partner-grants | Session (CRO Admin only) | Adds a partner_account_grants row |
+| DELETE /api/cro/partner-grants | Session (CRO Admin only) | Removes a partner_account_grants row |
 | GET /api/oauth/[provider]/start | Session | Redirects to Microsoft/Google OAuth consent for a mailbox connection |
 | GET /api/oauth/[provider]/callback | Session (OAuth redirect) | Exchanges the auth code for tokens, encrypts them (§5.2), and upserts an email_connections row |
 | POST /api/import/validate | Session (edit role for contacts) | Parses an uploaded CSV/XLSX (papaparse/ExcelJS), maps columns, returns a preview and error report — no writes yet |
@@ -1149,6 +1191,7 @@ Judgment calls made while turning the PRD, App Flow Document, and prior Q&A into
 - **merge_companies()**** (§7.3)** is a minimal reassign-and-archive implementation of "manual merge otherwise" — it doesn't attempt to reconcile conflicting field values between the two company records (name, industry, etc.); the surviving record simply keeps its own values. A more opinionated merge UI can layer on top of this function without changing it.
 - **No audit log table.** PRD §6.9 explicitly limits Phase 1 to a last-login timestamp, with no full audit trail — confirmed out of scope, not an oversight.
 - **No file attachments table, no custom fields/pipelines, no client portal tables.** All three were explicitly confirmed out of scope for Phase 1 in this document's clarifying questions and the PRD itself (PRD §6.8, §10) — none of the tables above make any provision for them, so adding any later is a genuine schema change, not a toggle. **Client-confirmed exception:** three Supabase Storage buckets (`company-logos`, `avatars`, `contact-avatars`) were added for the company logo, user profile picture, and (as of the Contact Detail redesign) a per-contact profile picture — no new Postgres table, and no general-purpose attachments feature; each just backs a single image field (`accounts.logo_url`, `users.avatar_url`, `contacts.avatar_url`) that already existed or was added for this purpose. `contact-avatars` objects are namespaced by `account_id` (matching `company-logos`) rather than by contact owner, since any of a contact's edit-capable roles may upload its photo, not just one user.
+- **A third user category, "partner," was added 2026-09-08 — not in the PRD's original role table at all.** While scoping the CRO Leader admin dashboard (Milestone 11), the client asked for a genuinely different capability: a vendor/partner relationship that sees only specific MSP accounts it's explicitly granted, not every account on the platform the way CRO Leader roles do. This is new scope, not implied by anything in the PRD/App Flow/Backend Schema as originally written — flagged and confirmed with the client (including the consent question: CRO Admin grants access unilaterally, no MSP-side approval step) before building. See §2 for the full model, §5.2 for `partner_account_grants`, and §6.1 for `is_partner_for()`. The "viewing as" mechanism this required (a cookie-based effective-account resolution in `getCurrentUser()`) also serves CRO Leader roles, which had no way to actually enter an MSP account before this — the CroLeaderBanner (Design System §8.10) existed since Milestone 5 but had "nothing to trigger it" until now.
 - **email_connections' SELECT policy is account-wide as of 2026-09-08, not single-user as originally written in §6.3.** A client-confirmed, deliberate reversal for the Contact Detail quick-send From picker — see §6.3 for the exact policy, the paired column-level privilege restriction that keeps tokens private regardless, and why (cosmetic display identity only, never real per-mailbox sending).
 - **New environment variables beyond the Tech Stack Lockfile's §7 checklist:**
 | **Variable** | **Purpose** |

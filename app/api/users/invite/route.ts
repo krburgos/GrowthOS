@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
 import type { UserRole } from "@/lib/auth/get-current-user";
-import { ALL_ROLES, CRO_LEADER_ROLES, MSP_ROLES } from "@/lib/auth/roles";
+import { ALL_ROLES, CRO_LEADER_ROLES, MSP_ROLES, PARTNER_ROLES } from "@/lib/auth/roles";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -61,7 +61,11 @@ export async function POST(request: NextRequest) {
         );
       }
       targetAccountId = account_id;
-    } else if (CRO_LEADER_ROLES.includes(role)) {
+    } else if (CRO_LEADER_ROLES.includes(role) || PARTNER_ROLES.includes(role)) {
+      // Partner roles carry no account_id, same as CRO Leader — which
+      // accounts they can see comes from partner_account_grants,
+      // managed separately (POST /api/cro/partner-grants), not at
+      // invite time.
       targetAccountId = null;
     } else {
       return NextResponse.json({ error: "Unrecognized role." }, { status: 400 });

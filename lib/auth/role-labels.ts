@@ -9,4 +9,5 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   cro_admin: "CRO Leader Admin",
   cro_advisor: "CRO Leader Advisor",
   cro_service_team: "CRO Leader Service Team",
+  partner: "Partner",
 };

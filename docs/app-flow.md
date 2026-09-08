@@ -92,8 +92,8 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 | I2 | Settings | Connected Email Accounts | Owner, Admin (each user connects their own) |
 | I3 | Settings | Custom Statuses | Owner, Admin |
 | I4 | Settings | My Profile | All MSP roles (own profile only) |
-| J1 | CRO Leader | CRO Leader Dashboard (MSP search) | CRO Leader Admin, Advisor |
-| — | CRO Leader | _(inside any MSP account, all D–I screens render with the banner from §2.5)_ | CRO Leader Admin, Advisor |
+| J1 | CRO Leader | CRO Leader Dashboard (MSP search) — also serves as the Partner Dashboard (2026-09-08), account list scoped to grants for a partner | CRO Leader Admin, Advisor, Service Team; Partner (granted accounts only) |
+| — | CRO Leader | _(inside any MSP account, all D–I screens render with the banner from §2.5)_ | CRO Leader Admin, Advisor, Service Team; Partner |
 | K1 | System | Access Restricted (redirect target) | Any role hitting a disabled area |
 | K2 | System | Not Found (404) | Any role, broken/stale link |
 | K3 | System | Session Timeout (modal) | Any authenticated role |
@@ -195,6 +195,8 @@ One shared page for all roles (no role-specific dashboards, per the PRD). Sectio
 ### 4.10 CRO Leader Dashboard (J1)
 
 Kept intentionally light, per the client's direction. One primary element: a **search-by-MSP box** at the top of the page, returning matching accounts as the CRO Leader Admin/Advisor types. Selecting an account enters it (§2.5, §5.7) — everything past that point is the same MSP screens described above, with the viewing-as banner.
+
+**Client-confirmed addition (2026-09-08) — this screen doubles as the Partner Dashboard.** A new "partner" user (not in the original PRD role table — a vendor/agency relationship distinct from CRO Leader staff) reaches this exact same URL and layout, but the account list only shows accounts they've been explicitly granted, not every MSP on the platform; "New MSP Account" and the Partners management panel (invite a partner, grant/revoke which accounts they see) only render for CRO Admin. One screen, role-aware, rather than a second near-duplicate one — the two are structurally identical ("search and enter an account") once the RLS layer distinguishes who can see what.
 
 ### 4.11 System Screens
 

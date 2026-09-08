@@ -5,7 +5,7 @@ import { KpiTiles, type KpiTileData } from "@/components/dashboard/kpi-tiles";
 import { PipelineByStage, type StageCount } from "@/components/dashboard/pipeline-by-stage";
 import { RecentActivityFeed, type FeedItem } from "@/components/dashboard/recent-activity-feed";
 import { TodayTasksPanel, type DueTask } from "@/components/dashboard/today-tasks-panel";
-import { getCurrentUser, isCroLeaderRole } from "@/lib/auth/get-current-user";
+import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
 import type { StageGroup } from "@/lib/opportunities/stages";
 import { createClient } from "@/lib/supabase/server";
 
@@ -51,7 +51,13 @@ function weekOverWeek(dates: string[], sevenAgo: number, fourteenAgo: number, no
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (isCroLeaderRole(user.role)) redirect("/cro");
+  // A CRO Leader/partner role only ever reaches this page once they've
+  // entered an MSP account (POST /api/cro/enter) — otherwise /cro is
+  // their landing page. Bug fix (2026-09-08): this used to redirect
+  // unconditionally for any CRO Leader role, which broke "viewing as"
+  // — a CRO Leader who'd already entered an account got bounced right
+  // back to /cro instead of seeing that MSP's dashboard.
+  if (needsAccountSelection(user.role) && !user.account_id) redirect("/cro");
 
   const supabase = await createClient();
 
