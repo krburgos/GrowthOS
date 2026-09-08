@@ -65,27 +65,29 @@ export function TodayTasksPanel({ tasks }: { tasks: DueTask[] }) {
       {tasks.length === 0 ? (
         <p className="px-4 py-6 text-body-sm text-neutral-500">Nothing due — you&apos;re all caught up.</p>
       ) : (
-        tasks.map((task, i) => {
-          const bucket = dueBucket(task.due_at);
-          return (
-            <div
-              key={task.id}
-              className={cn("flex items-center gap-3 px-4 py-3", i > 0 && "border-t border-secondary-100")}
-            >
-              <Checkbox
-                aria-label={`Mark "${task.subject ?? "task"}" complete`}
-                onCheckedChange={() => complete(task.id)}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-body-sm font-medium text-neutral-800">{task.subject || "Task"}</p>
-                <p className="truncate text-caption text-neutral-500">{task.who}</p>
+        <div className="max-h-[480px] overflow-y-auto">
+          {tasks.map((task, i) => {
+            const bucket = dueBucket(task.due_at);
+            return (
+              <div
+                key={task.id}
+                className={cn("flex items-center gap-3 px-4 py-3", i > 0 && "border-t border-secondary-100")}
+              >
+                <Checkbox
+                  aria-label={`Mark "${task.subject ?? "task"}" complete`}
+                  onCheckedChange={() => complete(task.id)}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-body-sm font-medium text-neutral-800">{task.subject || "Task"}</p>
+                  <p className="truncate text-caption text-neutral-500">{task.who}</p>
+                </div>
+                <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-caption font-semibold", bucket.className)}>
+                  {bucket.label}
+                </span>
               </div>
-              <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-caption font-semibold", bucket.className)}>
-                {bucket.label}
-              </span>
-            </div>
-          );
-        })
+            );
+          })}
+        </div>
       )}
     </div>
   );

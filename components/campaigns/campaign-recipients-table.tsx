@@ -96,7 +96,7 @@ export function CampaignRecipientsTable({ recipients }: { recipients: RecipientR
       {filtered.length === 0 ? (
         <p className="px-4 py-8 text-center text-body text-neutral-500">No recipients match this filter.</p>
       ) : (
-        <div className="mt-3 overflow-x-auto">
+        <div className="mt-3 max-h-[560px] overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>

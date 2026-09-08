@@ -31,28 +31,30 @@ export function RecentActivityFeed({ items }: { items: FeedItem[] }) {
       {items.length === 0 ? (
         <p className="px-4 py-6 text-body-sm text-neutral-500">No activity yet.</p>
       ) : (
-        items.map((item, i) => {
-          const Icon = TYPE_ICON[item.type];
-          return (
-            <div key={item.id} className={cn("flex items-start gap-3 px-4 py-3", i > 0 && "border-t border-neutral-100")}>
-              <span
-                className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full text-white",
-                  TYPE_ICON_BG[item.type]
-                )}
-              >
-                <Icon className="size-3.5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-body-sm font-medium text-neutral-800">
-                  {item.subject || item.type[0].toUpperCase() + item.type.slice(1)}
-                </p>
-                <p className="truncate text-caption text-neutral-500">{item.who}</p>
+        <div className="max-h-[480px] overflow-y-auto">
+          {items.map((item, i) => {
+            const Icon = TYPE_ICON[item.type];
+            return (
+              <div key={item.id} className={cn("flex items-start gap-3 px-4 py-3", i > 0 && "border-t border-neutral-100")}>
+                <span
+                  className={cn(
+                    "flex size-7 shrink-0 items-center justify-center rounded-full text-white",
+                    TYPE_ICON_BG[item.type]
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-body-sm font-medium text-neutral-800">
+                    {item.subject || item.type[0].toUpperCase() + item.type.slice(1)}
+                  </p>
+                  <p className="truncate text-caption text-neutral-500">{item.who}</p>
+                </div>
+                <span className="shrink-0 text-caption text-neutral-400">{relativeTime(item.occurred_at)}</span>
               </div>
-              <span className="shrink-0 text-caption text-neutral-400">{relativeTime(item.occurred_at)}</span>
-            </div>
-          );
-        })
+            );
+          })}
+        </div>
       )}
     </div>
   );

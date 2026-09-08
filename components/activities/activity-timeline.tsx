@@ -120,7 +120,7 @@ export function ActivityTimeline({ activities }: { activities: ActivityRow[] }) 
       {filtered.length === 0 ? (
         <p className="text-body text-neutral-500">No activity yet</p>
       ) : (
-        <div>
+        <div className="max-h-[560px] overflow-y-auto pr-1">
           {groups.map(([label, dayActivities]) => (
             <div key={label}>
               <p className="mb-2.5 mt-5 pl-11 text-caption font-semibold uppercase tracking-wide text-neutral-400 first:mt-0">

@@ -46,7 +46,7 @@ export function EmailList({ activities, contactName, contactEmail }: { activitie
   }
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-neutral-200">
+    <div className="flex max-h-[560px] flex-col overflow-y-auto rounded-lg border border-neutral-200">
       {activities.map((activity, i) => {
         const sender = unwrap(activity.users);
         const pickedConnection = unwrap(activity.email_connections);

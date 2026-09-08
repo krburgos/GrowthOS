@@ -347,7 +347,7 @@ export function ContactDetailBody({
               {opportunities.length === 0 ? (
                 <p className="text-body text-neutral-500">No opportunities yet</p>
               ) : (
-                <ul className="flex flex-col gap-2.5">
+                <ul className="flex max-h-[560px] flex-col gap-2.5 overflow-y-auto pr-1">
                   {opportunities.map((o) => (
                     <li key={o.id}>
                       <Link

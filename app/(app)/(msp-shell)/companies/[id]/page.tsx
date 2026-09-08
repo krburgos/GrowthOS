@@ -97,31 +97,33 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           Contacts <span className="text-body text-neutral-400">({contacts?.length ?? 0})</span>
         </h2>
         {contacts && contacts.length > 0 ? (
-          <Table>
-            <TableHeader variant="solid">
-              <TableRow className="border-b-0 hover:bg-transparent">
-                <TableHead variant="solid">Name</TableHead>
-                <TableHead variant="solid">Title</TableHead>
-                <TableHead variant="solid">Email</TableHead>
-                <TableHead variant="solid">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {contacts.map((c) => {
-                const status = Array.isArray(c.contact_statuses) ? c.contact_statuses[0] : c.contact_statuses;
-                return (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium text-neutral-800">
-                      <Link href={`/contacts/${c.id}`}>{c.full_name}</Link>
-                    </TableCell>
-                    <TableCell>{c.title ?? "—"}</TableCell>
-                    <TableCell>{c.email}</TableCell>
-                    <TableCell>{status && <Badge variant="neutral">{status.name}</Badge>}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <div className="max-h-[420px] overflow-y-auto">
+            <Table>
+              <TableHeader variant="solid">
+                <TableRow className="border-b-0 hover:bg-transparent">
+                  <TableHead variant="solid">Name</TableHead>
+                  <TableHead variant="solid">Title</TableHead>
+                  <TableHead variant="solid">Email</TableHead>
+                  <TableHead variant="solid">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contacts.map((c) => {
+                  const status = Array.isArray(c.contact_statuses) ? c.contact_statuses[0] : c.contact_statuses;
+                  return (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium text-neutral-800">
+                        <Link href={`/contacts/${c.id}`}>{c.full_name}</Link>
+                      </TableCell>
+                      <TableCell>{c.title ?? "—"}</TableCell>
+                      <TableCell>{c.email}</TableCell>
+                      <TableCell>{status && <Badge variant="neutral">{status.name}</Badge>}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         ) : (
           <p className="px-6 py-6 text-body text-neutral-500">No contacts at this company yet.</p>
         )}
@@ -132,34 +134,36 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           Opportunities <span className="text-body text-neutral-400">({opportunities?.length ?? 0})</span>
         </h2>
         {opportunities && opportunities.length > 0 ? (
-          <Table>
-            <TableHeader variant="solid">
-              <TableRow className="border-b-0 hover:bg-transparent">
-                <TableHead variant="solid">Contact</TableHead>
-                <TableHead variant="solid">Stage</TableHead>
-                <TableHead variant="solid">Value</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {opportunities.map((o) => {
-                const contact = Array.isArray(o.contacts) ? o.contacts[0] : o.contacts;
-                const stage = Array.isArray(o.opportunity_stages) ? o.opportunity_stages[0] : o.opportunity_stages;
-                return (
-                  <TableRow key={o.id}>
-                    <TableCell className="font-medium text-neutral-800">
-                      <Link href={`/opportunities/${o.id}`}>{contact?.full_name ?? "—"}</Link>
-                    </TableCell>
-                    <TableCell>
-                      {stage && (
-                        <Badge variant={STAGE_GROUP_BADGE_VARIANT[stage.stage_group as StageGroup]}>{stage.name}</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{o.value != null ? currency.format(o.value) : "—"}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <div className="max-h-[420px] overflow-y-auto">
+            <Table>
+              <TableHeader variant="solid">
+                <TableRow className="border-b-0 hover:bg-transparent">
+                  <TableHead variant="solid">Contact</TableHead>
+                  <TableHead variant="solid">Stage</TableHead>
+                  <TableHead variant="solid">Value</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {opportunities.map((o) => {
+                  const contact = Array.isArray(o.contacts) ? o.contacts[0] : o.contacts;
+                  const stage = Array.isArray(o.opportunity_stages) ? o.opportunity_stages[0] : o.opportunity_stages;
+                  return (
+                    <TableRow key={o.id}>
+                      <TableCell className="font-medium text-neutral-800">
+                        <Link href={`/opportunities/${o.id}`}>{contact?.full_name ?? "—"}</Link>
+                      </TableCell>
+                      <TableCell>
+                        {stage && (
+                          <Badge variant={STAGE_GROUP_BADGE_VARIANT[stage.stage_group as StageGroup]}>{stage.name}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{o.value != null ? currency.format(o.value) : "—"}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         ) : (
           <p className="px-6 py-6 text-body text-neutral-500">No opportunities at this company yet.</p>
         )}
