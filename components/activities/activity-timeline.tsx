@@ -1,18 +1,18 @@
 "use client";
 
-import { CheckSquare, Mail, Phone, StickyNote, Users as UsersIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { Checkbox } from "@/components/ui/checkbox";
+import { TYPE_ICON, TYPE_ICON_BG, type ActivityType } from "@/lib/activities/type-icon";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 export interface ActivityRow {
   id: string;
-  type: "call" | "email" | "meeting" | "task" | "note";
+  type: ActivityType;
   subject: string | null;
   body: string | null;
   occurred_at: string;
@@ -20,22 +20,6 @@ export interface ActivityRow {
   completed_at: string | null;
   users: { full_name: string; email?: string } | { full_name: string; email?: string }[] | null;
 }
-
-export const TYPE_ICON = {
-  call: Phone,
-  email: Mail,
-  meeting: UsersIcon,
-  task: CheckSquare,
-  note: StickyNote,
-} as const;
-
-export const TYPE_ICON_BG: Record<ActivityRow["type"], string> = {
-  call: "bg-primary-500",
-  email: "bg-secondary-500",
-  meeting: "bg-success-600",
-  task: "bg-warning-700",
-  note: "bg-neutral-400",
-};
 
 const TYPE_FILTERS: { value: "all" | ActivityRow["type"]; label: string }[] = [
   { value: "all", label: "All" },

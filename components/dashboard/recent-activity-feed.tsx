@@ -1,9 +1,9 @@
-import { TYPE_ICON, TYPE_ICON_BG, type ActivityRow } from "@/components/activities/activity-timeline";
+import { TYPE_ICON, TYPE_ICON_BG, type ActivityType } from "@/lib/activities/type-icon";
 import { cn } from "@/lib/utils";
 
 export interface FeedItem {
   id: string;
-  type: ActivityRow["type"];
+  type: ActivityType;
   subject: string | null;
   who: string;
   occurred_at: string;
