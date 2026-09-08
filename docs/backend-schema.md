@@ -541,10 +541,12 @@ create policy email_connections_update on email_connections for update
 To avoid the broadened row-visibility also exposing tokens, the migration pairs it with a **column-level privilege restriction** — orthogonal to RLS, which only ever filters rows, not columns:
 ```
 revoke select on email_connections from authenticated;
-grant select (id, user_id, provider, email_address, status, last_synced_at, archived_at, created_at, updated_at)
+grant select (id, user_id, provider, email_address, status, last_synced_at, archived_at, created_at, updated_at, token_expires_at)
   on email_connections to authenticated;
 ```
-`access_token_encrypted`, `refresh_token_encrypted`, and `token_expires_at` are deliberately left out of the grant — the `authenticated` role (every ordinary session) can no longer `select` those columns at all, account-wide visibility or not. Only the service-role client (used server-side in the OAuth callback route, which already bypasses RLS) can still read them. This is a stronger boundary than the original single-row-only policy alone provided for the tokens specifically, even though it's a weaker boundary for the identity metadata.
+Only `access_token_encrypted` and `refresh_token_encrypted` are left out of the grant — the `authenticated` role (every ordinary session) can no longer `select` either of those at all, account-wide visibility or not. Only the service-role client (used server-side in the OAuth callback route, which already bypasses RLS) can still read them.
+
+**Bug found and fixed same day:** the migration's initial grant list omitted `token_expires_at` too, even though the migration's own inline comment said only the two encrypted columns should stay locked down. `token_expires_at` isn't a secret — it's just an expiry timestamp — but Postgres rejects a whole `select` outright the moment it names an ungranted column, even for a user reading their own row. That silently broke the Connected Email Accounts page for every user right after they connected a mailbox (it always rendered the "not connected" empty state instead), since that page's query names `token_expires_at`. Fixed by granting `select (token_expires_at)` back to `authenticated` (migration `grant_email_connections_token_expires_at_select`), matching what the original comment actually intended.
 
 **What "From" actually does with this (client-confirmed, same day):** `POST /api/email/send` (§10) never uses a picked connection's tokens — sending is still 100% Resend-relayed (§5.2). Picking a teammate's connected mailbox sets that identity's name as the outgoing email's display From, and their real address as Reply-To; the teammate isn't notified, doesn't authorize it, and their actual Gmail/Outlook is never touched. The client was told this plainly (not real per-mailbox delivery) before confirming they still wanted it account-wide.
 

@@ -1,0 +1,11 @@
+-- Fix: the account-wide-visibility migration (20260908000002) revoked
+-- SELECT on email_connections from `authenticated` and re-granted it on
+-- a specific column list, but that list omitted token_expires_at even
+-- though the migration's own comment says only the two encrypted token
+-- columns should stay locked down. token_expires_at isn't a secret --
+-- it's just an expiry timestamp -- but its absence from the grant meant
+-- ANY select that named it (including a user reading their own row) was
+-- rejected outright by Postgres's column-level permission check, not
+-- silently filtered. Settings' Connected Email Accounts page selects it,
+-- so this broke seeing your own connection right after connecting it.
+grant select (token_expires_at) on email_connections to authenticated;
