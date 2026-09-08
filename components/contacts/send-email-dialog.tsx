@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail } from "lucide-react";
+import { Send } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -56,10 +56,15 @@ export function SendEmailDialog({ contactId, contactName, contactEmail }: { cont
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant="secondary" size="sm">
-          <Mail className="mr-1.5 size-3.5" />
-          Email
-        </Button>
+        <button
+          type="button"
+          className="flex flex-1 flex-col items-center justify-center gap-1.5 rounded-lg border border-neutral-200 bg-white p-3.5 text-center transition-colors hover:border-secondary-300 hover:bg-secondary-50"
+        >
+          <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 text-white shadow-sm">
+            <Send className="size-4" />
+          </span>
+          <span className="text-caption font-semibold text-neutral-700">Send Email</span>
+        </button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
