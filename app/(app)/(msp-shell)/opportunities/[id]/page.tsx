@@ -42,7 +42,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
       .order("occurred_at", { ascending: false }),
     supabase
       .from("opportunity_stages")
-      .select("id, name, stage_group, sort_order")
+      .select("id, name, stage_group, sort_order, win_probability")
       .eq("account_id", opportunity.account_id)
       .is("archived_at", null)
       .order("sort_order"),

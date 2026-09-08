@@ -17,9 +17,14 @@ interface OpportunityQueryRow {
   id: string;
   stage_id: string;
   value: number | null;
+  closed_at: string | null;
   contacts: { full_name: string } | { full_name: string }[] | null;
   companies: { name: string } | { name: string }[] | null;
-  opportunity_stages: { name: string; stage_group: StageGroup } | { name: string; stage_group: StageGroup }[] | null;
+  users: { full_name: string } | { full_name: string }[] | null;
+  opportunity_stages:
+    | { name: string; stage_group: StageGroup; win_probability: number }
+    | { name: string; stage_group: StageGroup; win_probability: number }[]
+    | null;
 }
 
 /**
@@ -43,12 +48,14 @@ export default async function OpportunitiesPage({
   const [{ data: rows }, { data: stageRows }] = await Promise.all([
     supabase
       .from("opportunities")
-      .select("id, stage_id, value, contacts(full_name), companies(name), opportunity_stages(name, stage_group)")
+      .select(
+        "id, stage_id, value, closed_at, contacts(full_name), companies(name), users(full_name), opportunity_stages(name, stage_group, win_probability)"
+      )
       .eq("account_id", user.account_id)
       .order("created_at", { ascending: false }),
     supabase
       .from("opportunity_stages")
-      .select("id, name, stage_group, sort_order")
+      .select("id, name, stage_group, sort_order, win_probability")
       .eq("account_id", user.account_id)
       .is("archived_at", null)
       .order("sort_order"),
@@ -60,15 +67,19 @@ export default async function OpportunitiesPage({
     const row = r as unknown as OpportunityQueryRow;
     const contact = Array.isArray(row.contacts) ? row.contacts[0] : row.contacts;
     const company = Array.isArray(row.companies) ? row.companies[0] : row.companies;
+    const owner = Array.isArray(row.users) ? row.users[0] : row.users;
     const stage = Array.isArray(row.opportunity_stages) ? row.opportunity_stages[0] : row.opportunity_stages;
     return {
       id: row.id,
       stage_id: row.stage_id,
       stage_name: stage?.name ?? "Unknown",
       stage_group: stage?.stage_group ?? "open",
+      win_probability: stage?.win_probability ?? 0,
       value: row.value,
+      closed_at: row.closed_at,
       contact_name: contact?.full_name ?? "Unknown",
       company_name: company?.name ?? null,
+      owner_name: owner?.full_name ?? null,
     };
   });
 

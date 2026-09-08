@@ -14,6 +14,7 @@ export interface OpportunityStageRow {
   name: string;
   stage_group: StageGroup;
   sort_order: number;
+  win_probability: number;
 }
 
 /** Design System §8.4 column header treatment per group. */

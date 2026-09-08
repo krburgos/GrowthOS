@@ -11,9 +11,32 @@ export interface OpportunityCardData {
   contact_name: string;
   company_name: string | null;
   value: number | null;
+  win_probability: number;
+  owner_name: string | null;
 }
 
 const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+/** Same hashed-color scheme as the Contacts table's row avatars
+ * (components/contacts/contacts-data-table.tsx) — kept as a local
+ * copy rather than a shared import, matching this codebase's existing
+ * pattern of small per-file initials helpers. */
+const AVATAR_COLORS = ["bg-primary-500", "bg-secondary-700", "bg-success-600", "bg-primary-800"];
+
+function ownerInitials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function ownerColor(name: string) {
+  const hash = [...name].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
 
 /**
  * Design System §8.4 — Opportunity Kanban Board card. White bg,
@@ -30,6 +53,14 @@ const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "
  * no visible focus state a keyboard user had no way to see which card
  * was focused — `focus-visible:ring` closes that gap with the app's
  * standard ring treatment (§7).
+ *
+ * Client-confirmed redesign ("Concept B — Value-forward board," Kanban
+ * mockup review): adds the owner's initials (hashed color, same scheme
+ * as the Contacts table) and the card's stage win-probability (§7.5 of
+ * the Backend Schema) as a plain pill — every card in a column shares
+ * the same probability since it's a property of the stage, not the
+ * individual deal, but repeating it per-card means it's visible without
+ * checking the column header.
  */
 export function OpportunityCard({ opportunity }: { opportunity: OpportunityCardData }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -49,17 +80,35 @@ export function OpportunityCard({ opportunity }: { opportunity: OpportunityCardD
         isDragging && "z-10 -translate-y-0.5 shadow-md"
       )}
     >
-      <Link
-        href={`/opportunities/${opportunity.id}`}
-        className="text-body font-medium text-neutral-800 hover:underline"
-        onClick={(e) => isDragging && e.preventDefault()}
-      >
-        {opportunity.contact_name}
-      </Link>
+      <div className="flex items-start justify-between gap-2">
+        <Link
+          href={`/opportunities/${opportunity.id}`}
+          className="text-body font-medium text-neutral-800 hover:underline"
+          onClick={(e) => isDragging && e.preventDefault()}
+        >
+          {opportunity.contact_name}
+        </Link>
+        {opportunity.owner_name && (
+          <span
+            className={cn(
+              "flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white",
+              ownerColor(opportunity.owner_name)
+            )}
+            title={opportunity.owner_name}
+          >
+            {ownerInitials(opportunity.owner_name)}
+          </span>
+        )}
+      </div>
       <span className="text-body-sm text-neutral-500">{opportunity.company_name ?? "—"}</span>
-      <span className="text-right text-body-sm text-neutral-700">
-        {opportunity.value != null ? currency.format(opportunity.value) : "—"}
-      </span>
+      <div className="mt-0.5 flex items-center justify-between">
+        <span className="text-body-sm font-semibold text-primary-900">
+          {opportunity.value != null ? currency.format(opportunity.value) : "—"}
+        </span>
+        <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-caption font-semibold text-neutral-600">
+          {opportunity.win_probability}%
+        </span>
+      </div>
     </div>
   );
 }
