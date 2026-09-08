@@ -183,6 +183,8 @@ The client's direction: "My customers want to manually add contacts to a list" �
 
 One shared page for all roles (no role-specific dashboards, per the PRD). Sections mirror the Dashboard's KPI snapshot but in full: leads/contacts added, opportunities by stage, campaign performance (sent/opened/clicked/bounced/unsubscribed), revenue from closed-won opportunities. **Each section has its own "Export to Spreadsheet" button**, rather than one export for the whole page, per the client's direction.
 
+**Client-confirmed layout, "Grid Dashboard" (approved mockup, 2026-09-08, chosen from five compared concepts):** all four sections sit in a compact 2×2 grid, visible at once with no scrolling on a normal desktop — leads as a weekly line chart, opportunities by stage as compact bars (the same visual language as the Dashboard's Pipeline by Stage), campaign performance as a table, and revenue from closed-won as monthly bars behind a total. No date-range picker (that was a different compared concept's own idea, not this one) — leads uses a trailing 8-week window and revenue a trailing 3-month window, fixed rather than user-adjustable in this pass.
+
 ### 4.9 Settings (I1–I4)
 
 - **Users & Roles (I1)** — table of the MSP's users, their role, last login (§4.11 audit note), invite/remove actions, role-change dropdown
