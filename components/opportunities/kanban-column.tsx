@@ -9,6 +9,22 @@ import { cn } from "@/lib/utils";
 const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
 /**
+ * Client-confirmed, this exact stage only (2026-09-08): the literal
+ * "Lost" column reads error-100/error-700 (light red) instead of the
+ * shared Lost/Stalled neutral-grey — the client wants "Lost"
+ * specifically to read as a dead end on the board, same as the
+ * Settings → Opportunity Stages screen already does. Keyed by stage
+ * **name**, not group membership: "Lost Resurrected" shares the Lost
+ * group but keeps the neutral header, since only the literal "Lost"
+ * stage should turn red. `STAGE_GROUP_HEADER_CLASSES` (shared with any
+ * future consumer) is untouched; this is a local, name-keyed override.
+ */
+function headerClasses(stage: OpportunityStageRow): string {
+  if (stage.name.trim().toLowerCase() === "lost") return "bg-error-100 text-error-700";
+  return STAGE_GROUP_HEADER_CLASSES[stage.stage_group];
+}
+
+/**
  * Client-confirmed redesign ("Concept B — Value-forward board"): the
  * header now also shows the column's total open value and the stage's
  * win probability (a single number, since every opportunity in a
@@ -30,7 +46,7 @@ export function KanbanColumn({
       <div
         className={cn(
           "flex flex-col gap-0.5 rounded-md px-3 py-2 text-caption font-semibold",
-          STAGE_GROUP_HEADER_CLASSES[stage.stage_group]
+          headerClasses(stage)
         )}
       >
         <div className="flex items-center justify-between">
