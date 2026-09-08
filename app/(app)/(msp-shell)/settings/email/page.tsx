@@ -4,7 +4,7 @@ import { EmailConnectionManager, type EmailConnectionRow } from "@/components/se
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Connected Email Accounts — GrowthOS" };
+export const metadata: Metadata = { title: "Connected Email Account — GrowthOS" };
 
 /**
  * App Flow §4.9, I2 — Connected Email Accounts. Connecting/disconnecting
@@ -30,7 +30,7 @@ export default async function ConnectedEmailAccountsPage() {
 
   return (
     <main className="w-full max-w-[1440px] flex-1 p-6 md:p-8">
-      <h1 className="mb-2 text-h1 text-primary-900">Connected Email Accounts</h1>
+      <h1 className="mb-2 text-h1 text-primary-900">Connected Email Account</h1>
       <p className="mb-6 text-body text-neutral-500">
         Connect the mailbox campaigns will send from. Only you can connect or disconnect it, and no one else
         can ever see or use its access tokens — but your name, provider, and address are visible to your

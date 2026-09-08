@@ -108,7 +108,7 @@ export function TopBar({
               <Link href="/settings/profile">My Profile</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/settings/email">Connected Email Accounts</Link>
+              <Link href="/settings/email">Connected Email Account</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={handleLogout}>Log Out</DropdownMenuItem>
