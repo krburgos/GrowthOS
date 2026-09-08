@@ -149,6 +149,8 @@ Prospects and contacts are **one merged section** — every record is a person, 
 **Companies List (D5).** A table — Company Name, Website, Industry, Employees, City, State, Contacts (a live count) — with a search field above it, same shell as Lists Index. No "Add Company": companies are still created only through Add Contact/Import's company-matching flow, unchanged.
 **Company Detail (D6).** The exact same field set as Contact Detail's Company card (Website, Company LinkedIn, Industry, Employees, Phone, Address, City, State), now with its own view/edit toggle, plus every Contact and Opportunity linked to this company. "Merge with another company" moved here from Contact Detail — Contact Detail's Company card now links out to Company Detail ("View Company") instead of offering merge itself.
 
+**Client-confirmed redesign (2026-09-08):** a gradient hero (name, an uploadable company logo, industry/location) replaces the plain page title, with a stat row (Contacts, Open Pipeline, Opportunities) below it.
+
 ### 4.5 Opportunities (E1–E3)
 
 **Opportunity Board (E1) — default view.** A kanban board grouped by stage (Identified Interest through Closed Won/Lost, Ghosted, On Hold, per the PRD's pipeline). Cards are draggable between stage columns; dragging a card updates its stage immediately. Given the number of stages, the board scrolls horizontally rather than compressing columns unreadably. Each card shows contact name, company, and value at a glance.
