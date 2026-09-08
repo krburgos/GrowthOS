@@ -16,6 +16,7 @@ import {
   User,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
@@ -32,7 +33,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { MergeCompanyDialog } from "@/components/contacts/merge-company-dialog";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/client";
 
@@ -83,6 +83,12 @@ type Option = { id: string; label: string };
  * User-Control-and-Freedom gap (no Cancel, no signal about whether you
  * were viewing or editing); this closes it using the pattern the app
  * already established elsewhere rather than inventing a new one.
+ *
+ * Client-confirmed (Companies page, 2026-09-08): the Company card's
+ * fields stay directly editable here — nothing about that changed —
+ * but "Merge with another company" moved to Company Detail, replaced
+ * by a plain "View Company" link now that the company has its own
+ * record to link to.
  */
 export function ContactOverviewForm({
   contactId,
@@ -104,7 +110,6 @@ export function ContactOverviewForm({
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [mergeOpen, setMergeOpen] = useState(false);
   const {
     register,
     handleSubmit,
@@ -316,10 +321,10 @@ export function ContactOverviewForm({
         <div className="rounded-lg border border-neutral-200 bg-white">
           <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-3">
             <h2 className="text-caption font-semibold uppercase tracking-wide text-neutral-500">Company</h2>
-            {editing && canEdit && companyId && (
-              <Button type="button" variant="ghost" size="sm" onClick={() => setMergeOpen(true)}>
-                Merge with another company
-              </Button>
+            {companyId && (
+              <Link href={`/companies/${companyId}`} className="text-body-sm font-medium text-primary-700 hover:underline">
+                View Company →
+              </Link>
             )}
           </div>
           <div className="flex flex-col divide-y divide-neutral-100">
@@ -414,16 +419,6 @@ export function ContactOverviewForm({
             {isSubmitting ? "Saving…" : "Save Changes"}
           </Button>
         </div>
-      )}
-
-      {companyId && (
-        <MergeCompanyDialog
-          open={mergeOpen}
-          onOpenChange={setMergeOpen}
-          sourceCompanyId={companyId}
-          sourceCompanyName={values.company_name || "this company"}
-          accountId={accountId}
-        />
       )}
     </form>
   );

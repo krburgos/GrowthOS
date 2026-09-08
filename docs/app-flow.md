@@ -76,6 +76,8 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 | D2 | Contacts | Contact Detail (tabs: Overview, Activity, Opportunities, Emails) | All MSP roles |
 | D3 | Contacts | Add Contact (manual) | Owner, Admin, Sales, Marketing |
 | D4 | Contacts | Import Contacts (upload → map → validate → confirm) | Owner, Admin, Sales, Marketing |
+| D5 | Companies | Companies List | All MSP roles |
+| D6 | Companies | Company Detail (profile + linked Contacts + linked Opportunities) | All MSP roles |
 | E1 | Opportunities | Opportunity Board (kanban by stage) | All MSP roles (edit: Owner/Admin/Sales) |
 | E2 | Opportunities | Opportunity List (sortable table) | All MSP roles |
 | E3 | Opportunities | Opportunity Detail | All MSP roles (edit: Owner/Admin/Sales) |
@@ -142,6 +144,10 @@ Prospects and contacts are **one merged section** — every record is a person, 
 **Import Contacts (D4).** A four-step flow: **Upload** (CSV/XLSX) → **Map Columns** (match file columns to GrowthOS fields, with a best-guess auto-mapping to start) → **Validate** (shows row-level issues — missing required fields, invalid formats) → **Confirm** (summary: "X contacts ready to import" before committing). Per the client's direction, any validation failures **block the entire import** — see §5.3 and §6. A row's email matching an existing contact is no longer one of those failures (client-confirmed change, see above) — that row updates the existing contact instead.
 
 **Client-confirmed redesign, Map Columns (2026-09-06, "Concept A — Spreadsheet-style column cards"):** the original screen listed GrowthOS fields and asked the user to pick one of their own column headers from a dropdown per field — a recall task if the user didn't remember their own file's header names. Flipped the direction instead: one card per column *from the file*, in its original order, each showing its raw header text, 2 real sample values pulled from the uploaded file, and a dropdown to say what GrowthOS field it becomes (or "Don't import"). Columns the auto-guesser matched confidently collapse into a single expandable "N columns auto-matched" summary bar (green, click to expand and double-check); everything else appears as a full card under a "need a quick look" heading. A status bar at the top always shows the two required fields (First Name, Email) as pass/fail pills, so a beginner never has to scroll to know if they're blocked from continuing. Explored as two initial concepts (a live raw-file-preview pane was the other, App Flow's own working notes) before landing on this one with the wrap-and-collapse refinement.
+
+**Client-confirmed addition, Companies (D5–D6, 2026-09-08):** the Implementation Plan's Milestone 6 originally called for "companies list/detail screens," but this document never specced one and it was never built — the merge-companies flow lived inline on Contact Detail's Company card instead, since there was nowhere else for it to go. Reopening that gap rather than inventing new scope:
+**Companies List (D5).** A table — Company Name, Website, Industry, Employees, City, State, Contacts (a live count) — with a search field above it, same shell as Lists Index. No "Add Company": companies are still created only through Add Contact/Import's company-matching flow, unchanged.
+**Company Detail (D6).** The exact same field set as Contact Detail's Company card (Website, Company LinkedIn, Industry, Employees, Phone, Address, City, State), now with its own view/edit toggle, plus every Contact and Opportunity linked to this company. "Merge with another company" moved here from Contact Detail — Contact Detail's Company card now links out to Company Detail ("View Company") instead of offering merge itself.
 
 ### 4.5 Opportunities (E1–E3)
 

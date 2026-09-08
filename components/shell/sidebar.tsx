@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  Building2,
   ChevronLeft,
   LayoutDashboard,
   ListChecks,
@@ -34,6 +35,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { section: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { section: "contacts", label: "Contacts", href: "/contacts", icon: Users },
+  { section: "companies", label: "Companies", href: "/companies", icon: Building2 },
   { section: "opportunities", label: "Opportunities", href: "/opportunities", icon: Target },
   { section: "lists", label: "Lists", href: "/lists", icon: ListChecks },
   { section: "campaigns", label: "Campaigns", href: "/campaigns", icon: Mail },

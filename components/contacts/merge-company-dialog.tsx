@@ -21,8 +21,10 @@ import { createClient } from "@/lib/supabase/client";
 /**
  * Backend Schema §7.3 — merge_companies(). "Manual merge, for the cases
  * auto-match can't resolve" — a deliberate user action, not automatic
- * (Implementation Plan Milestone 6). No dedicated Companies screen
- * exists (App Flow has none), so this lives inline on Contact Detail.
+ * (Implementation Plan Milestone 6). Client-confirmed (2026-09-08):
+ * reachable from Company Detail's overview form now that one exists —
+ * moved off Contact Detail's Company card, which used to be the only
+ * place it could live before the Companies page was built.
  */
 export function MergeCompanyDialog({
   open,

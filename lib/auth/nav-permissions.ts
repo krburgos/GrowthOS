@@ -3,6 +3,7 @@ import type { UserRole } from "@/lib/auth/get-current-user";
 export type NavAccess = "full" | "view" | "disabled";
 export type NavSection =
   | "contacts"
+  | "companies"
   | "opportunities"
   | "lists"
   | "campaigns"
@@ -22,6 +23,7 @@ export type NavSection =
 export const SIDEBAR_ACCESS: Record<UserRole, Record<NavSection, NavAccess>> = {
   msp_owner: {
     contacts: "full",
+    companies: "full",
     opportunities: "full",
     lists: "full",
     campaigns: "full",
@@ -30,6 +32,7 @@ export const SIDEBAR_ACCESS: Record<UserRole, Record<NavSection, NavAccess>> = {
   },
   msp_admin: {
     contacts: "full",
+    companies: "full",
     opportunities: "full",
     lists: "full",
     campaigns: "full",
@@ -38,6 +41,7 @@ export const SIDEBAR_ACCESS: Record<UserRole, Record<NavSection, NavAccess>> = {
   },
   msp_sales: {
     contacts: "full",
+    companies: "full",
     opportunities: "full",
     lists: "view",
     campaigns: "view",
@@ -46,6 +50,7 @@ export const SIDEBAR_ACCESS: Record<UserRole, Record<NavSection, NavAccess>> = {
   },
   msp_marketing: {
     contacts: "full",
+    companies: "full",
     opportunities: "view",
     lists: "full",
     campaigns: "full",
@@ -54,6 +59,7 @@ export const SIDEBAR_ACCESS: Record<UserRole, Record<NavSection, NavAccess>> = {
   },
   msp_read_only: {
     contacts: "view",
+    companies: "view",
     opportunities: "view",
     lists: "view",
     campaigns: "view",
@@ -62,6 +68,7 @@ export const SIDEBAR_ACCESS: Record<UserRole, Record<NavSection, NavAccess>> = {
   },
   cro_admin: {
     contacts: "full",
+    companies: "full",
     opportunities: "full",
     lists: "full",
     campaigns: "full",
@@ -70,6 +77,7 @@ export const SIDEBAR_ACCESS: Record<UserRole, Record<NavSection, NavAccess>> = {
   },
   cro_advisor: {
     contacts: "full",
+    companies: "full",
     opportunities: "full",
     lists: "full",
     campaigns: "full",
@@ -78,6 +86,7 @@ export const SIDEBAR_ACCESS: Record<UserRole, Record<NavSection, NavAccess>> = {
   },
   cro_service_team: {
     contacts: "view",
+    companies: "view",
     opportunities: "view",
     lists: "view",
     campaigns: "view",
