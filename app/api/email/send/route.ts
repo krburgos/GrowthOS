@@ -1,7 +1,7 @@
-import { Resend } from "resend";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
+import { sendWithFallback } from "@/lib/email/resend-send";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -115,32 +115,15 @@ export async function POST(request: NextRequest) {
     replyToEmail = connection.email_address;
   }
 
-  const { RESEND_API_KEY, EMAIL_FROM_ADDRESS } = process.env;
-  if (!RESEND_API_KEY || !EMAIL_FROM_ADDRESS) {
-    return NextResponse.json(
-      { error: "Email sending isn't configured yet — ask an admin to set up Resend." },
-      { status: 500 }
-    );
-  }
-
-  const resend = new Resend(RESEND_API_KEY);
-  const realAddress = replyToEmail;
-
-  const sendFrom = (address: string) =>
-    resend.emails.send({
-      from: `${fromName} <${address}>`,
-      replyTo: replyToEmail,
-      to: contact.email,
-      cc: ccList.length > 0 ? ccList : undefined,
-      subject,
-      text: body,
-    });
-
-  let { error: sendError } = await sendFrom(realAddress);
-
-  if (sendError && realAddress !== EMAIL_FROM_ADDRESS && /not verified/i.test(sendError.message ?? "")) {
-    ({ error: sendError } = await sendFrom(EMAIL_FROM_ADDRESS));
-  }
+  const { error: sendError } = await sendWithFallback({
+    fromName,
+    realAddress: replyToEmail,
+    replyToEmail,
+    to: contact.email,
+    cc: ccList,
+    subject,
+    content: body,
+  });
 
   if (sendError) {
     console.error("Resend send failed:", sendError);

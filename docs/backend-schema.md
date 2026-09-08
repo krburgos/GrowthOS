@@ -1044,9 +1044,12 @@ language plpgsql security definer set search_path = public
 as $$
 declare
   v_campaign record;
-  v_app_url text := current_setting('app.settings.app_url', true);
-  v_cron_secret text := current_setting('app.settings.cron_secret', true);
+  v_app_url text;
+  v_cron_secret text;
 begin
+  select decrypted_secret into v_app_url from vault.decrypted_secrets where name = 'app_url';
+  select decrypted_secret into v_cron_secret from vault.decrypted_secrets where name = 'cron_secret';
+
   for v_campaign in
     select id from campaigns
     where status = 'scheduled' and scheduled_at <= now()
@@ -1064,7 +1067,7 @@ end;
 $$;
 ```
 
-send_due_campaigns() only flips a campaign's status and makes one HTTP handoff — it never talks to SMTP itself. §8 covers the rest of that flow, including the one-time ALTER DATABASE setup app.settings.app_url and app.settings.cron_secret need.
+send_due_campaigns() only flips a campaign's status and makes one HTTP handoff — it never talks to SMTP itself. §8 covers the rest of that flow, including the one-time Vault setup app_url and cron_secret need (Supabase Vault, not the `ALTER DATABASE ... SET app.settings.*` GUC approach this document originally specced — see §12's correction note for why).
 
 ## 8. Scheduled Campaign Sending Flow
 
@@ -1077,8 +1080,9 @@ Postgres cannot send SMTP email itself, so scheduled sending is a two-stage hand
 - Once every recipient has been processed, the route sets the campaign's status = 'sent' and sent_at = now() (or 'failed' if sending could not complete, so it doesn't get silently retried by the next cron tick).
 **One-time setup this flow depends on**, to be run once against the Supabase database after provisioning:
 ```
-alter database postgres set app.settings.app_url = 'https://<production-domain>';
-alter database postgres set app.settings.cron_secret = '<same value as the CRON_SECRET env var>';
+select vault.create_secret('https://<production-domain>', 'app_url');
+select vault.create_secret('<same value as the CRON_SECRET env var>', 'cron_secret');
+-- To change either later: select vault.update_secret((select id from vault.secrets where name = 'app_url'), '<new value>');
 
 select cron.schedule(
   'send-due-campaigns',
@@ -1095,8 +1099,10 @@ Every recipient of a campaign gets a unique campaign_recipients.tracking_token (
 - **Open:** the email client loads GET /api/track/open/[token].gif. The route calls record_campaign_event(token, 'opened') and returns a static 1×1 transparent GIF regardless of whether the token matched anything (never error back to an email client).
 - **Click:** every link in the campaign body is rewritten at send time to GET /api/track/click/[token]?url=<original-destination>. The route calls record_campaign_event(token, 'clicked', jsonb_build_object('url', <original-destination>)) and 302-redirects the browser to the original URL.
 - **Unsubscribe:** the CAN-SPAM-required footer link points to GET /api/unsubscribe/[token]. The route calls record_campaign_event(token, 'unsubscribed') — which also sets that contact's email_opt_out = true (§7.6) — and shows a plain confirmation page. Every future campaign send excludes opted-out contacts at the list-resolution step (§8, step 4).
-- **Bounces & complaints:** these can't be detected from a pixel or redirect — they come from Resend's own webhook, delivered to POST /api/webhooks/resend (§10), which verifies Resend's (Svix) signature and calls record_campaign_event() with 'bounced' or 'complained' for the matching token.
+- **Bounces & complaints:** these can't be detected from a pixel or redirect — they come from Resend's own webhook, delivered to POST /api/webhooks/resend (§10), which verifies Resend's (Svix) signature and calls record_campaign_event() with 'bounced' or 'complained' for the matching token. Also forwards 'delivered' the same way.
 record_campaign_event() centralizes all four sources so campaign_events stays a single, consistent append-only log and campaign_recipients's rolled-up counters never fall out of sync with it.
+
+**Implementation notes (Milestone 10, 2026-09-08):** the webhook identifies which recipient an event belongs to via a `tracking_token` **tag** set on every Resend send call (`tags: [{ name: "tracking_token", value: ... }]`) and echoed back in the webhook payload — not by matching on to-address, which could collide across campaigns/contacts. Signature verification is a hand-rolled Svix HMAC check (`lib/email/verify-svix-signature.ts`, Node's built-in `crypto`) rather than the `svix` npm package — no new Tech Stack Lockfile dependency for one HMAC comparison.
 
 ## 10. API Endpoints
 
@@ -1148,8 +1154,11 @@ Judgment calls made while turning the PRD, App Flow Document, and prior Q&A into
 | **Variable** | **Purpose** |
 | --- | --- |
 | TOKEN_ENCRYPTION_KEY | AES-256-GCM key for encrypting OAuth tokens before they're written to email_connections (§5.2) |
-| CRON_SECRET | Shared secret checked by POST /api/campaigns/send-due (§8) against the database's app.settings.cron_secret |
+| CRON_SECRET | Shared secret checked by POST /api/campaigns/send-due (§8) against the database's stored cron_secret |
 | RESEND_WEBHOOK_SECRET | Verifies the Svix signature on incoming Resend webhook calls (§10) |
+| APP_URL | The app's own base URL (Milestone 10), used to build campaign tracking-pixel/click/unsubscribe links (§9) — must be kept in sync with the database's own copy of the same value, below |
+
+- **Correction (found live, 2026-09-08): app_url/cron_secret live in Supabase Vault, not app.settings.*.** This document's §8 describes setting them via `ALTER DATABASE ... SET app.settings.cron_secret`/`app.settings.app_url`; the actual send_due_campaigns() function already deployed reads `vault.decrypted_secrets` instead (`select decrypted_secret from vault.decrypted_secrets where name = 'app_url'`, same for `cron_secret`) — a more secure approach (Vault-encrypted at rest, not a plaintext database-level GUC) that was apparently adopted when the schema was first built, without this document being updated to match. Both secrets are already correctly populated against the production Vercel URL. To change either later: `select vault.update_secret((select id from vault.secrets where name = 'app_url'), '<new value>')` (or `vault.create_secret` if the row doesn't exist yet), not the ALTER DATABASE statement this document originally described.
 
 - **pg_cron**** and ****pg_net**** must be enabled from the Supabase dashboard** before running §5's migration — noted in §1, repeated here because it's an easy first-deploy failure point (the extension can be allow-listed per project tier rather than available by default).
 - **Opportunity ****name**** is nullable (§5.5).** Neither the PRD nor the App Flow Document names a distinct opportunity title field — the Kanban card shows contact, company, and value. A nullable free-text name is included so the UI can let a user optionally label an opportunity without requiring it.
