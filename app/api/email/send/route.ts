@@ -120,7 +120,11 @@ export async function POST(request: NextRequest) {
   });
 
   if (sendError) {
-    return NextResponse.json({ error: "Couldn't send that email — please try again." }, { status: 502 });
+    console.error("Resend send failed:", sendError);
+    return NextResponse.json(
+      { error: `Couldn't send that email — ${sendError.message || "please try again."}` },
+      { status: 502 }
+    );
   }
 
   const { error: activityError } = await supabase.from("activities").insert({
