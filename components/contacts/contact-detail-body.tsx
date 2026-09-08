@@ -46,18 +46,42 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+function hostnameOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url.replace(/^https?:\/\/(www\.)?/, "");
+  }
+}
+
+function linkedinHandleOf(url: string): string {
+  const match = url.match(/linkedin\.com\/(.+?)\/?(?:[?#].*)?$/i);
+  return match ? match[1] : url.replace(/^https?:\/\//, "");
+}
+
 /**
  * Contact Detail — Concept B, "Two-Column CRM Record" (approved mockup,
  * client-confirmed round two of the Contact Detail redesign). A
- * persistent record rail (light neutral-50, deliberately *not* navy —
- * the app's real sidebar is the only dark rail on screen, per the
- * client's explicit "don't wreck the sidebar" direction) replaces the
- * old plain identity row; Overview's fields fold into the rail as a
- * glance ("Quick Facts") plus an Edit Details shortcut into the full
- * Overview tab, which still holds the complete view/edit form
- * unchanged. The right side gets a stat row (open pipeline, lifetime
- * won value, last activity — all derived from data already fetched,
- * no new queries) above the tabs.
+ * persistent record rail (deliberately *not* navy — the app's real
+ * sidebar is the only dark rail on screen, per the client's explicit
+ * "don't wreck the sidebar" direction) replaces the old plain identity
+ * row; Overview's fields fold into the rail as a glance ("Quick Facts")
+ * plus an Edit Details shortcut into the full Overview tab, which still
+ * holds the complete view/edit form unchanged. The right side gets a
+ * stat row (open pipeline, lifetime won value, last activity — all
+ * derived from data already fetched, no new queries) above the tabs.
+ *
+ * Client-confirmed rail redesign ("Refined Card," approved mockup,
+ * 2026-09-08): rail background is secondary-100 (chosen after
+ * comparing five intensity steps of the app's own teal scale, 50–400,
+ * live). Status/temperature/score became outlined chips instead of
+ * flat-filled ones, Edit Details became a solid primary button, and
+ * Website/Person LinkedIn moved out of the old icon-only row into a
+ * labeled "Links" section (icon chip + label + domain/handle text).
+ * Company LinkedIn (company.linkedinUrl) is deliberately not rendered
+ * here anymore — it's still shown and editable on Company Detail, per
+ * the client's direction to remove it specifically from the contact
+ * profile.
  *
  * Sizing: rail and content are plain `flex`/`flex-1` flex items, no
  * `min-h-full` and no internal `overflow-y-auto` — the whole page
@@ -131,7 +155,7 @@ export function ContactDetailBody({
   return (
     <div className="flex flex-1">
       {/* ---- Record rail ---- */}
-      <aside className="flex w-72 shrink-0 flex-col gap-5 border-r border-neutral-200 bg-neutral-50 p-5">
+      <aside className="flex w-72 shrink-0 flex-col gap-5 border-r border-neutral-200 bg-secondary-100 p-5">
         <div className="flex flex-col items-center gap-2 text-center">
           <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 shadow-sm">
             <ContactAvatarUpload
@@ -152,68 +176,30 @@ export function ContactDetailBody({
           )}
           <div className="flex flex-wrap justify-center gap-1.5">
             {statusName && (
-              <span className="rounded-full bg-secondary-100 px-2.5 py-1 text-caption font-semibold text-secondary-800">
+              <span className="rounded-full border border-secondary-500 bg-white px-2.5 py-1 text-caption font-semibold text-secondary-700">
                 {statusName}
               </span>
             )}
             {temperature && (
               <span
                 className={cn(
-                  "rounded-full px-2.5 py-1 text-caption font-semibold",
-                  temperature === "hot" ? "bg-error-100 text-error-700" : "bg-primary-100 text-primary-700"
+                  "rounded-full border bg-white px-2.5 py-1 text-caption font-semibold",
+                  temperature === "hot" ? "border-error-500 text-error-700" : "border-primary-400 text-primary-700"
                 )}
               >
                 {temperature === "hot" ? "Hot" : "Cold"}
               </span>
             )}
             {score != null && (
-              <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-caption font-semibold text-neutral-700">
+              <span className="rounded-full border border-neutral-300 bg-white px-2.5 py-1 text-caption font-semibold text-neutral-600">
                 Score {score}
               </span>
-            )}
-          </div>
-          <div className="flex justify-center gap-2">
-            {company?.website && (
-              <a
-                href={company.website}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`${company.name}'s website`}
-                title="Company website"
-                className="flex size-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-colors hover:bg-primary-700 hover:text-white"
-              >
-                <Globe className="size-3.5" />
-              </a>
-            )}
-            {company?.linkedinUrl && (
-              <a
-                href={company.linkedinUrl}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`${company.name}'s LinkedIn`}
-                title="Company LinkedIn"
-                className="flex size-7 items-center justify-center rounded-full bg-neutral-100 text-neutral-500 transition-colors hover:bg-primary-700 hover:text-white"
-              >
-                <Link2 className="size-3.5" />
-              </a>
-            )}
-            {linkedinUrl && (
-              <a
-                href={linkedinUrl}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`${fullName}'s LinkedIn`}
-                title="Person LinkedIn"
-                className="flex size-7 items-center justify-center rounded-full bg-secondary-50 text-secondary-700 transition-colors hover:bg-secondary-700 hover:text-white"
-              >
-                <Link2 className="size-3.5" />
-              </a>
             )}
           </div>
           {canEdit && (
             <Button
               type="button"
-              variant="secondary"
+              variant="primary"
               size="sm"
               className="w-full"
               onClick={() => setActiveTab("overview")}
@@ -224,7 +210,45 @@ export function ContactDetailBody({
           )}
         </div>
 
-        <div className="flex flex-col gap-2.5 border-t border-neutral-200 pt-4">
+        {(company?.website || linkedinUrl) && (
+          <div className="flex flex-col gap-2 border-t border-secondary-200 pt-4">
+            <h2 className="text-caption font-semibold uppercase tracking-wide text-neutral-500">Links</h2>
+            {company?.website && (
+              <a
+                href={company.website}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2.5 rounded-md border border-neutral-200 bg-white px-2.5 py-2 transition-colors hover:border-secondary-400"
+              >
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-secondary-50 text-secondary-700">
+                  <Globe className="size-3.5" />
+                </span>
+                <span className="flex min-w-0 flex-col text-left">
+                  <span className="text-caption font-semibold text-neutral-800">Website</span>
+                  <span className="truncate text-caption text-neutral-500">{hostnameOf(company.website)}</span>
+                </span>
+              </a>
+            )}
+            {linkedinUrl && (
+              <a
+                href={linkedinUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2.5 rounded-md border border-neutral-200 bg-white px-2.5 py-2 transition-colors hover:border-secondary-400"
+              >
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-secondary-50 text-secondary-700">
+                  <Link2 className="size-3.5" />
+                </span>
+                <span className="flex min-w-0 flex-col text-left">
+                  <span className="text-caption font-semibold text-neutral-800">LinkedIn</span>
+                  <span className="truncate text-caption text-neutral-500">{linkedinHandleOf(linkedinUrl)}</span>
+                </span>
+              </a>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2.5 border-t border-secondary-200 pt-4">
           <h2 className="text-caption font-semibold uppercase tracking-wide text-neutral-400">Quick Facts</h2>
           <div className="flex items-start gap-2 text-body-sm text-neutral-700">
             <Mail className="mt-0.5 size-3.5 shrink-0 text-neutral-400" />
