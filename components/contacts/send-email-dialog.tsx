@@ -58,7 +58,7 @@ export function SendEmailDialog({ contactId, contactName, contactEmail }: { cont
       <DialogTrigger asChild>
         <button
           type="button"
-          className="flex flex-1 flex-col items-center justify-center gap-1.5 rounded-lg border border-neutral-200 bg-white p-3.5 text-center transition-colors hover:border-secondary-300 hover:bg-secondary-50"
+          className="flex aspect-square shrink-0 flex-col items-center justify-center gap-1.5 rounded-lg border border-neutral-200 bg-white p-3.5 text-center transition-colors hover:border-secondary-300 hover:bg-secondary-50"
         >
           <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 text-white shadow-sm">
             <Send className="size-4" />
