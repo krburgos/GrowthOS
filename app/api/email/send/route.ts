@@ -16,11 +16,25 @@ import { createClient } from "@/lib/supabase/server";
  * *account-wide* connected mailbox's identity (client-confirmed
  * reversal of part of Backend Schema §6.3's single-user rule, scoped to
  * this narrow read — see the email_connections_directory_and_send_from
- * migration). This is cosmetic only: the connection's tokens are never
- * used, and the email still goes out through Resend with that
- * identity's name/address as the display From and Reply-To. Every send
- * is logged as an activities row, including which identity was used
- * (send_from_connection_id, null = the sender's own) and any Cc list.
+ * migration). The connection's tokens are never used — sending always
+ * goes through Resend, never that identity's actual Gmail/Outlook.
+ *
+ * Real-address attempt, with a graceful fallback (2026-09-08 follow-up):
+ * Resend can send from any address on a domain verified in the account,
+ * not just one fixed EMAIL_FROM_ADDRESS — so the first attempt uses the
+ * picked identity's (or, by default, the sender's own) real address as
+ * From. If that address's domain isn't verified yet, Resend rejects it
+ * with a "not verified" error; only then does this retry using the
+ * shared EMAIL_FROM_ADDRESS, with the real address kept as Reply-To
+ * (which works for any address, verified or not — Reply-To isn't
+ * subject to domain authentication the way From is). This is why a
+ * teammate's Gmail/Outlook-connected identity still falls back cleanly:
+ * their domain can never be verified by this account, but their real
+ * address still works fine as Reply-To. Every send is logged as an
+ * activities row (send_from_connection_id records which identity was
+ * *picked*, not which literal address the send ultimately used — the
+ * display name is accurate either way, only the address can differ in
+ * the fallback case) and any Cc list.
  */
 const sendEmailSchema = z.object({
   contactId: z.string().uuid(),
@@ -110,14 +124,23 @@ export async function POST(request: NextRequest) {
   }
 
   const resend = new Resend(RESEND_API_KEY);
-  const { error: sendError } = await resend.emails.send({
-    from: `${fromName} <${EMAIL_FROM_ADDRESS}>`,
-    replyTo: replyToEmail,
-    to: contact.email,
-    cc: ccList.length > 0 ? ccList : undefined,
-    subject,
-    text: body,
-  });
+  const realAddress = replyToEmail;
+
+  const sendFrom = (address: string) =>
+    resend.emails.send({
+      from: `${fromName} <${address}>`,
+      replyTo: replyToEmail,
+      to: contact.email,
+      cc: ccList.length > 0 ? ccList : undefined,
+      subject,
+      text: body,
+    });
+
+  let { error: sendError } = await sendFrom(realAddress);
+
+  if (sendError && realAddress !== EMAIL_FROM_ADDRESS && /not verified/i.test(sendError.message ?? "")) {
+    ({ error: sendError } = await sendFrom(EMAIL_FROM_ADDRESS));
+  }
 
   if (sendError) {
     console.error("Resend send failed:", sendError);
