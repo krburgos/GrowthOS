@@ -19,6 +19,14 @@ export interface ActivityRow {
   due_at: string | null;
   completed_at: string | null;
   users: { full_name: string; email?: string } | { full_name: string; email?: string }[] | null;
+  /** Set only on type: "email" rows — a Cc address list, comma-separated. */
+  cc?: string | null;
+  /** Which connected mailbox's identity was used as From/Reply-To (null = the sender's own). */
+  send_from_connection_id?: string | null;
+  email_connections?:
+    | { email_address: string; users: { full_name: string } | { full_name: string }[] | null }
+    | { email_address: string; users: { full_name: string } | { full_name: string }[] | null }[]
+    | null;
 }
 
 const TYPE_FILTERS: { value: "all" | ActivityRow["type"]; label: string }[] = [

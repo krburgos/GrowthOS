@@ -10,7 +10,7 @@
 | Auth | Supabase Auth (auth.users), extended by a 1:1 public.users profile table |
 | Data access | Hybrid — direct browser-to-Supabase for simple CRUD (RLS-protected), Next.js API routes with the Supabase service role for anything needing secrets or multi-step server logic |
 | Scheduled jobs | pg_cron (in-database scheduler) + pg_net (HTTP calls from Postgres), handing off actual email sending to a Next.js API route |
-| Email delivery | Nodemailer over SendGrid SMTP relay (Tech Stack Lockfile §3.8), triggered by that API route — Postgres never sends email directly |
+| Email delivery | Resend (Tech Stack Lockfile §3.8, amended 2026-09-08 from SendGrid/Nodemailer), triggered by that API route — Postgres never sends email directly |
 
 Two extensions beyond the Postgres defaults are required: pg_cron and pg_net. Both must be turned on from the Supabase dashboard (Database → Extensions) before running the migration in §5 — create extension can fail silently on hosted Supabase if the extension isn't allow-listed for the project tier, so this is called out here rather than assumed.
 Thirteen database tables cover Phase 1 in full: accounts, users, email_connections, companies, contact_statuses, contacts, lists, list_members, opportunity_stages, opportunities, activities, campaigns, campaign_recipients, campaign_events — fourteen, including the event log. (opportunity_stages was added after this document's first pass, by the `customizable_opportunity_stages` migration — see §5.5, §7.5.) No table exists for file attachments, custom fields, audit logging, or a client portal; §12 records why each of those is deliberately absent.
@@ -339,6 +339,13 @@ create index activities_opportunity_id_idx on activities(opportunity_id);
 create index activities_occurred_at_idx on activities(account_id, occurred_at desc);
 ```
 
+**Client-confirmed addition (2026-09-08, `email_connections_directory_and_send_from` migration):**
+```
+alter table activities add column send_from_connection_id uuid references email_connections(id) on delete set null;
+alter table activities add column cc text;
+```
+Both nullable. `send_from_connection_id` is null for the default case (the email used the sender's own identity) and set only when a teammate's connected mailbox was picked as From on Contact Detail's quick-send Email button (§6.3, §10) — `user_id` above still always records who actually clicked send, regardless of which identity was displayed. `cc` is a plain comma/semicolon-separated address list, free text and not validated against existing contacts (client-confirmed) — set only on `type = 'email'` rows that had a Cc.
+
 opportunities.company_id is denormalized from contacts.company_id (kept in sync by sync_opportunity_company(), §7) purely so the Opportunity Board and reports can filter/group by company without a join through contacts on every query.
 
 ### 5.6 campaigns, campaign_recipients, campaign_events
@@ -473,7 +480,14 @@ create policy users_update on users for update
 alter table email_connections enable row level security;
 
 create policy email_connections_select on email_connections for select
-  using (user_id = auth.uid());
+  using (
+    user_id = auth.uid()
+    or exists (
+      select 1 from users u
+      where u.id = email_connections.user_id
+        and u.account_id = auth_account_id()
+    )
+  );
 
 create policy email_connections_insert on email_connections for insert
   with check (user_id = auth.uid());
@@ -483,6 +497,18 @@ create policy email_connections_update on email_connections for update
 -- Deliberately no CRO Leader bypass anywhere in this table, per the client's explicit decision:
 -- a connected mailbox and its tokens are strictly the connecting user's own.
 ```
+
+**Client-confirmed amendment (2026-09-08, `email_connections_directory_and_send_from` migration):** the SELECT policy above was broadened from strictly `user_id = auth.uid()` to account-wide, so Contact Detail's quick-send Email button can list every connected mailbox in the account as a "From" identity option (a deliberate, explicit reversal of part of this section's original "strictly the connecting user's own" rule — confirmed with the client only after they understood the real mechanism, see below). INSERT and UPDATE are untouched — connecting/disconnecting a mailbox is still strictly your own action, and there is still no CRO Leader bypass anywhere in this table.
+
+To avoid the broadened row-visibility also exposing tokens, the migration pairs it with a **column-level privilege restriction** — orthogonal to RLS, which only ever filters rows, not columns:
+```
+revoke select on email_connections from authenticated;
+grant select (id, user_id, provider, email_address, status, last_synced_at, archived_at, created_at, updated_at)
+  on email_connections to authenticated;
+```
+`access_token_encrypted`, `refresh_token_encrypted`, and `token_expires_at` are deliberately left out of the grant — the `authenticated` role (every ordinary session) can no longer `select` those columns at all, account-wide visibility or not. Only the service-role client (used server-side in the OAuth callback route, which already bypasses RLS) can still read them. This is a stronger boundary than the original single-row-only policy alone provided for the tokens specifically, even though it's a weaker boundary for the identity metadata.
+
+**What "From" actually does with this (client-confirmed, same day):** `POST /api/email/send` (§10) never uses a picked connection's tokens — sending is still 100% Resend-relayed (§5.2). Picking a teammate's connected mailbox only sets that identity's name/address as the outgoing email's display From and Reply-To; the teammate isn't notified, doesn't authorize it, and their actual Gmail/Outlook is never touched. The client was told this plainly (not real per-mailbox delivery) before confirming they still wanted it account-wide.
 
 
 ### 6.4 companies, contact_statuses, contacts
@@ -1044,8 +1070,8 @@ Postgres cannot send SMTP email itself, so scheduled sending is a two-stage hand
 - A Marketing/Owner/Admin user builds a campaign against a list and either sends immediately or sets scheduled_at and leaves status = 'scheduled'.
 - Once a minute, pg_cron calls send_due_campaigns() (§7.6).
 - That function finds every campaign with status = 'scheduled' and scheduled_at <= now(), flips each to status = 'sending' (so a second cron tick can't double-send it — for update skip locked also guards against overlap if a run takes longer than a minute), and calls POST /api/campaigns/send-due once per campaign via net.http_post, passing the campaign id and a shared secret header.
-- POST /api/campaigns/send-due (§10) resolves the list's members, excludes any contacts.email_opt_out = true, creates a campaign_recipients row per remaining contact (if not already present), and sends each email through Nodemailer over the SendGrid SMTP relay from the campaign's send_from_connection_id mailbox.
-- As SendGrid accepts each send, the route calls record_campaign_event() (§7.6) with event_type = 'sent' for that recipient's tracking_token.
+- POST /api/campaigns/send-due (§10) resolves the list's members, excludes any contacts.email_opt_out = true, creates a campaign_recipients row per remaining contact (if not already present), and sends each email through Resend, displaying the campaign's send_from_connection_id mailbox as the From/Reply-To identity.
+- As Resend accepts each send, the route calls record_campaign_event() (§7.6) with event_type = 'sent' for that recipient's tracking_token.
 - Once every recipient has been processed, the route sets the campaign's status = 'sent' and sent_at = now() (or 'failed' if sending could not complete, so it doesn't get silently retried by the next cron tick).
 **One-time setup this flow depends on**, to be run once against the Supabase database after provisioning:
 ```
@@ -1067,7 +1093,7 @@ Every recipient of a campaign gets a unique campaign_recipients.tracking_token (
 - **Open:** the email client loads GET /api/track/open/[token].gif. The route calls record_campaign_event(token, 'opened') and returns a static 1×1 transparent GIF regardless of whether the token matched anything (never error back to an email client).
 - **Click:** every link in the campaign body is rewritten at send time to GET /api/track/click/[token]?url=<original-destination>. The route calls record_campaign_event(token, 'clicked', jsonb_build_object('url', <original-destination>)) and 302-redirects the browser to the original URL.
 - **Unsubscribe:** the CAN-SPAM-required footer link points to GET /api/unsubscribe/[token]. The route calls record_campaign_event(token, 'unsubscribed') — which also sets that contact's email_opt_out = true (§7.6) — and shows a plain confirmation page. Every future campaign send excludes opted-out contacts at the list-resolution step (§8, step 4).
-- **Bounces & complaints:** these can't be detected from a pixel or redirect — they come from SendGrid's own Event Webhook, delivered to POST /api/webhooks/sendgrid (§10), which verifies SendGrid's signature and calls record_campaign_event() with 'bounced' or 'complained' for the matching token.
+- **Bounces & complaints:** these can't be detected from a pixel or redirect — they come from Resend's own webhook, delivered to POST /api/webhooks/resend (§10), which verifies Resend's (Svix) signature and calls record_campaign_event() with 'bounced' or 'complained' for the matching token.
 record_campaign_event() centralizes all four sources so campaign_events stays a single, consistent append-only log and campaign_recipients's rolled-up counters never fall out of sync with it.
 
 ## 10. API Endpoints
@@ -1082,13 +1108,13 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | GET /api/oauth/[provider]/callback | Session (OAuth redirect) | Exchanges the auth code for tokens, encrypts them (§5.2), and upserts an email_connections row |
 | POST /api/import/validate | Session (edit role for contacts) | Parses an uploaded CSV/XLSX (papaparse/ExcelJS), maps columns, returns a preview and error report — no writes yet |
 | POST /api/import/commit | Session (edit role for contacts) | Inserts validated rows, calling match_or_create_company() (§7.3) per row and honoring the contacts dedup index (§5.3) |
-| POST /api/email/send | Session | Client-confirmed addition (2026-09-08), ahead of Milestone 10 — sends a single Contact Detail "quick send" email via the same SendGrid SMTP relay/Nodemailer path Campaigns will use (not the recipient's own connected mailbox), then logs an activities row (type='email') |
+| POST /api/email/send | Session | Client-confirmed addition (2026-09-08), ahead of Milestone 10 — sends a single Contact Detail "quick send" email via Resend (not the recipient's own connected mailbox), optionally displaying any account-wide connected mailbox's identity as From/Reply-To (§6.3), then logs an activities row (type='email', §5.5) |
 | POST /api/campaigns/[id]/send | Session (edit role for campaigns) | Validates a campaign and transitions it to scheduled (or immediately to sending) |
-| POST /api/campaigns/send-due | x-cron-secret header (no user session) | Called only by send_due_campaigns() (§8); resolves recipients and sends via Nodemailer/SendGrid |
+| POST /api/campaigns/send-due | x-cron-secret header (no user session) | Called only by send_due_campaigns() (§8); resolves recipients and sends via Resend |
 | GET /api/track/open/[token].gif | None (public) | Records an 'opened' event (§9), returns a 1×1 GIF |
 | GET /api/track/click/[token] | None (public) | Records a 'clicked' event (§9), 302-redirects to the destination URL |
 | GET /api/unsubscribe/[token] | None (public) | Records an 'unsubscribed' event, sets email_opt_out (§9) |
-| POST /api/webhooks/sendgrid | SendGrid signature header (no user session) | Records 'bounced' / 'complained' / 'delivered' events from SendGrid's Event Webhook |
+| POST /api/webhooks/resend | Resend (Svix) signature header (no user session) | Records 'bounced' / 'complained' / 'delivered' events from Resend's webhook |
 | GET /api/reports/export | Session | Streams an XLSX/CSV export of report data (ExcelJS) for volumes too large to build client-side |
 
 
@@ -1115,12 +1141,13 @@ Judgment calls made while turning the PRD, App Flow Document, and prior Q&A into
 - **merge_companies()**** (§7.3)** is a minimal reassign-and-archive implementation of "manual merge otherwise" — it doesn't attempt to reconcile conflicting field values between the two company records (name, industry, etc.); the surviving record simply keeps its own values. A more opinionated merge UI can layer on top of this function without changing it.
 - **No audit log table.** PRD §6.9 explicitly limits Phase 1 to a last-login timestamp, with no full audit trail — confirmed out of scope, not an oversight.
 - **No file attachments table, no custom fields/pipelines, no client portal tables.** All three were explicitly confirmed out of scope for Phase 1 in this document's clarifying questions and the PRD itself (PRD §6.8, §10) — none of the tables above make any provision for them, so adding any later is a genuine schema change, not a toggle. **Client-confirmed exception:** three Supabase Storage buckets (`company-logos`, `avatars`, `contact-avatars`) were added for the company logo, user profile picture, and (as of the Contact Detail redesign) a per-contact profile picture — no new Postgres table, and no general-purpose attachments feature; each just backs a single image field (`accounts.logo_url`, `users.avatar_url`, `contacts.avatar_url`) that already existed or was added for this purpose. `contact-avatars` objects are namespaced by `account_id` (matching `company-logos`) rather than by contact owner, since any of a contact's edit-capable roles may upload its photo, not just one user.
+- **email_connections' SELECT policy is account-wide as of 2026-09-08, not single-user as originally written in §6.3.** A client-confirmed, deliberate reversal for the Contact Detail quick-send From picker — see §6.3 for the exact policy, the paired column-level privilege restriction that keeps tokens private regardless, and why (cosmetic display identity only, never real per-mailbox sending).
 - **New environment variables beyond the Tech Stack Lockfile's §7 checklist:**
 | **Variable** | **Purpose** |
 | --- | --- |
 | TOKEN_ENCRYPTION_KEY | AES-256-GCM key for encrypting OAuth tokens before they're written to email_connections (§5.2) |
 | CRON_SECRET | Shared secret checked by POST /api/campaigns/send-due (§8) against the database's app.settings.cron_secret |
-| SENDGRID_WEBHOOK_VERIFICATION_KEY | Verifies the signature on incoming SendGrid Event Webhook calls (§10) |
+| RESEND_WEBHOOK_SECRET | Verifies the Svix signature on incoming Resend webhook calls (§10) |
 
 - **pg_cron**** and ****pg_net**** must be enabled from the Supabase dashboard** before running §5's migration — noted in §1, repeated here because it's an easy first-deploy failure point (the extension can be allow-listed per project tier rather than available by default).
 - **Opportunity ****name**** is nullable (§5.5).** Neither the PRD nor the App Flow Document names a distinct opportunity title field — the Kanban card shows contact, company, and value. A nullable free-text name is included so the UI can let a user optionally label an opportunity without requiring it.

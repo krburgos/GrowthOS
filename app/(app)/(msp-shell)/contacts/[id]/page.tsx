@@ -49,33 +49,53 @@ export default async function ContactDetailPage({
 
   if (!contact) notFound();
 
-  const [{ data: statuses }, { data: owners }, { data: activityRows }, { data: opportunityRows }, { data: memberRows }] =
-    await Promise.all([
-      supabase
-        .from("contact_statuses")
-        .select("id, name")
-        .eq("account_id", user.account_id)
-        .is("archived_at", null)
-        .order("sort_order"),
-      supabase
-        .from("users")
-        .select("id, full_name")
-        .eq("account_id", user.account_id)
-        .is("archived_at", null)
-        .order("full_name"),
-      supabase
-        .from("activities")
-        .select("id, type, subject, body, occurred_at, due_at, completed_at, users(full_name, email)")
-        .eq("contact_id", id)
-        .is("archived_at", null)
-        .order("occurred_at", { ascending: false }),
-      supabase
-        .from("opportunities")
-        .select("id, name, value, created_at, opportunity_stages(name, stage_group)")
-        .eq("contact_id", id)
-        .order("created_at", { ascending: false }),
-      supabase.from("list_members").select("list_id, lists(name)").eq("contact_id", id),
-    ]);
+  const [
+    { data: statuses },
+    { data: owners },
+    { data: activityRows },
+    { data: opportunityRows },
+    { data: memberRows },
+    { data: connectionRows },
+  ] = await Promise.all([
+    supabase
+      .from("contact_statuses")
+      .select("id, name")
+      .eq("account_id", user.account_id)
+      .is("archived_at", null)
+      .order("sort_order"),
+    supabase
+      .from("users")
+      .select("id, full_name")
+      .eq("account_id", user.account_id)
+      .is("archived_at", null)
+      .order("full_name"),
+    supabase
+      .from("activities")
+      .select(
+        "id, type, subject, body, occurred_at, due_at, completed_at, cc, send_from_connection_id, users(full_name, email), email_connections(email_address, users(full_name))"
+      )
+      .eq("contact_id", id)
+      .is("archived_at", null)
+      .order("occurred_at", { ascending: false }),
+    supabase
+      .from("opportunities")
+      .select("id, name, value, created_at, opportunity_stages(name, stage_group)")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: false }),
+    supabase.from("list_members").select("list_id, lists(name)").eq("contact_id", id),
+    supabase
+      .from("email_connections")
+      .select("id, provider, email_address, users(full_name)")
+      .eq("status", "connected")
+      .is("archived_at", null)
+      .neq("user_id", user.id),
+  ]);
+
+  const fromOptions = (connectionRows ?? []).map((c) => {
+    const owner = Array.isArray(c.users) ? c.users[0] : c.users;
+    const providerLabel = c.provider === "google" ? "Google" : "Microsoft";
+    return { id: c.id, label: `${owner?.full_name ?? "Unknown"} — ${c.email_address} (${providerLabel})` };
+  });
 
   const listMemberships: ContactListMembership[] = (memberRows ?? [])
     .map((row) => {
@@ -164,6 +184,8 @@ export default async function ContactDetailPage({
       emailActivities={emailActivities}
       opportunities={opportunities}
       listMemberships={listMemberships}
+      currentUserName={user.full_name}
+      fromOptions={fromOptions}
     />
   );
 }

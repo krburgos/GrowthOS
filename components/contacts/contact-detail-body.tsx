@@ -13,7 +13,7 @@ import {
   ContactOverviewForm,
   type ContactOverviewDefaults,
 } from "@/components/contacts/contact-overview-form";
-import { SendEmailDialog } from "@/components/contacts/send-email-dialog";
+import { SendEmailDialog, type FromOption } from "@/components/contacts/send-email-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -118,6 +118,8 @@ export function ContactDetailBody({
   emailActivities,
   opportunities,
   listMemberships,
+  currentUserName,
+  fromOptions,
 }: {
   contactId: string;
   accountId: string;
@@ -141,6 +143,8 @@ export function ContactDetailBody({
   emailActivities: ActivityRow[];
   opportunities: OpportunityRow[];
   listMemberships: ContactListMembership[];
+  currentUserName: string;
+  fromOptions: FromOption[];
 }) {
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -275,7 +279,13 @@ export function ContactDetailBody({
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="max-w-4xl flex-1 p-6 md:p-8">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row">
-            <SendEmailDialog contactId={contactId} contactName={fullName} contactEmail={email} />
+            <SendEmailDialog
+              contactId={contactId}
+              contactName={fullName}
+              contactEmail={email}
+              currentUserName={currentUserName}
+              fromOptions={fromOptions}
+            />
             {phone && (
               <a
                 href={`tel:${phone}`}

@@ -114,10 +114,9 @@ This set covers the screens in the App Flow Document — tabs (contact detail), 
 
 | **Package** | **Version** | **Notes** |
 | --- | --- | --- |
-| nodemailer | **9.0.5** | Sends via SMTP — see §5.2 for why this instead of a vendor-specific SDK |
-| @types/nodemailer | **8.0.1** | Type definitions for nodemailer |
+| resend | **6.26.0** | Official Resend SDK — see §5.2 for why this replaced Nodemailer/SendGrid |
 
-**Delivery vendor: SendGrid**, used as an SMTP relay (no separate SendGrid npm package needed — credentials go through environment variables, §7). SendGrid's own dashboard and Event Webhook provide the open/click/bounce/unsubscribe tracking data the PRD and App Flow Document require.
+**Delivery vendor: Resend** (client-confirmed amendment, 2026-09-08 — supersedes the original SendGrid/Nodemailer decision below). Resend's own dashboard and webhooks (Svix-signed) provide the open/click/bounce/unsubscribe tracking data the PRD and App Flow Document require, the same role SendGrid's Event Webhook was originally scoped to fill.
 
 ### 3.9 Dev Tooling (minimal, per your direction)
 
@@ -155,7 +154,7 @@ Ready to drop into a fresh create-next-app scaffold — Claude Code should recon
     "recharts": "3.10.1",
     "papaparse": "5.6.0",
     "exceljs": "4.4.0",
-    "nodemailer": "9.0.5",
+    "resend": "6.26.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "tailwind-merge": "3.6.0",
@@ -179,7 +178,6 @@ Ready to drop into a fresh create-next-app scaffold — Claude Code should recon
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "@types/papaparse": "5.5.2",
-    "@types/nodemailer": "8.0.1",
     "tailwindcss": "4.3.3",
     "@tailwindcss/postcss": "4.3.3",
     "eslint": "10.9.1",
@@ -198,10 +196,16 @@ The shadcn CLI (**4.19.0**) is not listed here — it's invoked with npx shadcn@
 
 TypeScript 7.0 — the Go-native compiler rewrite — reached general availability in August 2026, days before this document. It's faster, but it is by definition less than a year old and the surrounding tooling (ESLint plugins, editor integrations, framework-specific type-checking) is still catching up. TypeScript 5.9.3 is the mature, JS-based line with years of ecosystem support behind it — the well-established alternative the selection rule calls for. Revisit this once TS 7 has a track record; it isn't a permanent no.
 
-### 5.2 Email: Nodemailer + SendGrid SMTP, not a vendor SDK or AWS SES
+### 5.2 Email: Resend, not Nodemailer/SendGrid (superseded 2026-09-08)
 
-Two things were weighed: cost (Amazon SES is cheapest at real volume) versus setup simplicity (avoiding a fourth vendor account/IAM relationship alongside Vercel, Supabase, and whatever handles email). Given the one-month timeline and "very limited, tools only" budget, simplicity won — SendGrid needs only an API key/SMTP credential and has a workable free tier to start, with no AWS account, domain verification through IAM, or sending-limit request process to go through first.
-For the library itself: SendGrid's own @sendgrid/mail package is an official vendor SDK, but it's a thin wrapper with a much smaller GitHub following than the job calls for. **Nodemailer** (17k+ GitHub stars, in production use for over a decade) sends over plain SMTP to any provider — including SendGrid's SMTP relay — so it satisfies the star/age rule cleanly while keeping the door open to switch providers later without touching the sending code, only the SMTP credentials.
+**Original decision (kept here for history):** cost (Amazon SES is cheapest at real volume) was weighed against setup simplicity (avoiding a fourth vendor account/IAM relationship alongside Vercel, Supabase, and whatever handles email). SendGrid won on simplicity — an API key/SMTP credential and a workable free tier, no AWS account or IAM domain verification. For the library, SendGrid's own `@sendgrid/mail` was a thin wrapper with a smaller GitHub following than the job called for, so **Nodemailer** (a provider-agnostic SMTP client) was pinned instead, sending over plain SMTP to SendGrid's relay.
+
+**Client-confirmed amendment (2026-09-08):** switched the delivery vendor to **Resend**, evaluated directly against SendGrid/Resend/Postmark/Amazon SES/real per-mailbox Gmail-Graph-API sending while scoping the Contact Detail "quick send" email feature. The deciding factors were unchanged from the original comparison — configuration effort and cost, with deliverability held constant since it's driven by DNS domain authentication (SPF/DKIM/DMARC) regardless of vendor, not by vendor choice itself:
+- Resend's setup is the lightest of the realistic options: connect a domain, get an API key, done — no SMTP relay indirection, no separate transport library.
+- Its free tier (3,000 emails/month, 100/day) comfortably covers both this feature and early Campaign volume (Milestone 10).
+- Real per-mailbox sending via Gmail/Graph APIs was considered and rejected again here for the same reason as the original OAuth scope decision (§10 below, Implementation Plan Milestone 9) — it requires restricted OAuth scopes, a Google CASA security review, and two separate provider-specific send integrations, which is *more* configuration, not less.
+- Because Resend ships an official SDK with first-class Next.js support, **Nodemailer is no longer needed at all** — Resend's SDK talks to its HTTPS API directly rather than SMTP, so the "provider-agnostic transport library" rationale that justified Nodemailer's presence no longer applies. Nodemailer and @types/nodemailer are removed from the dependency table and package.json fragment above.
+- This supersedes SendGrid for **both** this quick-send feature and the not-yet-built Campaigns pipeline (Milestone 10, Implementation Plan §13) — one vendor for all outbound mail, not two.
 
 ### 5.3 No rich-text editor for campaign emails
 
@@ -227,8 +231,8 @@ Values Claude Code will need supplied (not generated) before the app can run end
 | NEXT_PUBLIC_SUPABASE_URL | Supabase project URL |
 | NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase anonymous/public key |
 | SUPABASE_SERVICE_ROLE_KEY | Server-side Supabase operations (never exposed to the client) |
-| SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD | SendGrid SMTP relay credentials, used by Nodemailer |
-| EMAIL_FROM_ADDRESS | Default sending address for campaigns and system email |
+| RESEND_API_KEY | Resend API key, used by the `resend` SDK (§3.8, §5.2) |
+| EMAIL_FROM_ADDRESS | Default sending address for campaigns and system email — must be on a domain verified in Resend |
 | GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET | Google Workspace email account connection (PRD §9) |
 | MICROSOFT_OAUTH_CLIENT_ID / MICROSOFT_OAUTH_CLIENT_SECRET | Microsoft 365 email account connection (PRD §9) |
 

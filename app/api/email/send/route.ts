@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -6,23 +6,38 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * Client-confirmed addition (2026-09-08) — a single-contact "quick send"
- * from Contact Detail, ahead of Milestone 10's bulk Campaigns. The docs
- * were silent on this narrower case; the client's explicit direction was
- * to use the same mechanism Campaigns will use rather than sending via
- * the recipient's own connected Gmail/M365 mailbox (Tech Stack Lockfile
- * §5.2 reserves provider send APIs for nothing — "don't implement
- * Gmail/Graph send APIs" — regardless of which mailbox is connected).
+ * from Contact Detail, ahead of Milestone 10's bulk Campaigns. Sends via
+ * Resend (Tech Stack Lockfile §5.2, amended from SendGrid/Nodemailer the
+ * same day) rather than the recipient's own connected Gmail/M365 mailbox
+ * — Tech Stack Lockfile §5.2 still says "don't implement Gmail/Graph
+ * send APIs," regardless of which mailbox is connected.
  *
- * The connected email_connections identity isn't used for sending at
- * all here (per §6.3 it's single-user and only verifies identity); the
- * sender's real address is only used as the Reply-To so replies still
- * reach them even though delivery routes through the shared relay.
+ * From/Cc (same-day follow-up): `fromConnectionId` optionally picks any
+ * *account-wide* connected mailbox's identity (client-confirmed
+ * reversal of part of Backend Schema §6.3's single-user rule, scoped to
+ * this narrow read — see the email_connections_directory_and_send_from
+ * migration). This is cosmetic only: the connection's tokens are never
+ * used, and the email still goes out through Resend with that
+ * identity's name/address as the display From and Reply-To. Every send
+ * is logged as an activities row, including which identity was used
+ * (send_from_connection_id, null = the sender's own) and any Cc list.
  */
 const sendEmailSchema = z.object({
   contactId: z.string().uuid(),
   subject: z.string().trim().min(1),
   body: z.string().trim().min(1),
+  fromConnectionId: z.string().uuid().nullable().optional(),
+  cc: z.string().optional(),
 });
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseAddressList(raw: string | undefined): string[] {
+  return (raw ?? "")
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -48,7 +63,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Enter a subject and a message." }, { status: 400 });
   }
-  const { contactId, subject, body } = parsed.data;
+  const { contactId, subject, body, fromConnectionId, cc } = parsed.data;
 
   const { data: contact } = await supabase
     .from("contacts")
@@ -61,30 +76,50 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "That contact couldn't be found." }, { status: 404 });
   }
 
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM_ADDRESS } = process.env;
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASSWORD || !EMAIL_FROM_ADDRESS) {
+  const ccList = parseAddressList(cc);
+  const invalidCc = ccList.find((addr) => !EMAIL_RE.test(addr));
+  if (invalidCc) {
+    return NextResponse.json({ error: `"${invalidCc}" isn't a valid email address.` }, { status: 400 });
+  }
+
+  let fromName = sender.full_name;
+  let replyToEmail = sender.email;
+
+  if (fromConnectionId) {
+    const { data: connection } = await supabase
+      .from("email_connections")
+      .select("id, email_address, status, users(full_name, account_id)")
+      .eq("id", fromConnectionId)
+      .single();
+
+    const owner = connection ? (Array.isArray(connection.users) ? connection.users[0] : connection.users) : undefined;
+    if (!connection || connection.status !== "connected" || !owner || owner.account_id !== sender.account_id) {
+      return NextResponse.json({ error: "That sender identity isn't available." }, { status: 400 });
+    }
+
+    fromName = owner.full_name;
+    replyToEmail = connection.email_address;
+  }
+
+  const { RESEND_API_KEY, EMAIL_FROM_ADDRESS } = process.env;
+  if (!RESEND_API_KEY || !EMAIL_FROM_ADDRESS) {
     return NextResponse.json(
-      { error: "Email sending isn't configured yet — ask an admin to set up the mail relay." },
+      { error: "Email sending isn't configured yet — ask an admin to set up Resend." },
       { status: 500 }
     );
   }
 
-  const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT),
-    secure: Number(SMTP_PORT) === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+  const resend = new Resend(RESEND_API_KEY);
+  const { error: sendError } = await resend.emails.send({
+    from: `${fromName} via GrowthOS <${EMAIL_FROM_ADDRESS}>`,
+    replyTo: replyToEmail,
+    to: contact.email,
+    cc: ccList.length > 0 ? ccList : undefined,
+    subject,
+    text: body,
   });
 
-  try {
-    await transporter.sendMail({
-      from: `"${sender.full_name} via GrowthOS" <${EMAIL_FROM_ADDRESS}>`,
-      replyTo: sender.email,
-      to: contact.email,
-      subject,
-      text: body,
-    });
-  } catch {
+  if (sendError) {
     return NextResponse.json({ error: "Couldn't send that email — please try again." }, { status: 502 });
   }
 
@@ -95,6 +130,8 @@ export async function POST(request: NextRequest) {
     type: "email",
     subject,
     body,
+    cc: ccList.length > 0 ? ccList.join(", ") : null,
+    send_from_connection_id: fromConnectionId ?? null,
   });
 
   if (activityError) {

@@ -12,6 +12,10 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+function unwrap<T>(value: T | T[] | null | undefined): T | undefined {
+  return Array.isArray(value) ? value[0] : value ?? undefined;
+}
+
 /**
  * Client-confirmed modernization pass (approved mockup, Contact Detail
  * redesign): the Emails tab reads the same Activity rows as the
@@ -27,6 +31,14 @@ function initials(name: string) {
  * reviewed in full rather than just skimmed as a snippet. This is still
  * historical activity logging, not a live inbox: there's nothing to
  * sync or reply to here.
+ *
+ * Same-day follow-up: when a From identity was picked at send time
+ * (activities.send_from_connection_id), From shows *that* connected
+ * mailbox's name/address rather than the actual sender — matching what
+ * the recipient really saw, since the picked identity only changes
+ * display From/Reply-To (components/contacts/send-email-dialog.tsx),
+ * not who's credited internally as having sent it. Cc, when present,
+ * is shown alongside To.
  */
 export function EmailList({ activities, contactName, contactEmail }: { activities: ActivityRow[]; contactName: string; contactEmail: string }) {
   if (activities.length === 0) {
@@ -36,7 +48,12 @@ export function EmailList({ activities, contactName, contactEmail }: { activitie
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-neutral-200">
       {activities.map((activity, i) => {
-        const author = Array.isArray(activity.users) ? activity.users[0] : activity.users;
+        const sender = unwrap(activity.users);
+        const pickedConnection = unwrap(activity.email_connections);
+        const pickedOwner = pickedConnection ? unwrap(pickedConnection.users) : undefined;
+        const fromName = pickedOwner?.full_name ?? sender?.full_name ?? "Unknown";
+        const fromEmail = pickedConnection?.email_address ?? sender?.email;
+
         return (
           <details key={activity.id} className={"group px-4 py-3.5 " + (i > 0 ? "border-t border-neutral-100" : "")}>
             <summary className="flex cursor-pointer list-none items-center gap-3">
@@ -48,7 +65,7 @@ export function EmailList({ activities, contactName, contactEmail }: { activitie
                   {activity.subject || "(no subject)"}
                 </p>
                 <p className="truncate text-body-sm text-neutral-500">
-                  {author?.full_name ?? "Unknown"} → {contactName}
+                  {fromName} → {contactName}
                 </p>
               </div>
               <span className="shrink-0 text-caption text-neutral-400">
@@ -61,14 +78,19 @@ export function EmailList({ activities, contactName, contactEmail }: { activitie
                 <Mail className="mt-0.5 size-3 shrink-0" />
                 <div className="flex flex-col gap-0.5">
                   <span>
-                    <span className="font-semibold text-neutral-600">From:</span>{" "}
-                    {author?.full_name ?? "Unknown"}
-                    {author?.email && <span className="text-neutral-400"> &lt;{author.email}&gt;</span>}
+                    <span className="font-semibold text-neutral-600">From:</span> {fromName}
+                    {fromEmail && <span className="text-neutral-400"> &lt;{fromEmail}&gt;</span>}
                   </span>
                   <span>
                     <span className="font-semibold text-neutral-600">To:</span> {contactName}{" "}
                     <span className="text-neutral-400">&lt;{contactEmail}&gt;</span>
                   </span>
+                  {activity.cc && (
+                    <span>
+                      <span className="font-semibold text-neutral-600">Cc:</span>{" "}
+                      <span className="text-neutral-400">{activity.cc}</span>
+                    </span>
+                  )}
                 </div>
               </div>
               <p className="whitespace-pre-wrap text-body-sm text-neutral-700">{activity.body || "(no message)"}</p>
