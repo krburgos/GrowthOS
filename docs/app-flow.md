@@ -188,9 +188,9 @@ One shared page for all roles (no role-specific dashboards, per the PRD). Sectio
 ### 4.9 Settings (I1–I4)
 
 - **Users & Roles (I1)** — table of the MSP's users, their role, last login (§4.11 audit note), invite/remove actions, role-change dropdown
-- **Connected Email Accounts (I2)** — each user's own Microsoft 365/Google Workspace connection status, with Connect/Reconnect actions
+- **Connected Email Accounts (I2)** — each user's own Microsoft 365/Google Workspace connection status, with Connect/Reconnect actions. **Nav placement (client-confirmed 2026-09-08):** lives under the My Profile column as "Email Integration," not Account Settings — it's a per-user connection, not an account-wide one. The Account Settings column keeps a disabled "Email Auth" row as a placeholder for a not-yet-built, account-wide feature (registering the MSP's own sending domain with Resend from inside GrowthOS, instead of relying on the shared `EMAIL_FROM_ADDRESS` fallback) — backlogged, not scoped for Phase 1.
 - **Custom Statuses (I3)** — manage the MSP's custom prospect statuses (add, rename, reorder, retire)
-- **My Profile (I4)** — the logged-in user's own name, email, password change
+- **My Profile (I4)** — the logged-in user's own name, email, password change, and now the Email Integration row (above)
 
 ### 4.10 CRO Leader Dashboard (J1)
 

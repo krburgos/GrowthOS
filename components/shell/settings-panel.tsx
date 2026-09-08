@@ -6,12 +6,11 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
-type AccountSub = "company" | "users" | "email" | "customizations";
+type AccountSub = "company" | "users" | "customizations";
 
 const ACCOUNT_SUB_BY_PATH: Record<string, AccountSub> = {
   "/settings/company": "company",
   "/settings/users": "users",
-  "/settings/email": "email",
   "/settings/statuses": "customizations",
   "/settings/opportunity-stages": "customizations",
 };
@@ -28,13 +27,13 @@ const MY_PROFILE_ROWS: Row[] = [
   { label: "Two Factor Auth" },
   { label: "Phone Numbers" },
   { label: "Notifications" },
-  { label: "Integrations" },
+  { label: "Email Integration", href: "/settings/email" },
 ];
 
 const ACCOUNT_SETTINGS_ROWS: (Row & { sub?: AccountSub })[] = [
   { label: "Company", href: "/settings/company", sub: "company" },
   { label: "Billing & Payments" },
-  { label: "Email Auth", href: "/settings/email", sub: "email" },
+  { label: "Email Auth" },
   { label: "Users", href: "/settings/users", sub: "users" },
   { label: "Integrations" },
   { label: "Customizations", href: "/settings/statuses", sub: "customizations" },
@@ -42,7 +41,6 @@ const ACCOUNT_SETTINGS_ROWS: (Row & { sub?: AccountSub })[] = [
 
 const ACCOUNT_SUB_ROWS: Partial<Record<AccountSub, Row[]>> = {
   users: [{ label: "Users & Roles", href: "/settings/users" }],
-  email: [{ label: "Connected Email Accounts", href: "/settings/email" }],
   customizations: [
     { label: "Signature" },
     { label: "Branding" },
@@ -64,7 +62,6 @@ const ACCOUNT_SUB_ROWS: Partial<Record<AccountSub, Row[]>> = {
 const ACCOUNT_SUB_TITLE: Record<AccountSub, string> = {
   company: "Company",
   users: "Users",
-  email: "Email Auth",
   customizations: "Customizations",
 };
 
@@ -136,7 +133,7 @@ function NavColumn({
 export function SettingsPanel() {
   const pathname = usePathname();
 
-  if (pathname === "/settings/profile" || pathname === "/settings/profile/password") {
+  if (pathname === "/settings/profile" || pathname === "/settings/profile/password" || pathname === "/settings/email") {
     return <NavColumn title="My Profile" rows={MY_PROFILE_ROWS} activeHref={pathname} backHref="/settings" />;
   }
 

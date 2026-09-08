@@ -7,7 +7,9 @@ import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { GoogleLogo, MicrosoftLogo } from "@/components/icons/provider-logos";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 export interface EmailConnectionRow {
   id: string;
@@ -17,10 +19,15 @@ export interface EmailConnectionRow {
   token_expires_at: string | null;
 }
 
-const PROVIDER_LABELS: Record<EmailConnectionRow["provider"], string> = {
-  google: "Google Workspace",
-  microsoft: "Microsoft 365",
-};
+const PROVIDERS: {
+  id: EmailConnectionRow["provider"];
+  label: string;
+  description: string;
+  Logo: (props: { className?: string }) => React.JSX.Element;
+}[] = [
+  { id: "google", label: "Google Workspace", description: "Gmail, Google Calendar", Logo: GoogleLogo },
+  { id: "microsoft", label: "Microsoft 365", description: "Outlook, Exchange", Logo: MicrosoftLogo },
+];
 
 const STATUS_BADGE: Record<EmailConnectionRow["status"], { variant: "success" | "error" | "neutral"; label: string }> = {
   connected: { variant: "success", label: "Connected" },
@@ -76,38 +83,74 @@ export function EmailConnectionManager({ connection }: { connection: EmailConnec
     router.refresh();
   };
 
-  if (connection && connection.status !== "disconnected") {
-    const badge = STATUS_BADGE[connection.status];
-    return (
-      <div className="flex max-w-md flex-col gap-4 rounded-lg border border-neutral-200 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-body font-medium text-neutral-800">{PROVIDER_LABELS[connection.provider]}</p>
-            <p className="text-body-sm text-neutral-500">{connection.email_address}</p>
-          </div>
-          <Badge variant={badge.variant}>{badge.label}</Badge>
-        </div>
-        {connection.status === "error" ? (
-          <Button asChild size="sm">
-            <a href={`/api/oauth/${connection.provider}/start`}>Reconnect</a>
-          </Button>
-        ) : (
-          <Button variant="destructive" size="sm" className="self-start" onClick={handleDisconnect}>
-            Disconnect
-          </Button>
-        )}
-      </div>
-    );
-  }
+  const isConnected = connection && connection.status !== "disconnected";
 
   return (
-    <div className="flex max-w-md flex-col gap-3">
-      <Button asChild>
-        <a href="/api/oauth/google/start">Connect Google Workspace</a>
-      </Button>
-      <Button asChild variant="secondary">
-        <a href="/api/oauth/microsoft/start">Connect Microsoft 365</a>
-      </Button>
+    <div className="grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-2">
+      {PROVIDERS.map(({ id, label, description, Logo }) => {
+        const isThisProvider = connection?.provider === id;
+
+        if (isConnected && !isThisProvider) {
+          return (
+            <div
+              key={id}
+              className="flex flex-col items-center gap-2 rounded-md border border-neutral-200 bg-white p-6 text-center opacity-50"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-md bg-neutral-50">
+                <Logo className="h-6 w-6" />
+              </div>
+              <p className="text-body font-medium text-neutral-800">{label}</p>
+              <p className="text-body-sm text-neutral-500">Only one mailbox can be connected at a time.</p>
+            </div>
+          );
+        }
+
+        if (isConnected && isThisProvider && connection) {
+          const badge = STATUS_BADGE[connection.status];
+          return (
+            <div
+              key={id}
+              className={cn(
+                "flex flex-col items-center gap-2 rounded-md border p-6 text-center shadow-sm",
+                connection.status === "error" ? "border-error-200 bg-white" : "border-success-500 bg-success-50"
+              )}
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-md bg-white shadow-sm">
+                <Logo className="h-6 w-6" />
+              </div>
+              <p className="text-body font-medium text-neutral-800">{label}</p>
+              <p className="max-w-full truncate text-body-sm text-neutral-500">{connection.email_address}</p>
+              <Badge variant={badge.variant}>{badge.label}</Badge>
+              {connection.status === "error" ? (
+                <Button asChild size="sm" className="mt-1">
+                  <a href={`/api/oauth/${connection.provider}/start`}>Reconnect</a>
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" className="mt-1 text-error-700 hover:bg-error-100" onClick={handleDisconnect}>
+                  Disconnect
+                </Button>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <a
+            key={id}
+            href={`/api/oauth/${id}/start`}
+            className="flex flex-col items-center gap-2 rounded-md border border-neutral-200 bg-white p-6 text-center shadow-sm transition-colors hover:border-secondary-400 hover:shadow-md"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-neutral-50">
+              <Logo className="h-6 w-6" />
+            </div>
+            <p className="text-body font-medium text-neutral-800">{label}</p>
+            <p className="text-body-sm text-neutral-500">{description}</p>
+            <span className="mt-1 inline-flex h-9 items-center rounded-md border border-neutral-300 px-4 text-button text-primary-700">
+              Connect
+            </span>
+          </a>
+        );
+      })}
     </div>
   );
 }
