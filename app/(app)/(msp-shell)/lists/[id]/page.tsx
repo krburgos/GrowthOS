@@ -55,22 +55,22 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
   if (contacts.length > 0) {
     const { data: listRows } = await supabase
       .from("list_members")
-      .select("contact_id, lists(name)")
+      .select("contact_id, lists(id, name)")
       .in("contact_id", contacts.map((c) => c.id));
 
-    const listNamesByContact = new Map<string, string[]>();
+    const listsByContact = new Map<string, { id: string; name: string }[]>();
     for (const row of (listRows ?? []) as unknown as {
       contact_id: string;
-      lists: { name: string } | { name: string }[] | null;
+      lists: { id: string; name: string } | { id: string; name: string }[] | null;
     }[]) {
       const l = Array.isArray(row.lists) ? row.lists[0] : row.lists;
       if (!l) continue;
-      const existing = listNamesByContact.get(row.contact_id) ?? [];
-      existing.push(l.name);
-      listNamesByContact.set(row.contact_id, existing);
+      const existing = listsByContact.get(row.contact_id) ?? [];
+      existing.push(l);
+      listsByContact.set(row.contact_id, existing);
     }
     for (const c of contacts) {
-      c.list_names = listNamesByContact.get(c.id) ?? [];
+      c.lists = listsByContact.get(c.id) ?? [];
     }
   }
 

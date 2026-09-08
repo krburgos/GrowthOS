@@ -26,7 +26,7 @@ export interface ContactListRow {
   users: { full_name: string } | null;
   updated_at: string;
   last_activity_at?: string | null;
-  list_names?: string[];
+  lists?: { id: string; name: string }[];
 }
 
 export const CONTACT_SORT_FIELDS = {

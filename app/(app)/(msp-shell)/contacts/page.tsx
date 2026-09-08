@@ -84,7 +84,7 @@ export default async function ContactsListPage({
         .order("occurred_at", { ascending: false }),
       supabase
         .from("list_members")
-        .select("contact_id, lists(name)")
+        .select("contact_id, lists(id, name)")
         .in("contact_id", contacts.map((c) => c.id)),
     ]);
 
@@ -95,18 +95,21 @@ export default async function ContactsListPage({
       }
     }
 
-    const listNamesByContact = new Map<string, string[]>();
-    for (const row of (listRows ?? []) as unknown as { contact_id: string; lists: { name: string } | { name: string }[] | null }[]) {
+    const listsByContact = new Map<string, { id: string; name: string }[]>();
+    for (const row of (listRows ?? []) as unknown as {
+      contact_id: string;
+      lists: { id: string; name: string } | { id: string; name: string }[] | null;
+    }[]) {
       const list = Array.isArray(row.lists) ? row.lists[0] : row.lists;
       if (!list) continue;
-      const existing = listNamesByContact.get(row.contact_id) ?? [];
-      existing.push(list.name);
-      listNamesByContact.set(row.contact_id, existing);
+      const existing = listsByContact.get(row.contact_id) ?? [];
+      existing.push(list);
+      listsByContact.set(row.contact_id, existing);
     }
 
     for (const c of contacts) {
       c.last_activity_at = lastActivityByContact.get(c.id) ?? null;
-      c.list_names = listNamesByContact.get(c.id) ?? [];
+      c.lists = listsByContact.get(c.id) ?? [];
     }
   }
 
