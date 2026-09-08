@@ -18,7 +18,7 @@ export interface ActivityRow {
   occurred_at: string;
   due_at: string | null;
   completed_at: string | null;
-  users: { full_name: string } | { full_name: string }[] | null;
+  users: { full_name: string; email?: string } | { full_name: string; email?: string }[] | null;
 }
 
 const TYPE_ICON = {

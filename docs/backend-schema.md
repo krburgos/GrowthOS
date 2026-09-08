@@ -1082,6 +1082,7 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | GET /api/oauth/[provider]/callback | Session (OAuth redirect) | Exchanges the auth code for tokens, encrypts them (§5.2), and upserts an email_connections row |
 | POST /api/import/validate | Session (edit role for contacts) | Parses an uploaded CSV/XLSX (papaparse/ExcelJS), maps columns, returns a preview and error report — no writes yet |
 | POST /api/import/commit | Session (edit role for contacts) | Inserts validated rows, calling match_or_create_company() (§7.3) per row and honoring the contacts dedup index (§5.3) |
+| POST /api/email/send | Session | Client-confirmed addition (2026-09-08), ahead of Milestone 10 — sends a single Contact Detail "quick send" email via the same SendGrid SMTP relay/Nodemailer path Campaigns will use (not the recipient's own connected mailbox), then logs an activities row (type='email') |
 | POST /api/campaigns/[id]/send | Session (edit role for campaigns) | Validates a campaign and transitions it to scheduled (or immediately to sending) |
 | POST /api/campaigns/send-due | x-cron-secret header (no user session) | Called only by send_due_campaigns() (§8); resolves recipients and sends via Nodemailer/SendGrid |
 | GET /api/track/open/[token].gif | None (public) | Records an 'opened' event (§9), returns a 1×1 GIF |
@@ -1100,6 +1101,7 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | Creating/editing a campaign in draft | Direct browser → Supabase | Metadata only; sending itself is the privileged step |
 | Reading/updating one's own email_connections row (status, disconnect) | Direct browser → Supabase, RLS-protected | Scoped strictly to auth.uid() (§6.3); no secret exposure risk in exposing connection _metadata_ |
 | Connecting a mailbox (OAuth), sending a campaign, importing a spreadsheet, inviting/deactivating a user, creating an account, all tracking/webhook endpoints | Next.js API route, service role | Needs an OAuth secret, the SMTP relay credential, the Auth Admin API, or write access that spans RLS-visible rows a single user session shouldn't otherwise have |
+| Sending a single Contact Detail "quick send" email (POST /api/email/send) | Next.js API route, session-scoped client (not service role) | Needs the SMTP relay credential (a secret, so it can't run client-side), but the activities row it writes afterward stays inside the sender's own RLS-visible data — no elevated access needed for that part |
 | Dashboard/report aggregates | Direct browser → Supabase (aggregate queries under RLS) for Phase 1's single reporting view; GET /api/reports/export only for the file-export path | PRD §6.7 requires no role-specific dashboards and in-app reporting only — no reason to route simple aggregate reads through a server function |
 
 

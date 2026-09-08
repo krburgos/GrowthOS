@@ -65,7 +65,7 @@ export default async function ContactDetailPage({
         .order("full_name"),
       supabase
         .from("activities")
-        .select("id, type, subject, body, occurred_at, due_at, completed_at, users(full_name)")
+        .select("id, type, subject, body, occurred_at, due_at, completed_at, users(full_name, email)")
         .eq("contact_id", id)
         .is("archived_at", null)
         .order("occurred_at", { ascending: false }),

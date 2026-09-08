@@ -13,6 +13,7 @@ import {
   ContactOverviewForm,
   type ContactOverviewDefaults,
 } from "@/components/contacts/contact-overview-form";
+import { SendEmailDialog } from "@/components/contacts/send-email-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -249,6 +250,18 @@ export function ContactDetailBody({
       {/* ---- Main content ---- */}
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="max-w-4xl flex-1 p-6 md:p-8">
+          <div className="mb-3 flex justify-end gap-2">
+            {phone && (
+              <Button type="button" variant="secondary" size="sm" asChild>
+                <a href={`tel:${phone}`}>
+                  <Phone className="mr-1.5 size-3.5" />
+                  Call
+                </a>
+              </Button>
+            )}
+            <SendEmailDialog contactId={contactId} contactName={fullName} contactEmail={email} />
+          </div>
+
           <div className="mb-5 flex flex-col gap-3 sm:flex-row">
             <div className="flex-1 rounded-lg border border-neutral-200 bg-white p-3.5">
               <p className="text-h4 font-bold tabular-nums text-primary-900">{currency.format(openPipeline)}</p>
@@ -330,7 +343,7 @@ export function ContactDetailBody({
             </TabsContent>
 
             <TabsContent value="emails">
-              <EmailList activities={emailActivities} contactName={fullName} />
+              <EmailList activities={emailActivities} contactName={fullName} contactEmail={email} />
             </TabsContent>
           </Tabs>
         </div>
