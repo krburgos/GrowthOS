@@ -33,7 +33,7 @@ const MY_PROFILE_ROWS: Row[] = [
 
 const ACCOUNT_SETTINGS_ROWS: (Row & { sub?: AccountSub })[] = [
   { label: "Company", href: "/settings/company", sub: "company" },
-  { label: "Growth Solution Questionnaire", href: "/settings/growth-questionnaire", sub: "growth_questionnaire" },
+  { label: "GOS Questionnaire", href: "/settings/growth-questionnaire", sub: "growth_questionnaire" },
   { label: "Billing & Payments" },
   { label: "Email Auth" },
   { label: "Users", href: "/settings/users", sub: "users" },
@@ -63,7 +63,7 @@ const ACCOUNT_SUB_ROWS: Partial<Record<AccountSub, Row[]>> = {
 
 const ACCOUNT_SUB_TITLE: Record<AccountSub, string> = {
   company: "Company",
-  growth_questionnaire: "Growth Solution Questionnaire",
+  growth_questionnaire: "GOS Questionnaire",
   users: "Users",
   customizations: "Customizations",
 };
