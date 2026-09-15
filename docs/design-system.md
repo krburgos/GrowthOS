@@ -405,6 +405,8 @@ Top bar: white background, 1px neutral-200 bottom border, 56px height, logo left
 
 **Impeccable critique finding (2026-09-06):** this pass briefly gave the notification bell a hardcoded "unread" dot with no real state behind it. Flagged as a persistently-lying status indicator (P2) and removed — the bell stays plain until a real unread-notifications source exists to drive it honestly.
 
+**Client-confirmed (2026-09-15) — that real source now exists.** The bell opens a `DropdownMenu` (same primitive as the avatar menu): while the account's Growth Questionnaire (§8.15) is incomplete, an error-600 dot sits on the bell and the dropdown holds one item — icon, "Complete your Growth Solution Questionnaire," an "X of 75 answered" caption — linking straight to the questionnaire. Once complete, the dot is gone and the dropdown reads "You're all caught up." rather than being empty with no explanation. Still exactly one honest state at a time, same rule the P2 fix established — no notification, no dot, ever.
+
 **Client-confirmed alignment fix:** the logo previously sat in a shrink-to-content cell, so the command palette's left edge landed a few pixels short of the Settings nav column's 192px width (§8.9) one row down — a small stray gap between the search field and the nav column beneath it. The logo now sits in a fixed 176px cell (plus the top bar's own 16px left padding = 192px), so the palette's left edge lines up exactly with the Settings nav column's right edge / main content's left edge on every page.
 
 ### 8.11 Loading & Empty States
@@ -423,6 +425,12 @@ Recharts series colors, in order of use: primary-700, secondary-500, success-600
 ### 8.14 Auth Screens & the Opportunities View Toggle
 
 **Client-confirmed modernization pass (approved mockup):** the login/forgot-password/reset-password/accept-invite layout's plain neutral background became a soft radial-gradient ground (secondary-800 glow upper-left, primary-700 glow lower-right, over a primary-950 base) with a deeper card shadow — cosmetic only, no change to the forms themselves. The Opportunities Board/List segmented toggle's flat `primary-700`-fill active state became a light neutral-50 track with a white, shadow-sm "pressed" pill for whichever view is active, consistent with how segmented controls read as a control rather than a badge.
+
+### 8.15 Growth Solution Questionnaire
+
+**Client-confirmed addition (2026-09-15), "Concept A — Stepped"** (chosen over a single-page accordion concept, both shown as mockups first). One card per section: a `primary-100`/`primary-700` icon chip + section name + "Section N of 8" pill in the header, then each question as a `label` / `input` row (question text left, the matching control right, 260px column). A progress bar (`secondary-500` → `success-500` gradient fill) plus "X of 75 answered" sits above the stepper; the stepper itself is a dot-and-connecting-line row — `success-500` filled circles with a check mark for completed sections, a `primary-700` circle with a `secondary-100` focus ring for the current one, `neutral-200` for the rest — clicking any dot jumps straight to that section.
+
+**Per-question input, matched to what it's actually asking, not one blanket text box:** a number field (max-width 160px) for a count; a two-segment Yes/No button pair (`success-100`/`success-800` and `error-100`/`error-700` when selected, otherwise plain) for a yes/no question; a plain `<select>` for the one multiple-choice question (Hunters/Farmers/Both); four numbered squares, the selected one filled `primary-700`, for the one 1–4 scale question; a resizable textarea for everything open-ended. Footer row: Back (left, hidden on the first section), then "Skip for now, remind me later" (always available, a plain text link — never a button, so it doesn't compete with Save & Continue), then Save & Continue (Finish on the last section) — Export PDF appears in that same row, but only once every question has an answer.
 
 **Impeccable critique finding (2026-09-06, P1) + fix:** this pass originally placed the logo directly on the gradient, above the white card — a direct violation of §2's "white/near-white backgrounds only" logo rule. Fixed by moving the logo inside the white card (above the form), which is spec-compliant with no new logo asset needed.
 

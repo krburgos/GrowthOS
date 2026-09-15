@@ -92,6 +92,7 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 | I2 | Settings | Connected Email Accounts | Owner, Admin (each user connects their own) |
 | I3 | Settings | Custom Statuses | Owner, Admin |
 | I4 | Settings | My Profile | All MSP roles (own profile only) |
+| I5 | Settings | Growth Questionnaire (client-confirmed addition, 2026-09-15) | Owner, Admin edit; other MSP roles view; CRO Admin/Advisor and a granted partner get the same read+write parity they have elsewhere |
 | J1 | CRO Leader | CRO Leader Dashboard (MSP search) — also serves as the Partner Dashboard (2026-09-08), account list scoped to grants for a partner | CRO Leader Admin, Advisor, Service Team; Partner (granted accounts only) |
 | — | CRO Leader | _(inside any MSP account, all D–I screens render with the banner from §2.5)_ | CRO Leader Admin, Advisor, Service Team; Partner |
 | K1 | System | Access Restricted (redirect target) | Any role hitting a disabled area |
@@ -131,6 +132,8 @@ Empty and loading states: see §6.
 **Client-confirmed layout, "Concept B — Command Center" (approved mockup, 2026-09-08):** built as a KPI strip first (the convention most CRM home screens open with), then Pipeline by Stage and Recent Activity in a wide left column, with Tasks/Follow-ups Due pulled into a permanently visible highlighted rail on the right instead of this section's literal top-of-page slot — still the first thing the eye lands on, via placement/color rather than document order. "This week" is a trailing 7-day window, not a Sunday/Monday calendar week (neither document specifies one). Campaign Sends shows "—" until Campaigns (Milestone 10) exists, the same placeholder convention already used for Bounced on the Contacts table.
 
 **Client-confirmed rename (2026-09-15):** "Pipeline by Stage" is now labeled "Opportunities by Stage" on the actual Dashboard — a copy-only change, same component and data. Kept as "Pipeline by Stage" in the narrative above and elsewhere in this document where it describes the mockup as originally approved.
+
+**Client-confirmed addition (2026-09-15):** a full-width banner sits above the KPI strip while the account's Growth Questionnaire (§4.9, I5) is incomplete — "Complete your Growth Solution Questionnaire," a short progress line, and its own progress bar. It disappears entirely once every question is answered; nothing else on the Dashboard shifts to fill the space differently, the KPI strip just moves up.
 
 ### 4.4 Contacts (D1–D4)
 
@@ -187,12 +190,15 @@ One shared page for all roles (no role-specific dashboards, per the PRD). Sectio
 
 **Client-confirmed layout, "Grid Dashboard" (approved mockup, 2026-09-08, chosen from five compared concepts):** all four sections sit in a compact 2×2 grid, visible at once with no scrolling on a normal desktop — leads as a weekly line chart, opportunities by stage as compact bars (the same visual language as the Dashboard's Pipeline by Stage), campaign performance as a table, and revenue from closed-won as monthly bars behind a total. No date-range picker (that was a different compared concept's own idea, not this one) — leads uses a trailing 8-week window and revenue a trailing 3-month window, fixed rather than user-adjustable in this pass.
 
-### 4.9 Settings (I1–I4)
+### 4.9 Settings (I1–I5)
 
 - **Users & Roles (I1)** — table of the MSP's users, their role, last login (§4.11 audit note), invite/remove actions, role-change dropdown
 - **Connected Email Accounts (I2)** — each user's own Microsoft 365/Google Workspace connection status, with Connect/Reconnect actions. **Nav placement (client-confirmed 2026-09-08):** lives under the My Profile column as "Email Integration," not Account Settings — it's a per-user connection, not an account-wide one. The Account Settings column keeps a disabled "Email Auth" row as a placeholder for a not-yet-built, account-wide feature (registering the MSP's own sending domain with Resend from inside GrowthOS, instead of relying on the shared `EMAIL_FROM_ADDRESS` fallback) — backlogged, not scoped for Phase 1.
 - **Custom Statuses (I3)** — manage the MSP's custom prospect statuses (add, rename, reorder, retire)
 - **My Profile (I4)** — the logged-in user's own name, email, password change, and now the Email Integration row (above)
+- **Growth Questionnaire (I5, client-confirmed addition 2026-09-15)** — Account Settings, right after Company. The 8-section, 75-question Growth Solution Questionnaire (source: "Growth Solution Questionnaire for MSPs.docx"), presented one section per screen ("Concept A — Stepped," approved from two compared mockups) with a dot-and-line progress stepper, Back / Save & Continue, and "Skip for now, remind me later" always available — nothing here is required to proceed. Each question's input matches what it's actually asking (a number field for a count, Yes/No for a yes/no question, a Hunters/Farmers choice, the one 1–4 scale question, free text for the rest), not a blanket text box. Answers save to `growth_questionnaire_responses` on every Continue/Skip/Finish. Once every question has an answer, "Export PDF" (§10, GET /api/questionnaire/export) becomes available in the wizard itself.
+  - **Onboarding hook:** App Flow's own Onboarding Profile Wizard (B1, §4.2) was never actually built in this codebase despite being documented — `AcceptInviteForm` has always gone straight to the Dashboard. Rather than build the missing wizard to attach this to, a freshly-invited **Owner** (the one role this questionnaire is meant for) now lands on the Growth Questionnaire first instead of the Dashboard after setting their password, with the same "Skip for now" escape hatch; every other invited role's flow is unchanged.
+  - **Surfaced while incomplete, in two places, both client-confirmed:** a full-width Dashboard banner ("Complete your Growth Solution Questionnaire," its own progress bar, disappears entirely once done — §4.3) and the top bar's notification bell, which is otherwise fully decorative (Design System §8.10 — it was deliberately left with no fake unread state until a real notification existed). This is that first real notification: a red dot only while incomplete, one item linking to the questionnaire, an honest "You're all caught up" empty state once it's done.
 
 ### 4.10 CRO Leader Dashboard (J1)
 

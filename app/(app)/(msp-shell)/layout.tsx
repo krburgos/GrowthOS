@@ -5,6 +5,8 @@ import { Sidebar } from "@/components/shell/sidebar";
 import { TopBar } from "@/components/shell/top-bar";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
 import { SIDEBAR_ACCESS } from "@/lib/auth/nav-permissions";
+import { countAnswered } from "@/lib/questionnaire/questions";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * The real sidebar + top bar shell (Design System §8.9-§8.10, App Flow
@@ -47,13 +49,28 @@ export default async function MspShellLayout({ children }: { children: React.Rea
   // /cro is their home.
   if (needsAccountSelection(user.role) && !user.account_id) redirect("/cro");
 
+  const supabase = await createClient();
+  const { data: questionnaireResponse } = await supabase
+    .from("growth_questionnaire_responses")
+    .select("answers, completed_at")
+    .eq("account_id", user.account_id)
+    .maybeSingle();
+  const questionnaireAnsweredCount = countAnswered((questionnaireResponse?.answers as Record<string, unknown>) ?? {});
+  const questionnaireComplete = !!questionnaireResponse?.completed_at;
+
   return (
     <div className="flex flex-1 flex-col">
       {user.viewingAccountName && <CroLeaderBanner companyName={user.viewingAccountName} />}
       <div className="flex min-h-0 flex-1">
         <Sidebar access={SIDEBAR_ACCESS[user.role]} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar fullName={user.full_name} access={SIDEBAR_ACCESS[user.role]} accountId={user.account_id!} />
+          <TopBar
+            fullName={user.full_name}
+            access={SIDEBAR_ACCESS[user.role]}
+            accountId={user.account_id!}
+            questionnaireAnsweredCount={questionnaireAnsweredCount}
+            questionnaireComplete={questionnaireComplete}
+          />
           {children}
         </div>
       </div>

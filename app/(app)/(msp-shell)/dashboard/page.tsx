@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { GrowthQuestionnaireBanner } from "@/components/dashboard/growth-questionnaire-banner";
 import { KpiTiles, type KpiTileData } from "@/components/dashboard/kpi-tiles";
 import { PipelineByStage, type StageCount } from "@/components/dashboard/pipeline-by-stage";
 import { RecentActivityFeed, type FeedItem } from "@/components/dashboard/recent-activity-feed";
 import { TodayTasksPanel, type DueTask } from "@/components/dashboard/today-tasks-panel";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
 import type { StageGroup } from "@/lib/opportunities/stages";
+import { countAnswered } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Dashboard — GrowthOS" };
@@ -73,6 +75,7 @@ export default async function DashboardPage() {
     { data: recentMeetings },
     { data: feedRows },
     { data: taskRows },
+    { data: questionnaireResponse },
   ] = await Promise.all([
     supabase
       .from("opportunity_stages")
@@ -111,6 +114,7 @@ export default async function DashboardPage() {
       .not("due_at", "is", null)
       .order("due_at", { ascending: true })
       .limit(8),
+    supabase.from("growth_questionnaire_responses").select("answers, completed_at").eq("account_id", user.account_id).maybeSingle(),
   ]);
 
   // ---- Pipeline by stage ----
@@ -162,6 +166,11 @@ export default async function DashboardPage() {
     };
   });
 
+  const questionnaireAnsweredCount = countAnswered(
+    (questionnaireResponse?.answers as Record<string, unknown>) ?? {}
+  );
+  const questionnaireComplete = !!questionnaireResponse?.completed_at;
+
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-6 md:p-8">
       <div>
@@ -170,6 +179,8 @@ export default async function DashboardPage() {
           Welcome back, {user.full_name.split(" ")[0]} — here&apos;s what&apos;s happening across the account today.
         </p>
       </div>
+
+      {!questionnaireComplete && <GrowthQuestionnaireBanner answeredCount={questionnaireAnsweredCount} />}
 
       <KpiTiles tiles={kpiTiles} />
 

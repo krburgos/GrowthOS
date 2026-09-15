@@ -108,6 +108,8 @@ This set covers the screens in the App Flow Document — tabs (contact detail), 
 | papaparse | **5.6.0** | CSV import (§6.1 of the PRD) and CSV report export |
 | @types/papaparse | **5.5.2** | Type definitions for papaparse |
 | exceljs | **4.4.0** | XLSX import and export — chosen over the xlsx/SheetJS npm package, whose npm-published build lags its official releases and carries known licensing friction; ExcelJS is MIT-licensed and cleanly distributed |
+| pdfkit | **0.20.2** | Server-side PDF generation — the Growth Solution Questionnaire's completed-answers export (2026-09-15). Chosen over `@react-pdf/renderer` for this specific document: the export is a plain, single-column list of question/answer pairs with no layout complex enough to need React's component model, and pdfkit's direct low-level drawing API (text, moveDown, addPage) is the smaller dependency for that shape of document. |
+| @types/pdfkit | **0.17.6** | Type definitions for pdfkit |
 
 
 ### 3.8 Email Sending
@@ -154,6 +156,7 @@ Ready to drop into a fresh create-next-app scaffold — Claude Code should recon
     "recharts": "3.10.1",
     "papaparse": "5.6.0",
     "exceljs": "4.4.0",
+    "pdfkit": "0.20.2",
     "resend": "6.26.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
@@ -178,6 +181,7 @@ Ready to drop into a fresh create-next-app scaffold — Claude Code should recon
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "@types/papaparse": "5.5.2",
+    "@types/pdfkit": "0.17.6",
     "tailwindcss": "4.3.3",
     "@tailwindcss/postcss": "4.3.3",
     "eslint": "10.9.1",

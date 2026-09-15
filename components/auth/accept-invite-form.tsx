@@ -42,9 +42,21 @@ export function AcceptInviteForm() {
       return;
     }
 
-    // App Flow §4.1, A4: on success, straight to the Dashboard — no
-    // onboarding wizard for invited (non-Owner) users.
-    router.push("/dashboard");
+    // App Flow §4.1, A4: on success, straight to the Dashboard — no real
+    // Onboarding Wizard exists in this codebase despite being documented
+    // (App Flow's own B1 screen was never built). Client-confirmed
+    // (2026-09-15): a freshly-invited Owner — the one role the Growth
+    // Solution Questionnaire is actually meant for — lands on it first
+    // instead, with its own "Skip for now" back to the Dashboard; every
+    // other invited role goes straight to the Dashboard as before.
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    const { data: profile } = authUser
+      ? await supabase.from("users").select("role").eq("id", authUser.id).single()
+      : { data: null };
+
+    router.push(profile?.role === "msp_owner" ? "/settings/growth-questionnaire" : "/dashboard");
     router.refresh();
   };
 

@@ -721,6 +721,47 @@ create policy activities_update on activities for update
 ```
 
 
+### 6.6a growth_questionnaire_responses
+
+**Client-confirmed addition (2026-09-15)** — the Growth Solution Questionnaire, sourced from "Growth Solution Questionnaire for MSPs.docx" (8 sections, 75 questions). One row per account; answers live in a single `jsonb` column keyed by a stable question key defined in `lib/questionnaire/questions.ts`, not one column per question — the question list itself is app-code, not schema, since the source document can be revised without a migration. Same RLS shape as `contact_statuses` (§6.4): account-scoped read/write for the MSP, CRO Admin/Advisor and a granted partner get the same read+write parity they have everywhere else.
+
+```
+create table growth_questionnaire_responses (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null unique references accounts(id),
+  answers jsonb not null default '{}'::jsonb,
+  completed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index growth_questionnaire_responses_account_id_idx on growth_questionnaire_responses(account_id);
+
+alter table growth_questionnaire_responses enable row level security;
+
+create policy growth_questionnaire_responses_select on growth_questionnaire_responses for select
+  using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
+
+create policy growth_questionnaire_responses_insert on growth_questionnaire_responses for insert
+  with check (
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin'))
+    or auth_has_any_role('cro_admin','cro_advisor')
+    or is_partner_for(account_id)
+  );
+
+create policy growth_questionnaire_responses_update on growth_questionnaire_responses for update
+  using (
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin'))
+    or auth_has_any_role('cro_admin','cro_advisor')
+    or is_partner_for(account_id)
+  );
+
+create trigger trg_growth_questionnaire_responses_updated_at before update on growth_questionnaire_responses
+  for each row execute function set_updated_at();
+```
+
+`completed_at` is set by the application (not a check constraint) once every question in `lib/questionnaire/questions.ts` has a non-null answer — it drives the Dashboard banner (App Flow §4.3) and the notification bell (§8.10 of the Design System) both disappearing, and gates the PDF export button in the wizard itself.
+
+
 ### 6.6 campaigns, campaign_recipients, campaign_events
 
 ```
@@ -1168,6 +1209,7 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | GET /api/unsubscribe/[token] | None (public) | Records an 'unsubscribed' event, sets email_opt_out (§9) |
 | POST /api/webhooks/resend | Resend (Svix) signature header (no user session) | Records 'bounced' / 'complained' / 'delivered' events from Resend's webhook |
 | GET /api/reports/export | Session | Streams an XLSX/CSV export of report data (ExcelJS) for volumes too large to build client-side |
+| GET /api/questionnaire/export | Session | Streams a PDF (pdfkit) of the Growth Solution Questionnaire's questions and saved answers for one account (§6.6a) |
 
 
 ## 11. Data Access Pattern Summary

@@ -6,10 +6,11 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
-type AccountSub = "company" | "users" | "customizations";
+type AccountSub = "company" | "growth_questionnaire" | "users" | "customizations";
 
 const ACCOUNT_SUB_BY_PATH: Record<string, AccountSub> = {
   "/settings/company": "company",
+  "/settings/growth-questionnaire": "growth_questionnaire",
   "/settings/users": "users",
   "/settings/statuses": "customizations",
   "/settings/opportunity-stages": "customizations",
@@ -32,6 +33,7 @@ const MY_PROFILE_ROWS: Row[] = [
 
 const ACCOUNT_SETTINGS_ROWS: (Row & { sub?: AccountSub })[] = [
   { label: "Company", href: "/settings/company", sub: "company" },
+  { label: "Growth Questionnaire", href: "/settings/growth-questionnaire", sub: "growth_questionnaire" },
   { label: "Billing & Payments" },
   { label: "Email Auth" },
   { label: "Users", href: "/settings/users", sub: "users" },
@@ -61,6 +63,7 @@ const ACCOUNT_SUB_ROWS: Partial<Record<AccountSub, Row[]>> = {
 
 const ACCOUNT_SUB_TITLE: Record<AccountSub, string> = {
   company: "Company",
+  growth_questionnaire: "Growth Questionnaire",
   users: "Users",
   customizations: "Customizations",
 };

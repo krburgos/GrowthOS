@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell } from "lucide-react";
+import { Bell, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { NavAccess, NavSection } from "@/lib/auth/nav-permissions";
+import { TOTAL_QUESTION_COUNT } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/client";
 
 function initials(name: string) {
@@ -52,11 +53,19 @@ function initials(name: string) {
  * header's own 16px left padding = 192px), so the palette's left edge
  * lines up exactly with the Settings nav column's right edge / main
  * content's left edge on every page, not just approximately.
+ *
+ * Client-confirmed (2026-09-15) — the bell is now real, not decorative:
+ * its one possible item is the Growth Solution Questionnaire reminder,
+ * and the dot only renders while `questionnaireComplete` is false. Still
+ * honest by the same rule that removed the old hardcoded dot — no item,
+ * no dot, ever.
  */
 export function TopBar({
   fullName,
   access,
   accountId,
+  questionnaireAnsweredCount,
+  questionnaireComplete,
 }: {
   fullName: string;
   /** Omitted on the CRO Leader's lightweight header (App Flow §4.10) —
@@ -65,8 +74,11 @@ export function TopBar({
    * access to run against, so it's simply not rendered there. */
   access?: Record<NavSection, NavAccess>;
   accountId?: string;
+  questionnaireAnsweredCount?: number;
+  questionnaireComplete?: boolean;
 }) {
   const router = useRouter();
+  const hasNotification = !questionnaireComplete && questionnaireAnsweredCount !== undefined;
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -89,13 +101,41 @@ export function TopBar({
       )}
 
       <div className="ml-auto flex items-center gap-2">
-        <button
-          type="button"
-          className="flex size-9 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
-          aria-label="Notifications"
-        >
-          <Bell className="size-5" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="relative flex size-9 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
+              aria-label="Notifications"
+            >
+              <Bell className="size-5" />
+              {hasNotification && (
+                <span className="absolute right-1.5 top-1.5 size-2 rounded-full border border-white bg-error-600" />
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            {hasNotification ? (
+              <DropdownMenuItem asChild className="flex items-start gap-3 py-2.5">
+                <Link href="/settings/growth-questionnaire">
+                  <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary-100 text-secondary-700">
+                    <ClipboardList className="size-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-body-sm font-semibold text-neutral-800">
+                      Complete your Growth Solution Questionnaire
+                    </span>
+                    <span className="block text-caption text-neutral-500">
+                      {questionnaireAnsweredCount} of {TOTAL_QUESTION_COUNT} answered — tap to continue
+                    </span>
+                  </span>
+                </Link>
+              </DropdownMenuItem>
+            ) : (
+              <p className="px-2 py-6 text-center text-body-sm text-neutral-400">You&apos;re all caught up.</p>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <DropdownMenu>
           <DropdownMenuTrigger className="rounded-full ring-2 ring-transparent ring-offset-2 transition-shadow hover:ring-secondary-100 focus-visible:outline-none focus-visible:ring-secondary-500/40">
