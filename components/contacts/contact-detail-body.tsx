@@ -148,12 +148,13 @@ export function ContactDetailBody({
 }) {
   const [activeTab, setActiveTab] = useState("overview");
 
-  const openPipeline = opportunities
-    .filter((o) => o.stage?.stage_group === "open")
-    .reduce((sum, o) => sum + (o.value ?? 0), 0);
-  const wonLifetime = opportunities
-    .filter((o) => o.stage?.stage_group === "won")
-    .reduce((sum, o) => sum + (o.value ?? 0), 0);
+  // Client-confirmed formula (2026-09-15), replacing the real opportunity
+  // sums these tiles showed before: Prospect Value is a company-size-driven
+  // estimate ($200 x Employees x 12), not derived from this contact's own
+  // opportunities at all. Opportunities Value is a fixed 3x multiple of it.
+  const companyEmployees = Number(company?.company_size) || 0;
+  const prospectValue = 200 * companyEmployees * 12;
+  const opportunitiesValue = prospectValue * 3;
   const lastActivityLabel = activities.length > 0 ? dayLabel(activities[0].occurred_at) : "No activity yet";
 
   return (
@@ -298,12 +299,12 @@ export function ContactDetailBody({
               </a>
             )}
             <div className="flex-1 rounded-lg border border-neutral-200 bg-white p-3.5">
-              <p className="text-h4 font-bold tabular-nums text-primary-900">{currency.format(openPipeline)}</p>
-              <p className="text-caption text-neutral-500">Open Pipeline</p>
+              <p className="text-h4 font-bold tabular-nums text-primary-900">{currency.format(prospectValue)}</p>
+              <p className="text-caption text-neutral-500">Prospect Value</p>
             </div>
             <div className="flex-1 rounded-lg border border-neutral-200 bg-white p-3.5">
-              <p className="text-h4 font-bold tabular-nums text-primary-900">{currency.format(wonLifetime)}</p>
-              <p className="text-caption text-neutral-500">Lifetime Won Value</p>
+              <p className="text-h4 font-bold tabular-nums text-primary-900">{currency.format(opportunitiesValue)}</p>
+              <p className="text-caption text-neutral-500">Opportunities Value</p>
             </div>
             <div className="flex-1 rounded-lg border border-neutral-200 bg-white p-3.5">
               <p className="text-h4 font-bold tabular-nums text-primary-900">{lastActivityLabel}</p>

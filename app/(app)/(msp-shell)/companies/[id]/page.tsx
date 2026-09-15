@@ -66,12 +66,10 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
       .order("created_at", { ascending: false }),
   ]);
 
-  const openPipeline = (opportunities ?? [])
-    .filter((o) => {
-      const stage = Array.isArray(o.opportunity_stages) ? o.opportunity_stages[0] : o.opportunity_stages;
-      return stage?.stage_group === "open";
-    })
-    .reduce((sum, o) => sum + (o.value ?? 0), 0);
+  // Client-confirmed formula (2026-09-15), replacing the real open-
+  // opportunity sum this tile showed before: Prospect Value is a
+  // company-size-driven estimate ($200 x Employees x 12).
+  const prospectValue = 200 * (Number(company.company_size) || 0) * 12;
 
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-6 p-6 md:p-8">
@@ -83,8 +81,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           <p className="text-caption text-neutral-500">Contacts</p>
         </div>
         <div className="rounded-lg border border-secondary-100 bg-gradient-to-br from-secondary-50 to-white p-3.5">
-          <p className="text-h4 font-bold tabular-nums text-secondary-800">{currency.format(openPipeline)}</p>
-          <p className="text-caption text-neutral-500">Open Pipeline</p>
+          <p className="text-h4 font-bold tabular-nums text-secondary-800">{currency.format(prospectValue)}</p>
+          <p className="text-caption text-neutral-500">Prospect Value</p>
         </div>
         <div className="rounded-lg border border-neutral-200 bg-white p-3.5">
           <p className="text-h4 font-bold tabular-nums text-primary-900">{opportunities?.length ?? 0}</p>
