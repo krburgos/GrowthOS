@@ -38,6 +38,16 @@ export function LoginForm() {
       return;
     }
 
+    // Bug fix (2026-09-15): the "viewing as" cookie (growthos_viewing_
+    // account_id) is httpOnly and was never cleared on login/logout, so
+    // it silently persisted across sessions -- a CRO Leader/partner user
+    // who'd ever entered an MSP account would keep landing back inside
+    // that same account on every future login instead of the CRO Leader
+    // Dashboard. /api/cro/exit already does exactly the clear this
+    // needs; reused here rather than duplicating it. Harmless no-op for
+    // MSP staff logins, which never have this cookie set.
+    await fetch("/api/cro/exit", { method: "POST" });
+
     router.push("/dashboard");
     router.refresh();
   };

@@ -81,6 +81,10 @@ export function TopBar({
   const hasNotification = !questionnaireComplete && questionnaireAnsweredCount !== undefined;
 
   const handleLogout = async () => {
+    // Same "viewing as" cookie cleanup as login (components/auth/login-form.tsx)
+    // -- defensive here too, so a shared browser never hands the next
+    // person who logs in someone else's leftover viewing-as state.
+    await fetch("/api/cro/exit", { method: "POST" });
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
