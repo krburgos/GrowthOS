@@ -5,7 +5,7 @@ import { parseImportFile } from "@/lib/import/parse";
 import { applyMapping, validateRows } from "@/lib/import/validate";
 import { createClient } from "@/lib/supabase/server";
 
-const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_sales", "msp_marketing", "cro_admin", "cro_advisor"];
+const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 
 /**
  * Backend Schema §10 — POST /api/import/validate. Parses the uploaded

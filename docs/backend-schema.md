@@ -20,15 +20,15 @@ Thirteen database tables cover Phase 1 in full: accounts, users, email_connectio
 GrowthOS uses **one shared schema with application-level isolation enforced by Row Level Security** — not a separate database or schema per MSP. The PRD (§5, §9) confirms no compliance driver currently requires stricter isolation than that; if one emerges later, RLS can be tightened without a data migration.
 **Tenant unit.** A tenant is an accounts row — one MSP. Every tenant-scoped table carries an account_id column and an RLS policy that compares it against the caller's own account.
 **Three categories of user** (client-confirmed addition of the third, 2026-09-08 — see §12 for the full flag-and-confirm trail):
-- **MSP staff** (msp_owner, msp_admin, msp_sales, msp_marketing, msp_read_only) — always belong to exactly one account; users.account_id is required (not null) for these roles.
+- **MSP staff** (msp_owner, msp_admin, msp_marketing, msp_read_only) — always belong to exactly one account; users.account_id is required (not null) for these roles. **msp_sales was removed 2026-09-15** — its edit rights (Opportunities/Activities) folded into msp_marketing; the enum label itself is still technically present in the database (Postgres can't drop a single enum value without recreating the type) but is unreachable from the app.
 - **CRO Leader staff** (cro_admin, cro_advisor, cro_service_team) — belong to no single account and can act across *all* of them, unconditionally; users.account_id is required to be null for these roles. This is enforced by a CHECK constraint on users (§5), not left to application code to get right.
 - **Partner** — also belongs to no single account (account_id null, same CHECK constraint bucket as CRO Leader), but unlike CRO Leader, a partner can only act on the specific accounts explicitly listed in `partner_account_grants` (§5.2), managed unilaterally by CRO Admin. A vendor/agency relationship, not platform staff.
 **"Viewing as" (also 2026-09-08):** since neither CRO Leader nor partner has a home account, every MSP-shell page (which reads `user.account_id` directly, dozens of call sites) needs *something* to resolve that to once one of them wants to work inside a specific MSP's data. `getCurrentUser()` (`lib/auth/get-current-user.ts`) resolves this from a `growthos_viewing_account_id` cookie set by POST /api/cro/enter (§10) — the cookie is a pure UI convenience for choosing which account to display; it grants nothing by itself; every query is still independently authorized by the RLS policies below (`is_cro_leader()` / `is_partner_for()`), regardless of what the cookie claims.
 **Permission matrix.** The PRD's role table (§4) specifies view/edit access per role but only as a single combined "Own account data" description per row. To turn that into concrete per-table RLS policies, this document treats **view (SELECT) as broad** — any role with access to an account can see all of that account's CRM data, since the App Flow Document already assumes cross-navigation (a Sales user needs to see which list a contact belongs to; Marketing needs to see opportunity outcomes to judge campaign impact) — and treats **edit (INSERT/UPDATE) as the PRD's specific per-role grant, applied literally**. This interpretation is flagged as an assumption in §12 for the client to confirm; if narrower view access turns out to be intended, only the SELECT policies in §6 need to change.
 | **Resource** | **View** | **Edit** |
 | --- | --- | --- |
-| Companies, Contacts, Contact Statuses | All roles in the account; all CRO Leader roles; a partner, for accounts they're granted | Owner, Admin, Sales, Marketing (own account) · CRO Admin, CRO Advisor (any account) · a partner, for accounts they're granted. Contact Statuses management is Owner/Admin/CRO Admin/CRO Advisor/partner (granted accounts) only. |
-| Opportunities, Activities | All roles in the account; all CRO Leader roles; a partner, for accounts they're granted | Owner, Admin, Sales (own account) · CRO Admin, CRO Advisor (any account) · a partner, for accounts they're granted |
+| Companies, Contacts, Contact Statuses | All roles in the account; all CRO Leader roles; a partner, for accounts they're granted | Owner, Admin, Marketing (own account) · CRO Admin, CRO Advisor (any account) · a partner, for accounts they're granted. Contact Statuses management is Owner/Admin/CRO Admin/CRO Advisor/partner (granted accounts) only. |
+| Opportunities, Activities | All roles in the account; all CRO Leader roles; a partner, for accounts they're granted | Owner, Admin, Marketing (own account) · CRO Admin, CRO Advisor (any account) · a partner, for accounts they're granted |
 | Lists, List Members, Campaigns, Campaign Recipients | All roles in the account; all CRO Leader roles; a partner, for accounts they're granted | Owner, Admin, Marketing (own account) · CRO Admin, CRO Advisor (any account) · a partner, for accounts they're granted |
 | Users (own account roster) | All roles in the account; all CRO Leader roles. **Not** a partner — deliberately excluded, a partner never sees an MSP's own staff/user roster, only its CRM data. | Owner, Admin (own account, cannot touch CRO Leader-role rows) · CRO Admin (any account) |
 | Accounts (own account settings) | Own account; all CRO Leader roles; a partner, for accounts they're granted (read-only — see below) | Owner, Admin (own account) · CRO Admin, CRO Advisor (any account). A partner never edits account settings, only CRM data. |
@@ -87,6 +87,12 @@ create type user_role as enum (
   'cro_admin', 'cro_advisor', 'cro_service_team',
   'partner' -- client-confirmed addition, 2026-09-08 — see §2, §5.2, §12
 );
+-- 'msp_sales' is client-confirmed removed from the product (2026-09-15,
+-- see §2) but stays in this enum literal — Postgres has no "drop one
+-- enum value" operation short of recreating the type and every policy/
+-- column that references it, which wasn't worth the risk for a role
+-- nothing in the app can assign anymore. Don't remove it here without
+-- also handling that recreation.
 
 create type contact_source as enum ('import', 'manual');
 
@@ -563,13 +569,13 @@ create policy companies_select on companies for select
 
 create policy companies_insert on companies for insert
   with check (
-    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_sales','msp_marketing'))
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_marketing'))
     or auth_has_any_role('cro_admin','cro_advisor')
   );
 
 create policy companies_update on companies for update
   using (
-    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_sales','msp_marketing'))
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_marketing'))
     or auth_has_any_role('cro_admin','cro_advisor')
   );
 
@@ -597,13 +603,13 @@ create policy contacts_select on contacts for select
 
 create policy contacts_insert on contacts for insert
   with check (
-    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_sales','msp_marketing'))
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_marketing'))
     or auth_has_any_role('cro_admin','cro_advisor')
   );
 
 create policy contacts_update on contacts for update
   using (
-    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_sales','msp_marketing'))
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_marketing'))
     or auth_has_any_role('cro_admin','cro_advisor')
   );
 ```
@@ -691,13 +697,13 @@ create policy opportunities_select on opportunities for select
 
 create policy opportunities_insert on opportunities for insert
   with check (
-    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_sales'))
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_marketing'))
     or auth_has_any_role('cro_admin','cro_advisor')
   );
 
 create policy opportunities_update on opportunities for update
   using (
-    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_sales'))
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_marketing'))
     or auth_has_any_role('cro_admin','cro_advisor')
   );
 -- No delete policy — and no archived_at column to set anyway; opportunities are permanent (§2, §5.5).
@@ -709,16 +715,18 @@ create policy activities_select on activities for select
 
 create policy activities_insert on activities for insert
   with check (
-    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_sales'))
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_marketing'))
     or auth_has_any_role('cro_admin','cro_advisor')
   );
 
 create policy activities_update on activities for update
   using (
-    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_sales'))
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin','msp_marketing'))
     or auth_has_any_role('cro_admin','cro_advisor')
   );
 ```
+
+**Client-confirmed change (2026-09-15):** Opportunities and Activities edit rights moved from `msp_sales` to `msp_marketing` — msp_sales no longer exists (§2), and msp_marketing now has full edit access to everything in this section, not just Lists/Campaigns as before.
 
 
 ### 6.6a growth_questionnaire_responses

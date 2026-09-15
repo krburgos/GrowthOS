@@ -2,10 +2,19 @@ import { cookies } from "next/headers";
 
 import { createClient } from "@/lib/supabase/server";
 
+/**
+ * Client-confirmed removal (2026-09-15): msp_sales no longer exists as
+ * an assignable role — msp_marketing absorbed its edit rights (full
+ * access to Contacts/Companies/Opportunities/Lists/Campaigns, still
+ * view-only on Reports, still no Settings access). The 'msp_sales'
+ * label is still technically present in the database's user_role enum
+ * (Postgres has no direct "remove enum value" operation and recreating
+ * the type wasn't worth the risk for an already-empty role) but nothing
+ * in the app can assign it anymore — treat it as gone.
+ */
 export type UserRole =
   | "msp_owner"
   | "msp_admin"
-  | "msp_sales"
   | "msp_marketing"
   | "msp_read_only"
   | "cro_admin"

@@ -121,7 +121,7 @@ Two secrets are generated, not issued by a vendor — Claude Code can generate b
 - Surface the dedup rule in the UI: a manual-entry attempt with a duplicate account+email should fail with a clear message, not a raw constraint-violation error.
 **Checkpoint:**
 - Claude Code: import a small test CSV (5–10 rows, including one intentional duplicate email and one row sharing a domain with an existing company) and confirm the dedup and auto-match both behave as specified.
-- Human verification: log in as an msp_read_only test user and confirm every edit control is disabled/hidden, and as msp_sales and confirm edit works — spot-checking the RLS write-role matrix (Backend Schema §6.4) against real UI, not just the policy SQL.
+- Human verification: log in as an msp_read_only test user and confirm every edit control is disabled/hidden, and as msp_sales and confirm edit works — spot-checking the RLS write-role matrix (Backend Schema §6.4) against real UI, not just the policy SQL. (msp_sales was client-confirmed removed 2026-09-15, well after this milestone's checkpoint passed — its edit rights moved to msp_marketing, see Backend Schema §2/§6.5.)
 
 ## 10. Milestone 7 — Lists & Segmentation
 

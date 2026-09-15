@@ -3,7 +3,6 @@ import type { UserRole } from "@/lib/auth/get-current-user";
 export const MSP_ROLES: UserRole[] = [
   "msp_owner",
   "msp_admin",
-  "msp_sales",
   "msp_marketing",
   "msp_read_only",
 ];

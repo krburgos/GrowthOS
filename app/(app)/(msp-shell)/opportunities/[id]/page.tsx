@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Opportunity — GrowthOS" };
 
-const CAN_EDIT_ROLES = ["msp_owner", "msp_admin", "msp_sales", "cro_admin", "cro_advisor"];
+const CAN_EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 
 /**
  * App Flow §4.5, E3 — Opportunity Detail. Core fields, notes, and its

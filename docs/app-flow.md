@@ -50,11 +50,12 @@ Sidebar items and in-page actions a role cannot use are shown **disabled** (visi
 | --- | --- | --- | --- | --- | --- | --- |
 | MSP Owner | Full | Full | Full | Full | Full | Full |
 | MSP Admin | Full | Full | Full | Full | Full | Full |
-| MSP Sales User | Full | Full | View | View | View | Disabled |
-| MSP Marketing User | Full | View | Full | Full | View | Disabled |
+| MSP Marketing User | Full | Full | Full | Full | View | Disabled |
 | MSP Read-Only User | View | View | View | View | View | Disabled |
 
 If a user reaches a disabled area anyway (a direct link, a bookmark), see the "Permission Denied" pattern in §6.
+
+**Client-confirmed removal — MSP Sales User (2026-09-15):** this role is gone; see PRD §4 and Backend Schema §2 for the full rationale. MSP Marketing User absorbed its edit rights (Opportunities moved from View to Full) — its own Reports (View) and Settings (Disabled) restrictions are unchanged.
 
 ### 2.5 CRO Leader "Viewing As" Banner
 
@@ -74,17 +75,17 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 | C1 | Dashboard | Dashboard (Home) | All MSP roles |
 | D1 | Contacts | Contacts List | All MSP roles |
 | D2 | Contacts | Contact Detail (tabs: Overview, Activity, Opportunities, Emails) | All MSP roles |
-| D3 | Contacts | Add Contact (manual) | Owner, Admin, Sales, Marketing |
-| D4 | Contacts | Import Contacts (upload → map → validate → confirm) | Owner, Admin, Sales, Marketing |
+| D3 | Contacts | Add Contact (manual) | Owner, Admin, Marketing |
+| D4 | Contacts | Import Contacts (upload → map → validate → confirm) | Owner, Admin, Marketing |
 | D5 | Companies | Companies List | All MSP roles |
 | D6 | Companies | Company Detail (profile + linked Contacts + linked Opportunities) | All MSP roles |
-| E1 | Opportunities | Opportunity Board (kanban by stage) | All MSP roles (edit: Owner/Admin/Sales) |
+| E1 | Opportunities | Opportunity Board (kanban by stage) | All MSP roles (edit: Owner/Admin/Marketing) |
 | E2 | Opportunities | Opportunity List (sortable table) | All MSP roles |
-| E3 | Opportunities | Opportunity Detail | All MSP roles (edit: Owner/Admin/Sales) |
+| E3 | Opportunities | Opportunity Detail | All MSP roles (edit: Owner/Admin/Marketing) |
 | F1 | Lists | Lists Index | All MSP roles |
 | F2 | Lists | List Detail (members) | All MSP roles |
 | F3 | Lists | Create List | Owner, Admin, Marketing |
-| G1 | Campaigns | Campaigns Index | All MSP roles (view only for Read-Only/Sales) |
+| G1 | Campaigns | Campaigns Index | All MSP roles (view only for Read-Only) |
 | G2 | Campaigns | Campaign Detail (stats) | All MSP roles |
 | G3 | Campaigns | Compose Campaign (compose → select list → preview → send) | Owner, Admin, Marketing |
 | H1 | Reports | Reports | All MSP roles |
@@ -208,7 +209,7 @@ Kept intentionally light, per the client's direction. One primary element: a **s
 
 ### 4.11 System Screens
 
-- **Access Restricted (K1)** — the redirect target when a role hits a disabled area directly (e.g., a Sales User opening a Settings link). Lands on the Dashboard with an inline banner: "You don't have access to that page."
+- **Access Restricted (K1)** — the redirect target when a role hits a disabled area directly (e.g., a Marketing User opening a Settings link). Lands on the Dashboard with an inline banner: "You don't have access to that page."
 - **Not Found (K2)** — a standard 404-style page (e.g., a bookmarked contact that no longer exists), with a link back to Dashboard.
 - **Session Timeout (K3)** — a blocking modal on session expiry: "Your session has ended — log in again to continue," with a log-in field inline so in-progress work elsewhere in the tab isn't lost more than necessary.
 
