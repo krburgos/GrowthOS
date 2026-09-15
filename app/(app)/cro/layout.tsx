@@ -1,4 +1,4 @@
-import { TopBar } from "@/components/shell/top-bar";
+import { CroHeader } from "@/components/cro/cro-header";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 
 export default async function CroLayout({ children }: { children: React.ReactNode }) {
@@ -7,7 +7,7 @@ export default async function CroLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex flex-1 flex-col">
-      <TopBar fullName={user.full_name} />
+      <CroHeader fullName={user.full_name} role={user.role} />
       {children}
     </div>
   );

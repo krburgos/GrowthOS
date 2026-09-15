@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -15,7 +15,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
 export interface PartnerRow {
   id: string;
@@ -30,6 +32,9 @@ export interface PartnerRow {
  * MSP accounts they can see (partner_account_grants). CRO Admin grants
  * unilaterally, no MSP-side consent step, per the client's explicit
  * direction.
+ *
+ * Pagination (2026-09-15): client-side via `LocalPaginationBar`, same
+ * reasoning as the Accounts list above it on this shared page.
  */
 export function PartnerAccessPanel({
   partners,
@@ -46,6 +51,13 @@ export function PartnerAccessPanel({
   const [addingFor, setAddingFor] = useState<string | null>(null);
   const [pickedAccountId, setPickedAccountId] = useState("");
   const [pending, setPending] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+
+  const pagePartners = useMemo(
+    () => partners.slice((page - 1) * pageSize, page * pageSize),
+    [partners, page, pageSize]
+  );
 
   const handleInvite = async () => {
     setInviting(true);
@@ -150,70 +162,79 @@ export function PartnerAccessPanel({
       {partners.length === 0 ? (
         <p className="px-4 py-6 text-body-sm text-neutral-500">No partners invited yet.</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-neutral-100">
-          {partners.map((p) => (
-            <li key={p.id} className="flex flex-col gap-2.5 px-4 py-3.5">
-              <div>
-                <p className="text-body font-semibold text-neutral-800">{p.fullName}</p>
-                <p className="text-caption text-neutral-500">{p.email}</p>
-              </div>
+        <>
+          <ul className="flex flex-col divide-y divide-neutral-100">
+            {pagePartners.map((p) => (
+              <li key={p.id} className="flex flex-col gap-2.5 px-4 py-3.5">
+                <div>
+                  <p className="text-body font-semibold text-neutral-800">{p.fullName}</p>
+                  <p className="text-caption text-neutral-500">{p.email}</p>
+                </div>
 
-              <div className="flex flex-wrap items-center gap-1.5">
-                {p.grants.length === 0 && <span className="text-caption text-neutral-400">No accounts granted yet</span>}
-                {p.grants.map((g) => (
-                  <span
-                    key={g.accountId}
-                    className="flex items-center gap-1.5 rounded-full bg-secondary-50 px-2.5 py-1 text-caption font-medium text-secondary-800"
-                  >
-                    {g.accountName}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {p.grants.length === 0 && <span className="text-caption text-neutral-400">No accounts granted yet</span>}
+                  {p.grants.map((g) => (
+                    <span
+                      key={g.accountId}
+                      className="flex items-center gap-1.5 rounded-full bg-secondary-50 px-2.5 py-1 text-caption font-medium text-secondary-800"
+                    >
+                      {g.accountName}
+                      <button
+                        type="button"
+                        onClick={() => removeGrant(p.id, g.accountId)}
+                        disabled={pending}
+                        aria-label={`Remove ${g.accountName} access`}
+                        className="text-secondary-500 hover:text-error-700"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+
+                  {addingFor === p.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <Select value={pickedAccountId} onValueChange={setPickedAccountId}>
+                        <SelectTrigger className="h-7 w-44 text-caption">
+                          <SelectValue placeholder="Choose account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allAccounts
+                            .filter((a) => !p.grants.some((g) => g.accountId === a.id))
+                            .map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" onClick={() => addGrant(p.id)} disabled={!pickedAccountId || pending}>
+                        Add
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setAddingFor(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
                     <button
                       type="button"
-                      onClick={() => removeGrant(p.id, g.accountId)}
-                      disabled={pending}
-                      aria-label={`Remove ${g.accountName} access`}
-                      className="text-secondary-500 hover:text-error-700"
+                      onClick={() => setAddingFor(p.id)}
+                      className="rounded-full border border-dashed border-neutral-300 px-2.5 py-1 text-caption font-semibold text-neutral-500 hover:border-secondary-400 hover:text-secondary-700"
                     >
-                      ×
+                      + Add account
                     </button>
-                  </span>
-                ))}
-
-                {addingFor === p.id ? (
-                  <div className="flex items-center gap-1.5">
-                    <Select value={pickedAccountId} onValueChange={setPickedAccountId}>
-                      <SelectTrigger className="h-7 w-44 text-caption">
-                        <SelectValue placeholder="Choose account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allAccounts
-                          .filter((a) => !p.grants.some((g) => g.accountId === a.id))
-                          .map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <Button size="sm" onClick={() => addGrant(p.id)} disabled={!pickedAccountId || pending}>
-                      Add
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setAddingFor(null)}>
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setAddingFor(p.id)}
-                    className="rounded-full border border-dashed border-neutral-300 px-2.5 py-1 text-caption font-semibold text-neutral-500 hover:border-secondary-400 hover:text-secondary-700"
-                  >
-                    + Add account
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <LocalPaginationBar
+            page={page}
+            pageSize={pageSize}
+            totalCount={partners.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </>
       )}
     </div>
   );
