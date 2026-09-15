@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Growth Solution Questionnaire — Gr
 const EDIT_ROLES = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"];
 
 /**
- * Settings → Account Settings → Growth Questionnaire (new, 2026-09-15).
+ * Settings → Account Settings → Growth Solution Questionnaire (new, 2026-09-15).
  * Answers live in growth_questionnaire_responses, one row per account
  * (Backend Schema, same RLS shape as contact_statuses). Direct
  * RLS-scoped read here (hybrid access, no secret involved); the wizard
