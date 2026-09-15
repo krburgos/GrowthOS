@@ -6,8 +6,10 @@ import { KanbanBoard, type BoardOpportunity } from "@/components/opportunities/k
 import { OpportunityListTable, type OpportunityListRow } from "@/components/opportunities/opportunity-list-table";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import type { OpportunityStageRow, StageGroup } from "@/lib/opportunities/stages";
+import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -32,17 +34,24 @@ interface OpportunityQueryRow {
  * toggle, server-driven via ?view=. Columns/stage options come from the
  * account's own opportunity_stages rows (client-confirmed customizable,
  * Settings → Opportunity Stages), not a fixed list.
+ *
+ * Pagination (2026-09-15) applies only to List view — the Board's
+ * columns each need every one of their own cards present (already
+ * height-capped with internal scroll per column, not row-bottomless),
+ * so the same full `opportunities` fetch that feeds the board gets
+ * sliced in JS only when rendering the flat List table.
  */
 export default async function OpportunitiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; page?: string; pageSize?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const { view } = await searchParams;
+  const { view, ...pageParams } = await searchParams;
   const isListView = view === "list";
+  const { page, pageSize, from, to } = parsePagination(pageParams);
 
   const supabase = await createClient();
   const [{ data: rows }, { data: stageRows }] = await Promise.all([
@@ -114,7 +123,10 @@ export default async function OpportunitiesPage({
       {opportunities.length === 0 ? (
         <EmptyState icon={Target} />
       ) : isListView ? (
-        <OpportunityListTable opportunities={opportunities as OpportunityListRow[]} />
+        <>
+          <OpportunityListTable opportunities={opportunities.slice(from, to + 1) as OpportunityListRow[]} />
+          <PaginationBar page={page} pageSize={pageSize} totalCount={opportunities.length} />
+        </>
       ) : (
         <KanbanBoard stages={stages} opportunities={opportunities as BoardOpportunity[]} />
       )}

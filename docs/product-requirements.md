@@ -77,7 +77,7 @@ Technical isolation is **application-level** (tenant ID scoping with row-level s
 The system must store, for each prospect/company and its contacts:
 - Company name, website, industry, geography, company size
 - Contact name, title, email, phone
-- Assigned owner (MSP user)
+- Assigned salesperson (MSP user; **renamed from "Owner" 2026-09-15**, client-confirmed — this is the per-record assignment field, not the "Owner" account role in §5's role table, which is unchanged)
 - Status (see §6.2), notes, associated activities, associated opportunities, list memberships
 - Source of the record (import, manual entry)
 **Import & entry.** Prospects and contacts can be added by spreadsheet import (CSV/XLSX, mapped to these fields) or manual entry. This is also the path for migrating existing GlassHive data.

@@ -1,6 +1,22 @@
 "use client";
 
-import { Archive, ArrowDown, ArrowUp, MoreVertical, Pencil, Plus } from "lucide-react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Archive, GripVertical, MoreVertical, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -95,21 +111,33 @@ export function StagesManager({
 
   const sorted = [...stages].sort((a, b) => a.sort_order - b.sort_order);
 
-  const move = async (index: number, direction: -1 | 1) => {
-    const other = sorted[index + direction];
-    const current = sorted[index];
-    if (!other) return;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
-    setPendingId(current.id);
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = sorted.findIndex((s) => s.id === active.id);
+    const newIndex = sorted.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(sorted, oldIndex, newIndex);
+    setPendingId(String(active.id));
     const supabase = createClient();
-    const [{ error: e1 }, { error: e2 }] = await Promise.all([
-      supabase.from("opportunity_stages").update({ sort_order: other.sort_order }).eq("id", current.id),
-      supabase.from("opportunity_stages").update({ sort_order: current.sort_order }).eq("id", other.id),
-    ]);
+    const results = await Promise.all(
+      reordered
+        .map((stage, index) => ({ stage, index }))
+        .filter(({ stage, index }) => stage.sort_order !== index)
+        .map(({ stage, index }) => supabase.from("opportunity_stages").update({ sort_order: index }).eq("id", stage.id))
+    );
     setPendingId(null);
 
-    if (e1 || e2) {
-      toast.error(e1?.message ?? e2?.message ?? "Couldn't reorder.");
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      toast.error(failed.error.message);
       return;
     }
     router.refresh();
@@ -188,72 +216,27 @@ export function StagesManager({
         </Button>
       )}
 
-      <ul className="flex flex-col divide-y divide-neutral-100 rounded-md border border-neutral-200">
-        {sorted.map((stage, index) => (
-          <li key={stage.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-            <div className="flex items-center gap-3">
-              <span className="text-body text-neutral-800">{stage.name}</span>
-              <Badge variant={settingsBadgeVariant(stage)}>
-                {STAGE_GROUP_LABELS[stage.stage_group]}
-              </Badge>
-              <span className="text-body-sm tabular-nums text-neutral-500">{stage.win_probability}%</span>
-            </div>
-            {canEdit && (
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  disabled={index === 0 || pendingId === stage.id}
-                  onClick={() => move(index, -1)}
-                  className="flex size-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 disabled:opacity-30"
-                  aria-label={`Move ${stage.name} up`}
-                >
-                  <ArrowUp className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  disabled={index === sorted.length - 1 || pendingId === stage.id}
-                  onClick={() => move(index, 1)}
-                  className="flex size-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 disabled:opacity-30"
-                  aria-label={`Move ${stage.name} down`}
-                >
-                  <ArrowDown className="size-4" />
-                </button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex size-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100"
-                      aria-label={`More actions for ${stage.name}`}
-                    >
-                      <MoreVertical className="size-4" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        setEditTarget(stage);
-                        setEditName(stage.name);
-                        setEditGroup(stage.stage_group);
-                        setEditProbability(String(stage.win_probability));
-                      }}
-                    >
-                      <Pencil className="mr-2 size-4 text-neutral-400" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-error-700 data-[highlighted]:bg-error-50"
-                      onSelect={() => setRetireTarget(stage)}
-                    >
-                      <Archive className="mr-2 size-4" />
-                      Retire
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <SortableContext items={sorted.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+          <ul className="flex flex-col divide-y divide-neutral-100 rounded-md border border-neutral-200">
+            {sorted.map((stage) => (
+              <SortableStageRow
+                key={stage.id}
+                stage={stage}
+                canEdit={canEdit}
+                pending={pendingId === stage.id}
+                onEdit={() => {
+                  setEditTarget(stage);
+                  setEditName(stage.name);
+                  setEditGroup(stage.stage_group);
+                  setEditProbability(String(stage.win_probability));
+                }}
+                onRetire={() => setRetireTarget(stage)}
+              />
+            ))}
+          </ul>
+        </SortableContext>
+      </DndContext>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
@@ -395,5 +378,70 @@ export function StagesManager({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function SortableStageRow({
+  stage,
+  canEdit,
+  pending,
+  onEdit,
+  onRetire,
+}: {
+  stage: StageRow;
+  canEdit: boolean;
+  pending: boolean;
+  onEdit: () => void;
+  onRetire: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stage.id });
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={"flex items-center justify-between gap-3 px-4 py-2.5 bg-white" + (isDragging ? " relative z-10 shadow-md" : "")}
+    >
+      <div className="flex items-center gap-3">
+        {canEdit && (
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            disabled={pending}
+            className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 active:cursor-grabbing disabled:opacity-30"
+            aria-label={`Drag to reorder ${stage.name}`}
+          >
+            <GripVertical className="size-4" />
+          </button>
+        )}
+        <span className="text-body text-neutral-800">{stage.name}</span>
+        <Badge variant={settingsBadgeVariant(stage)}>{STAGE_GROUP_LABELS[stage.stage_group]}</Badge>
+        <span className="text-body-sm tabular-nums text-neutral-500">{stage.win_probability}%</span>
+      </div>
+      {canEdit && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex size-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100"
+              aria-label={`More actions for ${stage.name}`}
+            >
+              <MoreVertical className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={onEdit}>
+              <Pencil className="mr-2 size-4 text-neutral-400" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-error-700 data-[highlighted]:bg-error-50" onSelect={onRetire}>
+              <Archive className="mr-2 size-4" />
+              Retire
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </li>
   );
 }

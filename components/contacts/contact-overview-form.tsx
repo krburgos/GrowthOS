@@ -275,7 +275,7 @@ export function ContactOverviewForm({
                 <Value>{statusLabel}</Value>
               )}
             </Row>
-            <Row icon={User} label="Owner" fieldId="owner_id">
+            <Row icon={User} label="Salesperson" fieldId="owner_id">
               {editing ? (
                 <Select value={watch("owner_id")} onValueChange={(v) => setValue("owner_id", v)}>
                   <SelectTrigger id="owner_id" className="flex-1">

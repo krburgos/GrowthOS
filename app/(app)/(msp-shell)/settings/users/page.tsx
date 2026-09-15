@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 
 import { InviteUserDialog } from "@/components/settings/invite-user-dialog";
 import { UsersTable, type UserRow } from "@/components/settings/users-table";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { getCurrentUser, isCroLeaderRole } from "@/lib/auth/get-current-user";
 import { CRO_LEADER_ROLES, MSP_ROLES } from "@/lib/auth/roles";
+import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Users & Roles — GrowthOS" };
@@ -15,9 +17,15 @@ export const metadata: Metadata = { title: "Users & Roles — GrowthOS" };
  * CRO Admin's cross-account entry point (search + enter an MSP) is
  * Milestone 11 — this screen is account-scoped for now.
  */
-export default async function UsersRolesPage() {
+export default async function UsersRolesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; pageSize?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) return null;
+
+  const { page, pageSize, from, to } = parsePagination(await searchParams);
 
   if (isCroLeaderRole(user.role) && !user.account_id) {
     return (
@@ -34,12 +42,14 @@ export default async function UsersRolesPage() {
 
   const supabase = await createClient();
 
-  const [{ data: rows }, { data: lastLogins }] = await Promise.all([
+  const [{ data: rows }, { count: totalCount }, { data: lastLogins }] = await Promise.all([
     supabase
       .from("users")
       .select("id, full_name, email, role, archived_at")
       .eq("account_id", user.account_id)
-      .order("full_name"),
+      .order("full_name")
+      .range(from, to),
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("account_id", user.account_id),
     supabase.rpc("get_users_with_last_login", { p_account_id: user.account_id }),
   ]);
 
@@ -66,6 +76,7 @@ export default async function UsersRolesPage() {
         canEdit={canEdit}
         currentUserId={user.id}
       />
+      <PaginationBar page={page} pageSize={pageSize} totalCount={totalCount ?? users.length} />
     </main>
   );
 }

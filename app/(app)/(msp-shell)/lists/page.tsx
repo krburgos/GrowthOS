@@ -5,7 +5,9 @@ import Link from "next/link";
 import { ListsTable } from "@/components/lists/lists-table";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Lists — GrowthOS" };
@@ -28,12 +30,15 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro
  * rather than a SQL ORDER BY — those counts come from a follow-up
  * Promise.all, not a plain column, and a handful of lists per account
  * doesn't carry the same "tens of thousands of rows" scale concern
- * that drove Contacts' server-side sort (PRD §6.1).
+ * that drove Contacts' server-side sort (PRD §6.1). Client-confirmed
+ * pagination (2026-09-15) still applies here for consistency with
+ * every other list page — the page slice happens in JS after the sort
+ * above, same reasoning as the Companies list's own JS-computed sort.
  */
 export default async function ListsIndexPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; dir?: string }>;
+  searchParams: Promise<{ sort?: string; dir?: string; page?: string; pageSize?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) return null;
@@ -68,8 +73,9 @@ export default async function ListsIndexPage({
     })
   );
 
-  const { sort, dir } = await searchParams;
+  const { sort, dir, ...pageParams } = await searchParams;
   const ascending = dir !== "desc";
+  const { page, pageSize, from, to } = parsePagination(pageParams);
   const sortAccessors: Record<string, (l: (typeof listsWithCounts)[number]) => string | number> = {
     name: (l) => l.name.toLowerCase(),
     contacts: (l) => l.memberCount,
@@ -105,7 +111,10 @@ export default async function ListsIndexPage({
       {listsWithCounts.length === 0 ? (
         <EmptyState icon={ListChecks} />
       ) : (
-        <ListsTable lists={listsWithCounts} canEdit={canEdit} />
+        <>
+          <ListsTable lists={listsWithCounts.slice(from, to + 1)} canEdit={canEdit} />
+          <PaginationBar page={page} pageSize={pageSize} totalCount={listsWithCounts.length} />
+        </>
       )}
     </main>
   );

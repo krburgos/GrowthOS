@@ -52,7 +52,7 @@ export interface ContactFormOption {
 
 /**
  * App Flow §4.4, D3 — Add Contact. "Same fields as the list columns plus
- * notes" (name, company, status, owner, employee size, city, state) plus
+ * notes" (name, company, status, salesperson, employee size, city, state) plus
  * the PRD §6.1 contact fields (title, email, phone). Company fields are
  * folded in here per the client's direction (App Flow has no separate
  * Companies screen) — match_or_create_company() (Backend Schema §7.3)
@@ -268,7 +268,7 @@ export function ContactForm({
             </Select>
           </div>
           <div>
-            <Label htmlFor="owner_id">Owner</Label>
+            <Label htmlFor="owner_id">Salesperson</Label>
             <Select value={watch("owner_id")} onValueChange={(v) => setValue("owner_id", v)}>
               <SelectTrigger id="owner_id">
                 <SelectValue placeholder="Unassigned" />

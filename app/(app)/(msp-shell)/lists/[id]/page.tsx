@@ -7,9 +7,11 @@ import { ContactsDataTable } from "@/components/contacts/contacts-data-table";
 import { ListActionsMenu } from "@/components/lists/list-actions-menu";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import type { ContactListRow } from "@/lib/contacts/types";
+import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "List — GrowthOS" };
@@ -25,11 +27,18 @@ const CONTACT_FIELDS =
  * extra Move-to/Remove-from-list actions come from passing
  * currentListId.
  */
-export default async function ListDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ListDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string; pageSize?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) return null;
 
   const { id } = await params;
+  const { page, pageSize, from, to } = parsePagination(await searchParams);
   const supabase = await createClient();
 
   const { data: list } = await supabase
@@ -44,7 +53,15 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
   const canEdit = EDIT_ROLES.includes(user.role);
   let contacts: ContactListRow[] = [];
 
-  const { data } = await supabase.from("list_members").select(`contacts(${CONTACT_FIELDS})`).eq("list_id", id);
+  const [{ data }, { count: totalCount }] = await Promise.all([
+    supabase
+      .from("list_members")
+      .select(`contacts(${CONTACT_FIELDS})`)
+      .eq("list_id", id)
+      .order("added_at")
+      .range(from, to),
+    supabase.from("list_members").select("*", { count: "exact", head: true }).eq("list_id", id),
+  ]);
   contacts = (data ?? [])
     .map((row) => {
       const c = row.contacts as unknown as ContactListRow | ContactListRow[] | null;
@@ -97,7 +114,7 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
       </div>
       <div className="mb-6 flex items-center justify-between">
         <p className="text-body text-neutral-500">
-          {contacts.length} member{contacts.length === 1 ? "" : "s"}
+          {totalCount ?? contacts.length} member{(totalCount ?? contacts.length) === 1 ? "" : "s"}
         </p>
         {canEdit && (
           <div className="flex gap-2">
@@ -121,15 +138,18 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
           }
         />
       ) : (
-        <ContactsDataTable
-          contacts={contacts}
-          totalCount={contacts.length}
-          accountId={user.account_id!}
-          statuses={(statuses ?? []).map((s) => ({ id: s.id, label: s.name }))}
-          owners={(owners ?? []).map((o) => ({ id: o.id, label: o.full_name }))}
-          scope={{ mode: "list", listId: list.id }}
-          currentListId={list.id}
-        />
+        <>
+          <ContactsDataTable
+            contacts={contacts}
+            totalCount={totalCount ?? contacts.length}
+            accountId={user.account_id!}
+            statuses={(statuses ?? []).map((s) => ({ id: s.id, label: s.name }))}
+            owners={(owners ?? []).map((o) => ({ id: o.id, label: o.full_name }))}
+            scope={{ mode: "list", listId: list.id }}
+            currentListId={list.id}
+          />
+          <PaginationBar page={page} pageSize={pageSize} totalCount={totalCount ?? 0} />
+        </>
       )}
     </main>
   );

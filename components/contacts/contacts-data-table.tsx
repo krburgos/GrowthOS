@@ -27,6 +27,7 @@ import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { AddToListDialog } from "@/components/lists/add-to-list-dialog";
 import { ContactsBulkToolbar, type ContactSelectionState } from "@/components/contacts/contacts-bulk-toolbar";
+import { LinkedInLogo } from "@/components/icons/linkedin-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -415,6 +416,11 @@ export function ContactsDataTable({
               <Th sticky="left-11" className="border-r border-primary-800">
                 <User className="size-3.5" /> Full Name
               </Th>
+              {show("linkedin") && (
+                <Th>
+                  <LinkedInLogo className="size-3.5" /> Person LinkedIn
+                </Th>
+              )}
               <Th>
                 <Mail className="size-3.5" /> Email
               </Th>
@@ -466,11 +472,6 @@ export function ContactsDataTable({
               {show("mobile") && (
                 <Th>
                   <Phone className="size-3.5" /> Mobile Phone
-                </Th>
-              )}
-              {show("linkedin") && (
-                <Th>
-                  <Link2 className="size-3.5" /> Person LinkedIn
                 </Th>
               )}
               {show("addr") && (
@@ -556,6 +557,35 @@ export function ContactsDataTable({
                       </div>
                     )}
                   </Td>
+                  {show("linkedin") &&
+                    (editing && draft ? (
+                      <Td>
+                        <Input
+                          placeholder="https://linkedin.com/in/…"
+                          value={draft.linkedin_url}
+                          onChange={(e) => setDraft({ ...draft, linkedin_url: e.target.value })}
+                          onKeyDown={handleDraftKeyDown}
+                          onDoubleClick={(e) => e.stopPropagation()}
+                          className="h-8 w-40"
+                        />
+                      </Td>
+                    ) : (
+                      <Td>
+                        {c.linkedin_url ? (
+                          <a
+                            href={c.linkedin_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={`${c.full_name}'s LinkedIn`}
+                            className="flex size-7 items-center justify-center rounded-full bg-secondary-50 text-secondary-700 transition-colors hover:bg-secondary-700 hover:text-white"
+                          >
+                            <LinkedInLogo className="size-3.5" />
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </Td>
+                    ))}
                   <Td>
                     {editing && draft ? (
                       <Input
@@ -726,35 +756,6 @@ export function ContactsDataTable({
                       </Td>
                     ) : (
                       <Td className="whitespace-nowrap">{c.phone ?? "—"}</Td>
-                    ))}
-                  {show("linkedin") &&
-                    (editing && draft ? (
-                      <Td>
-                        <Input
-                          placeholder="https://linkedin.com/in/…"
-                          value={draft.linkedin_url}
-                          onChange={(e) => setDraft({ ...draft, linkedin_url: e.target.value })}
-                          onKeyDown={handleDraftKeyDown}
-                          onDoubleClick={(e) => e.stopPropagation()}
-                          className="h-8 w-40"
-                        />
-                      </Td>
-                    ) : (
-                      <Td>
-                        {c.linkedin_url ? (
-                          <a
-                            href={c.linkedin_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            aria-label={`${c.full_name}'s LinkedIn`}
-                            className="flex size-7 items-center justify-center rounded-full bg-secondary-50 text-secondary-700 transition-colors hover:bg-secondary-700 hover:text-white"
-                          >
-                            <Link2 className="size-3.5" />
-                          </a>
-                        ) : (
-                          "—"
-                        )}
-                      </Td>
                     ))}
                   {show("addr") && <Td className="whitespace-nowrap">{c.companies?.address_line1 ?? "—"}</Td>}
                   {show("city") && <Td className="whitespace-nowrap">{c.companies?.city ?? "—"}</Td>}

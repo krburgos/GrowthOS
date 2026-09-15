@@ -1,6 +1,22 @@
 "use client";
 
-import { Archive, ArrowDown, ArrowUp, MoreVertical, Pencil, Plus } from "lucide-react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Archive, GripVertical, MoreVertical, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -27,9 +43,11 @@ export interface StatusRow {
 }
 
 /**
- * App Flow §4.9, I3 — Custom Statuses. Add, rename, reorder (up/down —
- * not spec'd as drag-and-drop), retire (archive, per the soft-delete
- * rule; no status is ever hard-deleted).
+ * App Flow §4.9, I3 — Custom Statuses. Add, rename, reorder, retire
+ * (archive, per the soft-delete rule; no status is ever hard-deleted).
+ * Reorder is drag-and-drop (client-confirmed 2026-09-15, @dnd-kit/sortable
+ * — already pinned in the Tech Stack Lockfile for exactly this, just not
+ * used yet — superseding the original up/down-arrow-only spec).
  */
 export function StatusesManager({
   statuses,
@@ -50,21 +68,33 @@ export function StatusesManager({
 
   const sorted = [...statuses].sort((a, b) => a.sort_order - b.sort_order);
 
-  const move = async (index: number, direction: -1 | 1) => {
-    const other = sorted[index + direction];
-    const current = sorted[index];
-    if (!other) return;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
-    setPendingId(current.id);
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = sorted.findIndex((s) => s.id === active.id);
+    const newIndex = sorted.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(sorted, oldIndex, newIndex);
+    setPendingId(String(active.id));
     const supabase = createClient();
-    const [{ error: e1 }, { error: e2 }] = await Promise.all([
-      supabase.from("contact_statuses").update({ sort_order: other.sort_order }).eq("id", current.id),
-      supabase.from("contact_statuses").update({ sort_order: current.sort_order }).eq("id", other.id),
-    ]);
+    const results = await Promise.all(
+      reordered
+        .map((status, index) => ({ status, index }))
+        .filter(({ status, index }) => status.sort_order !== index)
+        .map(({ status, index }) => supabase.from("contact_statuses").update({ sort_order: index }).eq("id", status.id))
+    );
     setPendingId(null);
 
-    if (e1 || e2) {
-      toast.error(e1?.message ?? e2?.message ?? "Couldn't reorder.");
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      toast.error(failed.error.message);
       return;
     }
     router.refresh();
@@ -139,69 +169,25 @@ export function StatusesManager({
         </Button>
       )}
 
-      <ul className="flex flex-col divide-y divide-neutral-100 rounded-md border border-neutral-200">
-        {sorted.map((status, index) => (
-          <li key={status.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-            <span className="text-body text-neutral-800">
-              {status.name}
-              {status.is_default && (
-                <span className="ml-2 text-caption text-neutral-400">Default</span>
-              )}
-            </span>
-            {canEdit && (
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  disabled={index === 0 || pendingId === status.id}
-                  onClick={() => move(index, -1)}
-                  className="flex size-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 disabled:opacity-30"
-                  aria-label={`Move ${status.name} up`}
-                >
-                  <ArrowUp className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  disabled={index === sorted.length - 1 || pendingId === status.id}
-                  onClick={() => move(index, 1)}
-                  className="flex size-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 disabled:opacity-30"
-                  aria-label={`Move ${status.name} down`}
-                >
-                  <ArrowDown className="size-4" />
-                </button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex size-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100"
-                      aria-label={`More actions for ${status.name}`}
-                    >
-                      <MoreVertical className="size-4" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        setRenameTarget(status);
-                        setRenameValue(status.name);
-                      }}
-                    >
-                      <Pencil className="mr-2 size-4 text-neutral-400" />
-                      Rename
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-error-700 data-[highlighted]:bg-error-50"
-                      onSelect={() => setRetireTarget(status)}
-                    >
-                      <Archive className="mr-2 size-4" />
-                      Retire
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <SortableContext items={sorted.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+          <ul className="flex flex-col divide-y divide-neutral-100 rounded-md border border-neutral-200">
+            {sorted.map((status) => (
+              <SortableStatusRow
+                key={status.id}
+                status={status}
+                canEdit={canEdit}
+                pending={pendingId === status.id}
+                onRename={() => {
+                  setRenameTarget(status);
+                  setRenameValue(status.name);
+                }}
+                onRetire={() => setRetireTarget(status)}
+              />
+            ))}
+          </ul>
+        </SortableContext>
+      </DndContext>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
@@ -275,5 +261,71 @@ export function StatusesManager({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function SortableStatusRow({
+  status,
+  canEdit,
+  pending,
+  onRename,
+  onRetire,
+}: {
+  status: StatusRow;
+  canEdit: boolean;
+  pending: boolean;
+  onRename: () => void;
+  onRetire: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: status.id });
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={"flex items-center justify-between gap-3 px-4 py-2.5 bg-white" + (isDragging ? " relative z-10 shadow-md" : "")}
+    >
+      <div className="flex items-center gap-3">
+        {canEdit && (
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            disabled={pending}
+            className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 active:cursor-grabbing disabled:opacity-30"
+            aria-label={`Drag to reorder ${status.name}`}
+          >
+            <GripVertical className="size-4" />
+          </button>
+        )}
+        <span className="text-body text-neutral-800">
+          {status.name}
+          {status.is_default && <span className="ml-2 text-caption text-neutral-400">Default</span>}
+        </span>
+      </div>
+      {canEdit && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex size-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100"
+              aria-label={`More actions for ${status.name}`}
+            >
+              <MoreVertical className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={onRename}>
+              <Pencil className="mr-2 size-4 text-neutral-400" />
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-error-700 data-[highlighted]:bg-error-50" onSelect={onRetire}>
+              <Archive className="mr-2 size-4" />
+              Retire
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </li>
   );
 }

@@ -40,7 +40,7 @@ export function AssignOwnerDialog({
 
   const handleSubmit = async () => {
     if (!ownerId) {
-      toast.error("Choose an owner.");
+      toast.error("Choose a salesperson.");
       return;
     }
     setPending(true);
@@ -71,7 +71,7 @@ export function AssignOwnerDialog({
         </DialogHeader>
         <Select value={ownerId} onValueChange={setOwnerId}>
           <SelectTrigger>
-            <SelectValue placeholder="Choose an owner…" />
+            <SelectValue placeholder="Choose a salesperson…" />
           </SelectTrigger>
           <SelectContent>
             {owners.map((o) => (

@@ -5,8 +5,10 @@ import Link from "next/link";
 import { ContactsDataTable } from "@/components/contacts/contacts-data-table";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import type { ContactListRow } from "@/lib/contacts/types";
+import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Contacts — GrowthOS" };
@@ -31,14 +33,15 @@ const SORT_COLUMNS: Record<string, string> = {
 export default async function ContactsListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; dir?: string }>;
+  searchParams: Promise<{ sort?: string; dir?: string; page?: string; pageSize?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const { sort, dir } = await searchParams;
+  const { sort, dir, ...pageParams } = await searchParams;
   const sortColumn = SORT_COLUMNS[sort ?? "updated_at"] ?? "updated_at";
   const ascending = dir !== "desc";
+  const { page, pageSize, from, to } = parsePagination(pageParams);
 
   const supabase = await createClient();
   const [{ data: rows }, { count: totalCount }, { data: statuses }, { data: owners }] = await Promise.all([
@@ -50,7 +53,7 @@ export default async function ContactsListPage({
       .eq("account_id", user.account_id)
       .is("archived_at", null)
       .order(sortColumn, { ascending, referencedTable: sortColumn.includes("(") ? sortColumn.split("(")[0] : undefined })
-      .limit(100),
+      .range(from, to),
     supabase
       .from("contacts")
       .select("*", { count: "exact", head: true })
@@ -130,14 +133,17 @@ export default async function ContactsListPage({
       {contacts.length === 0 ? (
         <EmptyState icon={Users} />
       ) : (
-        <ContactsDataTable
-          contacts={contacts}
-          totalCount={totalCount ?? contacts.length}
-          accountId={user.account_id!}
-          statuses={(statuses ?? []).map((s) => ({ id: s.id, label: s.name }))}
-          owners={(owners ?? []).map((o) => ({ id: o.id, label: o.full_name }))}
-          scope={{ mode: "all-contacts", accountId: user.account_id! }}
-        />
+        <>
+          <ContactsDataTable
+            contacts={contacts}
+            totalCount={totalCount ?? contacts.length}
+            accountId={user.account_id!}
+            statuses={(statuses ?? []).map((s) => ({ id: s.id, label: s.name }))}
+            owners={(owners ?? []).map((o) => ({ id: o.id, label: o.full_name }))}
+            scope={{ mode: "all-contacts", accountId: user.account_id! }}
+          />
+          <PaginationBar page={page} pageSize={pageSize} totalCount={totalCount ?? 0} />
+        </>
       )}
     </main>
   );

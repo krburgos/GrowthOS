@@ -3,7 +3,9 @@ import Link from "next/link";
 
 import { CampaignsTable, type CampaignRow } from "@/components/campaigns/campaigns-table";
 import { Button } from "@/components/ui/button";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Campaigns — GrowthOS" };
@@ -16,11 +18,21 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro
  * 2026-09-08): navy-header table matching every other list screen,
  * open/click rate as compact inline meters, a KPI strip above it
  * mirroring the Dashboard/Company Detail stat-row pattern.
+ *
+ * Pagination (2026-09-15): the KPI strip's averages/counts are computed
+ * from every campaign, not just the current page, so the page slice is
+ * applied only to what `CampaignsTable` renders -- same reasoning as
+ * Companies/Lists Index's own JS-sort-then-slice.
  */
-export default async function CampaignsPage() {
+export default async function CampaignsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; pageSize?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) return null;
 
+  const { page, pageSize, from, to } = parsePagination(await searchParams);
   const supabase = await createClient();
 
   const { data: campaignRows } = await supabase
@@ -103,7 +115,8 @@ export default async function CampaignsPage() {
         </div>
       </div>
 
-      <CampaignsTable campaigns={campaigns} />
+      <CampaignsTable campaigns={campaigns.slice(from, to + 1)} />
+      <PaginationBar page={page} pageSize={pageSize} totalCount={campaigns.length} />
     </main>
   );
 }
