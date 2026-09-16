@@ -73,6 +73,8 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 | A4 | Auth | Accept Invite / Set Password (new user) | Public (tokened link) |
 | B1 | Onboarding | Onboarding Profile Wizard | New MSP Owner, first login |
 | C1 | Dashboard | Dashboard (Home) | All MSP roles |
+| C2 | GOS Dashboard | GOS Dashboard (client-confirmed addition, 2026-09-16, **mockup only**) — 14 GrowthOS Playbook steps as clickable cards, sits directly below Dashboard in the sidebar | All roles, full access (no restriction while mockup-only) |
+| C3 | GOS Dashboard | Playbook Step Detail — SEO/GEO get a tabbed Status Report / Suggestions & Fixes / Progress Tracker; the other 12 steps show Duties + KPIs only | All roles, full access (no restriction while mockup-only) |
 | D1 | Contacts | Contacts List | All MSP roles |
 | D2 | Contacts | Contact Detail (tabs: Overview, Activity, Opportunities, Emails) | All MSP roles |
 | D3 | Contacts | Add Contact (manual) | Owner, Admin, Marketing |
@@ -132,6 +134,14 @@ The landing screen after login, in priority order:
 Empty and loading states: see §6.
 
 **Client-confirmed layout, "Concept B — Command Center" (approved mockup, 2026-09-08):** built as a KPI strip first (the convention most CRM home screens open with), then Pipeline by Stage and Recent Activity in a wide left column, with Tasks/Follow-ups Due pulled into a permanently visible highlighted rail on the right instead of this section's literal top-of-page slot — still the first thing the eye lands on, via placement/color rather than document order. "This week" is a trailing 7-day window, not a Sunday/Monday calendar week (neither document specifies one). Campaign Sends shows "—" until Campaigns (Milestone 10) exists, the same placeholder convention already used for Bounced on the Contacts table.
+
+### 4.3a GOS Dashboard (C2–C3)
+
+**Client-confirmed addition (2026-09-16), mockup only.** A new top-level sidebar item, "GOS Dashboard," directly below Dashboard — sourced from "GrowthOS Playbook - Dev Plan.docx" rather than any of the six core spec documents, since the Playbook itself is new scope the client introduced in this session, not something PRD/App Flow/Implementation Plan had previously accounted for. Flagging per this repo's own rule for new scope: there is no backend table behind this yet, no RLS, and no wiring into real reporting data — client-confirmed this pass is presentation only, to validate the concept before any backend work is scoped.
+
+**GOS Dashboard (C2)** renders the Playbook's 14 numbered steps (SEO, GEO, Blogging & Content Development, Social Media, Website Oversight, ICP Development, List Building, Email Campaigning, CRM Administration, Opportunity Pipeline Metrics, Reviews & Testimonies, Events, SDR Outreach, Sales Enablement) as a flat grid of clickable cards — client-confirmed flat, not grouped by the Playbook's own 4 phases (Foundation & Visibility / Pipeline & Outbound Engine / Authority, Trust & Demand Creation / SDR Outreach & Sales Execution), though each card still shows its phase as a label. Every card shows a status pill (On Track / Ahead of Schedule / Needs Attention) and one headline stat — all illustrative sample data, clearly banner-labeled on the page as a mockup not yet connected to live reporting.
+
+**Playbook Step Detail (C3).** The source doc only spells out a "GrowthOS Dashboard" sub-shape — status report, suggestions/fixes list, quarterly progress tracker — for step 1 (SEO) and step 2 (GEO); client-confirmed (2026-09-16) those two steps alone get that as three tabs, while the other 12 steps open straight to their Duties (as a plain list — deliberately not checkboxes, since these are ongoing recurring services, not one-time tasks to mark done) and KPIs (as a stat grid, each showing the doc's own target range). Full access for every role while this is mockup-only (client-confirmed 2026-09-16) — a role/RLS pass is future scope once this becomes a real feature.
 
 **Client-confirmed rename (2026-09-15):** "Pipeline by Stage" is now labeled "Opportunities by Stage" on the actual Dashboard — a copy-only change, same component and data. Kept as "Pipeline by Stage" in the narrative above and elsewhere in this document where it describes the mockup as originally approved.
 

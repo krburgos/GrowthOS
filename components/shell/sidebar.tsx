@@ -5,6 +5,7 @@ import {
   Building2,
   ChevronLeft,
   LayoutDashboard,
+  LayoutGrid,
   ListChecks,
   Mail,
   Settings,
@@ -20,7 +21,7 @@ import type { NavAccess, NavSection } from "@/lib/auth/nav-permissions";
 import { cn } from "@/lib/utils";
 
 export interface NavItem {
-  section: NavSection | "dashboard";
+  section: NavSection | "dashboard" | "gosDashboard";
   label: string;
   href: string;
   /** Path prefix used to compute the active state, when it differs from
@@ -34,6 +35,7 @@ export interface NavItem {
  * destination list rather than maintaining a second, drift-prone copy. */
 export const NAV_ITEMS: NavItem[] = [
   { section: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { section: "gosDashboard", label: "GOS Dashboard", href: "/gos-dashboard", icon: LayoutGrid },
   { section: "contacts", label: "Contacts", href: "/contacts", icon: Users },
   { section: "companies", label: "Companies", href: "/companies", icon: Building2 },
   { section: "opportunities", label: "Opportunities", href: "/opportunities", icon: Target },
@@ -98,7 +100,8 @@ export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
     >
       <nav className="flex flex-col gap-1 px-3">
         {NAV_ITEMS.map((item) => {
-          const itemAccess: NavAccess = item.section === "dashboard" ? "full" : access[item.section];
+          const itemAccess: NavAccess =
+            item.section === "dashboard" || item.section === "gosDashboard" ? "full" : access[item.section];
           const disabled = itemAccess === "disabled";
           const matchAgainst = item.matchPrefix ?? item.href;
           const active = pathname === matchAgainst || pathname.startsWith(`${matchAgainst}/`);
