@@ -7,14 +7,13 @@ import { getStepOverviews } from "@/lib/gos-dashboard/queries";
 export const metadata: Metadata = { title: "GOS Dashboard — GrowthOS" };
 
 /**
- * GOS Dashboard (new, 2026-09-16, mockup only) — sits directly below
- * Dashboard in the main sidebar, visible to every role for this pass
- * (client-confirmed). Renders the 14 GrowthOS Playbook steps as a flat
- * grid of clickable cards (client-confirmed: flat, not grouped by phase),
- * each linking to /gos-dashboard/[slug]. Every stat, status, and tracker
- * value on this page and its detail pages is illustrative sample data —
- * there's no backend table behind this yet, deliberately, since this pass
- * is mockups only (client-confirmed 2026-09-16).
+ * GOS Dashboard (2026-09-16) — sits directly below Dashboard in the main
+ * sidebar, visible to every role. Renders the 14 GrowthOS Playbook steps
+ * as a flat grid of clickable cards (client-confirmed: flat, not grouped
+ * by phase), each linking to /gos-dashboard/[slug]. Step identity (title,
+ * icon, phase, duties) lives in app code at lib/gos-dashboard/playbook.ts;
+ * the status pill and headline stat on each card are real per-account data
+ * read from the gos_dashboard_* tables (Backend Schema §6.6c).
  */
 export default async function GosDashboardPage() {
   const user = await getCurrentUser();
@@ -27,9 +26,6 @@ export default async function GosDashboardPage() {
         <p className="max-w-[70ch] text-body text-neutral-500">
           The GrowthOS Playbook, tracked step by step — 4 phases, 14 workstreams from SEO and GEO through SDR
           outreach. Click into any card for its status report, duties, and KPIs.
-        </p>
-        <p className="mt-1 text-caption font-semibold uppercase tracking-wide text-warning-700">
-          Mockup — sample data, not yet connected to live reporting
         </p>
       </div>
 

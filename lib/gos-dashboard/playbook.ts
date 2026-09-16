@@ -1,16 +1,19 @@
 /**
- * GrowthOS Dashboard (GOS Dashboard) — mockup-only, client-confirmed
- * addition (2026-09-16). Sourced from "GrowthOS Playbook - Dev Plan.docx":
- * 4 phases, 14 numbered steps, each with its own Duties and KPIs. The doc
- * only spells out a "GrowthOS Dashboard" sub-shape (status report,
+ * GrowthOS Dashboard (GOS Dashboard) — client-confirmed addition
+ * (2026-09-16). Sourced from "GrowthOS Playbook - Dev Plan.docx": 4 phases,
+ * 14 numbered steps, each with its own Duties and KPIs. The doc only
+ * spells out a "GrowthOS Dashboard" sub-shape (status report,
  * suggestions/fixes list, progress tracker) for step 1 (SEO) and step 2
  * (GEO) — client-confirmed (2026-09-16) the other 12 steps stay simpler
  * (Duties + KPIs only, no report/suggestions/tracker tabs).
  *
- * This is presentation-only: every number, status, and tracker value below
- * is illustrative sample data (client-confirmed 2026-09-16), not read from
- * any real integration. Nothing here is persisted — there's no backend
- * table for this yet, deliberately, since this pass is mockups only.
+ * This file holds only the static shape of the 14 steps — identity, title,
+ * icon, phase, duties, and which steps get the SEO/GEO 3-tab treatment.
+ * The per-account values (status, headline stat, KPIs, status report
+ * summary, suggestions, tracker progress) live in the `gos_dashboard_*`
+ * tables (Backend Schema §6.6c) and are read via lib/gos-dashboard/queries.ts
+ * — the same "structure in code, data in DB" split used by
+ * lib/questionnaire/questions.ts and lib/vision-board/sections.ts.
  */
 
 export type PlaybookStatus = "on_track" | "ahead" | "needs_attention";

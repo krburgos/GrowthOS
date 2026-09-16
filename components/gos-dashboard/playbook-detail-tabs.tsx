@@ -36,11 +36,21 @@ function EditableSummary({
   const save = async () => {
     setSaving(true);
     const supabase = createClient();
-    const { error } = await supabase
-      .from("gos_dashboard_step_status")
-      .update({ status_report_summary: summary || null })
-      .eq("account_id", accountId)
-      .eq("step_slug", stepSlug);
+    // Upsert (matching EditOverviewPanel's pattern) rather than update — a
+    // step nobody has touched yet has no gos_dashboard_step_status row, so
+    // a plain .update() would match zero rows and silently no-op. Only
+    // account_id/step_slug/status_report_summary are in the payload, so on
+    // an existing row PostgREST's ON CONFLICT DO UPDATE only sets that one
+    // column — status/headline_label/headline_value (owned by
+    // EditOverviewPanel) are left untouched.
+    const { error } = await supabase.from("gos_dashboard_step_status").upsert(
+      {
+        account_id: accountId,
+        step_slug: stepSlug,
+        status_report_summary: summary || null,
+      },
+      { onConflict: "account_id,step_slug" }
+    );
     setSaving(false);
     if (error) {
       toast.error(getFriendlyErrorMessage(error));
