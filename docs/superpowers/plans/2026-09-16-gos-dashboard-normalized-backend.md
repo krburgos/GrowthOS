@@ -527,7 +527,7 @@ git commit -m "Wire GOS Dashboard step detail page to live per-account data"
 
 **Interfaces:**
 - Consumes: `StepDetail` from Task 2; the browser Supabase client (`createClient` from `@/lib/supabase/client`, same import `vision-board-wizard.tsx` uses).
-- Produces: `EditOverviewPanel({ accountId, slug, initialStatus, initialHeadline, canEdit }: {...})` and `EditKpiList({ accountId, slug, initialKpis, canEdit }: {...})` — both self-contained (own `useState`, own save-to-Supabase call), so the detail page just conditionally renders read vs. edit version without owning any form state itself.
+- Produces: `EditOverviewPanel({ accountId, stepSlug, initialStatus, initialHeadline, canEdit }: {...})` and `EditKpiList({ accountId, stepSlug, initialKpis, canEdit }: {...})` — both self-contained (own `useState`, own save-to-Supabase call), so the detail page just conditionally renders read vs. edit version without owning any form state itself.
 
 - [ ] **Step 1: Write `EditOverviewPanel`**
 
@@ -623,7 +623,110 @@ export function EditOverviewPanel({
 
 - [ ] **Step 2: Write `EditKpiList`**
 
-Adapt `ListFieldInput` from `components/settings/vision-board-wizard.tsx:69-139`: same add/remove-row shape, but each row holds `{ label, value, target }` (3 `Input`s per row) instead of one string. On add/remove, call `supabase.from("gos_dashboard_kpis").insert({...})` or `.update({ archived_at: new Date().toISOString() }).eq("id", rowId)` immediately per action (no separate Save button — matches the immediate-persist pattern the rest of this app's list-management screens use, e.g. `components/settings/statuses-manager.tsx`), rather than batching into one save.
+Same immediate-persist pattern as `components/settings/statuses-manager.tsx` (no separate Save button — each add/remove writes straight to Supabase), adapted from `ListFieldInput`'s add/remove-row shape in `components/settings/vision-board-wizard.tsx:69-139` but with 3 fields per row instead of 1:
+
+```typescript
+"use client";
+
+import { X } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
+import type { KpiStat } from "@/lib/gos-dashboard/playbook";
+import { createClient } from "@/lib/supabase/client";
+import { KpiGrid } from "@/components/gos-dashboard/kpi-grid";
+
+interface KpiRow extends KpiStat {
+  id: string;
+}
+
+export function EditKpiList({
+  accountId,
+  stepSlug,
+  initialKpis,
+  canEdit,
+}: {
+  accountId: string;
+  stepSlug: string;
+  initialKpis: (KpiStat & { id: string })[];
+  canEdit: boolean;
+}) {
+  const [rows, setRows] = useState<KpiRow[]>(initialKpis);
+  const [label, setLabel] = useState("");
+  const [value, setValue] = useState("");
+  const [target, setTarget] = useState("");
+
+  if (!canEdit) {
+    return <KpiGrid kpis={rows} />;
+  }
+
+  const add = async () => {
+    if (!label.trim() || !value.trim()) return;
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("gos_dashboard_kpis")
+      .insert({ account_id: accountId, step_slug: stepSlug, label, value, target: target || null })
+      .select("id, label, value, target")
+      .single();
+    if (error || !data) {
+      toast.error(getFriendlyErrorMessage(error));
+      return;
+    }
+    setRows((prev) => [...prev, { id: data.id, label: data.label, value: data.value, target: data.target ?? undefined }]);
+    setLabel("");
+    setValue("");
+    setTarget("");
+  };
+
+  const remove = async (id: string) => {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("gos_dashboard_kpis")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast.error(getFriendlyErrorMessage(error));
+      return;
+    }
+    setRows((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {rows.map((row) => (
+          <div key={row.id} className="relative rounded-lg border border-neutral-200 bg-white p-3.5">
+            <button
+              type="button"
+              aria-label="Remove"
+              onClick={() => remove(row.id)}
+              className="absolute right-2 top-2 text-neutral-400 hover:text-error-700"
+            >
+              <X className="size-3.5" />
+            </button>
+            <p className="text-h4 font-bold tabular-nums text-primary-900">{row.value}</p>
+            <p className="mt-0.5 text-caption text-neutral-500">{row.label}</p>
+            {row.target && <p className="mt-1 text-caption font-medium text-secondary-700">Target: {row.target}</p>}
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-neutral-300 p-3">
+        <Input placeholder="Label" value={label} onChange={(e) => setLabel(e.target.value)} className="w-40" />
+        <Input placeholder="Value" value={value} onChange={(e) => setValue(e.target.value)} className="w-28" />
+        <Input placeholder="Target (optional)" value={target} onChange={(e) => setTarget(e.target.value)} className="w-40" />
+        <Button type="button" variant="secondary" size="sm" onClick={add}>
+          + Add KPI
+        </Button>
+      </div>
+    </div>
+  );
+}
+```
+
+Note this requires `getStepDetail` (Task 2) to select and return each KPI row's `id`, not just `label`/`value`/`target` — go back and add `id` to the `KpiStat` returned for `StepDetail.kpis` specifically (`StepOverview.headline` and `statusReportStats` stay id-less, they're never individually removable): in `lib/gos-dashboard/queries.ts`, change the `kpis` select to `"id, label, value, target"` and the map to include `id: r.id`, and widen `StepDetail`'s `kpis` field type to `(KpiStat & { id: string })[]`.
 
 - [ ] **Step 3: Wire both into the detail page behind `canEdit`**
 
@@ -693,30 +796,79 @@ git commit -m "Add CRO Leader edit UI for GOS Dashboard status and KPIs"
 ## Task 6: CRO Leader edit UI — status report, suggestions, tracker (SEO/GEO only)
 
 **Files:**
-- Modify: `components/gos-dashboard/playbook-detail-tabs.tsx` — accept a `canEdit` prop; each tab renders an edit affordance (textarea for the summary, add/remove rows for stats/suggestions/tracker) instead of the plain display when true.
-- Modify: `app/(app)/(msp-shell)/gos-dashboard/[slug]/page.tsx` — pass `canEdit` through to `PlaybookDetailTabs`.
+- Modify: `lib/gos-dashboard/queries.ts` — `getStepDetail`'s `suggestions` and `tracker` arrays need each row's `id` (same reasoning as Task 5's KPI `id` amendment — `statusReportStats` does NOT need `id`, since this task never makes individual stat rows removable, only the summary text as a whole). Select `"id, title, priority, detail"` for suggestions and `"id, label, percent_complete"` for tracker items; widen `StepDetail.suggestions` to `(SuggestionItem & { id: string })[]` and `StepDetail.tracker` to `(TrackerItem & { id: string })[]`.
+- Modify: `components/gos-dashboard/playbook-detail-tabs.tsx` — add `accountId`, `stepSlug`, `canEdit` props; each tab renders an edit affordance instead of the plain display when `canEdit` is true.
+- Modify: `app/(app)/(msp-shell)/gos-dashboard/[slug]/page.tsx` — pass `accountId`, `stepSlug`, `canEdit` through to `PlaybookDetailTabs`.
 
 **Interfaces:**
-- Consumes: `canEdit` from Task 5; the same `createClient` browser-write pattern.
-- Produces: no new exports outside this component — this task is purely additive editing behavior on the existing `PlaybookDetailTabs`.
+- Consumes: `canEdit` from Task 5; the `id`-bearing `StepDetail.suggestions`/`StepDetail.tracker` this task adds to Task 2's queries.
+- Produces: `PlaybookDetailTabs` now takes `{ accountId: string; stepSlug: string; statusReportSummary: string | null; statusReportStats: KpiStat[]; suggestions: (SuggestionItem & { id: string })[]; tracker: (TrackerItem & { id: string })[]; canEdit: boolean }` — the `statusReportSummary`/`statusReportStats` fields are unchanged from Task 4, `suggestions`/`tracker` are now the widened, `id`-bearing shape, and `accountId`/`stepSlug`/`canEdit` are new.
 
 - [ ] **Step 1: Add summary editing to the Status Report tab**
 
-Add local state seeded from `statusReportSummary`, a `textarea` + "Save" button visible only when `canEdit`, writing via `supabase.from("gos_dashboard_step_status").update({ status_report_summary: value }).eq("account_id", accountId).eq("step_slug", stepSlug)`. Read-only viewers keep seeing the plain paragraph exactly as today.
+Inside `PlaybookDetailTabs`, seed local state from the `statusReportSummary` prop and render a `textarea` + "Save" button in place of the plain paragraph when `canEdit`:
+```typescript
+function EditableSummary({
+  accountId,
+  stepSlug,
+  initialSummary,
+}: {
+  accountId: string;
+  stepSlug: string;
+  initialSummary: string | null;
+}) {
+  const [summary, setSummary] = useState(initialSummary ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("gos_dashboard_step_status")
+      .update({ status_report_summary: summary || null })
+      .eq("account_id", accountId)
+      .eq("step_slug", stepSlug);
+    setSaving(false);
+    if (error) {
+      toast.error(getFriendlyErrorMessage(error));
+      return;
+    }
+    toast.success("Saved.");
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <textarea
+        className="h-24 w-full resize-y rounded-md border border-neutral-300 px-3 py-2 text-body-sm"
+        value={summary}
+        onChange={(e) => setSummary(e.target.value)}
+      />
+      <Button type="button" size="sm" onClick={save} disabled={saving} className="self-end">
+        {saving ? "Saving…" : "Save"}
+      </Button>
+    </div>
+  );
+}
+```
+In the "Status Report" tab body, replace Task 4's ternary (`{statusReportSummary ? <p ...>{statusReportSummary}</p> : <p ...>No status report yet.</p>}`) with: `{canEdit ? <EditableSummary accountId={accountId} stepSlug={stepSlug} initialSummary={statusReportSummary} /> : statusReportSummary ? <p ...>{statusReportSummary}</p> : <p className="text-body-sm text-neutral-400">No status report yet.</p>}`. Read-only viewers keep seeing exactly Task 4's rendering, now nested under the new condition's `else` branch.
 
 - [ ] **Step 2: Add row add/remove to Suggestions & Fixes and Progress Tracker tabs**
 
-Same immediate-persist pattern as `EditKpiList` (Task 5, Step 2): an "+ Add" row at the bottom of each tab when `canEdit`, each existing row gets a remove (×) button that sets `archived_at`. Suggestion rows: title/priority (a `<select>` of `high`/`medium`/`low`)/detail. Tracker rows: label + a percent number input (0–100).
+Same immediate-persist pattern as `EditKpiList` (Task 5, Step 2: insert on add, `archived_at` update on remove, no batch Save). In the "Suggestions & Fixes" tab, when `canEdit`, render each existing row with a remove (×) button (`onClick` → `supabase.from("gos_dashboard_suggestions").update({ archived_at: new Date().toISOString() }).eq("id", row.id)`, then filter it out of local state) and an add-row form below the list with 3 inputs — title (`Input`), priority (`<select>` of `high`/`medium`/`low`), detail (`Input`) — whose submit does `supabase.from("gos_dashboard_suggestions").insert({ account_id: accountId, step_slug: stepSlug, title, priority, detail }).select("id, title, priority, detail").single()` and appends the returned row to local state. In the "Progress Tracker" tab, same shape but 2 inputs (label `Input`, percent a `<input type="number" min={0} max={100}>`) writing to `gos_dashboard_tracker_items` with `percent_complete` instead of `value`/`target`. Both tabs keep their existing read-only rendering (progress bar / suggestion card) when `!canEdit`.
 
-- [ ] **Step 3: `tsc --noEmit`, then manual browser check**
+- [ ] **Step 3: Update the detail page call site**
+
+In `app/(app)/(msp-shell)/gos-dashboard/[slug]/page.tsx`, add the 3 new props to the existing `<PlaybookDetailTabs>` call (already present from Task 4/5): `accountId={user.account_id}`, `stepSlug={step.slug}`, `canEdit={canEdit}` alongside the existing `statusReportSummary`/`statusReportStats`/`suggestions`/`tracker` props.
+
+- [ ] **Step 4: `tsc --noEmit`, then manual browser check**
 
 Run: `npx tsc --noEmit -p .` — expected clean.
-Manual check: as `cro_admin`, add a suggestion and a tracker row to SEO, refresh, confirm both persist and the tracker bar renders at the entered percentage. As `msp_owner`, confirm the same tab shows the new rows read-only, no add/remove controls.
+Manual check: as `cro_admin`, add a suggestion and a tracker row to SEO, refresh, confirm both persist and the tracker bar renders at the entered percentage; remove one of each and confirm it disappears after refresh too (soft-deleted, not just hidden client-side — re-check via `mcp__supabase__execute_sql` that the row still exists with `archived_at` set, not gone). As `msp_owner`, confirm the same tab shows the surviving rows read-only, no add/remove controls.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add components/gos-dashboard/playbook-detail-tabs.tsx app/"(app)"/"(msp-shell)"/gos-dashboard/"[slug]"/page.tsx
+git add lib/gos-dashboard/queries.ts components/gos-dashboard/playbook-detail-tabs.tsx app/"(app)"/"(msp-shell)"/gos-dashboard/"[slug]"/page.tsx
 git commit -m "Add CRO Leader edit UI for GOS Dashboard status report, suggestions, and tracker"
 ```
 
