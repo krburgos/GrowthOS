@@ -1,12 +1,17 @@
 ﻿import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { PLAYBOOK_ICON } from "@/components/gos-dashboard/icon-map";
-import { StatusBadge } from "@/components/gos-dashboard/status-badge";
 import { getPhaseName } from "@/lib/gos-dashboard/playbook";
 import type { StepDetail } from "@/lib/gos-dashboard/queries";
 
-export function StepHeader({ step }: { step: StepDetail }) {
+/**
+ * `overviewSlot` renders the status badge (read-only viewers) or the
+ * EditOverviewPanel (CRO Leader edit UI, Task 5) — the detail page decides
+ * which, so this component stays agnostic of the canEdit check.
+ */
+export function StepHeader({ step, overviewSlot }: { step: StepDetail; overviewSlot: ReactNode }) {
   const Icon = PLAYBOOK_ICON[step.icon];
 
   return (
@@ -30,7 +35,7 @@ export function StepHeader({ step }: { step: StepDetail }) {
             {step.budgetNote && <p className="text-body-sm text-neutral-500">{step.budgetNote}</p>}
           </div>
         </div>
-        <StatusBadge status={step.status} />
+        {overviewSlot}
       </div>
     </div>
   );

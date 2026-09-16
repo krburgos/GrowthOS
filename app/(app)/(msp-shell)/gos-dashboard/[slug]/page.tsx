@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { DutiesList } from "@/components/gos-dashboard/duties-list";
+import { EditKpiList } from "@/components/gos-dashboard/edit-kpi-list";
+import { EditOverviewPanel } from "@/components/gos-dashboard/edit-overview-panel";
 import { KpiGrid } from "@/components/gos-dashboard/kpi-grid";
 import { PlaybookDetailTabs } from "@/components/gos-dashboard/playbook-detail-tabs";
 import { StepHeader } from "@/components/gos-dashboard/step-header";
@@ -30,9 +32,22 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
   const step = await getStepDetail(user.account_id, slug);
   if (!step) notFound();
 
+  const canEdit = user.role === "cro_admin" || user.role === "cro_advisor";
+
   return (
     <main className="mx-auto flex w-full max-w-[1000px] flex-1 flex-col gap-6 p-6 md:p-8">
-      <StepHeader step={step} />
+      <StepHeader
+        step={step}
+        overviewSlot={
+          <EditOverviewPanel
+            accountId={user.account_id}
+            stepSlug={step.slug}
+            initialStatus={step.status}
+            initialHeadline={step.headline}
+            canEdit={canEdit}
+          />
+        }
+      />
 
       {step.hasDashboardShape && (
         <PlaybookDetailTabs
@@ -50,7 +65,11 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
 
       <div>
         <h2 className="mb-3 text-h4 text-primary-900">KPIs</h2>
-        <KpiGrid kpis={step.kpis} />
+        {canEdit ? (
+          <EditKpiList accountId={user.account_id} stepSlug={step.slug} initialKpis={step.kpis} canEdit={canEdit} />
+        ) : (
+          <KpiGrid kpis={step.kpis} />
+        )}
       </div>
     </main>
   );
