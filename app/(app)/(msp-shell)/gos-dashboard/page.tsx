@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 
 import { PlaybookCard } from "@/components/gos-dashboard/playbook-card";
-import { PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { getStepOverviews } from "@/lib/gos-dashboard/queries";
 
 export const metadata: Metadata = { title: "GOS Dashboard — GrowthOS" };
 
@@ -15,7 +16,10 @@ export const metadata: Metadata = { title: "GOS Dashboard — GrowthOS" };
  * there's no backend table behind this yet, deliberately, since this pass
  * is mockups only (client-confirmed 2026-09-16).
  */
-export default function GosDashboardPage() {
+export default async function GosDashboardPage() {
+  const user = await getCurrentUser();
+  if (!user || !user.account_id) return null;
+  const steps = await getStepOverviews(user.account_id);
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-6 md:p-8">
       <div>
@@ -30,7 +34,7 @@ export default function GosDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {PLAYBOOK_STEPS.map((step) => (
+        {steps.map((step) => (
           <PlaybookCard key={step.slug} step={step} />
         ))}
       </div>

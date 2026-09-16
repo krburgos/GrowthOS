@@ -2,9 +2,10 @@ import Link from "next/link";
 
 import { PLAYBOOK_ICON } from "@/components/gos-dashboard/icon-map";
 import { StatusBadge } from "@/components/gos-dashboard/status-badge";
-import { getPhaseName, type PlaybookStep } from "@/lib/gos-dashboard/playbook";
+import { getPhaseName } from "@/lib/gos-dashboard/playbook";
+import type { StepOverview } from "@/lib/gos-dashboard/queries";
 
-export function PlaybookCard({ step }: { step: PlaybookStep }) {
+export function PlaybookCard({ step }: { step: StepOverview }) {
   const Icon = PLAYBOOK_ICON[step.icon];
 
   return (
@@ -28,12 +29,16 @@ export function PlaybookCard({ step }: { step: PlaybookStep }) {
 
       <div className="mt-auto flex items-baseline justify-between border-t border-neutral-100 pt-3">
         <div>
-          <p className="text-h4 font-bold tabular-nums text-primary-900">{step.headline.value}</p>
-          <p className="text-caption text-neutral-500">{step.headline.label}</p>
+          {step.headline ? (
+            <>
+              <p className="text-h4 font-bold tabular-nums text-primary-900">{step.headline.value}</p>
+              <p className="text-caption text-neutral-500">{step.headline.label}</p>
+            </>
+          ) : (
+            <p className="text-caption text-neutral-400">Not started yet</p>
+          )}
         </div>
-        <span className="shrink-0 text-body-sm font-semibold text-secondary-700 group-hover:underline">
-          View →
-        </span>
+        <span className="shrink-0 text-body-sm font-semibold text-secondary-700 group-hover:underline">View →</span>
       </div>
     </Link>
   );
