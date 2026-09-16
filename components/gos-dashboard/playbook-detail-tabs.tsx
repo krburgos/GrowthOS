@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 
-import type { PlaybookStep } from "@/lib/gos-dashboard/playbook";
+import type { KpiStat, SuggestionItem, TrackerItem } from "@/lib/gos-dashboard/playbook";
 import { cn } from "@/lib/utils";
 
 const TABS = ["Status Report", "Suggestions & Fixes", "Progress Tracker"] as const;
@@ -16,12 +16,23 @@ const PRIORITY_CLASSES: Record<"high" | "medium" | "low", string> = {
 };
 
 /**
- * The doc's own "GrowthOS Dashboard" sub-shape, only spelled out for SEO
- * and GEO (step.dashboard is undefined for the other 12 steps — see
- * lib/gos-dashboard/playbook.ts). Sample data only, per the mockup banner
- * on the parent page.
+ * The doc's own "GrowthOS Dashboard" sub-shape, only rendered for SEO
+ * and GEO (hasDashboardShape is true for those 2 steps, false for the
+ * other 12 — see lib/gos-dashboard/playbook.ts). Reads live per-account
+ * data from Task 2's getStepDetail. Empty states show when account has
+ * zero data entered yet (typical on new accounts).
  */
-export function PlaybookDetailTabs({ dashboard }: { dashboard: NonNullable<PlaybookStep["dashboard"]> }) {
+export function PlaybookDetailTabs({
+  statusReportSummary,
+  statusReportStats,
+  suggestions,
+  tracker,
+}: {
+  statusReportSummary: string | null;
+  statusReportStats: KpiStat[];
+  suggestions: SuggestionItem[];
+  tracker: TrackerItem[];
+}) {
   const [tab, setTab] = useState<Tab>("Status Report");
 
   return (
@@ -45,54 +56,68 @@ export function PlaybookDetailTabs({ dashboard }: { dashboard: NonNullable<Playb
       <div className="p-5">
         {tab === "Status Report" && (
           <div className="flex flex-col gap-4">
-            <p className="text-body-sm text-neutral-600">{dashboard.statusReport.summary}</p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {dashboard.statusReport.stats.map((s) => (
-                <div key={s.label} className="rounded-lg bg-neutral-50 p-3.5">
-                  <p className="text-h4 font-bold tabular-nums text-primary-900">{s.value}</p>
-                  <p className="text-caption text-neutral-500">{s.label}</p>
-                  {s.target && <p className="text-caption text-neutral-400">{s.target}</p>}
-                </div>
-              ))}
-            </div>
+            {statusReportSummary ? (
+              <p className="text-body-sm text-neutral-600">{statusReportSummary}</p>
+            ) : (
+              <p className="text-body-sm text-neutral-400">No status report yet.</p>
+            )}
+            {statusReportStats.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {statusReportStats.map((s) => (
+                  <div key={s.label} className="rounded-lg bg-neutral-50 p-3.5">
+                    <p className="text-h4 font-bold tabular-nums text-primary-900">{s.value}</p>
+                    <p className="text-caption text-neutral-500">{s.label}</p>
+                    {s.target && <p className="text-caption text-neutral-400">{s.target}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         )}
 
         {tab === "Suggestions & Fixes" && (
           <div className="flex flex-col gap-2.5">
-            {dashboard.suggestions.map((s) => (
-              <div key={s.title} className="flex items-start gap-3 rounded-lg border border-neutral-100 p-3.5">
-                <AlertCircle className="mt-0.5 size-4 shrink-0 text-neutral-400" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-body-sm font-semibold text-neutral-800">{s.title}</p>
-                    <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-caption font-semibold capitalize", PRIORITY_CLASSES[s.priority])}>
-                      {s.priority}
-                    </span>
+            {suggestions.length > 0 ? (
+              suggestions.map((s) => (
+                <div key={s.title} className="flex items-start gap-3 rounded-lg border border-neutral-100 p-3.5">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-neutral-400" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-body-sm font-semibold text-neutral-800">{s.title}</p>
+                      <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-caption font-semibold capitalize", PRIORITY_CLASSES[s.priority])}>
+                        {s.priority}
+                      </span>
+                    </div>
+                    <p className="text-caption text-neutral-500">{s.detail}</p>
                   </div>
-                  <p className="text-caption text-neutral-500">{s.detail}</p>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-body-sm text-neutral-400">Nothing added yet.</p>
+            )}
           </div>
         )}
 
         {tab === "Progress Tracker" && (
           <div className="flex flex-col gap-4">
-            {dashboard.tracker.map((item) => (
-              <div key={item.label}>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <p className="text-body-sm font-medium text-neutral-700">{item.label}</p>
-                  <p className="text-caption font-semibold tabular-nums text-neutral-500">{item.percentComplete}%</p>
+            {tracker.length > 0 ? (
+              tracker.map((item) => (
+                <div key={item.label}>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <p className="text-body-sm font-medium text-neutral-700">{item.label}</p>
+                    <p className="text-caption font-semibold tabular-nums text-neutral-500">{item.percentComplete}%</p>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-neutral-200">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-secondary-500 to-success-500"
+                      style={{ width: `${item.percentComplete}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-neutral-200">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-secondary-500 to-success-500"
-                    style={{ width: `${item.percentComplete}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-body-sm text-neutral-400">Nothing added yet.</p>
+            )}
           </div>
         )}
       </div>

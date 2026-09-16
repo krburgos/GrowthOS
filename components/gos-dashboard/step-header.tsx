@@ -1,11 +1,12 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { PLAYBOOK_ICON } from "@/components/gos-dashboard/icon-map";
 import { StatusBadge } from "@/components/gos-dashboard/status-badge";
-import { getPhaseName, type PlaybookStep } from "@/lib/gos-dashboard/playbook";
+import { getPhaseName } from "@/lib/gos-dashboard/playbook";
+import type { StepDetail } from "@/lib/gos-dashboard/queries";
 
-export function StepHeader({ step }: { step: PlaybookStep }) {
+export function StepHeader({ step }: { step: StepDetail }) {
   const Icon = PLAYBOOK_ICON[step.icon];
 
   return (

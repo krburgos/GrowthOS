@@ -1,6 +1,10 @@
-import type { KpiStat } from "@/lib/gos-dashboard/playbook";
+﻿import type { KpiStat } from "@/lib/gos-dashboard/playbook";
 
 export function KpiGrid({ kpis }: { kpis: KpiStat[] }) {
+  if (kpis.length === 0) {
+    return <p className="text-body-sm text-neutral-400">No KPIs added yet.</p>;
+  }
+
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {kpis.map((kpi) => (
