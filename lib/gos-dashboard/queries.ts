@@ -17,8 +17,8 @@ export interface StepDetail extends StepOverview {
   kpis: (KpiStat & { id: string })[];
   statusReportSummary: string | null;
   statusReportStats: KpiStat[];
-  suggestions: SuggestionItem[];
-  tracker: TrackerItem[];
+  suggestions: (SuggestionItem & { id: string })[];
+  tracker: (TrackerItem & { id: string })[];
 }
 
 export async function getStepOverviews(accountId: string): Promise<StepOverview[]> {
@@ -72,14 +72,14 @@ export async function getStepDetail(accountId: string, slug: string): Promise<St
         .order("created_at", { ascending: true }),
       supabase
         .from("gos_dashboard_suggestions")
-        .select("title, priority, detail")
+        .select("id, title, priority, detail")
         .eq("account_id", accountId)
         .eq("step_slug", slug)
         .is("archived_at", null)
         .order("created_at", { ascending: true }),
       supabase
         .from("gos_dashboard_tracker_items")
-        .select("label, percent_complete")
+        .select("id, label, percent_complete")
         .eq("account_id", accountId)
         .eq("step_slug", slug)
         .is("archived_at", null)
@@ -97,10 +97,11 @@ export async function getStepDetail(accountId: string, slug: string): Promise<St
     statusReportSummary: statusRow?.status_report_summary ?? null,
     statusReportStats: (statRows ?? []).map((r) => ({ label: r.label, value: r.value, target: r.target ?? undefined })),
     suggestions: (suggestionRows ?? []).map((r) => ({
+      id: r.id,
       title: r.title,
       priority: r.priority as SuggestionItem["priority"],
       detail: r.detail ?? "",
     })),
-    tracker: (trackerRows ?? []).map((r) => ({ label: r.label, percentComplete: r.percent_complete })),
+    tracker: (trackerRows ?? []).map((r) => ({ id: r.id, label: r.label, percentComplete: r.percent_complete })),
   };
 }

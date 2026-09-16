@@ -51,10 +51,13 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
 
       {step.hasDashboardShape && (
         <PlaybookDetailTabs
+          accountId={user.account_id}
+          stepSlug={step.slug}
           statusReportSummary={step.statusReportSummary}
           statusReportStats={step.statusReportStats}
           suggestions={step.suggestions}
           tracker={step.tracker}
+          canEdit={canEdit}
         />
       )}
 
