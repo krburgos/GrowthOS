@@ -94,6 +94,7 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 | I3 | Settings | Custom Statuses | Owner, Admin |
 | I4 | Settings | My Profile | All MSP roles (own profile only) |
 | I5 | Settings | Growth Solution Questionnaire (client-confirmed addition, 2026-09-15) | Owner, Admin edit; other MSP roles view; CRO Admin/Advisor and a granted partner get the same read+write parity they have elsewhere |
+| I5b | Settings | GrowthOS Vision Board (client-confirmed addition, 2026-09-16) — nav label "GOS Vision Board" (amended 2026-09-16, matching I5's "GOS Questionnaire" shortening), page heading "GrowthOS Vision Board" | Owner, Admin edit; other MSP roles view; CRO Admin/Advisor and a granted partner get the same read+write parity they have elsewhere |
 | J1 | CRO Leader | CRO Leader Dashboard (MSP search) — also serves as the Partner Dashboard (2026-09-08), account list scoped to grants for a partner | CRO Leader Admin, Advisor, Service Team; Partner (granted accounts only) |
 | — | CRO Leader | _(inside any MSP account, all D–I screens render with the banner from §2.5)_ | CRO Leader Admin, Advisor, Service Team; Partner |
 | K1 | System | Access Restricted (redirect target) | Any role hitting a disabled area |
@@ -134,7 +135,11 @@ Empty and loading states: see §6.
 
 **Client-confirmed rename (2026-09-15):** "Pipeline by Stage" is now labeled "Opportunities by Stage" on the actual Dashboard — a copy-only change, same component and data. Kept as "Pipeline by Stage" in the narrative above and elsewhere in this document where it describes the mockup as originally approved.
 
-**Client-confirmed addition (2026-09-15):** a full-width banner sits above the KPI strip while the account's Growth Questionnaire (§4.9, I5) is incomplete — "Complete your Growth Solution Questionnaire," a short progress line, and its own progress bar. It disappears entirely once every question is answered; nothing else on the Dashboard shifts to fill the space differently, the KPI strip just moves up.
+**Client-confirmed addition (2026-09-15):** a full-width banner sits above the KPI strip while the account's Growth Questionnaire (§4.9, I5) is incomplete — "Complete your Growth Solution Questionnaire," a short progress line, and its own progress bar.
+
+**Client-confirmed addition (2026-09-16):** a second, independent banner ("Complete your GrowthOS Vision Board," I5b) sits directly beneath the Questionnaire one — stacks regardless of either's complete/incomplete state. The notification bell (Design System §8.10) gets the same treatment: a second dropdown item, independent dot condition, both can show at once.
+
+**Client-confirmed amendment (2026-09-16):** both Dashboard banners now stay permanently visible instead of disappearing once complete — superseding the "disappears entirely" language above. Complete, each switches to a green state ("Growth Solution Questionnaire complete" / "GrowthOS Vision Board complete," "X of X answered," a check icon, "View →" instead of "Continue →") rather than vanishing; nothing else on the Dashboard shifts to fill the space either way. The notification bell dropdown is unaffected by this — it still drops its item and clears its dot once a document is complete, since a finished item genuinely needs no further action from a notification center.
 
 ### 4.4 Contacts (D1–D4)
 

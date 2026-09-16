@@ -7,6 +7,7 @@ import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-us
 import { SIDEBAR_ACCESS } from "@/lib/auth/nav-permissions";
 import { countAnswered } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
+import { countAnswered as countVisionBoardAnswered } from "@/lib/vision-board/sections";
 
 /**
  * The real sidebar + top bar shell (Design System §8.9-§8.10, App Flow
@@ -50,13 +51,22 @@ export default async function MspShellLayout({ children }: { children: React.Rea
   if (needsAccountSelection(user.role) && !user.account_id) redirect("/cro");
 
   const supabase = await createClient();
-  const { data: questionnaireResponse } = await supabase
-    .from("growth_questionnaire_responses")
-    .select("answers, completed_at")
-    .eq("account_id", user.account_id)
-    .maybeSingle();
+  const [{ data: questionnaireResponse }, { data: visionBoardResponse }] = await Promise.all([
+    supabase
+      .from("growth_questionnaire_responses")
+      .select("answers, completed_at")
+      .eq("account_id", user.account_id)
+      .maybeSingle(),
+    supabase
+      .from("vision_board_responses")
+      .select("answers, completed_at")
+      .eq("account_id", user.account_id)
+      .maybeSingle(),
+  ]);
   const questionnaireAnsweredCount = countAnswered((questionnaireResponse?.answers as Record<string, unknown>) ?? {});
   const questionnaireComplete = !!questionnaireResponse?.completed_at;
+  const visionBoardAnsweredCount = countVisionBoardAnswered((visionBoardResponse?.answers as Record<string, unknown>) ?? {});
+  const visionBoardComplete = !!visionBoardResponse?.completed_at;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -70,6 +80,8 @@ export default async function MspShellLayout({ children }: { children: React.Rea
             accountId={user.account_id!}
             questionnaireAnsweredCount={questionnaireAnsweredCount}
             questionnaireComplete={questionnaireComplete}
+            visionBoardAnsweredCount={visionBoardAnsweredCount}
+            visionBoardComplete={visionBoardComplete}
           />
           {children}
         </div>

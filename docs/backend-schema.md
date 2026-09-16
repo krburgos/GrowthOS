@@ -772,6 +772,49 @@ create trigger trg_growth_questionnaire_responses_updated_at before update on gr
 `completed_at` is set by the application (not a check constraint) once every question in `lib/questionnaire/questions.ts` has a non-null answer — it drives the Dashboard banner (App Flow §4.3) and the notification bell (§8.10 of the Design System) both disappearing, and gates the PDF export button in the wizard itself.
 
 
+### 6.6b vision_board_responses
+
+**Client-confirmed addition (2026-09-16)** — the GrowthOS Vision Board, sourced from "GrowthOS Vision Board Dev Questions.docx" (9 numbered sections + a Leadership Sign-Off). One row per account; answers live in a single `jsonb` column keyed by a stable field key defined in `lib/vision-board/sections.ts`, same reasoning as `growth_questionnaire_responses` (§6.6a) for keeping the question list as app-code rather than schema. Same RLS shape and role set, client-confirmed identical: MSP Owner/Admin write, CRO Admin/Advisor write on the MSP's behalf, a granted partner writes too, and read is account-scoped plus CRO Leader/partner.
+
+```
+create table vision_board_responses (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null unique references accounts(id),
+  answers jsonb not null default '{}'::jsonb,
+  completed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index vision_board_responses_account_id_idx on vision_board_responses(account_id);
+
+alter table vision_board_responses enable row level security;
+
+create policy vision_board_responses_select on vision_board_responses for select
+  using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
+
+create policy vision_board_responses_insert on vision_board_responses for insert
+  with check (
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin'))
+    or auth_has_any_role('cro_admin','cro_advisor')
+    or is_partner_for(account_id)
+  );
+
+create policy vision_board_responses_update on vision_board_responses for update
+  using (
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin'))
+    or auth_has_any_role('cro_admin','cro_advisor')
+    or is_partner_for(account_id)
+  );
+
+create trigger trg_vision_board_responses_updated_at before update on vision_board_responses
+  for each row execute function set_updated_at();
+```
+
+`completed_at` is set by the application once every field in `lib/vision-board/sections.ts` is answered (a "list" field counts as answered once it meets its `minItems`) — it drives the Dashboard banner and the notification bell disappearing, same rule as the Questionnaire's. The doc's "Ideal Customer Profile" sub-section isn't a field here — it's rendered read-only from the account's `growth_questionnaire_responses` answers instead of captured again, client-confirmed (2026-09-16). Its 5-question "Leadership Commitment" self-check also isn't persisted — a reflection prompt for the team ahead of sign-off, not a stored deliverable.
+
+The 8 dashboards/reports the source document promises GrowthOS will generate from a completed Vision Board (Strategic Vision Dashboard, Ideal Customer Profile Dashboard, Growth Scorecard, KPI Tracking Dashboard, Annual Growth Plan, Growth Barrier Analysis Report, AI-Powered Recommendations, Leadership Alignment Report) are explicitly **not** built. Client-confirmed (2026-09-16): finishing the wizard while complete (or reopening the page once it already is) shows a completion screen — a sign-off banner plus these 8 as a locked "Coming soon" grid, matching the approved mockup — but that's presentation only; none of the 8 actually generate anything. Building any of them is new scope for a future pass.
+
+
 ### 6.6 campaigns, campaign_recipients, campaign_events
 
 ```

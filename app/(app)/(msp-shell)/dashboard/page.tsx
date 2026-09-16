@@ -6,10 +6,12 @@ import { KpiTiles, type KpiTileData } from "@/components/dashboard/kpi-tiles";
 import { PipelineByStage, type StageCount } from "@/components/dashboard/pipeline-by-stage";
 import { RecentActivityFeed, type FeedItem } from "@/components/dashboard/recent-activity-feed";
 import { TodayTasksPanel, type DueTask } from "@/components/dashboard/today-tasks-panel";
+import { VisionBoardBanner } from "@/components/dashboard/vision-board-banner";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
 import type { StageGroup } from "@/lib/opportunities/stages";
 import { countAnswered } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
+import { countAnswered as countVisionBoardAnswered } from "@/lib/vision-board/sections";
 
 export const metadata: Metadata = { title: "Dashboard — GrowthOS" };
 
@@ -76,6 +78,7 @@ export default async function DashboardPage() {
     { data: feedRows },
     { data: taskRows },
     { data: questionnaireResponse },
+    { data: visionBoardResponse },
   ] = await Promise.all([
     supabase
       .from("opportunity_stages")
@@ -115,6 +118,7 @@ export default async function DashboardPage() {
       .order("due_at", { ascending: true })
       .limit(8),
     supabase.from("growth_questionnaire_responses").select("answers, completed_at").eq("account_id", user.account_id).maybeSingle(),
+    supabase.from("vision_board_responses").select("answers, completed_at").eq("account_id", user.account_id).maybeSingle(),
   ]);
 
   // ---- Pipeline by stage ----
@@ -170,6 +174,10 @@ export default async function DashboardPage() {
     (questionnaireResponse?.answers as Record<string, unknown>) ?? {}
   );
   const questionnaireComplete = !!questionnaireResponse?.completed_at;
+  const visionBoardAnsweredCount = countVisionBoardAnswered(
+    (visionBoardResponse?.answers as Record<string, unknown>) ?? {}
+  );
+  const visionBoardComplete = !!visionBoardResponse?.completed_at;
 
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-6 md:p-8">
@@ -180,7 +188,8 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {!questionnaireComplete && <GrowthQuestionnaireBanner answeredCount={questionnaireAnsweredCount} />}
+      <GrowthQuestionnaireBanner answeredCount={questionnaireAnsweredCount} complete={questionnaireComplete} />
+      <VisionBoardBanner answeredCount={visionBoardAnsweredCount} complete={visionBoardComplete} />
 
       <KpiTiles tiles={kpiTiles} />
 

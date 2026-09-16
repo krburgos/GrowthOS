@@ -6,11 +6,12 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
-type AccountSub = "company" | "growth_questionnaire" | "users" | "customizations";
+type AccountSub = "company" | "growth_questionnaire" | "vision_board" | "users" | "customizations";
 
 const ACCOUNT_SUB_BY_PATH: Record<string, AccountSub> = {
   "/settings/company": "company",
   "/settings/growth-questionnaire": "growth_questionnaire",
+  "/settings/vision-board": "vision_board",
   "/settings/users": "users",
   "/settings/statuses": "customizations",
   "/settings/opportunity-stages": "customizations",
@@ -34,6 +35,7 @@ const MY_PROFILE_ROWS: Row[] = [
 const ACCOUNT_SETTINGS_ROWS: (Row & { sub?: AccountSub })[] = [
   { label: "Company", href: "/settings/company", sub: "company" },
   { label: "GOS Questionnaire", href: "/settings/growth-questionnaire", sub: "growth_questionnaire" },
+  { label: "GOS Vision Board", href: "/settings/vision-board", sub: "vision_board" },
   { label: "Billing & Payments" },
   { label: "Email Auth" },
   { label: "Users", href: "/settings/users", sub: "users" },
@@ -64,6 +66,7 @@ const ACCOUNT_SUB_ROWS: Partial<Record<AccountSub, Row[]>> = {
 const ACCOUNT_SUB_TITLE: Record<AccountSub, string> = {
   company: "Company",
   growth_questionnaire: "GOS Questionnaire",
+  vision_board: "GOS Vision Board",
   users: "Users",
   customizations: "Customizations",
 };

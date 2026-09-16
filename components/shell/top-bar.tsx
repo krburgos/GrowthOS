@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ClipboardList } from "lucide-react";
+import { Bell, ClipboardList, Compass } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { NavAccess, NavSection } from "@/lib/auth/nav-permissions";
 import { TOTAL_QUESTION_COUNT } from "@/lib/questionnaire/questions";
+import { TOTAL_FIELD_COUNT } from "@/lib/vision-board/sections";
 import { createClient } from "@/lib/supabase/client";
 
 function initials(name: string) {
@@ -59,6 +60,11 @@ function initials(name: string) {
  * and the dot only renders while `questionnaireComplete` is false. Still
  * honest by the same rule that removed the old hardcoded dot — no item,
  * no dot, ever.
+ *
+ * Client-confirmed (2026-09-16) — a second, independent item for the
+ * GrowthOS Vision Board, same on/off rule as the Questionnaire's. Both
+ * can be true at once (the dropdown lists whichever are incomplete;
+ * the dot shows if either is).
  */
 export function TopBar({
   fullName,
@@ -66,6 +72,8 @@ export function TopBar({
   accountId,
   questionnaireAnsweredCount,
   questionnaireComplete,
+  visionBoardAnsweredCount,
+  visionBoardComplete,
 }: {
   fullName: string;
   /** Omitted on the CRO Leader's lightweight header (App Flow §4.10) —
@@ -76,9 +84,13 @@ export function TopBar({
   accountId?: string;
   questionnaireAnsweredCount?: number;
   questionnaireComplete?: boolean;
+  visionBoardAnsweredCount?: number;
+  visionBoardComplete?: boolean;
 }) {
   const router = useRouter();
-  const hasNotification = !questionnaireComplete && questionnaireAnsweredCount !== undefined;
+  const showQuestionnaireItem = !questionnaireComplete && questionnaireAnsweredCount !== undefined;
+  const showVisionBoardItem = !visionBoardComplete && visionBoardAnsweredCount !== undefined;
+  const hasNotification = showQuestionnaireItem || showVisionBoardItem;
 
   const handleLogout = async () => {
     // Same "viewing as" cookie cleanup as login (components/auth/login-form.tsx)
@@ -120,21 +132,42 @@ export function TopBar({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
             {hasNotification ? (
-              <DropdownMenuItem asChild className="flex items-start gap-3 py-2.5">
-                <Link href="/settings/growth-questionnaire">
-                  <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary-100 text-secondary-700">
-                    <ClipboardList className="size-4" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-body-sm font-semibold text-neutral-800">
-                      Complete your Growth Solution Questionnaire
-                    </span>
-                    <span className="block text-caption text-neutral-500">
-                      {questionnaireAnsweredCount} of {TOTAL_QUESTION_COUNT} answered — tap to continue
-                    </span>
-                  </span>
-                </Link>
-              </DropdownMenuItem>
+              <>
+                {showQuestionnaireItem && (
+                  <DropdownMenuItem asChild className="flex items-start gap-3 py-2.5">
+                    <Link href="/settings/growth-questionnaire">
+                      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary-100 text-secondary-700">
+                        <ClipboardList className="size-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-body-sm font-semibold text-neutral-800">
+                          Complete your Growth Solution Questionnaire
+                        </span>
+                        <span className="block text-caption text-neutral-500">
+                          {questionnaireAnsweredCount} of {TOTAL_QUESTION_COUNT} answered — tap to continue
+                        </span>
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {showVisionBoardItem && (
+                  <DropdownMenuItem asChild className="flex items-start gap-3 py-2.5">
+                    <Link href="/settings/vision-board">
+                      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary-100 text-secondary-700">
+                        <Compass className="size-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-body-sm font-semibold text-neutral-800">
+                          Complete your GrowthOS Vision Board
+                        </span>
+                        <span className="block text-caption text-neutral-500">
+                          {visionBoardAnsweredCount} of {TOTAL_FIELD_COUNT} answered — tap to continue
+                        </span>
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+              </>
             ) : (
               <p className="px-2 py-6 text-center text-body-sm text-neutral-400">You&apos;re all caught up.</p>
             )}
