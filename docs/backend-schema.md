@@ -815,6 +815,145 @@ create trigger trg_vision_board_responses_updated_at before update on vision_boa
 The 8 dashboards/reports the source document promises GrowthOS will generate from a completed Vision Board (Strategic Vision Dashboard, Ideal Customer Profile Dashboard, Growth Scorecard, KPI Tracking Dashboard, Annual Growth Plan, Growth Barrier Analysis Report, AI-Powered Recommendations, Leadership Alignment Report) are explicitly **not** built. Client-confirmed (2026-09-16): finishing the wizard while complete (or reopening the page once it already is) shows a completion screen — a sign-off banner plus these 8 as a locked "Coming soon" grid, matching the approved mockup — but that's presentation only; none of the 8 actually generate anything. Building any of them is new scope for a future pass.
 
 
+### 6.6c gos_dashboard_step_status, gos_dashboard_kpis, gos_dashboard_status_report_stats, gos_dashboard_suggestions, gos_dashboard_tracker_items
+
+**Client-confirmed addition (2026-09-16)** — the GOS Dashboard (App Flow §4.3a), sourced from "GrowthOS Playbook - Dev Plan.docx." Five tables hold the CRO-Leader-entered per-account values behind the Playbook's 14 steps; step identity itself — title, icon, phase, duties list, and whether a step gets the SEO/GEO three-tab shape — stays in app code at `lib/gos-dashboard/playbook.ts`, the same "structure in code, data in DB" split `growth_questionnaire_responses` (§6.6a) and `vision_board_responses` (§6.6b) use for their question/field lists. `gos_dashboard_step_status` is one row per account per step (unique on `account_id, step_slug`) holding the card's status pill, its headline stat, and — SEO/GEO only, left null for the other 12 — the Status Report tab's narrative summary; it has no `archived_at` since it's a singleton per step updated in place, not a list to retire entries from. The other four tables — `gos_dashboard_kpis`, `gos_dashboard_status_report_stats` (the SEO/GEO Status Report tab's own stat row, a different list than the KPIs grid at the bottom of the same step), `gos_dashboard_suggestions`, and `gos_dashboard_tracker_items` — are one-to-many per account+step and carry `archived_at` so individual rows can be retired without a hard delete, matching this repo's soft-delete convention. Three enums back all five tables: `gos_dashboard_step` (the 14 step slugs), `gos_dashboard_status` (`on_track` / `ahead` / `needs_attention`), and `gos_dashboard_priority` (`high` / `medium` / `low`).
+
+Unlike `growth_questionnaire_responses` and `vision_board_responses`, write access here is CRO Admin/Advisor only — the MSP account gets read-only, since this tracks CRO Leader's own service delivery, not something the MSP self-reports (client-confirmed 2026-09-16). Read keeps the same three-way pattern used everywhere else in this schema — own account, any CRO Leader role, or a granted partner (`is_partner_for`) — only the write side inverts, and there is no partner write policy on any of the five tables: a granted partner reads like everyone else but does not get the write parity they have on the Questionnaire or Vision Board.
+
+```
+create type gos_dashboard_step as enum (
+  'seo', 'geo', 'blogging-content', 'social-media', 'website-oversight',
+  'icp-development', 'list-building', 'email-campaigning', 'crm-administration',
+  'pipeline-metrics', 'reviews-testimonials', 'events', 'sdr-outreach', 'sales-enablement'
+);
+
+create type gos_dashboard_status as enum ('on_track', 'ahead', 'needs_attention');
+
+create type gos_dashboard_priority as enum ('high', 'medium', 'low');
+
+create table gos_dashboard_step_status (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references accounts(id),
+  step_slug gos_dashboard_step not null,
+  status gos_dashboard_status not null default 'on_track',
+  headline_label text,
+  headline_value text,
+  status_report_summary text,
+  updated_by uuid references users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (account_id, step_slug)
+);
+create index gos_dashboard_step_status_account_id_idx on gos_dashboard_step_status(account_id);
+
+create table gos_dashboard_kpis (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references accounts(id),
+  step_slug gos_dashboard_step not null,
+  label text not null,
+  value text not null,
+  target text,
+  archived_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index gos_dashboard_kpis_account_step_idx on gos_dashboard_kpis(account_id, step_slug);
+
+create table gos_dashboard_status_report_stats (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references accounts(id),
+  step_slug gos_dashboard_step not null,
+  label text not null,
+  value text not null,
+  target text,
+  archived_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index gos_dashboard_status_report_stats_account_step_idx on gos_dashboard_status_report_stats(account_id, step_slug);
+
+create table gos_dashboard_suggestions (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references accounts(id),
+  step_slug gos_dashboard_step not null,
+  title text not null,
+  priority gos_dashboard_priority not null default 'medium',
+  detail text,
+  archived_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index gos_dashboard_suggestions_account_step_idx on gos_dashboard_suggestions(account_id, step_slug);
+
+create table gos_dashboard_tracker_items (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references accounts(id),
+  step_slug gos_dashboard_step not null,
+  label text not null,
+  percent_complete int not null default 0 check (percent_complete between 0 and 100),
+  archived_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index gos_dashboard_tracker_items_account_step_idx on gos_dashboard_tracker_items(account_id, step_slug);
+
+alter table gos_dashboard_step_status enable row level security;
+alter table gos_dashboard_kpis enable row level security;
+alter table gos_dashboard_status_report_stats enable row level security;
+alter table gos_dashboard_suggestions enable row level security;
+alter table gos_dashboard_tracker_items enable row level security;
+
+create policy gos_dashboard_step_status_select on gos_dashboard_step_status for select
+  using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
+create policy gos_dashboard_step_status_write on gos_dashboard_step_status for insert
+  with check (auth_has_any_role('cro_admin', 'cro_advisor'));
+create policy gos_dashboard_step_status_update on gos_dashboard_step_status for update
+  using (auth_has_any_role('cro_admin', 'cro_advisor'));
+
+create policy gos_dashboard_kpis_select on gos_dashboard_kpis for select
+  using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
+create policy gos_dashboard_kpis_write on gos_dashboard_kpis for insert
+  with check (auth_has_any_role('cro_admin', 'cro_advisor'));
+create policy gos_dashboard_kpis_update on gos_dashboard_kpis for update
+  using (auth_has_any_role('cro_admin', 'cro_advisor'));
+
+create policy gos_dashboard_status_report_stats_select on gos_dashboard_status_report_stats for select
+  using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
+create policy gos_dashboard_status_report_stats_write on gos_dashboard_status_report_stats for insert
+  with check (auth_has_any_role('cro_admin', 'cro_advisor'));
+create policy gos_dashboard_status_report_stats_update on gos_dashboard_status_report_stats for update
+  using (auth_has_any_role('cro_admin', 'cro_advisor'));
+
+create policy gos_dashboard_suggestions_select on gos_dashboard_suggestions for select
+  using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
+create policy gos_dashboard_suggestions_write on gos_dashboard_suggestions for insert
+  with check (auth_has_any_role('cro_admin', 'cro_advisor'));
+create policy gos_dashboard_suggestions_update on gos_dashboard_suggestions for update
+  using (auth_has_any_role('cro_admin', 'cro_advisor'));
+
+create policy gos_dashboard_tracker_items_select on gos_dashboard_tracker_items for select
+  using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
+create policy gos_dashboard_tracker_items_write on gos_dashboard_tracker_items for insert
+  with check (auth_has_any_role('cro_admin', 'cro_advisor'));
+create policy gos_dashboard_tracker_items_update on gos_dashboard_tracker_items for update
+  using (auth_has_any_role('cro_admin', 'cro_advisor'));
+
+create trigger trg_gos_dashboard_step_status_updated_at before update on gos_dashboard_step_status
+  for each row execute function set_updated_at();
+create trigger trg_gos_dashboard_kpis_updated_at before update on gos_dashboard_kpis
+  for each row execute function set_updated_at();
+create trigger trg_gos_dashboard_status_report_stats_updated_at before update on gos_dashboard_status_report_stats
+  for each row execute function set_updated_at();
+create trigger trg_gos_dashboard_suggestions_updated_at before update on gos_dashboard_suggestions
+  for each row execute function set_updated_at();
+create trigger trg_gos_dashboard_tracker_items_updated_at before update on gos_dashboard_tracker_items
+  for each row execute function set_updated_at();
+```
+
+There's no `completed_at` here and nothing gates the Dashboard banner or notification bell — this isn't a wizard the MSP finishes, it's an ongoing worksheet the CRO Leader team keeps current as service delivery continues. Adding or renaming a Playbook step is still a `lib/gos-dashboard/playbook.ts` change plus an `alter type gos_dashboard_step add value` migration to extend the enum — no table shape change required. The five tables share one flat write-role check (`auth_has_any_role('cro_admin', 'cro_advisor')`) rather than the account-scoped `(account_id = auth_account_id() and auth_has_any_role(...))` pattern used elsewhere in this document, because there is no MSP role on either side of that OR to account-scope — write is CRO-Leader-only, full stop, regardless of which account is being edited.
+
+
 ### 6.6 campaigns, campaign_recipients, campaign_events
 
 ```
