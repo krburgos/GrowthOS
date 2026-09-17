@@ -9,6 +9,9 @@ import { TOTAL_QUESTION_COUNT } from "@/lib/questionnaire/questions";
  * entirely once complete; now stays on the Dashboard permanently, switching
  * to a green "complete" state ({TOTAL} of {TOTAL} answered) instead of
  * vanishing — same rule applied to the Vision Board banner for consistency.
+ * Client-confirmed (2026-09-17): in every state the title is just the
+ * document's name, the line is just the answered count, and the button
+ * always reads "View".
  */
 export function GrowthQuestionnaireBanner({
   answeredCount,
@@ -31,12 +34,9 @@ export function GrowthQuestionnaireBanner({
         {complete ? <CheckCircle2 className="size-5" /> : <ClipboardList className="size-5" />}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-body font-semibold">
-          {complete ? "GrowthOS Solution Questionnaire complete" : "Complete your GrowthOS Solution Questionnaire"}
-        </p>
+        <p className="text-body font-semibold">GrowthOS Solution Questionnaire</p>
         <p className="text-caption text-white/75">
           {answeredCount} of {TOTAL_QUESTION_COUNT} questions answered
-          {complete ? "" : " — takes about 15 minutes to finish."}
         </p>
         <div className="mt-2 h-1.5 w-56 max-w-full overflow-hidden rounded-full bg-white/25">
           <div className="h-full rounded-full bg-white" style={{ width: `${pct}%` }} />
@@ -48,7 +48,7 @@ export function GrowthQuestionnaireBanner({
           (complete ? "text-success-700" : "text-primary-800")
         }
       >
-        {complete ? "View →" : "Continue →"}
+        View →
       </span>
     </Link>
   );

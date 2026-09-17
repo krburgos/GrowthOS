@@ -160,6 +160,8 @@ Empty and loading states: see §6.
 
 **Client-confirmed amendment (2026-09-16):** both Dashboard banners now stay permanently visible instead of disappearing once complete — superseding the "disappears entirely" language above. Complete, each switches to a green state ("Growth Solution Questionnaire complete" / "GrowthOS Vision Board complete," "X of X answered," a check icon, "View →" instead of "Continue →") rather than vanishing; nothing else on the Dashboard shifts to fill the space either way. The notification bell dropdown is unaffected by this — it still drops its item and clears its dot once a document is complete, since a finished item genuinely needs no further action from a notification center.
 
+**Client-confirmed amendment (2026-09-17):** both Dashboard banners drop the "Complete your…" / "…complete" wording and the extra in-progress sentence — in every state the title is just the document's name ("GrowthOS Solution Questionnaire" / "GrowthOS Vision Board"), the line is just the answered count (e.g. "75 of 75 questions answered"), and the button always reads "View →". Green when complete, blue while in progress, as before.
+
 ### 4.4 Contacts (D1–D4)
 
 Prospects and contacts are **one merged section** — every record is a person, optionally tied to a company; there's no separate "Prospects" area.
