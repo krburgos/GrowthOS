@@ -1470,7 +1470,7 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | GET /api/unsubscribe/[token] | None (public) | Records an 'unsubscribed' event, sets email_opt_out (§9) |
 | POST /api/webhooks/resend | Resend (Svix) signature header (no user session) | Records 'bounced' / 'complained' / 'delivered' events from Resend's webhook |
 | GET /api/reports/export | Session | Streams an XLSX/CSV export of report data (ExcelJS) for volumes too large to build client-side |
-| GET /api/questionnaire/export | Session | Streams a PDF (pdfkit) of the Growth Solution Questionnaire's questions and saved answers for one account (§6.6a) |
+| GET /api/questionnaire/export | Session | Streams a PDF (pdfkit) of the GrowthOS Solution Questionnaire's questions and saved answers for one account (§6.6a). Client-confirmed redesign (2026-09-17): branded cover page (at-a-glance numbers, Yes answers by section, contents with page numbers, answer key), then every question as a numbered row with its answer styled by type, in embedded Poppins |
 | GET /api/vision-board/export | Session | Streams a PDF (pdfkit) of every GrowthOS Vision Board answer for one account, in wizard order, with the Questionnaire-sourced ICP (§6.6b). Client-confirmed 2026-09-17: anyone who can view the Vision Board can export it, so the regular session client under RLS is enough |
 
 
