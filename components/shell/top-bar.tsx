@@ -56,7 +56,7 @@ function initials(name: string) {
  * content's left edge on every page, not just approximately.
  *
  * Client-confirmed (2026-09-15) — the bell is now real, not decorative:
- * its one possible item is the Growth Solution Questionnaire reminder,
+ * its one possible item is the GrowthOS Solution Questionnaire reminder,
  * and the dot only renders while `questionnaireComplete` is false. Still
  * honest by the same rule that removed the old hardcoded dot — no item,
  * no dot, ever.
@@ -140,8 +140,8 @@ export function TopBar({
                         <ClipboardList className="size-4" />
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate text-body-sm font-semibold text-neutral-800">
-                          Complete your Growth Solution Questionnaire
+                        <span className="block text-body-sm font-semibold text-neutral-800">
+                          Complete your GrowthOS Solution Questionnaire
                         </span>
                         <span className="block text-caption text-neutral-500">
                           {questionnaireAnsweredCount} of {TOTAL_QUESTION_COUNT} answered — tap to continue

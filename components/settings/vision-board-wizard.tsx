@@ -176,7 +176,7 @@ function TextFieldInput({
  * account, jsonb keyed by field key) on every Continue/Skip/Finish.
  *
  * The Marketing Strategy step's ICP box is read-only, built from the
- * account's Growth Solution Questionnaire answers rather than asked
+ * account's GrowthOS Solution Questionnaire answers rather than asked
  * again here — client-confirmed (2026-09-16). The real Questionnaire
  * doesn't carry a structured company-size/revenue-range/decision-maker
  * breakdown, so this shows the fields it actually has (target market,
@@ -393,7 +393,7 @@ export function VisionBoardWizard({
           {section.key === "marketing" && (
             <div className="rounded-md border border-dashed border-secondary-300 bg-secondary-50 p-4">
               <p className="mb-2 text-caption font-bold uppercase tracking-wide text-secondary-800">
-                Ideal Customer Profile — from your Growth Solution Questionnaire
+                Ideal Customer Profile — from your GrowthOS Solution Questionnaire
               </p>
               <div className="grid grid-cols-1 gap-2 text-body-sm sm:grid-cols-3">
                 <div>
@@ -414,7 +414,7 @@ export function VisionBoardWizard({
                 </div>
               </div>
               <a href="/settings/growth-questionnaire" className="mt-2 inline-block text-caption font-semibold text-secondary-700 hover:underline">
-                Edit these in the Growth Solution Questionnaire →
+                Edit these in the GrowthOS Solution Questionnaire →
               </a>
             </div>
           )}

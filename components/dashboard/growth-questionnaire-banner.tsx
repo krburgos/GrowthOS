@@ -5,7 +5,7 @@ import { TOTAL_QUESTION_COUNT } from "@/lib/questionnaire/questions";
 
 /**
  * Client-confirmed (2026-09-15, amended 2026-09-16) — full-width Dashboard
- * nudge for the Growth Solution Questionnaire. Originally disappeared
+ * nudge for the GrowthOS Solution Questionnaire. Originally disappeared
  * entirely once complete; now stays on the Dashboard permanently, switching
  * to a green "complete" state ({TOTAL} of {TOTAL} answered) instead of
  * vanishing — same rule applied to the Vision Board banner for consistency.
@@ -32,7 +32,7 @@ export function GrowthQuestionnaireBanner({
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-body font-semibold">
-          {complete ? "Growth Solution Questionnaire complete" : "Complete your Growth Solution Questionnaire"}
+          {complete ? "GrowthOS Solution Questionnaire complete" : "Complete your GrowthOS Solution Questionnaire"}
         </p>
         <p className="text-caption text-white/75">
           {answeredCount} of {TOTAL_QUESTION_COUNT} questions answered

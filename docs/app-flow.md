@@ -95,7 +95,7 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 | I2 | Settings | Connected Email Accounts | Owner, Admin (each user connects their own) |
 | I3 | Settings | Custom Statuses | Owner, Admin |
 | I4 | Settings | My Profile | All MSP roles (own profile only) |
-| I5 | Settings | Growth Solution Questionnaire (client-confirmed addition, 2026-09-15) | Owner, Admin edit; other MSP roles view; CRO Admin/Advisor and a granted partner get the same read+write parity they have elsewhere |
+| I5 | Settings | GrowthOS Solution Questionnaire (client-confirmed addition, 2026-09-15; renamed from "Growth Solution Questionnaire" everywhere users see it, 2026-09-17 — sidebar label stays "GOS Questionnaire") | Owner, Admin edit; other MSP roles view; CRO Admin/Advisor and a granted partner get the same read+write parity they have elsewhere |
 | I5b | Settings | GrowthOS Vision Board (client-confirmed addition, 2026-09-16) — nav label "GOS Vision Board" (amended 2026-09-16, matching I5's "GOS Questionnaire" shortening), page heading "GrowthOS Vision Board" | Owner, Admin edit; other MSP roles view; CRO Admin/Advisor and a granted partner get the same read+write parity they have elsewhere |
 | J1 | CRO Leader | CRO Leader Dashboard (MSP search) — also serves as the Partner Dashboard (2026-09-08), account list scoped to grants for a partner | CRO Leader Admin, Advisor, Service Team; Partner (granted accounts only) |
 | — | CRO Leader | _(inside any MSP account, all D–I screens render with the banner from §2.5)_ | CRO Leader Admin, Advisor, Service Team; Partner |

@@ -32,7 +32,7 @@ export interface SectionDef {
  *
  * The doc's "Ideal Customer Profile" sub-section is deliberately not a
  * field here — client-confirmed (2026-09-16) it's read-only, populated
- * from the account's Growth Solution Questionnaire answers instead of
+ * from the account's GrowthOS Solution Questionnaire answers instead of
  * captured again. The 5-question "Leadership Commitment" self-check is
  * also not stored: it's a reflection prompt for the team, not a
  * deliverable, so it renders as static guidance ahead of the sign-off

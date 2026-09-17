@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
   doc.on("data", (chunk) => chunks.push(chunk));
   const done = new Promise<Buffer>((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
 
-  doc.font("Helvetica-Bold").fontSize(20).fillColor("#022a66").text("Growth Solution Questionnaire");
+  doc.font("Helvetica-Bold").fontSize(20).fillColor("#022a66").text("GrowthOS Solution Questionnaire");
   doc.moveDown(0.15);
   doc.font("Helvetica").fontSize(12).fillColor("#576177").text(account?.name ?? "GrowthOS Account");
   doc.font("Helvetica").fontSize(9.5).fillColor("#9aa4b8").text(`${countAnswered(answers)} of ${TOTAL_QUESTION_COUNT} questions answered`);

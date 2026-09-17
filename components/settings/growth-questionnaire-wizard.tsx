@@ -95,7 +95,7 @@ function QuestionField({
   }
   if (q.type === "scale") {
     return (
-      <div className="inline-flex gap-1.5">
+      <div className="inline-flex gap-1.5 justify-self-start">
         {[1, 2, 3, 4].map((n) => (
           <button
             key={n}
@@ -115,31 +115,38 @@ function QuestionField({
       </div>
     );
   }
-  // yesno
+  // yesno — a fixed-width segmented control with two equal halves. As a
+  // grid cell it used to stretch to the full 260px answer column, leaving
+  // all the spare width trailing after "No" inside the border.
   return (
-    <div className="inline-flex overflow-hidden rounded-md border border-neutral-300">
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onChange(value === "yes" ? null : "yes")}
-        className={cn(
-          "px-5 py-2 text-body-sm font-semibold",
-          value === "yes" ? "bg-success-100 text-success-800" : "bg-white text-neutral-600 hover:bg-neutral-50"
-        )}
-      >
-        Yes
-      </button>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onChange(value === "no" ? null : "no")}
-        className={cn(
-          "border-l border-neutral-300 px-5 py-2 text-body-sm font-semibold",
-          value === "no" ? "bg-error-100 text-error-700" : "bg-white text-neutral-600 hover:bg-neutral-50"
-        )}
-      >
-        No
-      </button>
+    <div
+      role="group"
+      aria-label="Yes or no"
+      className="grid w-40 grid-cols-2 overflow-hidden rounded-md border border-neutral-300 justify-self-start"
+    >
+      {(["yes", "no"] as const).map((option) => {
+        const selected = value === option;
+        return (
+          <button
+            key={option}
+            type="button"
+            disabled={disabled}
+            aria-pressed={selected}
+            onClick={() => onChange(selected ? null : option)}
+            className={cn(
+              "h-9 text-body-sm font-semibold transition-colors focus-visible:relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary-500/60 disabled:cursor-not-allowed",
+              option === "no" && "border-l border-neutral-300",
+              selected
+                ? option === "yes"
+                  ? "bg-success-100 text-success-800"
+                  : "bg-error-100 text-error-700"
+                : "bg-white text-neutral-600 hover:bg-neutral-50"
+            )}
+          >
+            {option === "yes" ? "Yes" : "No"}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -223,7 +230,7 @@ export function GrowthQuestionnaireWizard({
 
   return (
     <div className="flex flex-col gap-1">
-      <h1 className="text-h1 text-primary-900">Growth Solution Questionnaire</h1>
+      <h1 className="text-h1 text-primary-900">GrowthOS Solution Questionnaire</h1>
       <p className="mb-5 max-w-[62ch] text-body-sm text-neutral-500">
         Designed to support MSPs during onboarding and surface where CRO Leader can help accelerate growth.
         Answering it often highlights opportunities on its own — and unlocks a free consultation to review your
