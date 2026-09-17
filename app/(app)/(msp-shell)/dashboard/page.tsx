@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { CompanyProfileCard } from "@/components/dashboard/company-profile-card";
 import { GrowthQuestionnaireBanner } from "@/components/dashboard/growth-questionnaire-banner";
 import { KpiTiles, type KpiTileData } from "@/components/dashboard/kpi-tiles";
 import { PipelineByStage, type StageCount } from "@/components/dashboard/pipeline-by-stage";
 import { RecentActivityFeed, type FeedItem } from "@/components/dashboard/recent-activity-feed";
 import { TodayTasksPanel, type DueTask } from "@/components/dashboard/today-tasks-panel";
 import { VisionBoardBanner } from "@/components/dashboard/vision-board-banner";
+import { COMPANY_PROFILE_COLUMNS, type CompanyProfile } from "@/lib/accounts/company-profile";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
 import type { StageGroup } from "@/lib/opportunities/stages";
 import { countAnswered } from "@/lib/questionnaire/questions";
@@ -14,6 +16,9 @@ import { createClient } from "@/lib/supabase/server";
 import { countAnswered as countVisionBoardAnswered } from "@/lib/vision-board/sections";
 
 export const metadata: Metadata = { title: "Dashboard — GrowthOS" };
+
+/** Same set as Settings › Company (accounts_update RLS, Backend Schema §6.1). */
+const PROFILE_EDIT_ROLES = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"];
 
 function unwrap<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : value ?? undefined;
@@ -63,6 +68,8 @@ export default async function DashboardPage() {
   // back to /cro instead of seeing that MSP's dashboard.
   if (needsAccountSelection(user.role) && !user.account_id) redirect("/cro");
 
+  const canEditProfile = PROFILE_EDIT_ROLES.includes(user.role);
+
   const supabase = await createClient();
 
   const now = Date.now();
@@ -79,6 +86,7 @@ export default async function DashboardPage() {
     { data: taskRows },
     { data: questionnaireResponse },
     { data: visionBoardResponse },
+    { data: account },
   ] = await Promise.all([
     supabase
       .from("opportunity_stages")
@@ -119,6 +127,7 @@ export default async function DashboardPage() {
       .limit(8),
     supabase.from("growth_questionnaire_responses").select("answers, completed_at").eq("account_id", user.account_id).maybeSingle(),
     supabase.from("vision_board_responses").select("answers, completed_at").eq("account_id", user.account_id).maybeSingle(),
+    supabase.from("accounts").select(COMPANY_PROFILE_COLUMNS).eq("id", user.account_id).maybeSingle(),
   ]);
 
   // ---- Pipeline by stage ----
@@ -187,6 +196,8 @@ export default async function DashboardPage() {
           Welcome back, {user.full_name.split(" ")[0]} — here&apos;s what&apos;s happening across the account today.
         </p>
       </div>
+
+      {account && <CompanyProfileCard account={account as unknown as CompanyProfile} canEdit={canEditProfile} />}
 
       <GrowthQuestionnaireBanner answeredCount={questionnaireAnsweredCount} complete={questionnaireComplete} />
       <VisionBoardBanner answeredCount={visionBoardAnsweredCount} complete={visionBoardComplete} />

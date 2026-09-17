@@ -117,7 +117,7 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 ### 4.2 Onboarding Profile Wizard (B1)
 
 A multi-step wizard, shown to the MSP Owner on first login only, with a progress indicator and save-and-resume between steps (confirmed with the client). Steps, condensed from the PRD's onboarding profile to a Phase 1 basic pass:
-- **Company Profile** — name, website, location, years in business, employee count
+- **Company Profile** — name, website, LinkedIn, full mailing address, phone, CEO, and a combined Sales & Marketing team of typed names (expanded 2026-09-17; also shown read-only on the Dashboard, §4.3)
 - **Sales & Marketing Snapshot** — current tools, CRM status, team size
 - **Target Market** — target industries, geography, ideal company size
 - **Growth Goals & Budget** — stated goals, budget range, timeline
@@ -159,6 +159,8 @@ Empty and loading states: see §6.
 **Client-confirmed addition (2026-09-16):** a second, independent banner ("Complete your GrowthOS Vision Board," I5b) sits directly beneath the Questionnaire one — stacks regardless of either's complete/incomplete state. The notification bell (Design System §8.10) gets the same treatment: a second dropdown item, independent dot condition, both can show at once.
 
 **Client-confirmed amendment (2026-09-16):** both Dashboard banners now stay permanently visible instead of disappearing once complete — superseding the "disappears entirely" language above. Complete, each switches to a green state ("Growth Solution Questionnaire complete" / "GrowthOS Vision Board complete," "X of X answered," a check icon, "View →" instead of "Continue →") rather than vanishing; nothing else on the Dashboard shifts to fill the space either way. The notification bell dropdown is unaffected by this — it still drops its item and clears its dot once a document is complete, since a finished item genuinely needs no further action from a notification center.
+
+**Client-confirmed addition (2026-09-17):** the **Company Profile card** now leads the Dashboard, above the banners and KPI strip: the account logo and name, then its full mailing address, phone, website and LinkedIn; below that, the CEO (name plus the fixed title "Chief Executive Officer") and one combined **Sales & Marketing** team of typed names shown as chips with a count. It is read-only here — "Edit profile" and the "+" beside Sales & Marketing both link to Settings › Company (the "+" to `#sales-marketing`, which opens that form already editing with a blank name ready), so the profile keeps exactly one edit surface. Both controls show only for the roles that can edit the account (Owner, Admin, CRO Admin/Advisor); everyone else sees the same card without them, and empty fields read "Not set yet" / "None added yet."
 
 **Client-confirmed amendment (2026-09-17):** both Dashboard banners drop the "Complete your…" / "…complete" wording and the extra in-progress sentence — in every state the title is just the document's name ("GrowthOS Solution Questionnaire" / "GrowthOS Vision Board"), the line is just the answered count (e.g. "75 of 75 questions answered"), and the button always reads "View →". Green when complete, blue while in progress, as before.
 

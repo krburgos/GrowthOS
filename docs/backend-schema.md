@@ -143,6 +143,17 @@ create table accounts (
   updated_at timestamptz not null default now()
 );
 
+-- Company Profile columns added after this document's first pass:
+--   logo_url, linkedin_url, address_city, address_state (industry was dropped, replaced by linkedin_url)
+-- Client-confirmed expansion (2026-09-17), migration 20260917000003:
+alter table accounts
+  add column address_street text,
+  add column address_suite text,
+  add column address_zip text,
+  add column phone text,
+  add column ceo_name text,
+  add column sales_marketing_names text[] not null default '{}'::text[];
+
 create table users (
   id uuid primary key references auth.users(id) on delete cascade,
   account_id uuid references accounts(id),
