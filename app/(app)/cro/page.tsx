@@ -10,6 +10,23 @@ import { createClient } from "@/lib/supabase/server";
 export const metadata: Metadata = { title: "CRO Leader Dashboard — GrowthOS" };
 
 /**
+ * Client-confirmed (2026-09-17): CRO Leader's own account always sits at the
+ * top of the account list, ahead of the alphabetical run — it's the account
+ * the team opens most often. Matched by name, the same way it appears in the
+ * list itself; every other account keeps its A–Z order.
+ */
+const PINNED_ACCOUNT_NAME = "CRO Leader";
+
+function pinnedFirst(accounts: CroAccountRow[]): CroAccountRow[] {
+  return [...accounts].sort((a, b) => {
+    const aPinned = a.name === PINNED_ACCOUNT_NAME;
+    const bPinned = b.name === PINNED_ACCOUNT_NAME;
+    if (aPinned !== bPinned) return aPinned ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+/**
  * App Flow §4.10 (J1) — CRO Leader Dashboard. Client-confirmed same-day
  * addition (2026-09-08): also serves as the Partner Dashboard — the
  * account list is role-aware (CRO Leader roles see every account,
@@ -43,6 +60,8 @@ export default async function CroDashboardPage() {
       .order("name");
     accounts = data ?? [];
   }
+
+  accounts = pinnedFirst(accounts);
 
   let partners: PartnerRow[] = [];
   if (isCroAdmin) {
