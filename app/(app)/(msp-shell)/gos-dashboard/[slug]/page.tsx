@@ -5,7 +5,11 @@ import { DutiesList } from "@/components/gos-dashboard/duties-list";
 import { KpiGrid } from "@/components/gos-dashboard/kpi-grid";
 import { PlaybookDetailTabs } from "@/components/gos-dashboard/playbook-detail-tabs";
 import { StepHeader } from "@/components/gos-dashboard/step-header";
+import { StepHoursPanel } from "@/components/gos-dashboard/step-hours-panel";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { getPlaybookStep, PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
+
+const LOG_HOURS_ROLES = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"];
 
 export function generateStaticParams() {
   return PLAYBOOK_STEPS.map((step) => ({ slug: step.slug }));
@@ -30,10 +34,13 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
   const { slug } = await params;
   const step = getPlaybookStep(slug);
   if (!step) notFound();
+  const user = await getCurrentUser();
 
   return (
     <main className="mx-auto flex w-full max-w-[1000px] flex-1 flex-col gap-6 p-6 md:p-8">
       <StepHeader step={step} />
+
+      <StepHoursPanel slug={step.slug} canLogHours={!!user && LOG_HOURS_ROLES.includes(user.role)} />
 
       {step.dashboard && <PlaybookDetailTabs dashboard={step.dashboard} />}
 
