@@ -40,7 +40,7 @@ export default async function GosDashboardPage() {
         <div>
           <h1 className="text-h1 text-primary-900">GrowthOS Strategy and Assignment Dashboard</h1>
           <p className="max-w-[70ch] text-body text-neutral-500">
-            The GrowthOS Playbook, tracked by hours — 4 phases, 14 workstreams from SEO through Sales Enablement. Click
+            The GrowthOS Strategy and Assignment Dashboard, tracked by hours — 4 phases, 14 workstreams from SEO through Sales Enablement. Click
             into any card for its status report, duties, and KPIs.
           </p>
         </div>
