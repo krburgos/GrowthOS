@@ -37,7 +37,7 @@ export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5">
         <span className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-neutral-700">
           <ShieldCheck className="size-4 text-success-600" />
-          Ready to run the Playbook
+          Ready to run The GrowthOS Strategy and Assignment
         </span>
         <CheckItem ok>
           Website on file · <b className="font-semibold text-neutral-800">{displayWebsite(website)}</b>
