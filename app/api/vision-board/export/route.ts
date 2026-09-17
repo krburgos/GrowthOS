@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { POPPINS, registerPoppins } from "@/lib/pdf/poppins";
 import { createClient } from "@/lib/supabase/server";
 import { VISION_BOARD_SECTIONS } from "@/lib/vision-board/sections";
 
@@ -34,7 +35,7 @@ function yesNo(v: unknown) {
  * Backend Schema §10 — GET /api/vision-board/export (client-confirmed
  * 2026-09-17). Anyone who can view the Vision Board can export it, so the
  * regular session client under vision_board_responses RLS is enough — no
- * service role. Same pdfkit approach as /api/questionnaire/export, laid
+ * service role. Same pdfkit approach and Poppins brand font as /api/questionnaire/export, laid
  * out to match the on-screen strategy document: every section in wizard
  * order, financial goals as figure boxes, page numbers in the footer.
  */
@@ -67,6 +68,7 @@ export async function GET(request: NextRequest) {
   const accountName = account?.name ?? "GrowthOS Account";
 
   const doc = new PDFDocument({ size: "LETTER", margins: { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN }, bufferPages: true });
+  registerPoppins(doc);
   const chunks: Buffer[] = [];
   doc.on("data", (chunk) => chunks.push(chunk));
   const done = new Promise<Buffer>((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
@@ -80,14 +82,14 @@ export async function GET(request: NextRequest) {
   const label = (value: string) => {
     ensure(40);
     doc.moveDown(0.35);
-    doc.font("Helvetica-Bold").fontSize(7.5).fillColor(FAINT).text(value.toUpperCase(), MARGIN, doc.y, { characterSpacing: 0.4 });
+    doc.font(POPPINS.semibold).fontSize(7.5).fillColor(FAINT).text(value.toUpperCase(), MARGIN, doc.y, { characterSpacing: 0.4 });
     doc.moveDown(0.15);
   };
 
   const body = (value: string | null) => {
     ensure(24);
     doc
-      .font(value ? "Helvetica" : "Helvetica-Oblique")
+      .font(POPPINS.regular)
       .fontSize(10)
       .fillColor(value ? INK : FAINT)
       .text(value ?? NOT_ANSWERED, MARGIN, doc.y, { width: contentWidth, lineGap: 2 });
@@ -97,8 +99,8 @@ export async function GET(request: NextRequest) {
     if (items.length === 0) return body(null);
     items.forEach((item, i) => {
       ensure(24);
-      doc.font("Helvetica-Bold").fontSize(10).fillColor(TEAL).text(`${i + 1}.`, MARGIN, doc.y, { continued: true, width: contentWidth });
-      doc.font("Helvetica").fillColor(INK).text(`  ${item}`, { width: contentWidth, lineGap: 2 });
+      doc.font(POPPINS.semibold).fontSize(10).fillColor(TEAL).text(`${i + 1}.`, MARGIN, doc.y, { continued: true, width: contentWidth });
+      doc.font(POPPINS.regular).fillColor(INK).text(`  ${item}`, { width: contentWidth, lineGap: 2 });
       doc.moveDown(0.2);
     });
   };
@@ -106,7 +108,7 @@ export async function GET(request: NextRequest) {
   const figures = (items: { label: string; value: string | null }[]) => {
     const gap = 6;
     const boxWidth = (contentWidth - gap * (items.length - 1)) / items.length;
-    doc.font("Helvetica-Bold").fontSize(10);
+    doc.font(POPPINS.semibold).fontSize(10);
     const valueHeight = Math.max(...items.map((f) => doc.heightOfString(f.value ?? NOT_ANSWERED, { width: boxWidth - 12 })));
     const boxHeight = 22 + valueHeight;
     ensure(boxHeight + 8);
@@ -114,9 +116,9 @@ export async function GET(request: NextRequest) {
     items.forEach((f, i) => {
       const x = MARGIN + i * (boxWidth + gap);
       doc.roundedRect(x, top, boxWidth, boxHeight, 3).lineWidth(0.75).strokeColor(RULE).stroke();
-      doc.font("Helvetica-Bold").fontSize(7).fillColor(FAINT).text(f.label.toUpperCase(), x + 6, top + 6, { width: boxWidth - 12, lineBreak: false, ellipsis: true });
+      doc.font(POPPINS.semibold).fontSize(7).fillColor(FAINT).text(f.label.toUpperCase(), x + 6, top + 6, { width: boxWidth - 12, lineBreak: false, ellipsis: true });
       doc
-        .font("Helvetica-Bold")
+        .font(POPPINS.semibold)
         .fontSize(10)
         .fillColor(f.value ? NAVY : FAINT)
         .text(f.value ?? NOT_ANSWERED, x + 6, top + 16, { width: boxWidth - 12 });
@@ -133,9 +135,9 @@ export async function GET(request: NextRequest) {
     ? `Signed off by ${signName}${signTitle ? `, ${signTitle}` : ""}${signDate ? ` · ${signDate}` : ""}`
     : "Not signed off yet";
 
-  doc.font("Helvetica-Bold").fontSize(8.5).fillColor(TEAL).text("GROWTHOS", MARGIN, MARGIN, { width: contentWidth, align: "right", characterSpacing: 0.6 });
-  doc.font("Helvetica-Bold").fontSize(20).fillColor(NAVY).text("GrowthOS Vision Board", MARGIN, MARGIN);
-  doc.font("Helvetica").fontSize(10.5).fillColor(MUTED).text(`${accountName}  ·  ${signedLine}`);
+  doc.font(POPPINS.semibold).fontSize(8.5).fillColor(TEAL).text("GROWTHOS", MARGIN, MARGIN, { width: contentWidth, align: "right", characterSpacing: 0.6 });
+  doc.font(POPPINS.bold).fontSize(20).fillColor(NAVY).text("GrowthOS Vision Board", MARGIN, MARGIN);
+  doc.font(POPPINS.regular).fontSize(10.5).fillColor(MUTED).text(`${accountName}  ·  ${signedLine}`);
   doc.moveDown(0.5);
   doc.moveTo(MARGIN, doc.y).lineTo(MARGIN + contentWidth, doc.y).lineWidth(1.5).strokeColor(NAVY).stroke();
   doc.moveDown(0.6);
@@ -145,7 +147,7 @@ export async function GET(request: NextRequest) {
     ensure(60);
     doc.moveDown(0.6);
     const heading = section.key === "signoff" ? section.name : `${index + 1}. ${section.name}`;
-    doc.font("Helvetica-Bold").fontSize(13).fillColor(NAVY).text(heading, MARGIN, doc.y, { width: contentWidth });
+    doc.font(POPPINS.semibold).fontSize(13).fillColor(NAVY).text(heading, MARGIN, doc.y, { width: contentWidth });
     doc.moveDown(0.15);
 
     switch (section.key) {
@@ -227,7 +229,7 @@ export async function GET(request: NextRequest) {
     const y = doc.page.height - MARGIN + 14;
     doc.page.margins.bottom = 0;
     doc.moveTo(MARGIN, y - 6).lineTo(MARGIN + contentWidth, y - 6).lineWidth(0.5).strokeColor(RULE).stroke();
-    doc.font("Helvetica").fontSize(8).fillColor(FAINT);
+    doc.font(POPPINS.regular).fontSize(8).fillColor(FAINT);
     doc.text(`GrowthOS Vision Board  ·  ${accountName}`, MARGIN, y, { width: contentWidth / 2, lineBreak: false });
     doc.text(`Page ${i - range.start + 1} of ${range.count}`, MARGIN + contentWidth / 2, y, {
       width: contentWidth / 2,

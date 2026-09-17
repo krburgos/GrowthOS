@@ -1,8 +1,7 @@
-import path from "node:path";
-
 import PDFDocument from "pdfkit";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { POPPINS, registerPoppins } from "@/lib/pdf/poppins";
 import { QUESTIONNAIRE_SECTIONS, TOTAL_QUESTION_COUNT, countAnswered, type QuestionDef } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,8 +37,7 @@ const ROW_PAD = 6;
 const QUESTION_W = CONTENT_W - ROW_PAD * 2 - NUM_W - 8 - ANSWER_W - 8;
 const WIDE_TEXT_THRESHOLD = 28;
 
-const FONT_DIR = path.join(process.cwd(), "lib", "pdf", "fonts");
-const F = { regular: "Poppins", medium: "Poppins-Medium", semibold: "Poppins-SemiBold", bold: "Poppins-Bold" };
+const F = POPPINS;
 
 const GLANCE: { key: string; label: string }[] = [
   { key: "overview_employees", label: "Employees" },
@@ -179,10 +177,7 @@ export async function GET(request: NextRequest) {
   const answeredCount = countAnswered(answers as Record<string, unknown>);
 
   const doc = new PDFDocument({ size: "LETTER", margins: { top: 0, bottom: 0, left: M, right: M }, bufferPages: true });
-  doc.registerFont(F.regular, path.join(FONT_DIR, "Poppins-Regular.ttf"));
-  doc.registerFont(F.medium, path.join(FONT_DIR, "Poppins-Medium.ttf"));
-  doc.registerFont(F.semibold, path.join(FONT_DIR, "Poppins-SemiBold.ttf"));
-  doc.registerFont(F.bold, path.join(FONT_DIR, "Poppins-Bold.ttf"));
+  registerPoppins(doc);
 
   const chunks: Buffer[] = [];
   doc.on("data", (chunk) => chunks.push(chunk));
