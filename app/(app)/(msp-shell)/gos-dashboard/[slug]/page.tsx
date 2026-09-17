@@ -7,8 +7,10 @@ import { EditOverviewPanel } from "@/components/gos-dashboard/edit-overview-pane
 import { KpiGrid } from "@/components/gos-dashboard/kpi-grid";
 import { PlaybookDetailTabs } from "@/components/gos-dashboard/playbook-detail-tabs";
 import { StepHeader } from "@/components/gos-dashboard/step-header";
+import { StepHoursPanel } from "@/components/gos-dashboard/step-hours-panel";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { getStepDetail } from "@/lib/gos-dashboard/queries";
+import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
+import { getStepDetail, getStepHours } from "@/lib/gos-dashboard/queries";
 import { PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -29,10 +31,15 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
   const user = await getCurrentUser();
   if (!user || !user.account_id) return null;
 
-  const step = await getStepDetail(user.account_id, slug);
+  const quarter = currentQuarter();
+  const [step, hours] = await Promise.all([
+    getStepDetail(user.account_id, slug),
+    getStepHours(user.account_id, quarter.start),
+  ]);
   if (!step) notFound();
 
   const canEdit = user.role === "cro_admin" || user.role === "cro_advisor";
+  const canLogHours = HOURS_EDIT_ROLES.includes(user.role);
 
   return (
     <main className="mx-auto flex w-full max-w-[1000px] flex-1 flex-col gap-6 p-6 md:p-8">
@@ -47,6 +54,14 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
             canEdit={canEdit}
           />
         }
+      />
+
+      <StepHoursPanel
+        accountId={user.account_id}
+        slug={step.slug}
+        hours={hours[step.slug]}
+        quarter={quarter}
+        canLogHours={canLogHours}
       />
 
       {step.hasDashboardShape && (

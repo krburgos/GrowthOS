@@ -953,6 +953,75 @@ create trigger trg_gos_dashboard_tracker_items_updated_at before update on gos_d
 
 There's no `completed_at` here and nothing gates the Dashboard banner or notification bell — this isn't a wizard the MSP finishes, it's an ongoing worksheet the CRO Leader team keeps current as service delivery continues. Adding or renaming a Playbook step is still a `lib/gos-dashboard/playbook.ts` change plus an `alter type gos_dashboard_step add value` migration to extend the enum — no table shape change required. The five tables share one flat write-role check (`auth_has_any_role('cro_admin', 'cro_advisor')`) rather than the account-scoped `(account_id = auth_account_id() and auth_has_any_role(...))` pattern used elsewhere in this document, because there is no MSP role on either side of that OR to account-scope — write is CRO-Leader-only, full stop, regardless of which account is being edited.
 
+**Client-confirmed (2026-09-17):** the CRO-Admin/Advisor-only write split above is now signed off — "CRO Leader people" edit every step's data, and `cro_service_team` stays read-only.
+
+
+### 6.6d gos_dashboard_step_hours, gos_dashboard_quarter_hours, gos_dashboard_kpi_mapping, gos_dashboard_source_counts()
+
+**Client-confirmed addition (2026-09-17)** — per-workstream hours and the Playbook doc's "GrowthOS KPI dashboard" band on the GOS Dashboard (App Flow §4.3a). Migration: `supabase/migrations/20260917000002_gos_dashboard_hours_and_kpi_band.sql`.
+
+- **Hours.** "Hours needed to complete" is a total for the whole workstream, so it lives on `gos_dashboard_step_hours` (one row per account per step, alongside the Yes/No `outsourced` placeholder). "Committed" and "achieved" belong to a calendar quarter, so they live on `gos_dashboard_quarter_hours` keyed by `quarter_start` (checked to be a real quarter start) — the UI shows only the current quarter, but a new quarter starts fresh without deleting or overwriting the previous one. Both are singletons updated in place, so neither has `archived_at`. **Write access is deliberately different from §6.6c:** the account's own MSP Owner/Admin can edit hours, plus CRO Admin/Advisor for any account (client-confirmed) — the account-scoped `(account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin')) or auth_has_any_role('cro_admin','cro_advisor')` shape.
+- **KPI band mapping.** The band's eight boxes (MQCs, MQLs, Interested, Engaged, Ghosted, Quoted, Won, Lost) are counted live from `contacts` (by `status_id`) and `opportunities` (by `stage_id`). Status and stage names differ per account, so `gos_dashboard_kpi_mapping` records which status or stage feeds which box: exactly one of `contact_status_id`/`opportunity_stage_id` per row, unique per account, `box` null meaning "counts toward no box." An account with no mapping rows uses the app's name-matching defaults (`lib/gos-dashboard/kpi-band.ts`: MQC/MQL/Engaged by exact contact status name; Won/Lost by stage group; Ghosted/Quoted/Interested by stage name containing ghost / quote-or-proposal / interest). Saving the mapping writes one row for every status and stage, updated in place — nothing to soft-delete. Write access: CRO Admin/Advisor only. "Engaged" counts contacts with the Engaged status, client-confirmed, since that's how the CRM uses it even though the doc lists it under Opportunities.
+- **`gos_dashboard_source_counts(p_account_id)`** returns one count per contact status and opportunity stage in a single round trip. It is `security invoker`, so `contacts`/`opportunities` RLS still decides what gets counted.
+
+```
+create table gos_dashboard_step_hours (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references accounts(id),
+  step_slug gos_dashboard_step not null,
+  needed_hours numeric(7,1) not null default 0 check (needed_hours >= 0),
+  outsourced boolean not null default false,
+  updated_by uuid references users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (account_id, step_slug)
+);
+
+create table gos_dashboard_quarter_hours (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references accounts(id),
+  step_slug gos_dashboard_step not null,
+  quarter_start date not null check (quarter_start = date_trunc('quarter', quarter_start)::date),
+  committed_hours numeric(7,1) not null default 0 check (committed_hours >= 0),
+  achieved_hours numeric(7,1) not null default 0 check (achieved_hours >= 0),
+  updated_by uuid references users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (account_id, step_slug, quarter_start)
+);
+
+create type gos_dashboard_kpi_box as enum ('mqc', 'mql', 'interested', 'engaged', 'ghosted', 'quoted', 'won', 'lost');
+
+create table gos_dashboard_kpi_mapping (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references accounts(id),
+  box gos_dashboard_kpi_box,
+  contact_status_id uuid references contact_statuses(id),
+  opportunity_stage_id uuid references opportunity_stages(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (num_nonnulls(contact_status_id, opportunity_stage_id) = 1),
+  unique (account_id, contact_status_id),
+  unique (account_id, opportunity_stage_id)
+);
+
+-- Hours (both tables): select = own account / CRO Leader / granted partner;
+-- insert/update = (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin'))
+--                 or auth_has_any_role('cro_admin','cro_advisor').
+-- Mapping: select as above; insert/update = auth_has_any_role('cro_admin','cro_advisor').
+-- updated_at triggers on all three; full policy text in the migration file.
+
+create function gos_dashboard_source_counts(p_account_id uuid)
+returns table (source_kind text, source_id uuid, record_count bigint)
+language sql stable security invoker set search_path = public as $$
+  select 'contact_status', c.status_id, count(*) from contacts c
+  where c.account_id = p_account_id and c.archived_at is null and c.status_id is not null group by c.status_id
+  union all
+  select 'opportunity_stage', o.stage_id, count(*) from opportunities o
+  where o.account_id = p_account_id group by o.stage_id
+$$;
+```
+
 
 ### 6.6 campaigns, campaign_recipients, campaign_events
 
