@@ -1522,3 +1522,7 @@ Judgment calls made while turning the PRD, App Flow Document, and prior Q&A into
 
 - **pg_cron**** and ****pg_net**** must be enabled from the Supabase dashboard** before running §5's migration — noted in §1, repeated here because it's an easy first-deploy failure point (the extension can be allow-listed per project tier rather than available by default).
 - **Opportunity ****name**** is nullable (§5.5).** Neither the PRD nor the App Flow Document names a distinct opportunity title field — the Kanban card shows contact, company, and value. A nullable free-text name is included so the UI can let a user optionally label an opportunity without requiring it.
+
+### 7.6 cro_account_portfolio()
+
+**Client-confirmed addition (2026-09-17)** — one round trip for the CRO Leader Dashboard's portfolio band and per-account status columns (App Flow §4.10). Returns, per non-archived account: whether the GrowthOS Solution Questionnaire and Vision Board are complete, this quarter's committed/achieved hours from gos_dashboard_quarter_hours, and the most recent non-archived activity timestamp. , so each underlying table's RLS still decides what the caller sees — every account for a CRO Leader role, granted accounts only for a partner, their own for an MSP user. Migration: supabase/migrations/20260917000004_cro_account_portfolio.sql.
