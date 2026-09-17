@@ -141,6 +141,8 @@ Empty and loading states: see §6.
 
 **GOS Dashboard (C2)** renders the Playbook's 14 numbered steps (SEO, GEO, Blogging & Content Development, Social Media, Website Oversight, ICP Development, List Building, Email Campaigning, CRM Administration, Opportunity Pipeline Metrics, Reviews & Testimonies, Events, SDR Outreach, Sales Enablement) as a flat grid of clickable cards — client-confirmed flat, not grouped by the Playbook's own 4 phases (Foundation & Visibility / Pipeline & Outbound Engine / Authority, Trust & Demand Creation / SDR Outreach & Sales Execution), though each card still shows its phase as a label. Cards originally showed a status pill and one headline stat; superseded by the 2026-09-17 redesign below.
 
+**Client-confirmed rename (2026-09-17):** the page heading (and browser tab title) reads "GrowthOS Strategy and Assignment Dashboard"; the sidebar label stays "GOS Dashboard."
+
 **Client-confirmed redesign (2026-09-17), all sourced from the Playbook doc.** Top to bottom, the page now shows:
 
 1. **Readiness check** — the doc's "Before You Begin — STOP": a website on file (Company settings) and a written ICP, counted as the Growth Solution Questionnaire's target-market answer. Both present: one slim "Ready to run the Playbook" line. Either missing: an amber "Before You Begin" warning with a link to fix it. It never blocks the rest of the page.
