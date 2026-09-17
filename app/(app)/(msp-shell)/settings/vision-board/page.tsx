@@ -35,7 +35,7 @@ export default async function VisionBoardPage() {
   const qAnswers = (questionnaire?.answers as Record<string, unknown>) ?? {};
 
   return (
-    <main className="w-full max-w-[900px] flex-1 p-6 md:p-8">
+    <main className="w-full max-w-[1160px] flex-1 p-6 md:p-8">
       <VisionBoardWizard
         accountId={user.account_id}
         initialAnswers={(response?.answers as Record<string, string | string[] | null>) ?? {}}

@@ -1471,6 +1471,7 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | POST /api/webhooks/resend | Resend (Svix) signature header (no user session) | Records 'bounced' / 'complained' / 'delivered' events from Resend's webhook |
 | GET /api/reports/export | Session | Streams an XLSX/CSV export of report data (ExcelJS) for volumes too large to build client-side |
 | GET /api/questionnaire/export | Session | Streams a PDF (pdfkit) of the Growth Solution Questionnaire's questions and saved answers for one account (§6.6a) |
+| GET /api/vision-board/export | Session | Streams a PDF (pdfkit) of every GrowthOS Vision Board answer for one account, in wizard order, with the Questionnaire-sourced ICP (§6.6b). Client-confirmed 2026-09-17: anyone who can view the Vision Board can export it, so the regular session client under RLS is enough |
 
 
 ## 11. Data Access Pattern Summary

@@ -7,7 +7,6 @@ import {
   Eye,
   Flag,
   Heart,
-  Lock,
   Megaphone,
   PenTool,
   Target,
@@ -19,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { VisionBoardSummary, type IcpAnswers } from "@/components/settings/vision-board-summary";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
@@ -53,16 +53,6 @@ const SELF_CHECK_PROMPTS = [
   "Are we focusing on the right activities to drive growth?",
 ];
 
-const OUTCOMES: { icon: LucideIcon; name: string; desc: string }[] = [
-  { icon: Eye, name: "Strategic Vision Dashboard", desc: "Your Core Values, Focus, and 10-Year Target as a single leadership view." },
-  { icon: Target, name: "Ideal Customer Profile Dashboard", desc: "A living view of who you sell to, built from your Vision Board and Questionnaire." },
-  { icon: BarChart3, name: "Growth Scorecard", desc: "Progress against your 1-Year Plan, updated as new data comes in." },
-  { icon: CalendarCheck, name: "KPI Tracking Dashboard", desc: "Your Critical Business Metrics, tracked automatically over time." },
-  { icon: Flag, name: "Annual Growth Plan", desc: "A shareable, formatted version of your Top Annual Priorities." },
-  { icon: TrendingDown, name: "Growth Barrier Analysis Report", desc: "A deeper breakdown of what's standing between you and doubled revenue." },
-  { icon: Megaphone, name: "AI-Powered Recommendations", desc: "Suggested next actions generated from your full Vision Board." },
-  { icon: PenTool, name: "Leadership Alignment Report", desc: "How closely your leadership team's self-checks and answers line up." },
-];
 
 type Answers = Record<string, string | string[] | null>;
 
@@ -184,10 +174,11 @@ function TextFieldInput({
  * illustrative set from the first mockup pass.
  *
  * Client-confirmed (2026-09-16), round two: finishing while complete no
- * longer redirects straight to the Dashboard — it shows a completion
- * screen with a sign-off banner and a locked "Coming soon" preview of
- * the 8 deliverables the source doc promises, matching the approved
- * mockup. Finishing while still incomplete (or Skip) behaves as before
+ * longer redirects straight to the Dashboard — it shows the completed
+ * view (VisionBoardSummary: every answer as a strategy document, plus
+ * PDF export; client-confirmed 2026-09-17, replacing the earlier
+ * sign-off banner and "Coming soon" deliverables preview). Finishing
+ * while still incomplete (or Skip) behaves as before
  * (save progress, redirect). Reopening the page after it's already
  * complete lands straight on this screen too, via `initialComplete`;
  * "Edit Vision Board" goes back into the stepper without losing that
@@ -206,11 +197,7 @@ export function VisionBoardWizard({
   initialComplete: boolean;
   canEdit: boolean;
   exitHref: string;
-  icpAnswers: {
-    targetMarket: string | null;
-    focusesOnVerticals: boolean | null;
-    hvcDefined: boolean | null;
-  };
+  icpAnswers: IcpAnswers;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"wizard" | "complete">(initialComplete ? "complete" : "wizard");
@@ -233,7 +220,9 @@ export function VisionBoardWizard({
       {
         account_id: accountId,
         answers,
-        completed_at: markCompleteIfDone && nowComplete ? new Date().toISOString() : null,
+        // An already-completed board stays complete through "Skip for now"
+        // as long as every answer is still filled in.
+        completed_at: nowComplete && (markCompleteIfDone || initialComplete) ? new Date().toISOString() : null,
       },
       { onConflict: "account_id" }
     );
@@ -272,67 +261,23 @@ export function VisionBoardWizard({
   const Icon = SECTION_ICON[section.icon];
 
   if (view === "complete") {
-    const name = (answers.signoff_name as string) || "Your leadership team";
-    const title = answers.signoff_title as string | undefined;
-    const date = (answers.signoff_date as string) || undefined;
     return (
-      <div className="flex flex-col gap-1">
-        <h1 className="text-h1 text-primary-900">GrowthOS Vision Board</h1>
-        <p className="mb-5 max-w-[62ch] text-body-sm text-neutral-500">
-          Your company&apos;s strategic operating plan — core values, target market, financial goals, and the
-          priorities your leadership team is aligned on.
-        </p>
-
-        <div className="mb-7 flex items-center gap-4 rounded-xl bg-gradient-to-br from-primary-900 to-primary-700 p-6 text-white">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white/15">
-            <Flag className="size-5" />
-          </span>
-          <div>
-            <h2 className="text-h4 text-white">Vision Board complete</h2>
-            <p className="text-body-sm text-white/75">
-              Signed off by {name}
-              {title ? ` (${title})` : ""}
-              {date ? ` on ${date}` : ""}. GrowthOS will use this to power the dashboards below.
-            </p>
-          </div>
-        </div>
-
-        <div className="mb-3.5 flex items-baseline justify-between">
-          <h3 className="text-h4 text-primary-900">What GrowthOS builds from this</h3>
-          <span className="text-caption text-neutral-400">8 deliverables</span>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {OUTCOMES.map((o) => (
-            <div key={o.name} className="relative rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-              <Lock className="absolute right-3 top-3 size-3.5 text-neutral-400" />
-              <span className="mb-2.5 flex size-8 items-center justify-center rounded-md bg-neutral-200 text-neutral-500">
-                <o.icon className="size-4" />
-              </span>
-              <h4 className="text-body-sm font-semibold text-neutral-700">{o.name}</h4>
-              <p className="text-caption text-neutral-400">{o.desc}</p>
-              <span className="mt-2 inline-block rounded-full bg-neutral-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-                Coming soon
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-6 flex items-center justify-between">
-          <button
-            type="button"
-            className="text-body-sm font-semibold text-secondary-700 hover:underline"
-            onClick={() => setView("wizard")}
-          >
-            ← Edit GOS Vision Board
-          </button>
-          <Button onClick={() => router.push(exitHref)}>Back to Dashboard</Button>
-        </div>
-      </div>
+      <VisionBoardSummary
+        accountId={accountId}
+        answers={answers}
+        icpAnswers={icpAnswers}
+        canEdit={canEdit}
+        onEdit={() => {
+          setStepIndex(0);
+          setView("wizard");
+          window.scrollTo({ top: 0 });
+        }}
+      />
     );
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex max-w-[900px] flex-col gap-1">
       <h1 className="text-h1 text-primary-900">GrowthOS Vision Board</h1>
       <p className="mb-5 max-w-[62ch] text-body-sm text-neutral-500">
         Your company&apos;s strategic operating plan — core values, target market, financial goals, and the
