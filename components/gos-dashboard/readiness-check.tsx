@@ -57,7 +57,7 @@ export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
       </span>
       <div className="flex min-w-[240px] flex-1 flex-col gap-2">
         <p className="max-w-[72ch] text-body-sm text-warning-800">
-          Nothing in the Playbook will work until both foundations are in place: a functioning website and a written Ideal
+          Nothing in The GrowthOS Strategy and Assignment will work until both foundations are in place: a functioning website and a written Ideal
           Client Profile.
         </p>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
