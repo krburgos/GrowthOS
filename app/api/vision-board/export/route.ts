@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
     : "Not signed off yet";
 
   doc.font(POPPINS.semibold).fontSize(8.5).fillColor(TEAL).text("GROWTHOS", MARGIN, MARGIN, { width: contentWidth, align: "right", characterSpacing: 0.6 });
-  doc.font(POPPINS.bold).fontSize(20).fillColor(NAVY).text("GOS Vision Board", MARGIN, MARGIN);
+  doc.font(POPPINS.bold).fontSize(20).fillColor(NAVY).text("GrowthOS Vision Board", MARGIN, MARGIN);
   doc.font(POPPINS.regular).fontSize(10.5).fillColor(MUTED).text(`${accountName}  ·  ${signedLine}`);
   doc.moveDown(0.5);
   doc.moveTo(MARGIN, doc.y).lineTo(MARGIN + contentWidth, doc.y).lineWidth(1.5).strokeColor(NAVY).stroke();
@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
         body(text(answers, "target10_text"));
         break;
       case "marketing": {
-        label("Ideal Customer Profile (from the GOS Solution Questionnaire)");
+        label("Ideal Customer Profile (from the GrowthOS Solution Questionnaire)");
         const target = typeof qAnswers.overview_target_market === "string" && qAnswers.overview_target_market.trim()
           ? qAnswers.overview_target_market.trim()
           : NOT_ANSWERED;
@@ -230,7 +230,7 @@ export async function GET(request: NextRequest) {
     doc.page.margins.bottom = 0;
     doc.moveTo(MARGIN, y - 6).lineTo(MARGIN + contentWidth, y - 6).lineWidth(0.5).strokeColor(RULE).stroke();
     doc.font(POPPINS.regular).fontSize(8).fillColor(FAINT);
-    doc.text(`GOS Vision Board  ·  ${accountName}`, MARGIN, y, { width: contentWidth / 2, lineBreak: false });
+    doc.text(`GrowthOS Vision Board  ·  ${accountName}`, MARGIN, y, { width: contentWidth / 2, lineBreak: false });
     doc.text(`Page ${i - range.start + 1} of ${range.count}`, MARGIN + contentWidth / 2, y, {
       width: contentWidth / 2,
       align: "right",
@@ -245,7 +245,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="gos-vision-board-${slug}.pdf"`,
+      "Content-Disposition": `attachment; filename="growthos-vision-board-${slug}.pdf"`,
     },
   });
 }

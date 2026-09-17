@@ -5,7 +5,7 @@ import { TOTAL_FIELD_COUNT } from "@/lib/vision-board/sections";
 
 /**
  * Client-confirmed (2026-09-16, amended 2026-09-16) — full-width Dashboard
- * nudge for the account's GOS Vision Board, same pattern as
+ * nudge for the account's GrowthOS Vision Board, same pattern as
  * GrowthQuestionnaireBanner (components/dashboard/growth-questionnaire-banner.tsx).
  * Originally disappeared entirely once complete; now stays on the
  * Dashboard permanently, switching to a green "complete" state ({TOTAL}
@@ -30,7 +30,7 @@ export function VisionBoardBanner({ answeredCount, complete }: { answeredCount: 
         {complete ? <CheckCircle2 className="size-5" /> : <Compass className="size-5" />}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-body font-semibold">GOS Vision Board</p>
+        <p className="text-body font-semibold">GrowthOS Vision Board</p>
         <p className="text-caption text-white/75">
           {answeredCount} of {TOTAL_FIELD_COUNT} fields answered
         </p>

@@ -4,12 +4,12 @@ import { VisionBoardWizard } from "@/components/settings/vision-board-wizard";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "GOS Vision Board — GrowthOS" };
+export const metadata: Metadata = { title: "GrowthOS Vision Board — GrowthOS" };
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"];
 
 /**
- * Settings → Account Settings → GOS Vision Board (new, 2026-09-16).
+ * Settings → Account Settings → GrowthOS Vision Board (new, 2026-09-16).
  * Answers live in vision_board_responses, one row per account (Backend
  * Schema §6.6b, same RLS shape as growth_questionnaire_responses).
  * Direct RLS-scoped read here (hybrid access, no secret involved); the

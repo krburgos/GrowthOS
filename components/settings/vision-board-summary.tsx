@@ -109,7 +109,7 @@ function FigureRow({ figures }: { figures: { label: string; value: string | null
  * wizard order, with a sticky section list, replacing the earlier
  * sign-off banner and "Coming soon" deliverables preview. Each section
  * gets a treatment that fits its answer shape. The ICP stays read-only,
- * sourced from the GOS Solution Questionnaire.
+ * sourced from the GrowthOS Solution Questionnaire.
  */
 export function VisionBoardSummary({
   accountId,
@@ -170,7 +170,7 @@ export function VisionBoardSummary({
       <div className="flex flex-col gap-5">
         <div className="grid grid-cols-1 gap-2.5 rounded-md border border-dashed border-secondary-300 bg-secondary-50 p-3.5 sm:grid-cols-3">
           <p className="text-caption font-bold uppercase tracking-wide text-secondary-800 sm:col-span-3">
-            Ideal Customer Profile · from the GOS Solution Questionnaire
+            Ideal Customer Profile · from the GrowthOS Solution Questionnaire
           </p>
           <div>
             <p className="text-caption text-neutral-500">Target market</p>
@@ -303,7 +303,7 @@ export function VisionBoardSummary({
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-3.5">
         <div>
-          <h1 className="text-h1 text-primary-900">GOS Vision Board</h1>
+          <h1 className="text-h1 text-primary-900">GrowthOS Vision Board</h1>
           <div className="mt-1.5 flex flex-wrap items-center gap-2 text-body-sm text-neutral-500">
             <span className="inline-flex items-center gap-1 rounded-full bg-success-100 py-0.5 pl-1.5 pr-2.5 text-caption font-semibold text-success-700">
               <CircleCheck className="size-3.5" strokeWidth={2.25} />

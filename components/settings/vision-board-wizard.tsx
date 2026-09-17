@@ -156,7 +156,7 @@ function TextFieldInput({
 }
 
 /**
- * Client-confirmed (2026-09-16) — the GOS Vision Board wizard,
+ * Client-confirmed (2026-09-16) — the GrowthOS Vision Board wizard,
  * modeled on GrowthQuestionnaireWizard's stepped pattern (one section
  * per screen, dot stepper, Save & Continue) but for this document's own
  * field shape: mostly free text plus several add/remove list fields
@@ -166,7 +166,7 @@ function TextFieldInput({
  * account, jsonb keyed by field key) on every Continue/Skip/Finish.
  *
  * The Marketing Strategy step's ICP box is read-only, built from the
- * account's GOS Solution Questionnaire answers rather than asked
+ * account's GrowthOS Solution Questionnaire answers rather than asked
  * again here — client-confirmed (2026-09-16). The real Questionnaire
  * doesn't carry a structured company-size/revenue-range/decision-maker
  * breakdown, so this shows the fields it actually has (target market,
@@ -278,7 +278,7 @@ export function VisionBoardWizard({
 
   return (
     <div className="flex max-w-[900px] flex-col gap-1">
-      <h1 className="text-h1 text-primary-900">GOS Vision Board</h1>
+      <h1 className="text-h1 text-primary-900">GrowthOS Vision Board</h1>
       <p className="mb-5 max-w-[62ch] text-body-sm text-neutral-500">
         Your company&apos;s strategic operating plan — core values, target market, financial goals, and the
         priorities your leadership team is aligned on. Signed off, it drives your Strategic Vision Dashboard and
@@ -338,7 +338,7 @@ export function VisionBoardWizard({
           {section.key === "marketing" && (
             <div className="rounded-md border border-dashed border-secondary-300 bg-secondary-50 p-4">
               <p className="mb-2 text-caption font-bold uppercase tracking-wide text-secondary-800">
-                Ideal Customer Profile — from your GOS Solution Questionnaire
+                Ideal Customer Profile — from your GrowthOS Solution Questionnaire
               </p>
               <div className="grid grid-cols-1 gap-2 text-body-sm sm:grid-cols-3">
                 <div>
@@ -359,7 +359,7 @@ export function VisionBoardWizard({
                 </div>
               </div>
               <a href="/settings/growth-questionnaire" className="mt-2 inline-block text-caption font-semibold text-secondary-700 hover:underline">
-                Edit these in the GOS Solution Questionnaire →
+                Edit these in the GrowthOS Solution Questionnaire →
               </a>
             </div>
           )}
