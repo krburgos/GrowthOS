@@ -5,6 +5,7 @@ import { HoursCard } from "@/components/gos-dashboard/hours-card";
 import { HoursTotalsStrip } from "@/components/gos-dashboard/hours-totals-strip";
 import { KpiBand } from "@/components/gos-dashboard/kpi-band";
 import { ReadinessCheck } from "@/components/gos-dashboard/readiness-check";
+import { HeroBand, HeroLabel } from "@/components/shell/hero-band";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
 import { getKpiBand, getReadiness, getStepHours, getStepOverviews } from "@/lib/gos-dashboard/queries";
@@ -36,19 +37,25 @@ export default async function GosDashboardPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-6 md:p-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-h1 text-primary-900">GrowthOS Strategy and Assignment Dashboard</h1>
-          <p className="max-w-[70ch] text-body text-neutral-500">
-            The GrowthOS Strategy and Assignment Dashboard, tracked by hours — 4 phases, 14 workstreams from SEO through Sales Enablement. Click
-            into any card for its status report, duties, and KPIs.
-          </p>
+      <HeroBand>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-h1 text-white">GrowthOS Strategy and Assignment Dashboard</h1>
+            <p className="max-w-[70ch] text-body text-white/75">
+              Tracked by hours — 4 phases, 14 workstreams from SEO through Sales Enablement. Click into any card for
+              its status report, duties, and KPIs.
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-3 py-1.5 text-body-sm font-semibold text-white">
+            <CalendarRange className="size-4" />
+            {quarter.label} · {quarter.range}
+          </span>
         </div>
-        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-primary-100 px-3 py-1.5 text-body-sm font-semibold text-primary-700">
-          <CalendarRange className="size-4" />
-          {quarter.label} · {quarter.range}
-        </span>
-      </div>
+        <div>
+          <HeroLabel>Workstream hours · {quarter.label}</HeroLabel>
+          <HoursTotalsStrip hours={Object.values(hours)} quarter={quarter} variant="hero" />
+        </div>
+      </HeroBand>
 
       <ReadinessCheck readiness={readiness} />
 
@@ -59,15 +66,9 @@ export default async function GosDashboardPage() {
         canEditMapping={isCroLeaderEditor}
       />
 
-      <section className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-body-sm font-semibold text-neutral-600">Workstream hours</h2>
-          {!canLogHours && (
-            <span className="text-caption text-neutral-400">View only — MSP Owner/Admin and CRO Leader log hours</span>
-          )}
-        </div>
-        <HoursTotalsStrip hours={Object.values(hours)} quarter={quarter} />
-      </section>
+      {!canLogHours && (
+        <p className="-mb-2 text-caption text-neutral-400">View only — MSP Owner/Admin and CRO Leader log hours</p>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {steps.map((step) => (

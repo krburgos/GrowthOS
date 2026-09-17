@@ -8,6 +8,7 @@ import { PipelineByStage, type StageCount } from "@/components/dashboard/pipelin
 import { RecentActivityFeed, type FeedItem } from "@/components/dashboard/recent-activity-feed";
 import { TodayTasksPanel, type DueTask } from "@/components/dashboard/today-tasks-panel";
 import { VisionBoardBanner } from "@/components/dashboard/vision-board-banner";
+import { HeroBand, HeroLabel } from "@/components/shell/hero-band";
 import { COMPANY_PROFILE_COLUMNS, type CompanyProfile } from "@/lib/accounts/company-profile";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
 import type { StageGroup } from "@/lib/opportunities/stages";
@@ -197,12 +198,18 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {account && <CompanyProfileCard account={account as unknown as CompanyProfile} canEdit={canEditProfile} />}
+      <HeroBand>
+        {account && (
+          <CompanyProfileCard account={account as unknown as CompanyProfile} canEdit={canEditProfile} variant="hero" />
+        )}
+        <div>
+          <HeroLabel>This week</HeroLabel>
+          <KpiTiles tiles={kpiTiles} variant="hero" />
+        </div>
+      </HeroBand>
 
       <GrowthQuestionnaireBanner answeredCount={questionnaireAnsweredCount} complete={questionnaireComplete} />
       <VisionBoardBanner answeredCount={visionBoardAnsweredCount} complete={visionBoardComplete} />
-
-      <KpiTiles tiles={kpiTiles} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
         <div className="flex flex-col gap-4">

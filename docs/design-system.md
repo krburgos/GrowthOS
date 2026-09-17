@@ -540,3 +540,19 @@ Every value above was generated from the client's exact brand hex codes (§2) us
 
 - **Custom status colors (§8.3):** MSP-created custom statuses default to the neutral badge treatment. If you want MSPs to be able to pick a badge color when creating a custom status, that's a feature decision for the PRD, not a styling gap — flag it and this document will define the exact color-picker options (almost certainly a constrained set from §3's scales, not a free color picker, to keep the palette coherent).
 - **Onboarding Wizard illustration/imagery style** isn't specified here — nothing in the PRD or App Flow Document calls for illustrations, so none are speced. If the wizard should feel more visual than the form-only treatment implied by §8.2, that's worth a follow-up.
+
+## 12. Hero band (client-confirmed color direction, 2026-09-17)
+
+Chosen from three compared mockups as "Concept B — navy command bar." A page that opens with an identity plus its headline numbers puts both inside **one** band across the top: a `linear-gradient(135deg, primary-900, primary-700 60%, secondary-800)` surface, `radius-lg`, white text, with translucent `white/10` fills and `white/15` hairlines for the tiles and dividers inside it. Everything below the band stays on the existing white/neutral-50 surfaces — the band is the single heavy block of color on the page and is never repeated further down.
+
+Implemented as `components/shell/hero-band.tsx` (`HeroBand`, `HeroLabel`). Components that can appear both inside the band and on a normal white surface take a `variant?: "card" | "hero"` prop rather than being duplicated — currently `KpiTiles`, `CompanyProfileCard` and `HoursTotalsStrip`.
+
+**Where it is used:** the Dashboard (Company Profile + the week's KPI tiles) and the GrowthOS Strategy and Assignment Dashboard (page title, quarter, and the hours totals strip). Not used on Settings screens, list/table pages, or the CRO Leader Dashboard, which have no identity-plus-numbers header to carry it.
+
+**Color rules this direction does not change.** No new tokens were introduced — the gradient, fills and text are all §9 tokens. Series color for charts and status pills still comes from the validated set below.
+
+### 12.1 Validated categorical palette
+
+For any chart or grouped stat that needs more than one color, use this fixed order — blue `primary-500 #2873e1`, teal `secondary-500 #03b8de`, green `success-600 #50af28`, red `error-600 #d60000`. As an ordered set it passes lightness-band, chroma, colorblind-separation (deutan/protan/tritan) and normal-vision checks; teal and green fall below 3:1 against white, so marks in those colors always carry a visible label or an adjacent value.
+
+**Amber (`warning-*`) is not a series color.** It failed colorblind separation against green (ΔE 2.2 deutan), so it stays reserved for the "Needs Attention" status — always paired with its label, never color alone.
