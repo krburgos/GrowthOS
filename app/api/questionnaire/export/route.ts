@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
   doc.strokeOpacity(1);
 
   doc.font(F.bold).fontSize(9).fillColor(TEAL_BRIGHT).text("GROWTHOS", M, 34, { characterSpacing: 1.3, lineBreak: false });
-  doc.font(F.bold).fontSize(26).fillColor("#ffffff").text("GrowthOS Solution Questionnaire", M, 50, { width: 380, lineGap: -4 });
+  doc.font(F.bold).fontSize(26).fillColor("#ffffff").text("GOS Solution Questionnaire", M, 50, { width: 380, lineGap: -4 });
   doc.font(F.regular).fontSize(13).fillColor("#d4dbe6").text(accountName, M, doc.y + 2, { width: 400 });
   const metaY = doc.y + 10;
   let mx = M;
@@ -384,7 +384,7 @@ export async function GET(request: NextRequest) {
     }
     doc.moveTo(M, PAGE_H - 40).lineTo(M + CONTENT_W, PAGE_H - 40).lineWidth(0.5).strokeColor(RULE).stroke();
     doc.font(F.regular).fontSize(7.5).fillColor(FAINT);
-    doc.text(`GrowthOS Solution Questionnaire · ${accountName} · Exported ${exportedOn}`, M, PAGE_H - 32, { width: CONTENT_W - 80, lineBreak: false, ellipsis: true });
+    doc.text(`GOS Solution Questionnaire · ${accountName} · Exported ${exportedOn}`, M, PAGE_H - 32, { width: CONTENT_W - 80, lineBreak: false, ellipsis: true });
     doc.text(`Page ${pageNo} of ${range.count}`, M, PAGE_H - 32, { width: CONTENT_W, align: "right", lineBreak: false });
   }
 
@@ -400,7 +400,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="growthos-solution-questionnaire-${slug}.pdf"`,
+      "Content-Disposition": `attachment; filename="gos-solution-questionnaire-${slug}.pdf"`,
     },
   });
 }

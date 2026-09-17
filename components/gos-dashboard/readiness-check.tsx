@@ -27,7 +27,7 @@ function displayWebsite(url: string) {
 /**
  * The Playbook doc's "Before You Begin — STOP" (client-confirmed,
  * 2026-09-17): a website on file in Company settings, and a written ICP —
- * counted as the GrowthOS Solution Questionnaire's target-market answer.
+ * counted as the GOS Solution Questionnaire's target-market answer.
  */
 export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
   const { website, targetMarket } = readiness;

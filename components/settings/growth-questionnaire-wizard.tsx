@@ -230,7 +230,7 @@ export function GrowthQuestionnaireWizard({
 
   return (
     <div className="flex flex-col gap-1">
-      <h1 className="text-h1 text-primary-900">GrowthOS Solution Questionnaire</h1>
+      <h1 className="text-h1 text-primary-900">GOS Solution Questionnaire</h1>
       <p className="mb-5 max-w-[62ch] text-body-sm text-neutral-500">
         Designed to support MSPs during onboarding and surface where CRO Leader can help accelerate growth.
         Answering it often highlights opportunities on its own — and unlocks a free consultation to review your

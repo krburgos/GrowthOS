@@ -744,7 +744,7 @@ create policy activities_update on activities for update
 
 ### 6.6a growth_questionnaire_responses
 
-**Client-confirmed addition (2026-09-15)** — the Growth Solution Questionnaire, sourced from "Growth Solution Questionnaire for MSPs.docx" (8 sections, 75 questions). One row per account; answers live in a single `jsonb` column keyed by a stable question key defined in `lib/questionnaire/questions.ts`, not one column per question — the question list itself is app-code, not schema, since the source document can be revised without a migration. Same RLS shape as `contact_statuses` (§6.4): account-scoped read/write for the MSP, CRO Admin/Advisor and a granted partner get the same read+write parity they have everywhere else.
+**Client-confirmed addition (2026-09-15)** — the GOS Solution Questionnaire, sourced from "Growth Solution Questionnaire for MSPs.docx" (8 sections, 75 questions). One row per account; answers live in a single `jsonb` column keyed by a stable question key defined in `lib/questionnaire/questions.ts`, not one column per question — the question list itself is app-code, not schema, since the source document can be revised without a migration. Same RLS shape as `contact_statuses` (§6.4): account-scoped read/write for the MSP, CRO Admin/Advisor and a granted partner get the same read+write parity they have everywhere else.
 
 ```
 create table growth_questionnaire_responses (
@@ -785,7 +785,7 @@ create trigger trg_growth_questionnaire_responses_updated_at before update on gr
 
 ### 6.6b vision_board_responses
 
-**Client-confirmed addition (2026-09-16)** — the GrowthOS Vision Board, sourced from "GrowthOS Vision Board Dev Questions.docx" (9 numbered sections + a Leadership Sign-Off). One row per account; answers live in a single `jsonb` column keyed by a stable field key defined in `lib/vision-board/sections.ts`, same reasoning as `growth_questionnaire_responses` (§6.6a) for keeping the question list as app-code rather than schema. Same RLS shape and role set, client-confirmed identical: MSP Owner/Admin write, CRO Admin/Advisor write on the MSP's behalf, a granted partner writes too, and read is account-scoped plus CRO Leader/partner.
+**Client-confirmed addition (2026-09-16)** — the GOS Vision Board, sourced from "GrowthOS Vision Board Dev Questions.docx" (9 numbered sections + a Leadership Sign-Off). One row per account; answers live in a single `jsonb` column keyed by a stable field key defined in `lib/vision-board/sections.ts`, same reasoning as `growth_questionnaire_responses` (§6.6a) for keeping the question list as app-code rather than schema. Same RLS shape and role set, client-confirmed identical: MSP Owner/Admin write, CRO Admin/Advisor write on the MSP's behalf, a granted partner writes too, and read is account-scoped plus CRO Leader/partner.
 
 ```
 create table vision_board_responses (
@@ -1481,8 +1481,8 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | GET /api/unsubscribe/[token] | None (public) | Records an 'unsubscribed' event, sets email_opt_out (§9) |
 | POST /api/webhooks/resend | Resend (Svix) signature header (no user session) | Records 'bounced' / 'complained' / 'delivered' events from Resend's webhook |
 | GET /api/reports/export | Session | Streams an XLSX/CSV export of report data (ExcelJS) for volumes too large to build client-side |
-| GET /api/questionnaire/export | Session | Streams a PDF (pdfkit) of the GrowthOS Solution Questionnaire's questions and saved answers for one account (§6.6a). Client-confirmed redesign (2026-09-17): branded cover page (at-a-glance numbers, Yes answers by section, contents with page numbers, answer key), then every question as a numbered row with its answer styled by type, in embedded Poppins |
-| GET /api/vision-board/export | Session | Streams a PDF (pdfkit) of every GrowthOS Vision Board answer for one account, in wizard order, with the Questionnaire-sourced ICP (§6.6b). Client-confirmed 2026-09-17: anyone who can view the Vision Board can export it, so the regular session client under RLS is enough |
+| GET /api/questionnaire/export | Session | Streams a PDF (pdfkit) of the GOS Solution Questionnaire's questions and saved answers for one account (§6.6a). Client-confirmed redesign (2026-09-17): branded cover page (at-a-glance numbers, Yes answers by section, contents with page numbers, answer key), then every question as a numbered row with its answer styled by type, in embedded Poppins |
+| GET /api/vision-board/export | Session | Streams a PDF (pdfkit) of every GOS Vision Board answer for one account, in wizard order, with the Questionnaire-sourced ICP (§6.6b). Client-confirmed 2026-09-17: anyone who can view the Vision Board can export it, so the regular session client under RLS is enough |
 
 
 ## 11. Data Access Pattern Summary
