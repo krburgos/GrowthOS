@@ -321,7 +321,7 @@ function MappingDialog({
   );
 }
 
-/** The Playbook doc's "GrowthOS KPI dashboard": Prospects + Opportunities in Pipeline, counted live from the CRM. */
+/** The Playbook doc's "GrowthOS KPI dashboard": Prospect Count + Opportunities Count (Total Active), counted live from the CRM. */
 export function KpiBand({
   accountId,
   sources,
@@ -396,14 +396,14 @@ export function KpiBand({
         <div>
           <div className="flex items-center justify-center gap-1.5 bg-primary-900 px-3 py-2 text-body-sm font-semibold text-white">
             <Users className="size-3.5" />
-            Prospects
+            Prospect Count
           </div>
           <div className="grid grid-cols-2">{KPI_BOXES.filter((b) => b.group === "prospects").map(renderCell)}</div>
         </div>
         <div className="border-t border-neutral-200 lg:border-l lg:border-t-0">
           <div className="flex items-center justify-center gap-1.5 bg-secondary-700 px-3 py-2 text-body-sm font-semibold text-white">
             <KanbanSquare className="size-3.5" />
-            Opportunities in Pipeline
+            Opportunities Count (Total Active)
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-6">{KPI_BOXES.filter((b) => b.group === "pipeline").map(renderCell)}</div>
         </div>

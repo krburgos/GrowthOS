@@ -10,7 +10,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
 import { getKpiBand, getReadiness, getStepHours, getStepOverviews } from "@/lib/gos-dashboard/queries";
 
-export const metadata: Metadata = { title: "GrowthOS Strategy and Assignment Dashboard — GrowthOS" };
+export const metadata: Metadata = { title: "GrowthOS Command Center – Strategy & Assignments Dashboard — GrowthOS" };
 
 /**
  * GOS Dashboard (App Flow §4.3a). Client-confirmed (2026-09-17), all from
@@ -40,7 +40,7 @@ export default async function GosDashboardPage() {
       <HeroBand>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-h1 text-white">GrowthOS Strategy and Assignment Dashboard</h1>
+            <h1 className="text-h1 text-white">GrowthOS Command Center – Strategy & Assignments Dashboard</h1>
             <p className="max-w-[70ch] text-body text-white/75">
               Tracked by hours — 4 phases, 14 workstreams from SEO through Sales Enablement. Click into any card for
               its status report, duties, and KPIs.
