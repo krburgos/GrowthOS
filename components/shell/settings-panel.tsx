@@ -33,9 +33,9 @@ const MY_PROFILE_ROWS: Row[] = [
 ];
 
 const ACCOUNT_SETTINGS_ROWS: (Row & { sub?: AccountSub })[] = [
-  { label: "Company", href: "/settings/company", sub: "company" },
-  { label: "GOS Questionnaire", href: "/settings/growth-questionnaire", sub: "growth_questionnaire" },
-  { label: "GOS Vision Board", href: "/settings/vision-board", sub: "vision_board" },
+  { label: "Company Profile", href: "/settings/company", sub: "company" },
+  { label: "Solution Questionnaire", href: "/settings/growth-questionnaire", sub: "growth_questionnaire" },
+  { label: "Vision Board", href: "/settings/vision-board", sub: "vision_board" },
   { label: "Billing & Payments" },
   { label: "Email Auth" },
   { label: "Users", href: "/settings/users", sub: "users" },
@@ -64,9 +64,9 @@ const ACCOUNT_SUB_ROWS: Partial<Record<AccountSub, Row[]>> = {
 };
 
 const ACCOUNT_SUB_TITLE: Record<AccountSub, string> = {
-  company: "Company",
-  growth_questionnaire: "GOS Questionnaire",
-  vision_board: "GOS Vision Board",
+  company: "Company Profile",
+  growth_questionnaire: "Solution Questionnaire",
+  vision_board: "Vision Board",
   users: "Users",
   customizations: "Customizations",
 };
