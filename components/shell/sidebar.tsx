@@ -34,8 +34,8 @@ export interface NavItem {
 /** Exported so the command palette (§8.10) can reuse the exact same
  * destination list rather than maintaining a second, drift-prone copy. */
 export const NAV_ITEMS: NavItem[] = [
-  { section: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { section: "gosDashboard", label: "GOS Dashboard", href: "/gos-dashboard", icon: LayoutGrid },
+  { section: "dashboard", label: "Homepage", href: "/dashboard", icon: LayoutDashboard },
+  { section: "gosDashboard", label: "Command Center", href: "/gos-dashboard", icon: LayoutGrid },
   { section: "contacts", label: "Contacts", href: "/contacts", icon: Users },
   { section: "companies", label: "Companies", href: "/companies", icon: Building2 },
   { section: "opportunities", label: "Opportunities", href: "/opportunities", icon: Target },

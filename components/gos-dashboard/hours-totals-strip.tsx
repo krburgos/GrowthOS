@@ -42,7 +42,7 @@ export function HoursTotalsStrip({
         hero ? "border-white/15 bg-white/10 lg:divide-white/15" : "border-neutral-200 bg-white lg:divide-neutral-100"
       )}
     >
-      <Stat label="Hours needed (all workstreams)" value={formatHours(needed)} unit="hrs" hero={hero} />
+      <Stat label="Hours required" value={formatHours(needed)} unit="hrs" hero={hero} />
       <Stat label="Committed this quarter" value={formatHours(committed)} unit="hrs" hero={hero} />
       <Stat label="Achieved this quarter" value={formatHours(achieved)} unit="hrs" hero={hero} />
       <Stat label="Outsourced" value={String(outsourced)} unit={`of ${hours.length} workstreams`} hero={hero} />
