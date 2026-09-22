@@ -20,7 +20,7 @@ export function VisionBoardBanner({ answeredCount, complete }: { answeredCount: 
 
   return (
     <Link
-      href="/settings/vision-board"
+      href={complete ? "/vision-board" : "/settings/vision-board"}
       className={
         "flex items-center gap-4 rounded-lg p-4 text-white transition-opacity hover:opacity-95 " +
         (complete ? "bg-gradient-to-r from-success-700 to-success-600" : "bg-gradient-to-r from-primary-800 to-secondary-700")

@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { VisionBoardSummary, type IcpAnswers } from "@/components/settings/vision-board-summary";
+import type { IcpAnswers } from "@/lib/vision-board/icp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
@@ -200,7 +200,7 @@ export function VisionBoardWizard({
   icpAnswers: IcpAnswers;
 }) {
   const router = useRouter();
-  const [view, setView] = useState<"wizard" | "complete">(initialComplete ? "complete" : "wizard");
+
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<Answers>(initialAnswers);
   const [saving, setSaving] = useState(false);
@@ -242,8 +242,7 @@ export function VisionBoardWizard({
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else if (isComplete(answers)) {
       toast.success("Vision Board complete.");
-      setView("complete");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      router.push("/vision-board");
       router.refresh();
     } else {
       toast.success("Progress saved.");
@@ -259,22 +258,6 @@ export function VisionBoardWizard({
   };
 
   const Icon = SECTION_ICON[section.icon];
-
-  if (view === "complete") {
-    return (
-      <VisionBoardSummary
-        accountId={accountId}
-        answers={answers}
-        icpAnswers={icpAnswers}
-        canEdit={canEdit}
-        onEdit={() => {
-          setStepIndex(0);
-          setView("wizard");
-          window.scrollTo({ top: 0 });
-        }}
-      />
-    );
-  }
 
   return (
     <div className="flex max-w-[900px] flex-col gap-1">
