@@ -56,7 +56,13 @@ const ON_GROUND: Record<Tone, { heading: string; body: string; eyebrow: string; 
  * It lives here rather than inside the route so the layout can be
  * rendered and looked at directly, without standing up a session.
  */
-export function renderVisionBoard(doc: InstanceType<typeof PDFDocument>, name: string, answers: VisionAnswers) {
+export function renderVisionBoard(
+  doc: InstanceType<typeof PDFDocument>,
+  name: string,
+  answers: VisionAnswers,
+  /** The account logo, already fetched. Omitted if it could not be read. */
+  logo?: Buffer
+) {
   const t = (key: string) => {
     const v = answers[key];
     return typeof v === "string" && v.trim() ? v.trim() : null;
@@ -152,12 +158,33 @@ export function renderVisionBoard(doc: InstanceType<typeof PDFDocument>, name: s
   g2.stop(0, "#2873e1", 0.45).stop(1, NAVY_950, 0);
   doc.rect(0, 0, W, H).fill(g2);
 
-  // Centred, to match the page's hero (client-confirmed mockup "C").
-  doc.font(POPPINS.bold).fontSize(13);
-  const plateW = doc.widthOfString(name) + 36;
-  const plateX = (W - plateW) / 2;
-  doc.roundedRect(plateX, 150, plateW, 38, 9).lineWidth(1).fillAndStroke("#16304f", "#3c5a86");
-  doc.fillColor(WHITE).text(name, plateX, 162, { width: plateW, align: "center" });
+  // Centred mark-beside-name lockup, matching the page's hero
+  // (client-confirmed mockups "C" and "A").
+  const MARK = 46;
+  const GAP = 14;
+  doc.font(POPPINS.bold).fontSize(17);
+  const nameW = doc.widthOfString(name);
+  const lockW = (logo ? MARK + GAP : 0) + nameW;
+  const lockX = (W - lockW) / 2;
+  const lockY = 146;
+
+  if (logo) {
+    doc.roundedRect(lockX, lockY, MARK, MARK, 9).fill(WHITE);
+    try {
+      doc.image(logo, lockX + 5, lockY + 5, { fit: [MARK - 10, MARK - 10], align: "center", valign: "center" });
+    } catch {
+      // A logo pdfkit cannot decode (an SVG, say) simply leaves the plate
+      // blank rather than failing the whole export.
+    }
+  }
+
+  const textX = lockX + (logo ? MARK + GAP : 0);
+  doc.font(POPPINS.bold).fontSize(17).fillColor(WHITE).text(name, textX, lockY + 8, { lineBreak: false });
+  doc
+    .font(POPPINS.semibold)
+    .fontSize(7.5)
+    .fillColor("#8fa3c4")
+    .text("VISION BOARD", textX, lockY + 30, { characterSpacing: 1.3, lineBreak: false });
 
   doc.y = 250;
   eyebrow(`Where ${name} is going — ten years out`, "center");

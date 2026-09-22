@@ -126,19 +126,24 @@ export function VisionPage({
         </div>
 
         <div className="relative z-10">
-          {/* A wide plate sized to the logo, not a square that crops it —
-              a company wordmark is usually far wider than it is tall. */}
-          <div className="mb-8 flex justify-center">
-            {account.logo_url ? (
-              <span className="inline-flex h-12 items-center rounded-lg bg-white/95 px-3.5">
+          {/* Client-confirmed lockup "A" (2026-09-22): the mark sits beside
+              the company name rather than standing alone, so the two read as
+              one unit and the name carries even when the mark is unfamiliar.
+              The plate is a rounded square with object-contain, which suits a
+              wide wordmark as well as a tall mark. */}
+          <div className="mb-9 flex items-center justify-center gap-3.5">
+            {account.logo_url && (
+              <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-lg bg-white/95 p-1.5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={account.logo_url} alt={account.name} className="max-h-7 w-auto max-w-[200px] object-contain" />
-              </span>
-            ) : (
-              <span className="inline-flex items-center rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-h4 font-bold">
-                {account.name}
+                <img src={account.logo_url} alt="" className="max-h-full max-w-full object-contain" />
               </span>
             )}
+            <span className="text-left">
+              <span className="block text-h2 font-bold leading-none tracking-tight">{account.name}</span>
+              <span className="mt-1.5 block text-caption font-semibold uppercase tracking-widest text-white/55">
+                Vision Board
+              </span>
+            </span>
           </div>
           <Eyebrow tone="dark">Where {account.name} is going — ten years out</Eyebrow>
           {target10 && (

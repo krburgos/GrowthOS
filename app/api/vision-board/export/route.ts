@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
   const [{ data: response }, { data: account }] = await Promise.all([
     supabase.from("vision_board_responses").select("answers").eq("account_id", accountId).maybeSingle(),
-    supabase.from("accounts").select("name").eq("id", accountId).maybeSingle(),
+    supabase.from("accounts").select("name, logo_url").eq("id", accountId).maybeSingle(),
   ]);
 
   if (!response) {
@@ -41,13 +41,26 @@ export async function GET(request: NextRequest) {
 
   const name = account?.name ?? "GrowthOS Account";
 
+  // The cover carries the account's logo beside its name, the same lockup the
+  // page uses. A logo that cannot be fetched is not worth failing an export
+  // over, so the cover simply falls back to the name alone.
+  let logo: Buffer | undefined;
+  if (account?.logo_url) {
+    try {
+      const res = await fetch(account.logo_url, { signal: AbortSignal.timeout(4000) });
+      if (res.ok) logo = Buffer.from(await res.arrayBuffer());
+    } catch {
+      logo = undefined;
+    }
+  }
+
   const doc = new PDFDocument({ size: "LETTER", margin: 54, bufferPages: true });
   registerPoppins(doc);
   const chunks: Buffer[] = [];
   doc.on("data", (c) => chunks.push(c));
   const done = new Promise<Buffer>((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
 
-  renderVisionBoard(doc, name, (response.answers ?? {}) as VisionAnswers);
+  renderVisionBoard(doc, name, (response.answers ?? {}) as VisionAnswers, logo);
 
   doc.end();
   const buffer = await done;
