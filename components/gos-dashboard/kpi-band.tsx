@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CountUp } from "@/components/ui/count-up";
+import { SectionHeading } from "@/components/shell/section-heading";
 import { Spinner } from "@/components/ui/spinner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import {
@@ -384,25 +385,22 @@ export function KpiBand({
 
   return (
     <section className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-body-sm font-semibold text-neutral-600">GrowthOS KPI Dashboard</h2>
-        <div className="flex items-center gap-3 text-caption text-neutral-400">
-          <span className="inline-flex items-center gap-1">
-            <Radio className="size-3.5" />
-            Live from the CRM{customized ? "" : " · default mapping"}
-          </span>
-          {canEditMapping && (
-            <button
-              type="button"
-              onClick={() => setMapOpen(true)}
-              className="inline-flex items-center gap-1 font-semibold text-secondary-700 hover:underline"
-            >
-              <SlidersHorizontal className="size-3.5" />
-              Edit mapping
-            </button>
-          )}
-        </div>
-      </div>
+      <SectionHeading title="GrowthOS KPI Dashboard">
+        <span className="inline-flex items-center gap-1 text-caption text-neutral-400">
+          <Radio className="size-3.5" />
+          Live from the CRM{customized ? "" : " · default mapping"}
+        </span>
+        {canEditMapping && (
+          <button
+            type="button"
+            onClick={() => setMapOpen(true)}
+            className="inline-flex items-center gap-1 text-caption font-semibold text-secondary-700 hover:underline"
+          >
+            <SlidersHorizontal className="size-3.5" />
+            Edit mapping
+          </button>
+        )}
+      </SectionHeading>
 
       <div className="grid grid-cols-1 overflow-hidden rounded-lg border border-neutral-200 bg-white lg:grid-cols-[3fr_5fr]">
         <div>

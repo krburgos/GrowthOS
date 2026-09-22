@@ -6,8 +6,10 @@ import { HoursTotalsStrip } from "@/components/gos-dashboard/hours-totals-strip"
 import { KpiBand } from "@/components/gos-dashboard/kpi-band";
 import { ReadinessCheck } from "@/components/gos-dashboard/readiness-check";
 import { HeroBand, HeroLabel } from "@/components/shell/hero-band";
+import { SectionHeading } from "@/components/shell/section-heading";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
+import { PLAYBOOK_PHASES } from "@/lib/gos-dashboard/playbook";
 import { getKpiBand, getReadiness, getStepHours, getStepOverviews } from "@/lib/gos-dashboard/queries";
 
 export const metadata: Metadata = { title: "GrowthOS Command Center – Strategy & Assignments Dashboard — GrowthOS" };
@@ -66,22 +68,30 @@ export default async function GosDashboardPage() {
         canEditMapping={isCroLeaderEditor}
       />
 
-      {!canLogHours && (
-        <p className="-mb-2 text-caption text-neutral-400">View only — MSP Owner/Admin and CRO Leader log hours</p>
-      )}
+      <section className="mt-2 flex flex-col gap-3">
+        <SectionHeading title="Mission Cards">
+          <span className="text-caption text-neutral-400">
+            {steps.length} workstreams · {PLAYBOOK_PHASES.length} phases
+          </span>
+        </SectionHeading>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {steps.map((step) => (
-          <HoursCard
-            key={step.slug}
-            step={step}
-            hours={hours[step.slug]}
-            quarter={quarter}
-            accountId={user.account_id!}
-            canLogHours={canLogHours}
-          />
-        ))}
-      </div>
+        {!canLogHours && (
+          <p className="text-caption text-neutral-400">View only — MSP Owner/Admin and CRO Leader log hours</p>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {steps.map((step) => (
+            <HoursCard
+              key={step.slug}
+              step={step}
+              hours={hours[step.slug]}
+              quarter={quarter}
+              accountId={user.account_id!}
+              canLogHours={canLogHours}
+            />
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
