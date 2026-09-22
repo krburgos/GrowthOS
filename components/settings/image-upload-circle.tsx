@@ -32,6 +32,7 @@ export function ImageUploadCircle({
   fallback,
   ariaLabel,
   compact,
+  shape = "circle",
 }: {
   bucket: string;
   folder: string;
@@ -47,6 +48,14 @@ export function ImageUploadCircle({
    * compact profile header) — the default size-9 button was sized for
    * the 96-128px circles elsewhere and would swallow a 56px one. */
   compact?: boolean;
+  /**
+   * "tile" (2026-09-22) renders a rounded square that fits the whole
+   * image in rather than a circle that crops to fill. A person's face
+   * survives a circular crop; a company wordmark does not — CRO Leader's
+   * own logo is roughly 4:1, so object-cover in a circle showed a slice
+   * of the middle and nothing else. Avatars keep the circle.
+   */
+  shape?: "circle" | "tile";
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -99,7 +108,11 @@ export function ImageUploadCircle({
     <div className="relative flex size-full items-center justify-center">
       {preview ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="" className="size-full rounded-full object-cover" />
+        <img
+          src={preview}
+          alt=""
+          className={cn("size-full", shape === "tile" ? "rounded-md object-contain" : "rounded-full object-cover")}
+        />
       ) : (
         fallback
       )}
@@ -123,8 +136,11 @@ export function ImageUploadCircle({
             disabled={uploading}
             aria-label={ariaLabel}
             className={cn(
-              "absolute bottom-0 right-0 flex items-center justify-center rounded-full bg-primary-700 text-white shadow-sm hover:bg-primary-800 disabled:opacity-50",
-              compact ? "size-5" : "size-9"
+              "absolute flex items-center justify-center rounded-full bg-primary-700 text-white shadow-sm ring-2 ring-white hover:bg-primary-800 disabled:opacity-50",
+              compact ? "size-5" : "size-9",
+              // A tile has corners, so the button hangs off one instead of
+              // sitting inside the image and covering part of it.
+              shape === "tile" ? "-bottom-1.5 -right-1.5" : "bottom-0 right-0"
             )}
           >
             <Camera className={compact ? "size-3" : "size-5"} />

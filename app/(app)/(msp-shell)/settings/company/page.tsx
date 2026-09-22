@@ -42,8 +42,18 @@ export default async function CompanyProfilePage() {
   return (
     <main className="w-full max-w-[900px] flex-1 p-6 md:p-8">
       <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-lg border border-neutral-200 bg-white px-5 py-4">
-        <div className="flex size-14 shrink-0 items-center justify-center rounded-lg">
-          <CompanyLogoUpload accountId={account.id} logoUrl={account.logo_url} canEdit={canEdit} />
+        {/* A tile, not a circle: a company wordmark is usually wide, and a
+            circular object-cover crop showed a slice of the middle. The
+            padding keeps the logo off its own border, and the camera button
+            hangs off the corner rather than sitting on top of the image. */}
+        <div className="flex size-16 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white p-1.5">
+          <CompanyLogoUpload
+            accountId={account.id}
+            logoUrl={account.logo_url}
+            canEdit={canEdit}
+            compact
+            shape="tile"
+          />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-caption font-semibold text-neutral-400">Company profile</p>

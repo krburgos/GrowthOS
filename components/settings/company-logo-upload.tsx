@@ -17,12 +17,17 @@ export function CompanyLogoUpload({
   logoUrl,
   canEdit,
   compact,
+  shape,
 }: {
   accountId: string;
   logoUrl: string | null;
   canEdit: boolean;
   compact?: boolean;
+  shape?: "circle" | "tile";
 }) {
+  // The white/70 fallback is for a dark circle; a tile sits on white, where
+  // it would be invisible. compact means "small camera button", not "dark
+  // ground" - the two were conflated before the tile shape existed.
   return (
     <ImageUploadCircle
       bucket="company-logos"
@@ -34,8 +39,11 @@ export function CompanyLogoUpload({
       currentUrl={logoUrl}
       canEdit={canEdit}
       compact={compact}
+      shape={shape}
       ariaLabel="Upload company logo"
-      fallback={<Building2 className={compact ? "size-1/2 text-white/70" : "size-1/2 text-neutral-400"} />}
+      fallback={
+        <Building2 className={compact && shape !== "tile" ? "size-1/2 text-white/70" : "size-1/2 text-neutral-400"} />
+      }
     />
   );
 }
