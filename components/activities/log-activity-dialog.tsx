@@ -1,10 +1,12 @@
 "use client";
 
+import { NotebookPen } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
+import { HERO_ACTION_CLASS } from "@/components/shell/hero-band";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -45,10 +47,13 @@ export function LogActivityDialog({
   accountId,
   contactId,
   opportunityId,
+  variant = "button",
 }: {
   accountId: string;
   contactId?: string;
   opportunityId?: string;
+  /** "hero" renders the trigger as a button for a HeroBand action row. */
+  variant?: "button" | "hero";
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -94,7 +99,14 @@ export function LogActivityDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">Log Activity</Button>
+        {variant === "hero" ? (
+          <button type="button" className={HERO_ACTION_CLASS}>
+            <NotebookPen className="size-4" />
+            Log activity
+          </button>
+        ) : (
+          <Button size="sm">Log Activity</Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

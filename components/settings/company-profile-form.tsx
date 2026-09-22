@@ -1,16 +1,15 @@
 "use client";
 
-import { Building2, Globe, Link as LinkIcon, MapPin, Pencil, Phone, Plus, UserRound, Users, X } from "lucide-react";
+import { Pencil, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatAddress } from "@/lib/accounts/company-profile";
+import { initials } from "@/lib/accounts/company-profile";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 interface Values {
   name: string;
@@ -26,27 +25,35 @@ interface Values {
   sales_marketing_names: string[];
 }
 
+const CEO_TITLE = "Chief Executive Officer";
+
 /**
- * Design System §8.9 "Profile-style content card," Concept A (approved
- * mockup — reverts Concept B's two-column grid back to a single-column
- * icon-label-value list, now with colored navy/teal icon badges
- * instead of flat grey, alternating per row). Matches ProfileForm's
- * identical redesign, since both screens share this card pattern.
- * Client-confirmed gap-fill (App Flow §4.9 never listed a Company
- * Profile screen even though Backend Schema §2 already grants Owner/
- * Admin edit rights on "Accounts (own account settings)"). The logo
- * itself is uploaded from the header above (CompanyLogoUpload), not
- * edited as a field here. Company LinkedIn replaced the original
- * Industry field per client direction — accounts.industry was dropped,
- * not left unused (the separate industry field on the companies table,
- * for CRM company records under Contacts, is untouched).
+ * Company Profile — client-confirmed redesign (2026-09-22, approved mockup
+ * "B"): the flat run of nine rows becomes two groups, Company details and
+ * People, matching how the information is actually shaped.
  *
- * Client-confirmed expansion (2026-09-17): a full mailing address (the
- * old City/State pair plus street, suite and ZIP), a phone number, the
- * CEO's name, and one combined Sales & Marketing list of typed names —
- * all of it also shown, read-only, on the Dashboard's Company Profile
- * card. The "+" on that card links to #sales-marketing here, which opens
- * the form straight into editing with a blank name ready to type.
+ * Three problems this addresses:
+ *
+ * - Every row led with a coloured square alternating navy, teal, navy, teal
+ *   by row position. The colour encoded nothing, so nine saturated chips
+ *   were decoration stacked down the page. Gone; the field label does that
+ *   work now.
+ * - A four-part address sat in a single row carrying the same visual weight
+ *   as a phone number. Street and City/State/ZIP are now fields of their
+ *   own inside the details group.
+ * - Nothing said this page is what the Dashboard hero renders. The People
+ *   group says so, and shows the CEO and the team as the same chips the
+ *   Dashboard draws.
+ *
+ * Deliberately NOT inline-edited, unlike My Profile: the address is several
+ * fields that are edited together, and the team is a list that grows and
+ * shrinks, so one Edit / Save / Cancel for the page is the honest model
+ * here. The two screens differ because the data differs.
+ *
+ * What did not change: which fields exist, the columns they write, the
+ * accounts_update RLS that governs them (Backend Schema §6.1), or the
+ * Dashboard "+" deep link to #sales-marketing, which still opens this form
+ * in edit mode with a blank name ready to type.
  */
 export function CompanyProfileForm({
   accountId,
@@ -113,103 +120,122 @@ export function CompanyProfileForm({
     router.refresh();
   };
 
-  const address = formatAddress({
-    address_street: values.address_street,
-    address_suite: values.address_suite,
-    address_city: values.address_city,
-    address_state: values.address_state,
-    address_zip: values.address_zip,
-  });
   const savedNames = values.sales_marketing_names.filter((n) => n.trim());
+  const cityLine = [values.address_city, [values.address_state, values.address_zip].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ");
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white">
-      <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
-        <h2 className="text-h4 text-primary-900">Company Profile</h2>
-        {canEdit && !editing && (
-          <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
-            <Pencil className="mr-1.5 size-4" />
-            Update Info
-          </Button>
-        )}
-      </div>
+    <div className="flex flex-col gap-4">
+      <Card
+        title="Company details"
+        action={
+          canEdit && !editing ? (
+            <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+              <Pencil className="mr-1.5 size-4" />
+              Edit
+            </Button>
+          ) : null
+        }
+      >
+        <div className="grid grid-cols-1 gap-x-8 px-6 py-3 sm:grid-cols-2">
+          <Field label="Company name" fieldId="company_name">
+            {editing ? <Input id="company_name" value={values.name} onChange={set("name")} /> : <Value>{values.name}</Value>}
+          </Field>
 
-      <div className="flex flex-col divide-y divide-neutral-100">
-        <Row icon={Building2} tone="navy" label="Company Name" fieldId="company_name">
-          {editing ? <Input id="company_name" value={values.name} onChange={set("name")} /> : <Value>{values.name}</Value>}
-        </Row>
+          <Field label="Phone" fieldId="company_phone">
+            {editing ? (
+              <Input id="company_phone" value={values.phone} onChange={set("phone")} />
+            ) : (
+              <Value>{values.phone}</Value>
+            )}
+          </Field>
 
-        <Row icon={MapPin} tone="teal" label="Address" fieldId="company_street" align="start">
-          {editing ? (
-            <div className="flex flex-col gap-2">
+          <Field label="Website" fieldId="company_website">
+            {editing ? (
+              <Input id="company_website" value={values.website} onChange={set("website")} />
+            ) : values.website ? (
+              <ExternalValue href={values.website}>{values.website}</ExternalValue>
+            ) : (
+              <Value />
+            )}
+          </Field>
+
+          <Field label="LinkedIn" fieldId="company_linkedin">
+            {editing ? (
+              <Input id="company_linkedin" value={values.linkedin_url} onChange={set("linkedin_url")} />
+            ) : values.linkedin_url ? (
+              <ExternalValue href={values.linkedin_url}>{values.linkedin_url}</ExternalValue>
+            ) : (
+              <Value />
+            )}
+          </Field>
+
+          <Field label="Street" fieldId="company_street">
+            {editing ? (
               <div className="grid gap-2 sm:grid-cols-[2fr_1fr]">
                 <Input id="company_street" value={values.address_street} onChange={set("address_street")} placeholder="Street" />
-                <Input value={values.address_suite} onChange={set("address_suite")} placeholder="Suite (optional)" aria-label="Suite" />
+                <Input value={values.address_suite} onChange={set("address_suite")} placeholder="Suite" aria-label="Suite" />
               </div>
+            ) : (
+              <Value>{[values.address_street, values.address_suite].filter(Boolean).join(", ")}</Value>
+            )}
+          </Field>
+
+          <Field label="City, State ZIP" fieldId="company_city">
+            {editing ? (
               <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr]">
-                <Input value={values.address_city} onChange={set("address_city")} placeholder="City" aria-label="City" />
+                <Input id="company_city" value={values.address_city} onChange={set("address_city")} placeholder="City" />
                 <Input value={values.address_state} onChange={set("address_state")} placeholder="State" aria-label="State" />
                 <Input value={values.address_zip} onChange={set("address_zip")} placeholder="ZIP" aria-label="ZIP" />
               </div>
-            </div>
-          ) : (
-            <Value>{address}</Value>
-          )}
-        </Row>
+            ) : (
+              <Value>{cityLine}</Value>
+            )}
+          </Field>
+        </div>
+      </Card>
 
-        <Row icon={Phone} tone="navy" label="Phone Number" fieldId="company_phone">
-          {editing ? (
-            <Input id="company_phone" value={values.phone} onChange={set("phone")} className="max-w-[260px]" />
-          ) : (
-            <Value>{values.phone}</Value>
-          )}
-        </Row>
+      <Card title="People" hint="Shown on the Dashboard">
+        <div className="flex flex-col gap-5 px-6 py-4">
+          <div>
+            <p className="mb-2.5 text-caption font-semibold uppercase tracking-wide text-neutral-400">{CEO_TITLE}</p>
+            {editing ? (
+              <Input
+                id="company_ceo"
+                value={values.ceo_name}
+                onChange={set("ceo_name")}
+                placeholder="Full name"
+                aria-label="CEO name"
+                className="max-w-[340px]"
+              />
+            ) : values.ceo_name ? (
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-700 to-secondary-700 text-caption font-semibold text-white">
+                  {initials(values.ceo_name)}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-body font-semibold text-neutral-800">{values.ceo_name}</p>
+                  <p className="text-caption text-neutral-500">{CEO_TITLE}</p>
+                </div>
+              </div>
+            ) : (
+              <Value />
+            )}
+          </div>
 
-        <Row icon={Globe} tone="teal" label="Website" fieldId="company_website">
-          {editing ? (
-            <Input id="company_website" value={values.website} onChange={set("website")} />
-          ) : values.website ? (
-            <a href={values.website} target="_blank" rel="noreferrer" className="block truncate text-body font-medium text-primary-700 hover:underline">
-              {values.website}
-            </a>
-          ) : (
-            <Value />
-          )}
-        </Row>
-
-        <Row icon={LinkIcon} tone="navy" label="Company LinkedIn" fieldId="company_linkedin">
-          {editing ? (
-            <Input id="company_linkedin" value={values.linkedin_url} onChange={set("linkedin_url")} />
-          ) : values.linkedin_url ? (
-            <a href={values.linkedin_url} target="_blank" rel="noreferrer" className="block truncate text-body font-medium text-primary-700 hover:underline">
-              {values.linkedin_url}
-            </a>
-          ) : (
-            <Value />
-          )}
-        </Row>
-
-        <Row icon={UserRound} tone="teal" label="CEO" fieldId="company_ceo">
-          {editing ? (
-            <Input id="company_ceo" value={values.ceo_name} onChange={set("ceo_name")} className="max-w-[320px]" />
-          ) : (
-            <Value>{values.ceo_name}</Value>
-          )}
-        </Row>
-
-        <div id="sales-marketing" className="scroll-mt-6">
-          <Row icon={Users} tone="navy" label="Sales & Marketing" fieldId="company_team_0" align="start">
+          <div id="sales-marketing" className="scroll-mt-6">
+            <p className="mb-2.5 text-caption font-semibold uppercase tracking-wide text-neutral-400">Sales &amp; Marketing</p>
             {editing ? (
               <div className="flex flex-col items-start gap-2">
                 {values.sales_marketing_names.map((person, i) => (
-                  <div key={i} className="flex w-full items-center gap-2">
+                  <div key={i} className="flex w-full max-w-[400px] items-center gap-2">
                     <Input
                       id={`company_team_${i}`}
                       value={person}
                       onChange={(e) => setName(i, e.target.value)}
                       placeholder="Full name"
                       aria-label={`Sales & Marketing person ${i + 1}`}
-                      className="max-w-[340px]"
                       autoFocus={i === values.sales_marketing_names.length - 1 && person === ""}
                     />
                     <button
@@ -225,19 +251,22 @@ export function CompanyProfileForm({
                 <button
                   type="button"
                   onClick={addName}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-neutral-300 px-3 py-1.5 text-body-sm font-semibold text-neutral-600 hover:border-secondary-500 hover:bg-secondary-50 hover:text-secondary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-neutral-300 px-3.5 py-1.5 text-body-sm font-semibold text-neutral-600 hover:border-secondary-500 hover:bg-secondary-50 hover:text-secondary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
                 >
                   <Plus className="size-3.5" />
                   Add person
                 </button>
               </div>
             ) : savedNames.length > 0 ? (
-              <ul className="flex flex-wrap gap-1.5">
+              <ul className="flex flex-wrap gap-2">
                 {savedNames.map((person, i) => (
                   <li
                     key={`${person}-${i}`}
-                    className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-body-sm font-medium text-neutral-700"
+                    className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 py-1 pl-1 pr-3.5 text-body-sm font-medium text-neutral-700"
                   >
+                    <span className="flex size-6 items-center justify-center rounded-full bg-secondary-100 text-[10px] font-semibold text-secondary-800">
+                      {initials(person)}
+                    </span>
                     {person}
                   </li>
                 ))}
@@ -245,17 +274,17 @@ export function CompanyProfileForm({
             ) : (
               <Value />
             )}
-          </Row>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {editing && (
-        <div className="flex justify-end gap-3 px-6 py-4">
+        <div className="flex justify-end gap-3">
           <Button variant="ghost" onClick={handleCancel} disabled={saving}>
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={saving}>
-            Save
+            {saving ? "Saving…" : "Save"}
           </Button>
         </div>
       )}
@@ -263,40 +292,59 @@ export function CompanyProfileForm({
   );
 }
 
-function Row({
-  icon: Icon,
-  tone,
-  label,
-  fieldId,
-  align = "center",
+function Card({
+  title,
+  hint,
+  action,
   children,
 }: {
-  icon: ComponentType<{ className?: string }>;
-  tone: "navy" | "teal";
-  label: string;
-  fieldId: string;
-  align?: "center" | "start";
+  title: string;
+  hint?: string;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <div className={cn("flex gap-4 px-6 py-3.5", align === "center" ? "items-center" : "items-start")}>
-      <span
-        className={cn(
-          "flex size-9 shrink-0 items-center justify-center rounded-lg text-white",
-          tone === "navy" ? "bg-primary-700" : "bg-secondary-600",
-          align === "start" && "mt-0.5"
-        )}
-      >
-        <Icon className="size-4" />
-      </span>
-      <label htmlFor={fieldId} className={cn("block w-32 shrink-0 text-body text-neutral-800", align === "start" && "pt-2")}>
+    <section className="rounded-lg border border-neutral-200 bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 px-6 py-4">
+        <h2 className="text-h4 text-primary-900">{title}</h2>
+        {action}
+        {hint && !action && <p className="text-caption text-neutral-400">{hint}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Field({ label, fieldId, children }: { label: string; fieldId: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1 py-2.5">
+      <label htmlFor={fieldId} className="text-caption font-semibold uppercase tracking-wide text-neutral-400">
         {label}
       </label>
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }
 
 function Value({ children }: { children?: ReactNode }) {
-  return <p className="truncate text-body text-neutral-600">{children || "—"}</p>;
+  return (
+    <p className="flex min-h-8 items-center truncate text-body text-neutral-800">
+      {children || <span className="text-neutral-300">Not set</span>}
+    </p>
+  );
+}
+
+function ExternalValue({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <p className="flex min-h-8 items-center">
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="truncate text-body font-medium text-primary-700 hover:underline"
+      >
+        {children}
+      </a>
+    </p>
+  );
 }

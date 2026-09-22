@@ -22,6 +22,13 @@ export function HeroBand({ className, children }: { className?: string; children
   );
 }
 
+/**
+ * The button style for an action sitting inside a HeroBand. Exported so a
+ * dialog that renders its own trigger can match the buttons beside it.
+ */
+export const HERO_ACTION_CLASS =
+  "inline-flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-1.5 text-body-sm font-semibold text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-300";
+
 /** Small uppercase label used above a group inside the band. */
 export function HeroLabel({ children }: { children: React.ReactNode }) {
   return <p className="mb-2 text-caption font-semibold uppercase tracking-wide text-white/55">{children}</p>;

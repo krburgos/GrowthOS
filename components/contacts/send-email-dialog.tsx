@@ -1,6 +1,8 @@
 "use client";
 
 import { Send } from "lucide-react";
+
+import { HERO_ACTION_CLASS } from "@/components/shell/hero-band";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -46,12 +48,15 @@ export function SendEmailDialog({
   contactEmail,
   currentUserName,
   fromOptions,
+  variant = "tile",
 }: {
   contactId: string;
   contactName: string;
   contactEmail: string;
   currentUserName: string;
   fromOptions: FromOption[];
+  /** "hero" renders the trigger as a button for a HeroBand action row. */
+  variant?: "tile" | "hero";
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -94,15 +99,22 @@ export function SendEmailDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className="flex aspect-square shrink-0 flex-col items-center justify-center gap-1.5 rounded-lg border border-neutral-200 bg-white p-3.5 text-center transition-colors hover:border-secondary-300 hover:bg-secondary-50"
-        >
-          <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 text-white shadow-sm">
+        {variant === "hero" ? (
+          <button type="button" className={HERO_ACTION_CLASS}>
             <Send className="size-4" />
-          </span>
-          <span className="text-caption font-semibold text-neutral-700">Send Email</span>
-        </button>
+            Email
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="flex aspect-square shrink-0 flex-col items-center justify-center gap-1.5 rounded-lg border border-neutral-200 bg-white p-3.5 text-center transition-colors hover:border-secondary-300 hover:bg-secondary-50"
+          >
+            <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 text-white shadow-sm">
+              <Send className="size-4" />
+            </span>
+            <span className="text-caption font-semibold text-neutral-700">Send Email</span>
+          </button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
