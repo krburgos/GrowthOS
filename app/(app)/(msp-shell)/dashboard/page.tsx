@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { CompanyProfileCard } from "@/components/dashboard/company-profile-card";
 import { GrowthQuestionnaireBanner } from "@/components/dashboard/growth-questionnaire-banner";
-import { KpiTiles, type KpiTileData } from "@/components/dashboard/kpi-tiles";
+import { KpiBandHero } from "@/components/dashboard/kpi-band-hero";
 import { PipelineByStage, type StageCount } from "@/components/dashboard/pipeline-by-stage";
 import { RecentActivityFeed, type FeedItem } from "@/components/dashboard/recent-activity-feed";
 import { TodayTasksPanel, type DueTask } from "@/components/dashboard/today-tasks-panel";
@@ -12,6 +12,7 @@ import { HeroBand, HeroLabel } from "@/components/shell/hero-band";
 import { COMPANY_PROFILE_COLUMNS, type CompanyProfile } from "@/lib/accounts/company-profile";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
 import type { StageGroup } from "@/lib/opportunities/stages";
+import { getKpiBand } from "@/lib/gos-dashboard/queries";
 import { countAnswered } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
 import { countAnswered as countVisionBoardAnswered } from "@/lib/vision-board/sections";
@@ -25,21 +26,6 @@ function unwrap<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : value ?? undefined;
 }
 
-function weekOverWeek(dates: string[], sevenAgo: number, fourteenAgo: number, now: number) {
-  const thisWeek = dates.filter((d) => {
-    const t = new Date(d).getTime();
-    return t >= sevenAgo && t <= now;
-  }).length;
-  const lastWeek = dates.filter((d) => {
-    const t = new Date(d).getTime();
-    return t >= fourteenAgo && t < sevenAgo;
-  }).length;
-  const diff = thisWeek - lastWeek;
-  const direction: "up" | "down" | "flat" = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
-  const text = diff === 0 ? "No change" : `${diff > 0 ? "+" : ""}${diff} vs last wk`;
-  return { thisWeek, direction, text };
-}
-
 /**
  * App Flow §4.3, Implementation Plan Milestone 11 — MSP landing screen.
  * Client-confirmed layout, "Concept B — Command Center" (approved
@@ -51,12 +37,19 @@ function weekOverWeek(dates: string[], sevenAgo: number, fourteenAgo: number, no
  *
  * Per the Implementation Plan's own instruction for this milestone,
  * every number here comes from direct Supabase aggregate queries under
- * RLS — no API route, since none of this touches a secret. "This week"
- * is implemented as a trailing 7-day window (not a Sunday/Monday
- * calendar week, which neither document specifies) compared against
- * the 7 days before that. Campaign Sends stays a "—" placeholder, the
- * same convention already used for Bounced on the Contacts table,
- * since Campaigns (Milestone 10) isn't built yet.
+ * RLS — no API route, since none of this touches a secret.
+ *
+ * Client-confirmed change (2026-09-22, approved mockup "A"): the hero's
+ * "This week" strip — New Leads, Opportunities created, Meetings held
+ * and Campaign sends, each with a week-over-week delta — is replaced by
+ * the KPI Dashboard band, the same counts the Command Center shows,
+ * rendered in the hero's own translucent material. This retires the KPI
+ * strip from the approved "Concept B" mockup (App Flow §4.3,
+ * Implementation Plan Milestone 11), which was raised with the client
+ * before the change: the band is a standing count where the strip was
+ * week-over-week movement, so the Homepage no longer reports change
+ * over time anywhere. components/dashboard/kpi-tiles.tsx is kept, unused,
+ * in case that movement is wanted back.
  */
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -73,16 +66,9 @@ export default async function DashboardPage() {
 
   const supabase = await createClient();
 
-  const now = Date.now();
-  const sevenAgo = now - 7 * 86400000;
-  const fourteenAgo = now - 14 * 86400000;
-  const fourteenAgoIso = new Date(fourteenAgo).toISOString();
-
   const [
     { data: stageRows },
     { data: opportunityRows },
-    { data: recentContacts },
-    { data: recentMeetings },
     { data: feedRows },
     { data: taskRows },
     { data: questionnaireResponse },
@@ -96,19 +82,6 @@ export default async function DashboardPage() {
       .is("archived_at", null)
       .order("sort_order"),
     supabase.from("opportunities").select("id, stage_id, created_at").eq("account_id", user.account_id),
-    supabase
-      .from("contacts")
-      .select("id, created_at")
-      .eq("account_id", user.account_id)
-      .is("archived_at", null)
-      .gte("created_at", fourteenAgoIso),
-    supabase
-      .from("activities")
-      .select("occurred_at")
-      .eq("account_id", user.account_id)
-      .eq("type", "meeting")
-      .is("archived_at", null)
-      .gte("occurred_at", fourteenAgoIso),
     supabase
       .from("activities")
       .select("id, type, subject, occurred_at, contacts(full_name), opportunities(name)")
@@ -143,17 +116,8 @@ export default async function DashboardPage() {
     count: countByStage.get(s.id) ?? 0,
   }));
 
-  // ---- KPI tiles ----
-  const leadsDelta = weekOverWeek((recentContacts ?? []).map((c) => c.created_at), sevenAgo, fourteenAgo, now);
-  const oppsDelta = weekOverWeek((opportunityRows ?? []).map((o) => o.created_at), sevenAgo, fourteenAgo, now);
-  const meetingsDelta = weekOverWeek((recentMeetings ?? []).map((m) => m.occurred_at), sevenAgo, fourteenAgo, now);
-
-  const kpiTiles: KpiTileData[] = [
-    { label: "New Leads this week", value: String(leadsDelta.thisWeek), delta: { direction: leadsDelta.direction, text: leadsDelta.text } },
-    { label: "Opportunities created", value: String(oppsDelta.thisWeek), delta: { direction: oppsDelta.direction, text: oppsDelta.text } },
-    { label: "Meetings held", value: String(meetingsDelta.thisWeek), delta: { direction: meetingsDelta.direction, text: meetingsDelta.text } },
-    { label: "Campaign sends", value: "—", delta: { direction: "flat", text: "Milestone 10" } },
-  ];
+  // ---- KPI band ----
+  const kpiBand = await getKpiBand(user.account_id!);
 
   // ---- Recent activity ----
   const feedItems: FeedItem[] = (feedRows ?? []).map((row) => {
@@ -203,8 +167,8 @@ export default async function DashboardPage() {
           <CompanyProfileCard account={account as unknown as CompanyProfile} canEdit={canEditProfile} variant="hero" />
         )}
         <div>
-          <HeroLabel>This week</HeroLabel>
-          <KpiTiles tiles={kpiTiles} variant="hero" />
+          <HeroLabel>KPI Dashboard</HeroLabel>
+          <KpiBandHero accountId={user.account_id!} sources={kpiBand.sources} />
         </div>
       </HeroBand>
 
