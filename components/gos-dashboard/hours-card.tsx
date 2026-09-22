@@ -62,7 +62,7 @@ export function HoursCard({
         {cells.map((c, i) => (
           <div
             key={c.key}
-            className={`flex flex-col px-2.5 py-2 ${i > 0 ? "border-l border-neutral-100" : ""} ${c.highlight ? "bg-secondary-50" : ""}`}
+            className={`flex flex-col items-center px-2.5 py-2 text-center ${i > 0 ? "border-l border-neutral-100" : ""} ${c.highlight ? "bg-secondary-50" : ""}`}
           >
             <span className="text-[10.5px] font-semibold uppercase tracking-wide text-neutral-400">{c.key}</span>
             <span className="text-h4 font-bold tabular-nums text-primary-900">
