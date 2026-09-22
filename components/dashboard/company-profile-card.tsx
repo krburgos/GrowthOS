@@ -52,8 +52,14 @@ export function CompanyProfileCard({
     >
       <div className={cn("flex flex-wrap items-center gap-x-5 gap-y-3.5", hero ? "pb-4" : "px-5 py-4")}>
         {account.logo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={account.logo_url} alt="" className="size-14 shrink-0 rounded-lg object-cover" />
+          // A logo is fitted, never cropped: object-cover here sliced the
+          // middle out of anything that was not square. The white plate is
+          // what an uploaded logo with a white background needs in order to
+          // sit on the hero's navy without a visible box around it.
+          <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-white p-1.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={account.logo_url} alt="" className="max-h-full max-w-full object-contain" />
+          </span>
         ) : (
           <span
             className={cn(
