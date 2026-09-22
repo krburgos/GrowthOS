@@ -2,7 +2,6 @@ import { Download, Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { AuroraArt, FieldArt, RingArt } from "@/components/vision-board/vision-art";
-import { initials } from "@/lib/accounts/company-profile";
 
 type Answers = Record<string, string | string[] | null>;
 
@@ -105,7 +104,7 @@ export function VisionPage({
   return (
     <article className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_20px_40px_-28px_rgba(2,42,102,0.35)]">
       {/* ---------------- Hero ---------------- */}
-      <header className="relative overflow-hidden bg-primary-950 px-6 pb-12 pt-14 text-white md:px-12 md:pb-14 md:pt-16">
+      <header className="relative overflow-hidden bg-primary-950 px-6 pb-14 pt-16 text-center text-white md:px-12 md:pb-16 md:pt-20">
         <AuroraArt />
         <div className="absolute right-4 top-4 z-20 flex gap-2 md:right-6 md:top-6">
           {canEdit && (
@@ -126,43 +125,53 @@ export function VisionPage({
           </a>
         </div>
 
-        <div className="relative z-10 max-w-[900px]">
-          <div className="mb-6 flex items-center gap-3">
+        <div className="relative z-10">
+          {/* A wide plate sized to the logo, not a square that crops it —
+              a company wordmark is usually far wider than it is tall. */}
+          <div className="mb-8 flex justify-center">
             {account.logo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={account.logo_url}
-                alt=""
-                className="size-10 shrink-0 rounded-lg bg-white/95 object-contain p-1"
-              />
+              <span className="inline-flex h-12 items-center rounded-lg bg-white/95 px-3.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={account.logo_url} alt={account.name} className="max-h-7 w-auto max-w-[200px] object-contain" />
+              </span>
             ) : (
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-body-sm font-bold">
-                {initials(account.name)}
+              <span className="inline-flex items-center rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-h4 font-bold">
+                {account.name}
               </span>
             )}
-            <div>
-              <p className="text-body-sm font-semibold">{account.name}</p>
-              <p className="text-caption text-white/55">Vision Board{signDate ? ` · signed ${signDate}` : ""}</p>
-            </div>
           </div>
           <Eyebrow tone="dark">Where {account.name} is going — ten years out</Eyebrow>
-          {target10 && <h1 className="max-w-[20ch] text-display font-bold leading-[1.14] tracking-tight">{target10}</h1>}
+          {target10 && (
+            <h1 className="mx-auto max-w-[34ch] text-balance text-display font-semibold leading-tight tracking-tight">
+              {target10}
+            </h1>
+          )}
+          {(signName || signDate) && (
+            <p className="mt-7 text-body-sm text-white/50">
+              {[signName, signTitle, signDate].filter(Boolean).join(" · ")}
+            </p>
+          )}
         </div>
       </header>
 
       {/* ---------------- Purpose & niche ---------------- */}
       {(purpose || niche) && (
         <Band>
+          {/* Label in its own rail so both statements start at the same left
+              edge, and neither is squeezed into a column too narrow for its
+              own type size. */}
           {purpose && (
-            <>
-              <Eyebrow>{account.name} exists to</Eyebrow>
-              <p className="max-w-[26ch] text-h1 font-semibold leading-tight tracking-tight text-primary-900">{purpose}</p>
-            </>
+            <Statement label={`${account.name} exists to`}>
+              <p className="max-w-[38ch] text-balance text-h1 font-semibold leading-snug tracking-tight text-primary-900">
+                {purpose}
+              </p>
+            </Statement>
           )}
           {niche && (
-            <div className={purpose ? "mt-9 border-t border-neutral-200 pt-7" : ""}>
-              <Eyebrow>And does this better than most</Eyebrow>
-              <p className="max-w-[54ch] text-h3 font-medium leading-relaxed text-neutral-800">{niche}</p>
+            <div className={purpose ? "mt-10 border-t border-neutral-200 pt-9" : ""}>
+              <Statement label="And does this better than most">
+                <p className="max-w-[54ch] text-h3 font-medium leading-relaxed text-neutral-800">{niche}</p>
+              </Statement>
             </div>
           )}
         </Band>
@@ -195,7 +204,7 @@ export function VisionPage({
       {(figures3.length > 0 || picture3.length > 0) && (
         <Band tone="deep">
           <Eyebrow tone="dark">Three years from today</Eyebrow>
-          <h2 className="max-w-[26ch] text-h1 font-semibold tracking-tight">
+          <h2 className="max-w-[34ch] text-balance text-h1 font-semibold leading-tight tracking-tight">
             This is what {account.name} looks like.
           </h2>
           {figures3.length > 0 && (
@@ -301,7 +310,7 @@ export function VisionPage({
                 style={{ borderColor: "color-mix(in srgb, var(--color-secondary-300) 25%, transparent)" }}
               />
               <Eyebrow tone="dark">Our guarantee</Eyebrow>
-              <p className="relative z-10 max-w-[34ch] text-h2 font-semibold leading-snug tracking-tight">{guarantee}</p>
+              <p className="relative z-10 max-w-[42ch] text-balance text-h2 font-semibold leading-snug tracking-tight">{guarantee}</p>
             </div>
           )}
 
@@ -348,7 +357,7 @@ export function VisionPage({
       {(obstacles.length > 0 || barrier) && (
         <Band tone="deep" art={<FieldArt />}>
           <Eyebrow tone="dark">Said plainly</Eyebrow>
-          <h2 className="max-w-[26ch] text-h1 font-semibold tracking-tight">
+          <h2 className="max-w-[34ch] text-balance text-h1 font-semibold leading-tight tracking-tight">
             What stands between here and there.
           </h2>
           <div className="mt-6 grid grid-cols-1 gap-9 lg:grid-cols-2">
@@ -368,7 +377,7 @@ export function VisionPage({
             {barrier && (
               <div className="border-l-[3px] border-warning-400 pl-5">
                 <Eyebrow tone="dark">The one barrier to doubling</Eyebrow>
-                <p className="max-w-[36ch] text-h3 font-medium leading-relaxed text-white">{barrier}</p>
+                <p className="max-w-[46ch] text-h3 font-medium leading-relaxed text-white">{barrier}</p>
               </div>
             )}
           </div>
@@ -376,20 +385,9 @@ export function VisionPage({
       )}
 
       {/* ---------------- Sign-off ---------------- */}
-      <footer className="flex flex-wrap items-center justify-between gap-5 border-t border-neutral-200 bg-neutral-50 px-6 py-7 md:px-12">
-        {signName ? (
-          <div className="flex items-center gap-4">
-            <span className="border-b-[1.5px] border-neutral-300 px-4 pb-1 text-h1 font-light italic text-primary-900">
-              {signName}
-            </span>
-            <div className="text-caption leading-relaxed text-neutral-500">
-              <b className="block text-body font-semibold text-neutral-800">{signName}</b>
-              {[signTitle, signDate && `signed ${signDate}`].filter(Boolean).join(" · ")}
-            </div>
-          </div>
-        ) : (
-          <span />
-        )}
+      {/* No signature block here: the hero credits it now, and saying it
+          twice on one page reads as a mistake rather than emphasis. */}
+      <footer className="flex flex-wrap items-center justify-end gap-5 border-t border-neutral-200 bg-neutral-50 px-6 py-6 md:px-12">
         <div className="flex gap-2">
           {canEdit && (
             <Link
@@ -422,12 +420,29 @@ const VALUE_GRADIENTS = [
 function Eyebrow({ children, tone = "light" }: { children: React.ReactNode; tone?: "light" | "dark" }) {
   return (
     <p
-      className={`mb-3.5 text-caption font-semibold uppercase tracking-[0.16em] ${
+      className={`mb-4 text-caption font-semibold uppercase tracking-widest ${
         tone === "dark" ? "text-secondary-300" : "text-secondary-700"
       }`}
     >
       {children}
     </p>
+  );
+}
+
+/**
+ * A statement with its label in a narrow rail to the left (client-confirmed
+ * mockup "B" for the purpose band): the label stops sitting on top of the
+ * sentence, and every statement in the band starts at the same left edge.
+ * The rail collapses above the statement on a narrow screen.
+ */
+function Statement({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-1 gap-x-9 gap-y-3 md:grid-cols-[minmax(150px,1fr)_minmax(0,3fr)]">
+      <p className="border-t-2 border-secondary-500 pt-3 text-caption font-semibold uppercase tracking-widest text-secondary-700">
+        {label}
+      </p>
+      <div>{children}</div>
+    </div>
   );
 }
 

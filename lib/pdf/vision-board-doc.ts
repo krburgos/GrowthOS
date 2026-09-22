@@ -96,13 +96,13 @@ export function renderVisionBoard(doc: InstanceType<typeof PDFDocument>, name: s
     doc.y = M + 16;
   };
 
-  const eyebrow = (value: string) => {
+  const eyebrow = (value: string, align: "left" | "center" = "left") => {
     ensure(26);
     doc
       .font(POPPINS.semibold)
       .fontSize(7.5)
       .fillColor(ON_GROUND[tone].eyebrow)
-      .text(value.toUpperCase(), M, doc.y, { width: CW, characterSpacing: 1.3 });
+      .text(value.toUpperCase(), M, doc.y, { width: CW, characterSpacing: 1.1, align });
     doc.moveDown(0.5);
   };
 
@@ -152,28 +152,26 @@ export function renderVisionBoard(doc: InstanceType<typeof PDFDocument>, name: s
   g2.stop(0, "#2873e1", 0.45).stop(1, NAVY_950, 0);
   doc.rect(0, 0, W, H).fill(g2);
 
-  doc.roundedRect(M, 96, 38, 38, 9).lineWidth(1).strokeColor("#3c5a86").fillAndStroke("#16304f", "#3c5a86");
-  doc
-    .font(POPPINS.bold)
-    .fontSize(13)
-    .fillColor(WHITE)
-    .text(initialsOf(name), M, 108, { width: 38, align: "center" });
+  // Centred, to match the page's hero (client-confirmed mockup "C").
+  doc.font(POPPINS.bold).fontSize(13);
+  const plateW = doc.widthOfString(name) + 36;
+  const plateX = (W - plateW) / 2;
+  doc.roundedRect(plateX, 150, plateW, 38, 9).lineWidth(1).fillAndStroke("#16304f", "#3c5a86");
+  doc.fillColor(WHITE).text(name, plateX, 162, { width: plateW, align: "center" });
 
-  doc.font(POPPINS.semibold).fontSize(11).fillColor(WHITE).text(name, M + 50, 102, { width: CW - 50 });
-  doc
-    .font(POPPINS.regular)
-    .fontSize(8.5)
-    .fillColor("#9fb3cf")
-    .text(`Vision Board${signDate ? `  ·  signed ${signDate}` : ""}`, M + 50, 117, { width: CW - 50 });
-
-  doc.y = 200;
-  eyebrow(`Where ${name} is going — ten years out`);
+  doc.y = 250;
+  eyebrow(`Where ${name} is going — ten years out`, "center");
   if (target10) {
     doc
-      .font(POPPINS.bold)
-      .fontSize(30)
+      .font(POPPINS.semibold)
+      .fontSize(27)
       .fillColor(WHITE)
-      .text(target10, M, doc.y, { width: CW * 0.86, lineGap: 6 });
+      .text(target10, M + CW * 0.08, doc.y, { width: CW * 0.84, lineGap: 7, align: "center" });
+    doc.moveDown(1.2);
+  }
+  const credit = [signName, signTitle, signDate].filter(Boolean).join("  ·  ");
+  if (credit) {
+    doc.font(POPPINS.regular).fontSize(9.5).fillColor("#8fa3c4").text(credit, M, doc.y, { width: CW, align: "center" });
   }
 
   // ======================= PURPOSE & NICHE =======================
@@ -181,19 +179,41 @@ export function renderVisionBoard(doc: InstanceType<typeof PDFDocument>, name: s
   const niche = t("focus_niche");
   if (purpose || niche) {
     section("white");
-    if (purpose) {
-      eyebrow(`${name} exists to`);
+    // Label in a narrow rail on the left, statement to its right - the
+    // page's "B" treatment, so both read the same way.
+    const RAIL = 132;
+    const STATEMENT_X = M + RAIL + 26;
+    const STATEMENT_W = CW - RAIL - 26;
+
+    const railLabel = (label: string, y: number) => {
+      doc.moveTo(M, y).lineTo(M + RAIL, y).lineWidth(2).strokeColor(TEAL_500).stroke();
       doc
         .font(POPPINS.semibold)
-        .fontSize(19)
+        .fontSize(7.5)
+        .fillColor(TEAL_700)
+        .text(label.toUpperCase(), M, y + 10, { width: RAIL, characterSpacing: 1.1 });
+    };
+
+    if (purpose) {
+      const top = doc.y;
+      railLabel(`${name} exists to`, top);
+      doc
+        .font(POPPINS.semibold)
+        .fontSize(18)
         .fillColor(NAVY_900)
-        .text(purpose, M, doc.y, { width: CW * 0.8, lineGap: 4 });
-      doc.moveDown(1.2);
+        .text(purpose, STATEMENT_X, top - 4, { width: STATEMENT_W, lineGap: 5 });
+      doc.y = Math.max(doc.y, top + 46) + 26;
     }
     if (niche) {
       if (purpose) rule();
-      eyebrow("And does this better than most");
-      paragraph(niche, 13, INK);
+      const top = doc.y;
+      railLabel("And does this better than most", top);
+      doc
+        .font(POPPINS.regular)
+        .fontSize(12)
+        .fillColor(INK)
+        .text(niche, STATEMENT_X, top - 2, { width: STATEMENT_W, lineGap: 3.5 });
+      doc.y = Math.max(doc.y, top + 46);
     }
   }
 
@@ -533,9 +553,4 @@ export function renderVisionBoard(doc: InstanceType<typeof PDFDocument>, name: s
       lineBreak: false,
     });
   }
-}
-
-function initialsOf(value: string) {
-  const parts = value.trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
 }
