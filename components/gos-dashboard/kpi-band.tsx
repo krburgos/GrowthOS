@@ -9,10 +9,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CountUp } from "@/components/ui/count-up";
 import { Spinner } from "@/components/ui/spinner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import {
   KPI_BOXES,
+  activeOpportunities,
   boxAcceptsKind,
   boxTotal,
   defaultBoxFor,
@@ -321,7 +323,15 @@ function MappingDialog({
   );
 }
 
-/** The Playbook doc's "GrowthOS KPI dashboard": Prospect Count + Opportunities Count (Total Active), counted live from the CRM. */
+/**
+ * The Playbook doc's "GrowthOS KPI dashboard": Prospects + Opportunities,
+ * counted live from the CRM. Client-confirmed (2026-09-22): each cell shows
+ * its label and figure only - the line naming the statuses or stages behind
+ * the figure repeated the label often enough to read as noise, and the same
+ * detail is still one click away in the records dialog and in Edit mapping.
+ * The figures count up on load, and the Opportunities header carries the
+ * active total as a pill.
+ */
 export function KpiBand({
   accountId,
   sources,
@@ -336,39 +346,32 @@ export function KpiBand({
   const [openBox, setOpenBox] = useState<KpiBox | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
 
-  const renderCell = (box: KpiBox, i: number) => {
-    const names = sources.filter((s) => s.box === box.key).map((s) => s.name);
-    return (
-      <button
-        key={box.key}
-        type="button"
-        onClick={() => setOpenBox(box)}
+  const renderCell = (box: KpiBox, i: number) => (
+    <button
+      key={box.key}
+      type="button"
+      onClick={() => setOpenBox(box)}
+      className={cn(
+        "flex min-w-0 flex-col items-center gap-0.5 border-t border-neutral-100 px-2 pb-4 pt-3 transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary-500",
+        i > 0 && "border-l"
+      )}
+    >
+      <span className="text-caption font-semibold text-neutral-500">{box.label}</span>
+      <CountUp
+        value={boxTotal(sources, box.key)}
         className={cn(
-          "flex min-w-0 flex-col items-center gap-0.5 border-t border-neutral-100 px-2 pb-3.5 pt-3 transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary-500",
-          i > 0 && "border-l"
+          "text-h1 font-bold leading-tight tabular-nums",
+          box.tone === "won"
+            ? "text-success-700"
+            : box.tone === "lost"
+              ? "text-neutral-500"
+              : box.tone === "ghosted"
+                ? "text-warning-800"
+                : "text-primary-900"
         )}
-      >
-        <span className="text-caption font-semibold text-neutral-500">{box.label}</span>
-        <span
-          className={cn(
-            "text-h2 font-bold leading-tight tabular-nums",
-            box.tone === "won"
-              ? "text-success-700"
-              : box.tone === "lost"
-                ? "text-neutral-500"
-                : box.tone === "ghosted"
-                  ? "text-warning-800"
-                  : "text-primary-900"
-          )}
-        >
-          {boxTotal(sources, box.key).toLocaleString()}
-        </span>
-        <span className="line-clamp-1 max-w-full text-center text-[10.5px] text-neutral-400">
-          {names.length ? names.join(" + ") : "Not mapped"}
-        </span>
-      </button>
-    );
-  };
+      />
+    </button>
+  );
 
   return (
     <section className="flex flex-col gap-2">
@@ -392,20 +395,29 @@ export function KpiBand({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 overflow-hidden rounded-lg border border-neutral-200 bg-white lg:grid-cols-[2fr_6fr]">
+      <div className="grid grid-cols-1 overflow-hidden rounded-lg border border-neutral-200 bg-white lg:grid-cols-[3fr_5fr]">
         <div>
           <div className="flex items-center justify-center gap-1.5 bg-primary-900 px-3 py-2 text-body-sm font-semibold text-white">
             <Users className="size-3.5" />
-            Prospect Count
+            Prospects
           </div>
-          <div className="grid grid-cols-2">{KPI_BOXES.filter((b) => b.group === "prospects").map(renderCell)}</div>
+          <div className="grid grid-cols-3">{KPI_BOXES.filter((b) => b.group === "prospects").map(renderCell)}</div>
         </div>
         <div className="border-t border-neutral-200 lg:border-l lg:border-t-0">
-          <div className="flex items-center justify-center gap-1.5 bg-secondary-700 px-3 py-2 text-body-sm font-semibold text-white">
-            <KanbanSquare className="size-3.5" />
-            Opportunities Count (Total Active)
+          <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 bg-secondary-700 px-3 py-2 text-body-sm font-semibold text-white">
+            <span className="inline-flex items-center gap-1.5">
+              <KanbanSquare className="size-3.5" />
+              Opportunities
+            </span>
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-0.5 text-caption font-semibold"
+              title="Every stage except Won, Lost and Lost Resurrected"
+            >
+              Active
+              <CountUp value={activeOpportunities(sources)} className="tabular-nums" />
+            </span>
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-6">{KPI_BOXES.filter((b) => b.group === "pipeline").map(renderCell)}</div>
+          <div className="grid grid-cols-3 sm:grid-cols-5">{KPI_BOXES.filter((b) => b.group === "pipeline").map(renderCell)}</div>
         </div>
       </div>
 
