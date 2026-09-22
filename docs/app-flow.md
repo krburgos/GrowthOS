@@ -109,6 +109,8 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 
 ### 4.1 Authentication & Account Setup
 
+**The bare domain ()** sends people where they belong rather than rendering anything: signed out to Log In, a CRO Leader or partner role that has not entered an account to the CRO Leader Dashboard, and everyone else signed in to the Dashboard. Fixed 2026-09-22 — the root still served the Milestone 1 design-system checkpoint placeholder, which the Implementation Plan had said would be superseded by the Dashboard in Milestone 11 but which was never actually removed, so anyone landing on the root URL got a gallery of buttons and badges instead of the app.
+
 **Log In (A1).** Email + password fields, "Forgot password?" link, log in button. On success → Dashboard (or the Onboarding Wizard, if onboarding is incomplete — see §5.1). On failure, an inline error under the form ("Incorrect email or password") — the form does not clear.
 **Forgot Password (A2).** Single email field. Always shows the same confirmation ("If that email exists, we've sent a reset link") whether or not the address is registered, so the flow can't be used to probe for valid accounts.
 **Reset Password (A3).** Reached only via the emailed, tokened link. New password + confirm fields. An expired or already-used token shows an inline error with a link back to Forgot Password rather than a broken form.
