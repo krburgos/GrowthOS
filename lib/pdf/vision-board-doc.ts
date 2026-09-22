@@ -198,10 +198,10 @@ export function renderVisionBoard(doc: InstanceType<typeof PDFDocument>, name: s
       const top = doc.y;
       railLabel(`${name} exists to`, top);
       doc
-        .font(POPPINS.semibold)
-        .fontSize(18)
-        .fillColor(NAVY_900)
-        .text(purpose, STATEMENT_X, top - 4, { width: STATEMENT_W, lineGap: 5 });
+        .font(POPPINS.regular)
+        .fontSize(12)
+        .fillColor(INK)
+        .text(purpose, STATEMENT_X, top - 2, { width: STATEMENT_W, lineGap: 3.5 });
       doc.y = Math.max(doc.y, top + 46) + 26;
     }
     if (niche) {

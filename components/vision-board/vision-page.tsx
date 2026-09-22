@@ -162,9 +162,7 @@ export function VisionPage({
               own type size. */}
           {purpose && (
             <Statement label={`${account.name} exists to`}>
-              <p className="max-w-[38ch] text-balance text-h1 font-semibold leading-snug tracking-tight text-primary-900">
-                {purpose}
-              </p>
+              <p className="max-w-[54ch] text-h3 font-medium leading-relaxed text-neutral-800">{purpose}</p>
             </Statement>
           )}
           {niche && (
