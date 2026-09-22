@@ -331,7 +331,23 @@ function MappingDialog({
  * detail is still one click away in the records dialog and in Edit mapping.
  * The figures count up on load, and the Opportunities header carries the
  * active total as a pill.
+ *
+ * Client-confirmed (2026-09-22): the figures are the point of the band, so
+ * they are set at display size and given room to sit in, with the label
+ * above them reduced to a quiet cap.
+ *
+ * Note the tone class is concatenated rather than passed through cn(): the
+ * project's type scale is defined with custom names (text-display, text-h1
+ * and so on), and tailwind-merge does not recognise those as font sizes, so
+ * cn("text-display", "text-primary-900") silently drops the size. See the
+ * comment on cn() in lib/utils.ts.
  */
+const TONE_CLASS: Record<string, string> = {
+  won: "text-success-700",
+  lost: "text-neutral-500",
+  ghosted: "text-warning-800",
+  default: "text-primary-900",
+};
 export function KpiBand({
   accountId,
   sources,
@@ -352,23 +368,16 @@ export function KpiBand({
       type="button"
       onClick={() => setOpenBox(box)}
       className={cn(
-        "flex min-w-0 flex-col items-center gap-0.5 border-t border-neutral-100 px-2 pb-4 pt-3 transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary-500",
+        "group flex min-w-0 flex-col items-center justify-center gap-1.5 border-t border-neutral-100 px-2 pb-5 pt-4 transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary-500",
         i > 0 && "border-l"
       )}
     >
-      <span className="text-caption font-semibold text-neutral-500">{box.label}</span>
+      <span className="text-caption font-semibold uppercase tracking-wide text-neutral-400 transition-colors group-hover:text-neutral-500">
+        {box.label}
+      </span>
       <CountUp
         value={boxTotal(sources, box.key)}
-        className={cn(
-          "text-h1 font-bold leading-tight tabular-nums",
-          box.tone === "won"
-            ? "text-success-700"
-            : box.tone === "lost"
-              ? "text-neutral-500"
-              : box.tone === "ghosted"
-                ? "text-warning-800"
-                : "text-primary-900"
-        )}
+        className={`text-display font-bold leading-none tracking-tight tabular-nums ${TONE_CLASS[box.tone ?? "default"]}`}
       />
     </button>
   );
