@@ -168,6 +168,23 @@ Two of those are fixes rather than taste: the teal rail was a colour weight no o
 
 **Client-confirmed amendment (2026-09-16):** both Dashboard banners now stay permanently visible instead of disappearing once complete — superseding the "disappears entirely" language above. Complete, each switches to a green state ("Growth Solution Questionnaire complete" / "GrowthOS Vision Board complete," "X of X answered," a check icon, "View →" instead of "Continue →") rather than vanishing; nothing else on the Dashboard shifts to fill the space either way. The notification bell dropdown is unaffected by this — it still drops its item and clears its dot once a document is complete, since a finished item genuinely needs no further action from a notification center.
 
+**Client-confirmed restructure (2026-09-24, approved mockup "A") — the setup block.** The hero, the Company Profile card and the two full-width document banners fold into a single navy block (`components/dashboard/setup-block.tsx`), top to bottom:
+
+1. **Three panels in a row** — Company Profile, Solution Questionnaire, Vision Board — saying what still needs doing.
+2. A hairline, then **Workstream hours** for the current quarter (the same `HoursTotalsStrip` the Command Center uses, shown here as well as there, not moved).
+3. **KPI Dashboard**, the Prospects and Opportunities counts described above.
+
+It is one container rather than cards above a band, so the two halves read as one object. Decisions behind it:
+
+- **Navy panels rather than white cards** (the first design). On white, amber had to compete with body text, navy headings and teal links; on navy nothing else is warm, so amber reads as "this needs you" and green as "handled". Colour carries meaning instead of decorating.
+- **Status drives the panel.** Unfinished: amber top rule, amber figure, a status pill ("Not started" / "In progress" / "N to add") and a solid white button. Finished: green rule, green figure, "Complete", and a quiet button. An account with everything done gets a calm row, not three cards shouting.
+- **The nudge lives in the panels.** The two full-width banners are gone, so nothing needs dismissing or re-showing. The notification bell is unaffected and still drops its item once a document is complete.
+- **Company Profile scores itself**: "9 / 11 fields" with the missing ones named beneath. The eleven are logo, company name, street, city, state, ZIP, phone, website, LinkedIn, CEO and at least one Sales & Marketing person (`COMPLETENESS_FIELDS` in `lib/accounts/company-profile.ts`). **Suite is deliberately excluded** — plenty of companies do not have one, and counting it would hold those accounts permanently short of complete.
+- **Sales & Marketing shows at most four names**, then "+N more" linking to the profile. Unbounded chips were the one thing that could wreck the row: fifteen names wrap to five rows and stretch all three panels.
+- Neither band label mentions the Command Center, at the client's request, even though the hours strip is that page's headline figure.
+
+Superseded and removed with this change: `company-profile-card.tsx`, `growth-questionnaire-banner.tsx` and `vision-board-banner.tsx`.
+
 **Client-confirmed replacement (2026-09-22) — the KPI strip becomes the KPI Dashboard band.** The hero's "This week" strip (New Leads this week, Opportunities created, Meetings held, Campaign sends, each with a week-over-week delta) is replaced by the **KPI Dashboard** band: the same Prospects and Opportunities counts the Command Center shows, under a `KPI Dashboard` hero label.
 
 This **retires the KPI strip from the approved "Concept B — Command Center" mockup** described above and in Implementation Plan Milestone 11. It was raised with the client before the change and confirmed, so recording it here rather than leaving the contradiction implicit. What is lost is *movement*: the band is a standing count ("how many MQCs exist"), the strip was change over a trailing 7-day window ("how many arrived this week"), so the Homepage no longer reports week-over-week change anywhere. `components/dashboard/kpi-tiles.tsx` is kept, unused, in case it is wanted back.

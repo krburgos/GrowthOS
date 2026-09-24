@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { CompanyProfileCard } from "@/components/dashboard/company-profile-card";
-import { GrowthQuestionnaireBanner } from "@/components/dashboard/growth-questionnaire-banner";
-import { KpiBandHero } from "@/components/dashboard/kpi-band-hero";
 import { PipelineByStage, type StageCount } from "@/components/dashboard/pipeline-by-stage";
 import { RecentActivityFeed, type FeedItem } from "@/components/dashboard/recent-activity-feed";
+import { SetupBlock } from "@/components/dashboard/setup-block";
 import { TodayTasksPanel, type DueTask } from "@/components/dashboard/today-tasks-panel";
-import { VisionBoardBanner } from "@/components/dashboard/vision-board-banner";
-import { HeroBand, HeroLabel } from "@/components/shell/hero-band";
 import { COMPANY_PROFILE_COLUMNS, type CompanyProfile } from "@/lib/accounts/company-profile";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
 import type { StageGroup } from "@/lib/opportunities/stages";
-import { getKpiBand } from "@/lib/gos-dashboard/queries";
-import { countAnswered } from "@/lib/questionnaire/questions";
+import { currentQuarter } from "@/lib/gos-dashboard/hours";
+import { getKpiBand, getStepHours } from "@/lib/gos-dashboard/queries";
+import { TOTAL_QUESTION_COUNT, countAnswered } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
-import { countAnswered as countVisionBoardAnswered } from "@/lib/vision-board/sections";
+import {
+  TOTAL_FIELD_COUNT as VISION_BOARD_TOTAL,
+  countAnswered as countVisionBoardAnswered,
+} from "@/lib/vision-board/sections";
 
 export const metadata: Metadata = { title: "Dashboard — GrowthOS" };
 
@@ -50,6 +50,13 @@ function unwrap<T>(value: T | T[] | null | undefined): T | undefined {
  * week-over-week movement, so the Homepage no longer reports change
  * over time anywhere. components/dashboard/kpi-tiles.tsx is kept, unused,
  * in case that movement is wanted back.
+ *
+ * Client-confirmed restructure (2026-09-24, approved mockup "A"): the
+ * hero, the Company Profile card and the two full-width document banners
+ * all fold into one navy SetupBlock — three panels saying what still
+ * needs doing, then workstream hours and the KPI Dashboard saying how
+ * things are going. The hours strip is the same component the Command
+ * Center uses, shown here too rather than moved.
  */
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -116,8 +123,12 @@ export default async function DashboardPage() {
     count: countByStage.get(s.id) ?? 0,
   }));
 
-  // ---- KPI band ----
-  const kpiBand = await getKpiBand(user.account_id!);
+  // ---- KPI band and this quarter's hours ----
+  const quarter = currentQuarter();
+  const [kpiBand, stepHours] = await Promise.all([
+    getKpiBand(user.account_id!),
+    getStepHours(user.account_id!, quarter.start),
+  ]);
 
   // ---- Recent activity ----
   const feedItems: FeedItem[] = (feedRows ?? []).map((row) => {
@@ -152,6 +163,11 @@ export default async function DashboardPage() {
     (visionBoardResponse?.answers as Record<string, unknown>) ?? {}
   );
   const visionBoardComplete = !!visionBoardResponse?.completed_at;
+  const vbAnswers = (visionBoardResponse?.answers as Record<string, unknown>) ?? {};
+  const visionBoardSignOff = {
+    name: typeof vbAnswers.signoff_name === "string" ? vbAnswers.signoff_name : null,
+    date: typeof vbAnswers.signoff_date === "string" ? vbAnswers.signoff_date : null,
+  };
 
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-6 md:p-8">
@@ -162,18 +178,26 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <HeroBand>
-        {account && (
-          <CompanyProfileCard account={account as unknown as CompanyProfile} canEdit={canEditProfile} variant="hero" />
-        )}
-        <div>
-          <HeroLabel>KPI Dashboard</HeroLabel>
-          <KpiBandHero accountId={user.account_id!} sources={kpiBand.sources} />
-        </div>
-      </HeroBand>
-
-      <GrowthQuestionnaireBanner answeredCount={questionnaireAnsweredCount} complete={questionnaireComplete} />
-      <VisionBoardBanner answeredCount={visionBoardAnsweredCount} complete={visionBoardComplete} />
+      <SetupBlock
+        accountId={user.account_id!}
+        account={(account as unknown as CompanyProfile) ?? null}
+        canEditProfile={canEditProfile}
+        questionnaire={{
+          answered: questionnaireAnsweredCount,
+          total: TOTAL_QUESTION_COUNT,
+          complete: questionnaireComplete,
+        }}
+        visionBoard={{
+          answered: visionBoardAnsweredCount,
+          total: VISION_BOARD_TOTAL,
+          complete: visionBoardComplete,
+          signedBy: visionBoardSignOff.name,
+          signedOn: visionBoardSignOff.date,
+        }}
+        hours={Object.values(stepHours)}
+        quarter={quarter}
+        kpiSources={kpiBand.sources}
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
         <div className="flex flex-col gap-4">

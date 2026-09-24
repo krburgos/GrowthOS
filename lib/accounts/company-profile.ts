@@ -37,3 +37,46 @@ export function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
   return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1][0] ?? "") : "")).toUpperCase();
 }
+
+/**
+ * Profile completeness (client-confirmed, 2026-09-24) — the eleven fields
+ * the Dashboard's Company Profile card scores itself against.
+ *
+ * Suite is deliberately not one of them: plenty of companies do not have
+ * one, so counting it would leave those accounts permanently short of
+ * complete for no reason. Everything else is expected of every account, so
+ * anything missing is a genuine gap worth naming.
+ *
+ * The labels are what the card lists under "Missing:", so they read as
+ * things to go and add rather than as column names.
+ */
+export const COMPLETENESS_FIELDS: { label: string; filled: (a: CompanyProfile) => boolean }[] = [
+  { label: "logo", filled: (a) => !!a.logo_url },
+  { label: "company name", filled: (a) => !!a.name?.trim() },
+  { label: "street", filled: (a) => !!a.address_street?.trim() },
+  { label: "city", filled: (a) => !!a.address_city?.trim() },
+  { label: "state", filled: (a) => !!a.address_state?.trim() },
+  { label: "ZIP", filled: (a) => !!a.address_zip?.trim() },
+  { label: "phone", filled: (a) => !!a.phone?.trim() },
+  { label: "website", filled: (a) => !!a.website?.trim() },
+  { label: "LinkedIn", filled: (a) => !!a.linkedin_url?.trim() },
+  { label: "CEO", filled: (a) => !!a.ceo_name?.trim() },
+  { label: "a Sales & Marketing person", filled: (a) => (a.sales_marketing_names ?? []).some((n) => n.trim()) },
+];
+
+export interface Completeness {
+  filled: number;
+  total: number;
+  missing: string[];
+  complete: boolean;
+}
+
+export function profileCompleteness(account: CompanyProfile): Completeness {
+  const missing = COMPLETENESS_FIELDS.filter((f) => !f.filled(account)).map((f) => f.label);
+  return {
+    filled: COMPLETENESS_FIELDS.length - missing.length,
+    total: COMPLETENESS_FIELDS.length,
+    missing,
+    complete: missing.length === 0,
+  };
+}
