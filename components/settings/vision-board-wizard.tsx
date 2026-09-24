@@ -242,7 +242,7 @@ export function VisionBoardWizard({
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else if (isComplete(answers)) {
       toast.success("Vision Board complete.");
-      router.push("/foundation/vision-board");
+      router.push("/vision-board");
       router.refresh();
     } else {
       toast.success("Progress saved.");
@@ -341,7 +341,7 @@ export function VisionBoardWizard({
                   </p>
                 </div>
               </div>
-              <a href="/foundation/solution-questionnaire" className="mt-2 inline-block text-caption font-semibold text-secondary-700 hover:underline">
+              <a href="/settings/growth-questionnaire" className="mt-2 inline-block text-caption font-semibold text-secondary-700 hover:underline">
                 Edit these in the GrowthOS Solution Questionnaire →
               </a>
             </div>

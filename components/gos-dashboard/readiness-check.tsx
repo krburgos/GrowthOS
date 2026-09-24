@@ -61,16 +61,16 @@ export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
   };
 
   const items: Item[] = [
-    { label: "Company Profile", href: "/foundation/company-profile", action: "Complete it", doc: readiness.profile },
+    { label: "Company Profile", href: "/settings/company", action: "Complete it", doc: readiness.profile },
     {
       label: "Solution Questionnaire",
-      href: "/foundation/solution-questionnaire",
+      href: "/settings/growth-questionnaire",
       action: readiness.questionnaire.done === 0 ? "Start it" : "Finish it",
       doc: readiness.questionnaire,
     },
     {
       label: "Vision Board",
-      href: "/foundation/vision-board",
+      href: "/settings/vision-board",
       action: readiness.visionBoard.done === 0 ? "Start it" : "Finish it",
       doc: readiness.visionBoard,
     },

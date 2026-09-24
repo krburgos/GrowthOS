@@ -6,9 +6,12 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
-type AccountSub = "users" | "customizations";
+type AccountSub = "company" | "growth_questionnaire" | "vision_board" | "users" | "customizations";
 
 const ACCOUNT_SUB_BY_PATH: Record<string, AccountSub> = {
+  "/settings/company": "company",
+  "/settings/growth-questionnaire": "growth_questionnaire",
+  "/settings/vision-board": "vision_board",
   "/settings/users": "users",
   "/settings/statuses": "customizations",
   "/settings/opportunity-stages": "customizations",
@@ -30,11 +33,9 @@ const MY_PROFILE_ROWS: Row[] = [
 ];
 
 const ACCOUNT_SETTINGS_ROWS: (Row & { sub?: AccountSub })[] = [
-  // All three documents now live under Foundation in the sidebar
-  // (client-confirmed, 2026-09-24), Company Profile included: if the
-  // product calls them foundations and blocks the Command Center until all
-  // three are done, keeping one of them here was the inconsistency. What
-  // is left here is account administration.
+  { label: "Company Profile", href: "/settings/company", sub: "company" },
+  { label: "Solution Questionnaire", href: "/settings/growth-questionnaire", sub: "growth_questionnaire" },
+  { label: "Vision Board", href: "/settings/vision-board", sub: "vision_board" },
   { label: "Billing & Payments" },
   { label: "Email Auth" },
   { label: "Users", href: "/settings/users", sub: "users" },
@@ -63,6 +64,9 @@ const ACCOUNT_SUB_ROWS: Partial<Record<AccountSub, Row[]>> = {
 };
 
 const ACCOUNT_SUB_TITLE: Record<AccountSub, string> = {
+  company: "Company Profile",
+  growth_questionnaire: "Solution Questionnaire",
+  vision_board: "Vision Board",
   users: "Users",
   customizations: "Customizations",
 };
@@ -160,7 +164,7 @@ export function SettingsPanel() {
       title="Settings"
       rows={[
         { label: "My Profile", href: "/settings/profile" },
-        { label: "Account Settings", href: "/settings/users" },
+        { label: "Account Settings", href: "/settings/company" },
       ]}
     />
   );
