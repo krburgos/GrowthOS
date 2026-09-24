@@ -1,4 +1,4 @@
-import { CalendarRange } from "lucide-react";
+import { CalendarRange, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 
 import { HoursCard } from "@/components/gos-dashboard/hours-card";
@@ -39,14 +39,19 @@ export default async function GosDashboardPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-6 md:p-8">
+      <ReadinessCheck readiness={readiness} />
+
       <HeroBand>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-h1 text-white">GrowthOS Command Center – Strategy & Assignments Dashboard</h1>
-            <p className="max-w-[70ch] text-body text-white/75">
-              Tracked by hours — 4 phases, 14 workstreams from SEO through Sales Enablement. Click into any card for
-              its status report, duties, and KPIs.
-            </p>
+            {/* Client-confirmed (2026-09-24), treatment "C": a badge in the
+                same material as the quarter pill opposite, rather than the
+                descriptive sentence that used to sit here. */}
+            <span className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-body-sm font-semibold text-white/90">
+              <Sparkles className="size-4 text-secondary-300" />
+              Powered by AI and CRO Leader
+            </span>
           </div>
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-3 py-1.5 text-body-sm font-semibold text-white">
             <CalendarRange className="size-4" />
@@ -59,8 +64,6 @@ export default async function GosDashboardPage() {
         </div>
       </HeroBand>
 
-      <ReadinessCheck readiness={readiness} />
-
       <KpiBand
         accountId={user.account_id}
         sources={kpiBand.sources}
@@ -70,8 +73,12 @@ export default async function GosDashboardPage() {
 
       <section className="mt-2 flex flex-col gap-3">
         <SectionHeading title="Mission Cards">
+          {/* The removed hero sentence was the only thing telling anyone the
+              cards open. Said here instead, where someone about to click is
+              actually looking. */}
           <span className="text-caption text-neutral-400">
-            {steps.length} workstreams · {PLAYBOOK_PHASES.length} phases
+            {steps.length} workstreams · {PLAYBOOK_PHASES.length} phases · click any card for its status report,
+            duties and KPIs
           </span>
         </SectionHeading>
 

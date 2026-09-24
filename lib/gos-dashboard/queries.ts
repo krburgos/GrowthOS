@@ -1,6 +1,17 @@
 import { EMPTY_HOURS, type StepHours } from "@/lib/gos-dashboard/hours";
 import { defaultBoxFor, type KpiBoxKey, type KpiSource, type SourceKind } from "@/lib/gos-dashboard/kpi-band";
+import {
+  COMPANY_PROFILE_COLUMNS,
+  COMPLETENESS_FIELDS,
+  profileCompleteness,
+  type CompanyProfile,
+} from "@/lib/accounts/company-profile";
+import { TOTAL_QUESTION_COUNT, countAnswered as countQuestionnaireAnswered } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
+import {
+  TOTAL_FIELD_COUNT as VISION_BOARD_TOTAL,
+  countAnswered as countVisionBoardAnswered,
+} from "@/lib/vision-board/sections";
 import {
   PLAYBOOK_STEPS,
   type KpiStat,
@@ -188,21 +199,53 @@ export async function getKpiBand(accountId: string): Promise<KpiBandData> {
   return { sources, customized };
 }
 
-export interface Readiness {
-  website: string | null;
-  targetMarket: string | null;
+/**
+ * The Playbook doc's "Before You Begin — STOP". Client-confirmed
+ * (2026-09-24) this now measures the three account documents rather than
+ * the doc's original website-and-ICP pair.
+ *
+ * That is a stricter test, not a looser one: the website is one of the
+ * eleven Company Profile completeness fields, and the written ICP is one
+ * of the Solution Questionnaire's questions, so both original foundations
+ * are still required - they are just required as part of finishing the
+ * documents that contain them.
+ */
+export interface DocReadiness {
+  done: number;
+  total: number;
+  complete: boolean;
 }
 
-/** The Playbook doc's "Before You Begin": a functioning website and a written ICP (client-confirmed: the Questionnaire's target market answer). */
+export interface Readiness {
+  profile: DocReadiness;
+  questionnaire: DocReadiness;
+  visionBoard: DocReadiness;
+  ready: boolean;
+}
+
 export async function getReadiness(accountId: string): Promise<Readiness> {
   const supabase = await createClient();
-  const [{ data: account }, { data: questionnaire }] = await Promise.all([
-    supabase.from("accounts").select("website").eq("id", accountId).maybeSingle(),
-    supabase.from("growth_questionnaire_responses").select("answers").eq("account_id", accountId).maybeSingle(),
+  const [{ data: account }, { data: questionnaire }, { data: visionBoard }] = await Promise.all([
+    supabase.from('accounts').select(COMPANY_PROFILE_COLUMNS).eq('id', accountId).maybeSingle(),
+    supabase.from('growth_questionnaire_responses').select('answers, completed_at').eq('account_id', accountId).maybeSingle(),
+    supabase.from('vision_board_responses').select('answers, completed_at').eq('account_id', accountId).maybeSingle(),
   ]);
-  const answer = (questionnaire?.answers as Record<string, unknown> | undefined)?.overview_target_market;
+
+  const c = account
+    ? profileCompleteness(account as unknown as CompanyProfile)
+    : { filled: 0, total: COMPLETENESS_FIELDS.length, complete: false };
+
+  const qAnswered = countQuestionnaireAnswered((questionnaire?.answers as Record<string, unknown>) ?? {});
+  const vAnswered = countVisionBoardAnswered((visionBoard?.answers as Record<string, unknown>) ?? {});
+
+  const profile = { done: c.filled, total: c.total, complete: c.complete };
+  const q = { done: qAnswered, total: TOTAL_QUESTION_COUNT, complete: !!questionnaire?.completed_at };
+  const v = { done: vAnswered, total: VISION_BOARD_TOTAL, complete: !!visionBoard?.completed_at };
+
   return {
-    website: account?.website?.trim() || null,
-    targetMarket: typeof answer === "string" && answer.trim() ? answer.trim() : null,
+    profile,
+    questionnaire: q,
+    visionBoard: v,
+    ready: profile.complete && q.complete && v.complete,
   };
 }
