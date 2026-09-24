@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 
 /**
- * The Solution Questionnaire moved out of Settings to Strategy (client-confirmed, 2026-09-24).
+ * The Solution Questionnaire left Settings for Foundation (client-confirmed, 2026-09-24).
  *
- * Kept rather than deleted: the Dashboard's setup block, the Command
- * Center's readiness strip, the notification bell and the invite flow all
- * linked here, and so does anything anyone bookmarked. A redirect costs one
- * file; a 404 costs trust.
+ * Kept rather than deleted: internal links, the notification bell, the
+ * invite flow and anyone's bookmarks all point at the old path. Each old
+ * path points straight at its final destination rather than hopping
+ * through the previous rename.
  */
 export default function SettingsQuestionnaireRedirect() {
-  redirect("/strategy/solution-questionnaire");
+  redirect("/foundation/solution-questionnaire");
 }

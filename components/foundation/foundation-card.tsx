@@ -2,13 +2,13 @@ import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 
 /**
- * One document on the Strategy index (client-confirmed, 2026-09-24).
+ * One document on the Foundation index (client-confirmed, 2026-09-24).
  *
  * Deliberately the same card language the Dashboard's setup block uses —
  * status rule, figure, meter, status pill — on white rather than navy, so
  * nothing new has to be learned when someone arrives here from there.
  */
-export function StrategyDocCard({
+export function FoundationCard({
   title,
   href,
   answered,
@@ -17,6 +17,7 @@ export function StrategyDocCard({
   complete,
   blurb,
   footNote,
+  unit = "questions answered",
 }: {
   title: string;
   href: string;
@@ -26,6 +27,8 @@ export function StrategyDocCard({
   complete: boolean;
   blurb: string;
   footNote?: string;
+  /** Company Profile counts fields, not questions. */
+  unit?: string;
 }) {
   const status = complete ? "Complete" : answered === 0 ? "Not started" : "In progress";
   const action = complete ? "View" : answered === 0 ? "Start" : "Continue";
@@ -49,7 +52,7 @@ export function StrategyDocCard({
 
       <div className="flex flex-1 flex-col gap-4 px-5 pb-5 pt-4">
         <div>
-          <p className="mb-1.5 text-caption font-bold uppercase tracking-widest text-neutral-400">Questions answered</p>
+          <p className="mb-1.5 text-caption font-bold uppercase tracking-widest text-neutral-400">{unit}</p>
           <p
             className={`text-h1 font-bold leading-none tracking-tight tabular-nums ${
               complete ? "text-success-700" : "text-warning-800"

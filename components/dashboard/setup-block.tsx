@@ -79,7 +79,7 @@ export function SetupBlock({
           answered={questionnaire.answered}
           total={questionnaire.total}
           complete={questionnaire.complete}
-          href="/strategy/solution-questionnaire"
+          href="/foundation/solution-questionnaire"
           startLabel="Start"
           detailLabel={questionnaire.complete ? "Where it is used" : "Why it matters"}
           detail={
@@ -97,7 +97,7 @@ export function SetupBlock({
           answered={visionBoard.answered}
           total={visionBoard.total}
           complete={visionBoard.complete}
-          href="/strategy/vision-board"
+          href="/foundation/vision-board"
           startLabel="Start"
           detailLabel={visionBoard.complete && visionBoard.signedBy ? "Signed off" : "What it covers"}
           detail={
@@ -237,7 +237,7 @@ function CompanyPanel({ account, canEdit }: { account: CompanyProfile; canEdit: 
       footNote="Shown across GrowthOS"
       action={
         canEdit ? (
-          <Link href="/settings/company" className={c.complete ? QUIET_CLASS : CTA_CLASS}>
+          <Link href="/foundation/company-profile" className={c.complete ? QUIET_CLASS : CTA_CLASS}>
             {c.complete ? "Edit →" : "Complete"}
           </Link>
         ) : null

@@ -109,7 +109,7 @@ export function VisionPage({
         <div className="absolute right-4 top-4 z-20 flex gap-2 md:right-6 md:top-6">
           {canEdit && (
             <Link
-              href="/strategy/vision-board?edit=1"
+              href="/foundation/vision-board?edit=1"
               className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-body-sm font-semibold text-white transition-colors hover:bg-white/20"
             >
               <Pencil className="size-4" />
@@ -394,7 +394,7 @@ export function VisionPage({
         <div className="flex gap-2">
           {canEdit && (
             <Link
-              href="/strategy/vision-board?edit=1"
+              href="/foundation/vision-board?edit=1"
               className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3.5 py-2 text-body-sm font-semibold text-neutral-700 hover:bg-neutral-50"
             >
               <Pencil className="size-4" />

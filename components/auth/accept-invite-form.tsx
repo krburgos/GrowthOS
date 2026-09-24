@@ -56,7 +56,7 @@ export function AcceptInviteForm() {
       ? await supabase.from("users").select("role").eq("id", authUser.id).single()
       : { data: null };
 
-    router.push(profile?.role === "msp_owner" ? "/strategy/solution-questionnaire" : "/dashboard");
+    router.push(profile?.role === "msp_owner" ? "/foundation/solution-questionnaire" : "/dashboard");
     router.refresh();
   };
 

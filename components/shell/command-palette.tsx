@@ -100,7 +100,7 @@ export function CommandPalette({
   const navItems: PaletteItem[] = useMemo(
     () =>
       NAV_ITEMS.filter((item) =>
-        item.section === "dashboard" || item.section === "gosDashboard" || item.section === "strategy"
+        item.section === "dashboard" || item.section === "gosDashboard" || item.section === "foundation"
           ? true
           : access[item.section] !== "disabled"
       )

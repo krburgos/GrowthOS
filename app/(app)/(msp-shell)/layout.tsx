@@ -4,6 +4,7 @@ import { CroLeaderBanner } from "@/components/shell/cro-leader-banner";
 import { Sidebar } from "@/components/shell/sidebar";
 import { TopBar } from "@/components/shell/top-bar";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
+import { COMPANY_PROFILE_COLUMNS, profileCompleteness, type CompanyProfile } from "@/lib/accounts/company-profile";
 import { SIDEBAR_ACCESS } from "@/lib/auth/nav-permissions";
 import { countAnswered } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
@@ -51,7 +52,7 @@ export default async function MspShellLayout({ children }: { children: React.Rea
   if (needsAccountSelection(user.role) && !user.account_id) redirect("/cro");
 
   const supabase = await createClient();
-  const [{ data: questionnaireResponse }, { data: visionBoardResponse }] = await Promise.all([
+  const [{ data: questionnaireResponse }, { data: visionBoardResponse }, { data: accountRow }] = await Promise.all([
     supabase
       .from("growth_questionnaire_responses")
       .select("answers, completed_at")
@@ -62,17 +63,25 @@ export default async function MspShellLayout({ children }: { children: React.Rea
       .select("answers, completed_at")
       .eq("account_id", user.account_id)
       .maybeSingle(),
+    supabase.from("accounts").select(COMPANY_PROFILE_COLUMNS).eq("id", user.account_id).maybeSingle(),
   ]);
   const questionnaireAnsweredCount = countAnswered((questionnaireResponse?.answers as Record<string, unknown>) ?? {});
   const questionnaireComplete = !!questionnaireResponse?.completed_at;
   const visionBoardAnsweredCount = countVisionBoardAnswered((visionBoardResponse?.answers as Record<string, unknown>) ?? {});
   const visionBoardComplete = !!visionBoardResponse?.completed_at;
+  // The sidebar's Foundation section shows a dot per document and a count
+  // of what is outstanding, so the shell resolves all three here.
+  const foundationDone = {
+    companyProfile: accountRow ? profileCompleteness(accountRow as unknown as CompanyProfile).complete : false,
+    questionnaire: questionnaireComplete,
+    visionBoard: visionBoardComplete,
+  };
 
   return (
     <div className="flex flex-1 flex-col">
       {user.viewingAccountName && <CroLeaderBanner companyName={user.viewingAccountName} />}
       <div className="flex min-h-0 flex-1">
-        <Sidebar access={SIDEBAR_ACCESS[user.role]} />
+        <Sidebar access={SIDEBAR_ACCESS[user.role]} foundationDone={foundationDone} />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar
             fullName={user.full_name}

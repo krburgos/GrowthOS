@@ -135,7 +135,7 @@ export function TopBar({
               <>
                 {showQuestionnaireItem && (
                   <DropdownMenuItem asChild className="flex items-start gap-3 py-2.5">
-                    <Link href="/strategy/solution-questionnaire">
+                    <Link href="/foundation/solution-questionnaire">
                       <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary-100 text-secondary-700">
                         <ClipboardList className="size-4" />
                       </span>
@@ -152,7 +152,7 @@ export function TopBar({
                 )}
                 {showVisionBoardItem && (
                   <DropdownMenuItem asChild className="flex items-start gap-3 py-2.5">
-                    <Link href="/strategy/vision-board">
+                    <Link href="/foundation/vision-board">
                       <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary-100 text-secondary-700">
                         <Compass className="size-4" />
                       </span>
@@ -185,7 +185,7 @@ export function TopBar({
               <Link href="/settings/profile">My Profile</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/settings/company">Account Settings</Link>
+              <Link href="/settings/users">Account Settings</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={handleLogout}>Log Out</DropdownMenuItem>

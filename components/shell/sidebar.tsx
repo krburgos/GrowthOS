@@ -22,7 +22,9 @@ import type { NavAccess, NavSection } from "@/lib/auth/nav-permissions";
 import { cn } from "@/lib/utils";
 
 export interface NavItem {
-  section: NavSection | "dashboard" | "gosDashboard" | "strategy";
+  section: NavSection | "dashboard" | "gosDashboard" | "foundation";
+  /** Rendered beneath the item while the rail is expanded. */
+  children?: { key: FoundationKey; label: string; href: string }[];
   label: string;
   href: string;
   /** Path prefix used to compute the active state, when it differs from
@@ -32,10 +34,30 @@ export interface NavItem {
   icon: ComponentType<{ className?: string }>;
 }
 
+/** The three documents under Foundation, keyed so the shell can say which are done. */
+export type FoundationKey = "companyProfile" | "questionnaire" | "visionBoard";
+
 /** Exported so the command palette (§8.10) can reuse the exact same
  * destination list rather than maintaining a second, drift-prone copy. */
 export const NAV_ITEMS: NavItem[] = [
   { section: "dashboard", label: "Homepage", href: "/dashboard", icon: LayoutDashboard },
+  // Client-confirmed sequence "A" (2026-09-24): Foundation sits directly
+  // above Command Center because it feeds it — the readiness strip blocks
+  // that page until all three of these are complete. Read top to bottom the
+  // rail tells the story: your day, what you set up, the plan being
+  // executed, the data, the reporting, the plumbing.
+  {
+    section: "foundation",
+    label: "Foundation",
+    href: "/foundation",
+    matchPrefix: "/foundation",
+    icon: Compass,
+    children: [
+      { key: "companyProfile", label: "Company Profile", href: "/foundation/company-profile" },
+      { key: "questionnaire", label: "Solution Questionnaire", href: "/foundation/solution-questionnaire" },
+      { key: "visionBoard", label: "Vision Board", href: "/foundation/vision-board" },
+    ],
+  },
   { section: "gosDashboard", label: "Command Center", href: "/gos-dashboard", icon: LayoutGrid },
   { section: "contacts", label: "Contacts", href: "/contacts", icon: Users },
   { section: "companies", label: "Companies", href: "/companies", icon: Building2 },
@@ -43,11 +65,6 @@ export const NAV_ITEMS: NavItem[] = [
   { section: "lists", label: "Lists", href: "/lists", icon: ListChecks },
   { section: "campaigns", label: "Campaigns", href: "/campaigns", icon: Mail },
   { section: "reports", label: "Reports", href: "/reports", icon: BarChart3 },
-  // Client-confirmed (2026-09-24): the Solution Questionnaire and Vision
-  // Board are not settings — they are written once, read often, exported,
-  // and read by other screens — so they get their own section here rather
-  // than living three levels into Settings. Company Profile stayed behind.
-  { section: "strategy", label: "Strategy", href: "/strategy", icon: Compass },
   {
     section: "settings",
     label: "Settings",
@@ -80,7 +97,14 @@ const SIDEBAR_COLLAPSED_KEY = "growthos.sidebar.collapsed";
  * nobody re-collapses it every session. The tooltip is kept, but only
  * while collapsed, as a quick label check without a full expand.
  */
-export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
+export function Sidebar({
+  access,
+  foundationDone,
+}: {
+  access: Record<NavSection, NavAccess>;
+  /** Which of the three Foundation documents are complete. */
+  foundationDone: Record<FoundationKey, boolean>;
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -107,13 +131,14 @@ export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
       <nav className="flex flex-col gap-1 px-3">
         {NAV_ITEMS.map((item) => {
           const itemAccess: NavAccess =
-            item.section === "dashboard" || item.section === "gosDashboard" || item.section === "strategy"
+            item.section === "dashboard" || item.section === "gosDashboard" || item.section === "foundation"
               ? "full"
               : access[item.section];
           const disabled = itemAccess === "disabled";
           const matchAgainst = item.matchPrefix ?? item.href;
           const active = pathname === matchAgainst || pathname.startsWith(`${matchAgainst}/`);
           const Icon = item.icon;
+          const outstanding = item.children?.filter((c) => !foundationDone[c.key]).length ?? 0;
 
           const content = (
             <span className="relative flex h-10 items-center">
@@ -141,6 +166,21 @@ export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
                 >
                   {item.label}
                 </span>
+                {/* A count of what is still outstanding, on the one item
+                    that can say. It survives collapsing, and disappears at
+                    zero so a finished account sees a plain icon rather than
+                    a permanent decoration. */}
+                {outstanding > 0 && (
+                  <span
+                    className={cn(
+                      "flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-warning-400 px-1 text-[10px] font-bold text-primary-950",
+                      collapsed ? "absolute right-1 top-0.5" : "ml-auto"
+                    )}
+                    aria-label={`${outstanding} still to complete`}
+                  >
+                    {outstanding}
+                  </span>
+                )}
               </span>
             </span>
           );
@@ -153,7 +193,44 @@ export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
             </Link>
           );
 
-          if (!collapsed) return <div key={item.section}>{link}</div>;
+          if (!collapsed) {
+            return (
+              <div key={item.section}>
+                {link}
+                {item.children && (
+                  <div className="ml-[25px] mt-0.5 mb-1 flex flex-col gap-px border-l border-white/15 pl-3">
+                    {item.children.map((child) => {
+                      const childActive = pathname === child.href;
+                      const done = foundationDone[child.key];
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          aria-current={childActive ? "page" : undefined}
+                          className={cn(
+                            "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-caption transition-colors",
+                            childActive
+                              ? "bg-white/10 font-semibold text-white"
+                              : "text-white/60 hover:bg-white/5 hover:text-white"
+                          )}
+                        >
+                          <span className="min-w-0 truncate">{child.label}</span>
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "ml-auto size-1.5 shrink-0 rounded-full",
+                              done ? "bg-success-400" : "bg-warning-400"
+                            )}
+                          />
+                          <span className="sr-only">{done ? "complete" : "still to complete"}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
 
           return (
             <Tooltip key={item.section}>
