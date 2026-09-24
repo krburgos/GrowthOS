@@ -85,7 +85,7 @@ function MappingDialog({
         </DialogHeader>
 
         <p className="mb-2 rounded-md bg-neutral-50 px-3 py-2 text-caption text-neutral-500">
-          MQCs, MQLs and Engaged count contacts by status; the other boxes count opportunities by stage. Each status or
+          MQCs and MQLs count contacts by status; the other boxes count opportunities by stage. Each status or
           stage counts toward one box at most.
         </p>
 
@@ -251,13 +251,13 @@ export function KpiBand({
         )}
       </SectionHeading>
 
-      <div className="grid grid-cols-1 overflow-hidden rounded-lg border border-neutral-200 bg-white lg:grid-cols-[3fr_5fr]">
+      <div className="grid grid-cols-1 overflow-hidden rounded-lg border border-neutral-200 bg-white lg:grid-cols-[2fr_6fr]">
         <div>
           <div className="flex items-center justify-center gap-1.5 bg-primary-900 px-3 py-2 text-body-sm font-semibold text-white">
             <Users className="size-3.5" />
             Prospects
           </div>
-          <div className="grid grid-cols-3">{KPI_BOXES.filter((b) => b.group === "prospects").map(renderCell)}</div>
+          <div className="grid grid-cols-2">{KPI_BOXES.filter((b) => b.group === "prospects").map(renderCell)}</div>
         </div>
         <div className="border-t border-neutral-200 lg:border-l lg:border-t-0">
           <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 bg-secondary-700 px-3 py-2 text-body-sm font-semibold text-white">

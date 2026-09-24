@@ -1,19 +1,24 @@
 /**
  * The Playbook doc's "GrowthOS KPI dashboard" band (client-confirmed,
  * 2026-09-17): Prospects and Opportunities, counted live from the account's
- * contacts and opportunities. "Engaged" counts contacts with the Engaged
- * status, since that's how the CRM uses it (client-confirmed).
+ * contacts and opportunities.
  *
  * Client-confirmed (2026-09-22): the two halves split by what they count
- * rather than by how the source doc drew them - Prospects holds the three
- * boxes fed by contact statuses (MQCs, MQLs, Engaged), Opportunities holds
- * the five fed by opportunity stages. That makes the grouping agree with
- * boxAcceptsKind() below, which already drew the line in the same place.
- * Engaged therefore moved out of the pipeline half; no box was added or
- * removed, so saved mappings carry over untouched.
+ * rather than by how the source doc drew them - Prospects holds the boxes
+ * fed by contact statuses, Opportunities the ones fed by opportunity
+ * stages. That makes the grouping agree with boxAcceptsKind() below, which
+ * already drew the line in the same place.
+ *
+ * Client-confirmed (2026-09-24): the Engaged box is gone, and with it the
+ * Engaged contact status, which was retired from every account in the same
+ * change (contacts on it moved to MQC - see the
+ * retire_engaged_contact_status migration). Prospects is therefore MQCs and
+ * MQLs. The 'engaged' value stays in the gos_dashboard_kpi_box enum because
+ * removing an enum value in Postgres is a rewrite, and nothing references
+ * it: no account had ever mapped a status to that box.
  */
 
-export type KpiBoxKey = "mqc" | "mql" | "interested" | "engaged" | "ghosted" | "quoted" | "won" | "lost";
+export type KpiBoxKey = "mqc" | "mql" | "interested" | "ghosted" | "quoted" | "won" | "lost";
 export type SourceKind = "contact_status" | "opportunity_stage";
 
 export interface KpiBox {
@@ -27,7 +32,6 @@ export const KPI_BOXES: KpiBox[] = [
   { key: "mqc", label: "MQCs", group: "prospects" },
   { key: "mql", label: "MQLs", group: "prospects" },
   { key: "interested", label: "Interested", group: "pipeline" },
-  { key: "engaged", label: "Engaged", group: "prospects" },
   { key: "ghosted", label: "Ghosted", group: "pipeline", tone: "ghosted" },
   { key: "quoted", label: "Quoted", group: "pipeline" },
   { key: "won", label: "Won", group: "pipeline", tone: "won" },
@@ -49,7 +53,6 @@ export function defaultBoxFor(kind: SourceKind, name: string, stageGroup?: strin
   if (kind === "contact_status") {
     if (n === "mqc") return "mqc";
     if (n === "mql") return "mql";
-    if (n === "engaged") return "engaged";
     return null;
   }
   if (stageGroup === "won") return "won";
@@ -80,6 +83,6 @@ export function boxTotal(sources: KpiSource[], key: KpiBoxKey): number {
 
 /** Which box each kind of source is allowed to feed. */
 export function boxAcceptsKind(key: KpiBoxKey, kind: SourceKind): boolean {
-  const contactBoxes: KpiBoxKey[] = ["mqc", "mql", "engaged"];
+  const contactBoxes: KpiBoxKey[] = ["mqc", "mql"];
   return kind === "contact_status" ? contactBoxes.includes(key) : !contactBoxes.includes(key);
 }

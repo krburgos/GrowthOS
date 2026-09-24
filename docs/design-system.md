@@ -273,7 +273,7 @@ Used for prospect statuses (§6.2 of the PRD) and custom statuses. radius-full, 
 | **Status category** | **Fill** | **Text** |
 | --- | --- | --- |
 | Neutral (Internal) | neutral-100 | neutral-700 |
-| In progress (MQC, MQL, Engaged) | secondary-50 (generated the same way as §3.2's lighter steps) | secondary-800 |
+| In progress (MQC, MQL) | secondary-50 (generated the same way as §3.2's lighter steps) | secondary-800 |
 | Positive (Existing Client) | success-50-equivalent light fill | success-800 |
 | Negative (Scrub, Not a Fit, UnSub - Call Only) | error-50-equivalent light fill | error-700 |
 
