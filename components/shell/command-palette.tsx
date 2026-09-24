@@ -100,7 +100,9 @@ export function CommandPalette({
   const navItems: PaletteItem[] = useMemo(
     () =>
       NAV_ITEMS.filter((item) =>
-        item.section === "dashboard" || item.section === "gosDashboard" ? true : access[item.section] !== "disabled"
+        item.section === "dashboard" || item.section === "gosDashboard" || item.section === "strategy"
+          ? true
+          : access[item.section] !== "disabled"
       )
         .filter((item) => !query.trim() || item.label.toLowerCase().includes(query.trim().toLowerCase()))
         .map((item) => ({ key: `nav-${item.section}`, label: item.label, icon: item.icon, href: item.href })),

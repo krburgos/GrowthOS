@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  Compass,
   Building2,
   ChevronLeft,
   LayoutDashboard,
@@ -21,7 +22,7 @@ import type { NavAccess, NavSection } from "@/lib/auth/nav-permissions";
 import { cn } from "@/lib/utils";
 
 export interface NavItem {
-  section: NavSection | "dashboard" | "gosDashboard";
+  section: NavSection | "dashboard" | "gosDashboard" | "strategy";
   label: string;
   href: string;
   /** Path prefix used to compute the active state, when it differs from
@@ -42,6 +43,11 @@ export const NAV_ITEMS: NavItem[] = [
   { section: "lists", label: "Lists", href: "/lists", icon: ListChecks },
   { section: "campaigns", label: "Campaigns", href: "/campaigns", icon: Mail },
   { section: "reports", label: "Reports", href: "/reports", icon: BarChart3 },
+  // Client-confirmed (2026-09-24): the Solution Questionnaire and Vision
+  // Board are not settings — they are written once, read often, exported,
+  // and read by other screens — so they get their own section here rather
+  // than living three levels into Settings. Company Profile stayed behind.
+  { section: "strategy", label: "Strategy", href: "/strategy", icon: Compass },
   {
     section: "settings",
     label: "Settings",
@@ -101,7 +107,9 @@ export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
       <nav className="flex flex-col gap-1 px-3">
         {NAV_ITEMS.map((item) => {
           const itemAccess: NavAccess =
-            item.section === "dashboard" || item.section === "gosDashboard" ? "full" : access[item.section];
+            item.section === "dashboard" || item.section === "gosDashboard" || item.section === "strategy"
+              ? "full"
+              : access[item.section];
           const disabled = itemAccess === "disabled";
           const matchAgainst = item.matchPrefix ?? item.href;
           const active = pathname === matchAgainst || pathname.startsWith(`${matchAgainst}/`);

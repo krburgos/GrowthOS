@@ -79,7 +79,7 @@ export function SetupBlock({
           answered={questionnaire.answered}
           total={questionnaire.total}
           complete={questionnaire.complete}
-          href="/settings/growth-questionnaire"
+          href="/strategy/solution-questionnaire"
           startLabel="Start"
           detailLabel={questionnaire.complete ? "Where it is used" : "Why it matters"}
           detail={
@@ -97,7 +97,7 @@ export function SetupBlock({
           answered={visionBoard.answered}
           total={visionBoard.total}
           complete={visionBoard.complete}
-          href={visionBoard.complete ? "/vision-board" : "/settings/vision-board"}
+          href="/strategy/vision-board"
           startLabel="Start"
           detailLabel={visionBoard.complete && visionBoard.signedBy ? "Signed off" : "What it covers"}
           detail={

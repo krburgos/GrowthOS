@@ -64,13 +64,13 @@ export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
     { label: "Company Profile", href: "/settings/company", action: "Complete it", doc: readiness.profile },
     {
       label: "Solution Questionnaire",
-      href: "/settings/growth-questionnaire",
+      href: "/strategy/solution-questionnaire",
       action: readiness.questionnaire.done === 0 ? "Start it" : "Finish it",
       doc: readiness.questionnaire,
     },
     {
       label: "Vision Board",
-      href: "/settings/vision-board",
+      href: "/strategy/vision-board",
       action: readiness.visionBoard.done === 0 ? "Start it" : "Finish it",
       doc: readiness.visionBoard,
     },

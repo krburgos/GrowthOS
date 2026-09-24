@@ -135,7 +135,7 @@ export function TopBar({
               <>
                 {showQuestionnaireItem && (
                   <DropdownMenuItem asChild className="flex items-start gap-3 py-2.5">
-                    <Link href="/settings/growth-questionnaire">
+                    <Link href="/strategy/solution-questionnaire">
                       <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary-100 text-secondary-700">
                         <ClipboardList className="size-4" />
                       </span>
@@ -152,7 +152,7 @@ export function TopBar({
                 )}
                 {showVisionBoardItem && (
                   <DropdownMenuItem asChild className="flex items-start gap-3 py-2.5">
-                    <Link href="/settings/vision-board">
+                    <Link href="/strategy/vision-board">
                       <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary-100 text-secondary-700">
                         <Compass className="size-4" />
                       </span>
