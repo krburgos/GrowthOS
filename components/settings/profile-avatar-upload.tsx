@@ -8,17 +8,28 @@ import { ImageUploadCircle } from "@/components/settings/image-upload-circle";
  * same shape as the company logo (avatars bucket, public read, write
  * restricted to the owning user only — see the avatar_storage
  * migration).
+ *
+ * `compact` and `onDark` are separate on purpose (fixed 2026-09-24). They
+ * used to be one flag, which meant the profile hero could not have a small
+ * camera button without also getting the styling for a dark ground — and
+ * choosing the other way round put a 36px button on a 64px circle, covering
+ * most of the avatar, with grey initials that all but vanished behind it.
+ * One flag sizes the button; the other says what it is sitting on.
  */
 export function ProfileAvatarUpload({
   userId,
   avatarUrl,
   fallbackText,
   compact,
+  onDark,
 }: {
   userId: string;
   avatarUrl: string | null;
   fallbackText: string;
+  /** Shrinks the camera button, for circles under about 80px. */
   compact?: boolean;
+  /** The circle sits on a dark ground, so the empty state needs light ink. */
+  onDark?: boolean;
 }) {
   return (
     <ImageUploadCircle
@@ -34,11 +45,9 @@ export function ProfileAvatarUpload({
       ariaLabel="Upload profile picture"
       fallback={
         fallbackText ? (
-          <span className={compact ? "text-body-sm font-semibold text-white" : "text-h3 font-medium text-neutral-500"}>
-            {fallbackText}
-          </span>
+          <span className={`text-h4 font-bold ${onDark ? "text-white" : "text-neutral-500"}`}>{fallbackText}</span>
         ) : (
-          <User className={compact ? "size-1/2 text-white/70" : "size-1/2 text-neutral-400"} />
+          <User className={`size-1/2 ${onDark ? "text-white/70" : "text-neutral-400"}`} />
         )
       }
     />

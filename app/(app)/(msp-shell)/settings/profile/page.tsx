@@ -47,6 +47,8 @@ export default async function ProfilePage() {
               userId={user.id}
               avatarUrl={profile?.avatar_url ?? null}
               fallbackText={initials(user.full_name)}
+              compact
+              onDark
             />
           </div>
           <div className="min-w-0 flex-1">
