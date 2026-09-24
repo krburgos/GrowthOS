@@ -12,6 +12,7 @@ import { currentQuarter } from "@/lib/gos-dashboard/hours";
 import { getKpiBand, getStepHours } from "@/lib/gos-dashboard/queries";
 import { TOTAL_QUESTION_COUNT, countAnswered } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
+import { getTeamMembers } from "@/lib/team/queries";
 import {
   TOTAL_FIELD_COUNT as VISION_BOARD_TOTAL,
   countAnswered as countVisionBoardAnswered,
@@ -125,9 +126,10 @@ export default async function DashboardPage() {
 
   // ---- KPI band and this quarter's hours ----
   const quarter = currentQuarter();
-  const [kpiBand, stepHours] = await Promise.all([
+  const [kpiBand, stepHours, teamMembers] = await Promise.all([
     getKpiBand(user.account_id!),
     getStepHours(user.account_id!, quarter.start),
+    getTeamMembers(user.account_id!),
   ]);
 
   // ---- Recent activity ----
@@ -197,6 +199,7 @@ export default async function DashboardPage() {
         hours={Object.values(stepHours)}
         quarter={quarter}
         kpiSources={kpiBand.sources}
+        teamCount={teamMembers.filter((m) => m.kind === "in_house").length}
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">

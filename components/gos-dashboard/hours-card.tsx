@@ -10,6 +10,7 @@ import { LogHoursDialog } from "@/components/gos-dashboard/log-hours-dialog";
 import { StatusBadge } from "@/components/gos-dashboard/status-badge";
 import { SHORT_TITLE, formatHours, quarterPct, type QuarterInfo, type StepHours } from "@/lib/gos-dashboard/hours";
 import type { StepOverview } from "@/lib/gos-dashboard/queries";
+import { initialsOf, type TeamMember } from "@/lib/team/members";
 
 /**
  * Client-confirmed (2026-09-17), "B — Ledger": short title + status pill,
@@ -23,12 +24,15 @@ export function HoursCard({
   quarter,
   accountId,
   canLogHours,
+  assignees,
 }: {
   step: StepOverview;
   hours: StepHours;
   quarter: QuarterInfo;
   accountId: string;
   canLogHours: boolean;
+  /** Who is responsible for this workstream, from the Company Profile rosters. */
+  assignees: { member: TeamMember; hours: number }[];
 }) {
   const [open, setOpen] = useState(false);
   const pct = quarterPct(hours);
@@ -71,6 +75,44 @@ export function HoursCard({
             </span>
           </div>
         ))}
+      </div>
+
+      {/* Client-confirmed (2026-09-24): who is on this workstream, as an
+          avatar stack with a count. Deliberately below the hours box and
+          labelled in weekly hours, because the three figures above are
+          quarterly - 8h/wk must not read as part of 120 hrs needed. */}
+      <div className="border-t border-neutral-100 pt-3">
+        <p className="mb-2 text-caption font-bold uppercase tracking-wide text-neutral-400">Assigned</p>
+        {assignees.length === 0 ? (
+          <p className="text-caption text-neutral-400">Nobody assigned yet</p>
+        ) : (
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center">
+              {assignees.slice(0, 4).map(({ member }, i) => (
+                <span
+                  key={member.id}
+                  title={member.name}
+                  className={`flex size-6 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white ${
+                    member.kind === "outsourced"
+                      ? "bg-gradient-to-br from-neutral-500 to-neutral-400"
+                      : "bg-gradient-to-br from-primary-700 to-secondary-700"
+                  } ${i > 0 ? "-ml-1.5" : ""}`}
+                >
+                  {initialsOf(member.name)}
+                </span>
+              ))}
+              {assignees.length > 4 && (
+                <span className="-ml-1.5 flex size-6 items-center justify-center rounded-full border-2 border-white bg-neutral-200 text-[9px] font-bold text-neutral-600">
+                  +{assignees.length - 4}
+                </span>
+              )}
+            </div>
+            <span className="text-caption text-neutral-500">
+              {assignees.length} {assignees.length === 1 ? "person" : "people"} ·{" "}
+              {assignees.reduce((sum, a) => sum + a.hours, 0)}h/wk
+            </span>
+          </div>
+        )}
       </div>
 
       {step.budgetNote && (

@@ -50,7 +50,7 @@ export function initials(name: string): string {
  * The labels are what the card lists under "Missing:", so they read as
  * things to go and add rather than as column names.
  */
-export const COMPLETENESS_FIELDS: { label: string; filled: (a: CompanyProfile) => boolean }[] = [
+export const COMPLETENESS_FIELDS: { label: string; filled: (a: CompanyProfile, teamCount?: number) => boolean }[] = [
   { label: "logo", filled: (a) => !!a.logo_url },
   { label: "company name", filled: (a) => !!a.name?.trim() },
   { label: "street", filled: (a) => !!a.address_street?.trim() },
@@ -61,7 +61,9 @@ export const COMPLETENESS_FIELDS: { label: string; filled: (a: CompanyProfile) =
   { label: "website", filled: (a) => !!a.website?.trim() },
   { label: "LinkedIn", filled: (a) => !!a.linkedin_url?.trim() },
   { label: "CEO", filled: (a) => !!a.ceo_name?.trim() },
-  { label: "a Sales & Marketing person", filled: (a) => (a.sales_marketing_names ?? []).some((n) => n.trim()) },
+  // Counted from the account_team_members roster (2026-09-24), not the
+  // old sales_marketing_names array, which the roster replaced.
+  { label: "a Sales & Marketing person", filled: (_a, teamCount) => (teamCount ?? 0) > 0 },
 ];
 
 export interface Completeness {
@@ -71,8 +73,8 @@ export interface Completeness {
   complete: boolean;
 }
 
-export function profileCompleteness(account: CompanyProfile): Completeness {
-  const missing = COMPLETENESS_FIELDS.filter((f) => !f.filled(account)).map((f) => f.label);
+export function profileCompleteness(account: CompanyProfile, teamCount = 0): Completeness {
+  const missing = COMPLETENESS_FIELDS.filter((f) => !f.filled(account, teamCount)).map((f) => f.label);
   return {
     filled: COMPLETENESS_FIELDS.length - missing.length,
     total: COMPLETENESS_FIELDS.length,

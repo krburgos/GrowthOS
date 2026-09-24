@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 
 import { CompanyLogoUpload } from "@/components/settings/company-logo-upload";
 import { CompanyProfileForm } from "@/components/settings/company-profile-form";
+import { TeamRoster } from "@/components/settings/team-roster";
 import { COMPANY_PROFILE_COLUMNS, formatAddress, type CompanyProfile } from "@/lib/accounts/company-profile";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
+import { getTeamMembers } from "@/lib/team/queries";
 
 export const metadata: Metadata = { title: "Company Profile — GrowthOS" };
 
@@ -29,11 +31,11 @@ export default async function CompanyProfilePage() {
   const canEdit = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"].includes(user.role);
 
   const supabase = await createClient();
-  const { data: account } = (await supabase
-    .from("accounts")
-    .select(COMPANY_PROFILE_COLUMNS)
-    .eq("id", user.account_id)
-    .single()) as { data: CompanyProfile | null };
+  const [accountResult, teamMembers] = await Promise.all([
+    supabase.from("accounts").select(COMPANY_PROFILE_COLUMNS).eq("id", user.account_id).single(),
+    getTeamMembers(user.account_id!),
+  ]);
+  const account = accountResult.data as CompanyProfile | null;
 
   if (!account) return null;
 
@@ -61,6 +63,8 @@ export default async function CompanyProfilePage() {
           {address && <p className="truncate text-body-sm text-neutral-500">{address}</p>}
         </div>
       </div>
+
+      <TeamRoster accountId={account.id} members={teamMembers} canEdit={canEdit} />
 
       <CompanyProfileForm
         accountId={account.id}

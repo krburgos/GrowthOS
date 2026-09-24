@@ -11,6 +11,8 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
 import { PLAYBOOK_PHASES } from "@/lib/gos-dashboard/playbook";
 import { getKpiBand, getReadiness, getStepHours, getStepOverviews } from "@/lib/gos-dashboard/queries";
+import { membersForStep } from "@/lib/team/members";
+import { getTeamMembers } from "@/lib/team/queries";
 
 export const metadata: Metadata = { title: "GrowthOS Command Center – Strategy & Assignments Dashboard — GrowthOS" };
 
@@ -27,11 +29,12 @@ export default async function GosDashboardPage() {
   if (!user || !user.account_id) return null;
 
   const quarter = currentQuarter();
-  const [steps, hours, kpiBand, readiness] = await Promise.all([
+  const [steps, hours, kpiBand, readiness, teamMembers] = await Promise.all([
     getStepOverviews(user.account_id),
     getStepHours(user.account_id, quarter.start),
     getKpiBand(user.account_id),
     getReadiness(user.account_id),
+    getTeamMembers(user.account_id),
   ]);
 
   const canLogHours = HOURS_EDIT_ROLES.includes(user.role);
@@ -95,6 +98,7 @@ export default async function GosDashboardPage() {
               quarter={quarter}
               accountId={user.account_id!}
               canLogHours={canLogHours}
+              assignees={membersForStep(teamMembers, step.slug)}
             />
           ))}
         </div>

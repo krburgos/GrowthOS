@@ -225,14 +225,20 @@ export interface Readiness {
 
 export async function getReadiness(accountId: string): Promise<Readiness> {
   const supabase = await createClient();
-  const [{ data: account }, { data: questionnaire }, { data: visionBoard }] = await Promise.all([
+  const [{ data: account }, { data: questionnaire }, { data: visionBoard }, { count: teamCount }] = await Promise.all([
     supabase.from('accounts').select(COMPANY_PROFILE_COLUMNS).eq('id', accountId).maybeSingle(),
     supabase.from('growth_questionnaire_responses').select('answers, completed_at').eq('account_id', accountId).maybeSingle(),
     supabase.from('vision_board_responses').select('answers, completed_at').eq('account_id', accountId).maybeSingle(),
+    supabase
+      .from('account_team_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId)
+      .eq('kind', 'in_house')
+      .is('archived_at', null),
   ]);
 
   const c = account
-    ? profileCompleteness(account as unknown as CompanyProfile)
+    ? profileCompleteness(account as unknown as CompanyProfile, teamCount ?? 0)
     : { filled: 0, total: COMPLETENESS_FIELDS.length, complete: false };
 
   const qAnswered = countQuestionnaireAnswered((questionnaire?.answers as Record<string, unknown>) ?? {});

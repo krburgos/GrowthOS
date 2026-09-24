@@ -56,6 +56,7 @@ export function SetupBlock({
   quarter,
   kpiSources,
   accountId,
+  teamCount,
 }: {
   account: CompanyProfile | null;
   canEditProfile: boolean;
@@ -65,11 +66,13 @@ export function SetupBlock({
   quarter: QuarterInfo;
   kpiSources: KpiSource[];
   accountId: string;
+  /** In-house roster size - the eleventh completeness field. */
+  teamCount: number;
 }) {
   return (
     <section className="flex flex-col gap-4 rounded-xl p-4 text-white md:p-5 bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]">
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        {account && <CompanyPanel account={account} canEdit={canEditProfile} />}
+        {account && <CompanyPanel account={account} canEdit={canEditProfile} teamCount={teamCount} />}
 
         <DocumentPanel
           title="Solution Questionnaire"
@@ -224,8 +227,8 @@ function Identity({ plate, title, sub }: { plate: ReactNode; title: string; sub:
   );
 }
 
-function CompanyPanel({ account, canEdit }: { account: CompanyProfile; canEdit: boolean }) {
-  const c = profileCompleteness(account);
+function CompanyPanel({ account, canEdit, teamCount }: { account: CompanyProfile; canEdit: boolean; teamCount: number }) {
+  const c = profileCompleteness(account, teamCount);
   const address = formatAddress(account);
   const cityLine = [account.address_city, account.address_state].filter(Boolean).join(", ") || address || "No address yet";
 
