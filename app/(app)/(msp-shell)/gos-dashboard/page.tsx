@@ -10,7 +10,7 @@ import { SectionHeading } from "@/components/shell/section-heading";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
 import { PLAYBOOK_PHASES } from "@/lib/gos-dashboard/playbook";
-import { getKpiBand, getReadiness, getStepHours, getStepOverviews } from "@/lib/gos-dashboard/queries";
+import { getKpiBand, getReadiness, getStepHours, getStepOverviews, getTasks } from "@/lib/gos-dashboard/queries";
 import { membersForStep } from "@/lib/team/members";
 import { getTeamMembers } from "@/lib/team/queries";
 
@@ -29,13 +29,22 @@ export default async function GosDashboardPage() {
   if (!user || !user.account_id) return null;
 
   const quarter = currentQuarter();
-  const [steps, hours, kpiBand, readiness, teamMembers] = await Promise.all([
+  const [steps, hours, kpiBand, readiness, teamMembers, tasks] = await Promise.all([
     getStepOverviews(user.account_id),
     getStepHours(user.account_id, quarter.start),
     getKpiBand(user.account_id),
     getReadiness(user.account_id),
     getTeamMembers(user.account_id),
+    getTasks(user.account_id),
   ]);
+
+  // One read for all 14 cards, bucketed here rather than a query per card.
+  const tasksByStep = new Map<string, typeof tasks>();
+  for (const task of tasks) {
+    const bucket = tasksByStep.get(task.step_slug);
+    if (bucket) bucket.push(task);
+    else tasksByStep.set(task.step_slug, [task]);
+  }
 
   const canLogHours = HOURS_EDIT_ROLES.includes(user.role);
   const isCroLeaderEditor = user.role === "cro_admin" || user.role === "cro_advisor";
@@ -81,7 +90,7 @@ export default async function GosDashboardPage() {
               actually looking. */}
           <span className="text-caption text-neutral-400">
             {steps.length} workstreams · {PLAYBOOK_PHASES.length} phases · click any card for its status report,
-            duties and KPIs
+            tasks and KPIs
           </span>
         </SectionHeading>
 
@@ -99,6 +108,7 @@ export default async function GosDashboardPage() {
               accountId={user.account_id!}
               canLogHours={canLogHours}
               assignees={membersForStep(teamMembers, step.slug)}
+              tasks={tasksByStep.get(step.slug) ?? []}
             />
           ))}
         </div>

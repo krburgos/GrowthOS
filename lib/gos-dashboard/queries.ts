@@ -7,6 +7,8 @@ import {
   type CompanyProfile,
 } from "@/lib/accounts/company-profile";
 import { TOTAL_QUESTION_COUNT, countAnswered as countQuestionnaireAnswered } from "@/lib/questionnaire/questions";
+import type { Task, TaskPriority, TaskState } from "@/lib/gos-dashboard/tasks";
+import type { TeamKind } from "@/lib/team/members";
 import { createClient } from "@/lib/supabase/server";
 import {
   TOTAL_FIELD_COUNT as VISION_BOARD_TOTAL,
@@ -254,4 +256,61 @@ export async function getReadiness(accountId: string): Promise<Readiness> {
     visionBoard: v,
     ready: profile.complete && q.complete && v.complete,
   };
+}
+
+interface TaskRow {
+  id: string;
+  step_slug: string;
+  title: string;
+  detail: string | null;
+  priority: TaskPriority;
+  state: TaskState;
+  hours: number | string;
+  due_date: string | null;
+  account_team_members: { id: string; name: string; kind: TeamKind } | { id: string; name: string; kind: TeamKind }[] | null;
+}
+
+function unwrap<T>(v: T | T[] | null): T | null {
+  return Array.isArray(v) ? (v[0] ?? null) : v;
+}
+
+function toTask(row: TaskRow): Task {
+  return {
+    id: row.id,
+    step_slug: row.step_slug,
+    title: row.title,
+    detail: row.detail,
+    priority: row.priority,
+    state: row.state,
+    hours: Number(row.hours),
+    due_date: row.due_date,
+    assignee: unwrap(row.account_team_members),
+  };
+}
+
+const SELECT = "id, step_slug, title, detail, priority, state, hours, due_date, account_team_members(id, name, kind)";
+
+/** Every live task for an account, for the Mission Card counts. */
+export async function getTasks(accountId: string): Promise<Task[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("gos_dashboard_tasks")
+    .select(SELECT)
+    .eq("account_id", accountId)
+    .is("archived_at", null)
+    .order("sort_order");
+  return ((data ?? []) as TaskRow[]).map(toTask);
+}
+
+/** One workstream's tasks, for its detail page. */
+export async function getTasksForStep(accountId: string, slug: string): Promise<Task[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("gos_dashboard_tasks")
+    .select(SELECT)
+    .eq("account_id", accountId)
+    .eq("step_slug", slug)
+    .is("archived_at", null)
+    .order("sort_order");
+  return ((data ?? []) as TaskRow[]).map(toTask);
 }

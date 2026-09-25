@@ -4,14 +4,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { EditSuggestionsList } from "@/components/gos-dashboard/edit-suggestions-list";
 import { EditTrackerList } from "@/components/gos-dashboard/edit-tracker-list";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
-import type { KpiStat, SuggestionItem, TrackerItem } from "@/lib/gos-dashboard/playbook";
+import type { KpiStat, TrackerItem } from "@/lib/gos-dashboard/playbook";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-const TABS = ["Status Report", "Suggestions & Fixes", "Progress Tracker"] as const;
+const TABS = ["Status Report", "Progress Tracker"] as const;
 type Tab = (typeof TABS)[number];
 
 /**
@@ -81,20 +80,23 @@ function EditableSummary({
  * zero data entered yet (typical on new accounts).
  *
  * CRO Leader (cro_admin/cro_advisor) editing (Task 6): the Status Report
- * summary gets an explicit Save button (EditableSummary above). Suggestions
- * & Fixes and Progress Tracker each own their editing (add/remove, immediate
- * persist, read-only fallback) in their own components — EditSuggestionsList
- * and EditTrackerList — matching the per-surface pattern EditKpiList/
- * EditOverviewPanel established in Task 5, rather than this component owning
- * their state directly. This component just owns tab switching and the
- * Status Report tab.
+ * summary gets an explicit Save button (EditableSummary above). Progress
+ * Tracker owns its editing (add/remove, immediate persist, read-only
+ * fallback) in EditTrackerList, matching the per-surface pattern
+ * EditKpiList/EditOverviewPanel established in Task 5, rather than this
+ * component owning its state directly. This component just owns tab
+ * switching and the Status Report tab.
+ *
+ * Client-confirmed (2026-09-25): the third tab, Suggestions & Fixes, is
+ * gone — it became the TaskList above these tabs, which gives each of those
+ * lines an owner, hours, a state and a due date, and appears on all 14
+ * steps rather than only the two with this shape.
  */
 export function PlaybookDetailTabs({
   accountId,
   stepSlug,
   statusReportSummary,
   statusReportStats,
-  suggestions,
   tracker,
   canEdit,
 }: {
@@ -102,7 +104,6 @@ export function PlaybookDetailTabs({
   stepSlug: string;
   statusReportSummary: string | null;
   statusReportStats: KpiStat[];
-  suggestions: (SuggestionItem & { id: string })[];
   tracker: (TrackerItem & { id: string })[];
   canEdit: boolean;
 }) {
@@ -148,10 +149,6 @@ export function PlaybookDetailTabs({
               </div>
             ) : null}
           </div>
-        )}
-
-        {tab === "Suggestions & Fixes" && (
-          <EditSuggestionsList accountId={accountId} stepSlug={stepSlug} initialSuggestions={suggestions} canEdit={canEdit} />
         )}
 
         {tab === "Progress Tracker" && (

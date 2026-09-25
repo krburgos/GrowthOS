@@ -1052,6 +1052,53 @@ $$;
 ```
 
 
+### 6.6f gos_dashboard_tasks
+
+**Client-confirmed addition (2026-09-25)** — the GOS Dashboard's Suggestions & Fixes list becomes a task list. Migrations: `supabase/migrations/20260925000001_gos_dashboard_tasks.sql` and `20260925000002_gos_dashboard_tasks_step_slug_enum.sql`.
+
+The client's framing: GrowthOS is more than a CRM — after reading a workstream's status report, the MSP should see what to do about it and who is doing it. A task is a to-do for a person: it carries an assignee, hours, a state and a due date.
+
+**Tasks replace `gos_dashboard_suggestions` (§6.6c) rather than sitting beside it.** That list was already CRO-authored "here is what to fix" with a priority and a detail line — a task missing exactly those four things. The client confirmed the replacement, and the migration carries the existing suggestion rows across as tasks (unassigned, zero hours, no due date, since there was nowhere to have recorded those). The `gos_dashboard_suggestions` table is left in place with its data intact rather than dropped, per this repo's soft-delete convention; the Step Detail page no longer reads it.
+
+- **Shape.** `step_slug` is the `gos_dashboard_step` enum, matching `gos_dashboard_step_hours` and `gos_dashboard_quarter_hours` (the first migration created it as `text`, which broke the achieved-hours trigger; the second corrects it). `priority` reuses the existing `gos_dashboard_priority` enum. `state` is a new `gos_dashboard_task_state` enum — `active` / `in_progress` / `on_hold` / `complete`, the four states the client specified — and is set manually; nothing infers it. `assignee_id` references `account_team_members` (§6.6e) `on delete set null`, so retiring someone from a roster leaves their tasks unassigned rather than destroying the work. Tasks carry `archived_at` and have no delete policy.
+- **Tasks are not tied to a quarter, but achieved hours are.** Completing a task adds its `hours` to `gos_dashboard_quarter_hours.achieved_hours` for the quarter it was *completed* in, so the figure keeps meaning "what got done this quarter." `stamp_task_completed_at()` sets `completed_at` on the transition into `complete` and clears it on the way back out; `sync_task_achieved_hours()` then applies the difference between what the row used to contribute and what it contributes now. Because it is a delta rather than a recount, re-opening subtracts, editing hours on a completed task adjusts, and archiving removes. This lives in a trigger rather than the app so the two figures cannot drift.
+- **Who may do what — deliberately split across two mechanisms.** RLS grants the row: insert is `auth_has_any_role('cro_admin','cro_advisor')` (only CRO Leader prescribes the work), while update also admits the account's own `msp_owner`/`msp_admin`. A `prevent_task_definition_change()` trigger then confines those MSP roles to `state` and `assignee_id`, raising if they touch title, detail, priority, hours, due date, step or `archived_at`. The reasoning the client confirmed: marking work done is not the same as prescribing it, and completing a task moves achieved hours — which MSP Owner/Admin already control under §6.6d. This is the same shape `prevent_self_role_escalation` uses on `users`: RLS decides the row, a trigger decides the columns.
+
+```
+create type gos_dashboard_task_state as enum ('active', 'in_progress', 'on_hold', 'complete');
+
+create table gos_dashboard_tasks (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references accounts(id) on delete cascade,
+  step_slug gos_dashboard_step not null,
+  title text not null check (length(trim(title)) > 0),
+  detail text,
+  priority gos_dashboard_priority not null default 'medium',
+  state gos_dashboard_task_state not null default 'active',
+  assignee_id uuid references account_team_members(id) on delete set null,
+  hours numeric(6,1) not null default 0 check (hours >= 0),
+  due_date date,
+  sort_order integer not null default 0,
+  completed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  archived_at timestamptz
+);
+
+create policy gos_dashboard_tasks_select on gos_dashboard_tasks for select
+  using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
+create policy gos_dashboard_tasks_insert on gos_dashboard_tasks for insert
+  with check (auth_has_any_role('cro_admin','cro_advisor'));
+create policy gos_dashboard_tasks_update on gos_dashboard_tasks for update
+  using (
+    (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin'))
+    or auth_has_any_role('cro_admin','cro_advisor')
+  );
+```
+
+Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream at 28.0 achieved hours went to 35.5 on completing a 7.5-hour task, back to 28.0 on re-opening it, to 38.0 when the completed task's hours were edited to 10.0, and back to 28.0 when it was archived.
+
+
 ### 6.6 campaigns, campaign_recipients, campaign_events
 
 ```
