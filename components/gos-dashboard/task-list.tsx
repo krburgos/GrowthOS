@@ -1,13 +1,14 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
@@ -81,15 +82,33 @@ export function TaskList({
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const summary = taskSummary(tasks);
+  // The board keeps its own copy of the rows so an inline change lands the
+  // instant it is clicked. Waiting for the write and then re-rendering the
+  // whole server page - which is what this did before - put a visible dead
+  // beat between the click and the colour changing.
+  const [rows, setRows] = useState(tasks);
+  useEffect(() => setRows(tasks), [tasks]);
+  const summary = taskSummary(rows);
 
-  const patch = async (id: string, values: Record<string, unknown>) => {
-    setBusy(id);
+  /**
+   * Applies the change locally first, then writes. On failure the row goes
+   * back to what it was and says so; nothing is left showing a value the
+   * database rejected.
+   *
+   * The refresh on success is still worth doing but no longer blocks
+   * anything visible: completing a task moves the workstream's achieved
+   * hours through a database trigger, so the Hours panel above this board
+   * has to catch up.
+   */
+  const patch = async (id: string, values: Record<string, unknown>, optimistic: Partial<Task>) => {
+    const before = rows.find((t) => t.id === id);
+    if (!before) return;
+    setRows((prev) => prev.map((t) => (t.id === id ? { ...t, ...optimistic } : t)));
+
     const supabase = createClient();
     const { error } = await supabase.from("gos_dashboard_tasks").update(values).eq("id", id);
-    setBusy(null);
     if (error) {
+      setRows((prev) => prev.map((t) => (t.id === id ? before : t)));
       toast.error(getFriendlyErrorMessage(error));
       return;
     }
@@ -108,7 +127,7 @@ export function TaskList({
 
   const groups = TASK_PRIORITY_GROUPS.map((g) => ({
     ...g,
-    items: tasks.filter((t) => t.priority === g.value),
+    items: rows.filter((t) => t.priority === g.value),
   })).filter((g) => g.items.length > 0);
 
   return (
@@ -117,7 +136,7 @@ export function TaskList({
         <div>
           <h2 className="text-h4 text-primary-900">What to do next</h2>
           <p className="mt-0.5 text-body-sm text-neutral-500">
-            {tasks.length === 0
+            {rows.length === 0
               ? "No tasks yet."
               : `${summary.done} of ${summary.total} done · ${formatTaskHours(summary.hours)} hrs of work${
                   summary.unassigned > 0 ? ` · ${summary.unassigned} unassigned` : ""
@@ -132,7 +151,7 @@ export function TaskList({
         )}
       </div>
 
-      {tasks.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="px-5 py-10 text-center text-body-sm text-neutral-400">
           {canDefine
             ? "Add the first task once the status report says what needs fixing."
@@ -188,8 +207,13 @@ export function TaskList({
                           {canAssign ? (
                             <Select
                               value={task.assignee?.id ?? UNASSIGNED}
-                              onValueChange={(v) => void patch(task.id, { assignee_id: v === UNASSIGNED ? null : v })}
-                              disabled={busy === task.id}
+                              onValueChange={(v) =>
+                                void patch(
+                                  task.id,
+                                  { assignee_id: v === UNASSIGNED ? null : v },
+                                  { assignee: team.find((m) => m.id === v) ?? null }
+                                )
+                              }
                             >
                               <SelectTrigger
                                 aria-label={`Who is doing ${task.title}`}
@@ -214,33 +238,11 @@ export function TaskList({
 
                         {/* Monday's tell: the status fills its whole cell. */}
                         <div className="flex">
-                          {canAssign ? (
-                            <Select
-                              value={task.state}
-                              onValueChange={(v) => void patch(task.id, { state: v as TaskState })}
-                              disabled={busy === task.id}
-                            >
-                              <SelectTrigger
-                                aria-label={`State of ${task.title}`}
-                                className={`h-auto w-full justify-center gap-1.5 rounded-none border-0 px-2 py-3 text-caption font-bold text-white shadow-none focus:ring-0 focus:ring-offset-0 [&>svg]:opacity-70 ${TASK_STATE_CELL[task.state]}`}
-                              >
-                                {TASK_STATE_LABEL[task.state]}
-                              </SelectTrigger>
-                              <SelectContent>
-                                {TASK_STATES.map((s) => (
-                                  <SelectItem key={s.value} value={s.value}>
-                                    {s.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <span
-                              className={`flex w-full items-center justify-center px-2 py-3 text-caption font-bold text-white ${TASK_STATE_CELL[task.state]}`}
-                            >
-                              {TASK_STATE_LABEL[task.state]}
-                            </span>
-                          )}
+                          <StatusCell
+                            task={task}
+                            canAssign={canAssign}
+                            onChange={(state) => void patch(task.id, { state }, { state })}
+                          />
                         </div>
 
                         <div className={CELL}>
@@ -293,6 +295,67 @@ export function TaskList({
         />
       )}
     </section>
+  );
+}
+
+/**
+ * The status cell (client-confirmed, 2026-09-25, "status palette").
+ *
+ * A colour palette rather than a Select: one click opens it, one more
+ * sets the state. The Select that was here before was a form control
+ * doing a board cell's job — it carried a chevron and a listbox, and it
+ * read as something you fill in rather than something you flip.
+ *
+ * The popover portals, so the group's rounded overflow-hidden frame
+ * cannot clip it.
+ */
+function StatusCell({
+  task,
+  canAssign,
+  onChange,
+}: {
+  task: Task;
+  canAssign: boolean;
+  onChange: (state: TaskState) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (!canAssign) {
+    return (
+      <span
+        className={`flex w-full items-center justify-center px-2 py-3 text-caption font-bold text-white ${TASK_STATE_CELL[task.state]}`}
+      >
+        {TASK_STATE_LABEL[task.state]}
+      </span>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        aria-label={`State of ${task.title}`}
+        className={`flex w-full items-center justify-center px-2 py-3 text-caption font-bold text-white transition-[filter] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-900 motion-reduce:transition-none ${TASK_STATE_CELL[task.state]}`}
+      >
+        {TASK_STATE_LABEL[task.state]}
+      </PopoverTrigger>
+      <PopoverContent align="center" sideOffset={4} className="flex w-[150px] flex-col gap-1 p-1.5">
+        {TASK_STATES.map((s) => (
+          <button
+            key={s.value}
+            type="button"
+            aria-current={s.value === task.state}
+            onClick={() => {
+              setOpen(false);
+              if (s.value !== task.state) onChange(s.value);
+            }}
+            className={`flex items-center justify-between gap-2 rounded px-2.5 py-2 text-left text-caption font-bold text-white hover:brightness-110 ${TASK_STATE_CELL[s.value]}`}
+          >
+            {s.label}
+            {s.value === task.state && <Check className="size-3.5" />}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
   );
 }
 
