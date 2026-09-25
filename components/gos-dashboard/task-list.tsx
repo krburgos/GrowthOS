@@ -283,10 +283,12 @@ export function TaskList({
                           <DueDate value={task.due_date} done={task.state === "complete"} />
                         </div>
 
-                        <div className={`${CELL} justify-center gap-1.5`}>
-                          <span className="text-body-sm font-semibold tabular-nums text-neutral-700">
-                            {formatTaskHours(task.hours)}
-                          </span>
+                        <div className={`${CELL} justify-center gap-1`}>
+                          <HoursCell
+                            task={task}
+                            canEdit={canAssign}
+                            onChange={(hours) => void patch(task.id, { hours }, { hours })}
+                          />
                           {canDefine && (
                             <button
                               type="button"
@@ -390,6 +392,89 @@ function StatusCell({
         ))}
       </PopoverContent>
     </Popover>
+  );
+}
+
+/**
+ * The hours cell (client-confirmed amendment, 2026-09-25).
+ *
+ * MSP Owner and Admin can now correct a task's hours, so the number is
+ * editable in place rather than only through the CRO-only dialog: the
+ * account running the work is usually the party that finds out an estimate
+ * was wrong, and they already own the achieved-hours figure a completed
+ * task feeds. A trigger enforces the same split — hours, state and
+ * assignee for those roles, and nothing else.
+ *
+ * Editing commits on Enter or on leaving the field, and abandons on
+ * Escape. It does not commit an unchanged or unparseable value, so
+ * tabbing through the board writes nothing.
+ */
+function HoursCell({
+  task,
+  canEdit,
+  onChange,
+}: {
+  task: Task;
+  canEdit: boolean;
+  onChange: (hours: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(String(task.hours));
+
+  if (!canEdit) {
+    return (
+      <span className="text-body-sm font-semibold tabular-nums text-neutral-700">
+        {formatTaskHours(task.hours)}
+      </span>
+    );
+  }
+
+  const commit = () => {
+    setEditing(false);
+    const next = Number(value);
+    if (!Number.isFinite(next) || next < 0) {
+      setValue(String(task.hours));
+      return;
+    }
+    if (next !== task.hours) onChange(next);
+  };
+
+  if (editing) {
+    return (
+      <input
+        type="number"
+        min="0"
+        step="0.5"
+        autoFocus
+        value={value}
+        aria-label={`Hours for ${task.title}`}
+        onChange={(e) => setValue(e.target.value)}
+        onFocus={(e) => e.target.select()}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") {
+            setValue(String(task.hours));
+            setEditing(false);
+          }
+        }}
+        className="w-14 rounded border border-secondary-500 px-1.5 py-0.5 text-center text-body-sm font-semibold tabular-nums text-neutral-900 outline-none"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setValue(String(task.hours));
+        setEditing(true);
+      }}
+      aria-label={`Hours for ${task.title} — ${formatTaskHours(task.hours)}, click to change`}
+      className="rounded px-1.5 py-0.5 text-body-sm font-semibold tabular-nums text-neutral-700 hover:bg-neutral-100 hover:text-primary-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
+    >
+      {formatTaskHours(task.hours)}
+    </button>
   );
 }
 
