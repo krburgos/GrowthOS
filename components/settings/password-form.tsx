@@ -7,8 +7,8 @@ import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { createClient } from "@/lib/supabase/client";
 
 const passwordSchema = z
@@ -51,9 +51,8 @@ export function PasswordForm() {
           <Label htmlFor="new-password" required>
             New password
           </Label>
-          <Input
+          <PasswordInput
             id="new-password"
-            type="password"
             autoComplete="new-password"
             error={!!passwordForm.formState.errors.password}
             {...passwordForm.register("password")}
@@ -68,9 +67,8 @@ export function PasswordForm() {
           <Label htmlFor="confirm-new-password" required>
             Confirm new password
           </Label>
-          <Input
+          <PasswordInput
             id="confirm-new-password"
-            type="password"
             autoComplete="new-password"
             error={!!passwordForm.formState.errors.confirmPassword}
             {...passwordForm.register("confirmPassword")}

@@ -7,8 +7,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { createClient } from "@/lib/supabase/client";
 
 const schema = z
@@ -66,9 +66,8 @@ export function AcceptInviteForm() {
         <Label htmlFor="password" required>
           Password
         </Label>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           autoComplete="new-password"
           error={!!errors.password}
           {...register("password")}
@@ -82,9 +81,8 @@ export function AcceptInviteForm() {
         <Label htmlFor="confirmPassword" required>
           Confirm password
         </Label>
-        <Input
+        <PasswordInput
           id="confirmPassword"
-          type="password"
           autoComplete="new-password"
           error={!!errors.confirmPassword}
           {...register("confirmPassword")}

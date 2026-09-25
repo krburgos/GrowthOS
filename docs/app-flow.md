@@ -231,6 +231,12 @@ Archiving came with authorship, since someone who can add a task needs to be abl
 
 **Client-confirmed (2026-09-25, approved mockup "C") — the setup panels' status reads larger.** Complete / Not started / In progress move from `text-caption` (12px) to `text-h3` (18px), a 50% increase, keeping the pill on the title line. Setting it to the figure's own size was mocked up alongside and rejected: at 28px the pill no longer fits beside the title and has to take its own row, and — seen against the whole block rather than the cards alone — it becomes a fourth element competing at 24–28px with the card figures, the hours strip and the KPI boxes, flattening the reading order instead of raising the status. `leading-none` is applied with it so the pill does not inherit h3's 26px line height and grow the header row.
 
+**Client-confirmed addition (2026-09-25) — password fields carry a show/hide toggle.** Every password input in the app now has one: Login (A1), Reset password (A3), Accept invite (A4) and Settings → Profile → Password (I3). It is one component, `components/ui/password-input.tsx`, wrapping the Design System §8.2 Input rather than restyling it, so border, height, focus ring and error state stay defined in one place.
+
+Each field owns its own toggle, so on the two screens with a "new" and a "confirm" pair, revealing one does not reveal the other — the confirm field exists to catch a typo, and tying them together would weaken that.
+
+Two behaviours worth recording because they are easy to regress: the toggle is `type="button"` (inside a form a button defaults to submit, so revealing a password would otherwise post the form), and it stays in the tab order (dropping it out shortens the tab path for a mouse user while leaving a keyboard user unable to reveal what they typed, which is the group the feature helps most). It announces its next action — "Show password" / "Hide password" — rather than its current state.
+
 **Client-confirmed rename (2026-09-15):** "Pipeline by Stage" is now labeled "Opportunities by Stage" on the actual Dashboard — a copy-only change, same component and data. Kept as "Pipeline by Stage" in the narrative above and elsewhere in this document where it describes the mockup as originally approved.
 
 **Client-confirmed addition (2026-09-15):** a full-width banner sits above the KPI strip while the account's Growth Questionnaire (§4.9, I5) is incomplete — "Complete your Growth Solution Questionnaire," a short progress line, and its own progress bar.
