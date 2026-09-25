@@ -177,7 +177,7 @@ export function TaskList({
         /* The board scrolls sideways rather than dropping columns: an owner
            or a due date you cannot see is the reason a task gets missed. */
         <div className="overflow-x-auto px-5 py-5">
-          <div className="min-w-[720px]">
+          <div className="min-w-[768px]">
             {groups.map((group) => {
               const groupHours = group.items.reduce((sum, t) => sum + t.hours, 0);
               return (
@@ -280,7 +280,11 @@ export function TaskList({
                         </div>
 
                         <div className={CELL}>
-                          <DueDate value={task.due_date} done={task.state === "complete"} />
+                          <DueDateCell
+                            task={task}
+                            canEdit={canAssign}
+                            onChange={(due_date) => void patch(task.id, { due_date }, { due_date })}
+                          />
                         </div>
 
                         <div className={`${CELL} justify-center gap-1`}>
@@ -479,7 +483,7 @@ function HoursCell({
 }
 
 /** Five columns, one definition — the header row and the data rows share it. */
-const ROW = "grid grid-cols-[minmax(0,1fr)_128px_128px_92px_78px] items-stretch";
+const ROW = "grid grid-cols-[minmax(0,1fr)_128px_128px_132px_78px] items-stretch";
 const CELL = "flex items-center gap-2 px-3.5 py-2.5";
 const HEAD = "text-caption font-bold uppercase tracking-wide text-neutral-400";
 
@@ -523,15 +527,86 @@ function Owner({ assignee, capacity }: { assignee: Task["assignee"]; capacity?: 
   );
 }
 
-/** A date that has passed on unfinished work is the one the reader needs. */
-function DueDate({ value, done }: { value: string | null; done: boolean }) {
-  if (!value) return <span className="text-body-sm text-neutral-300">—</span>;
-  const date = new Date(`${value}T00:00:00`);
-  const overdue = !done && date < new Date(new Date().toDateString());
+/**
+ * The due-date cell (client-confirmed amendment, 2026-09-25).
+ *
+ * Editable in place by MSP Owner and Admin, alongside hours, state and
+ * assignee — all four are how the work is *tracked*, which is the
+ * account's to say. The same trigger enforces it, so this only decides
+ * which control is drawn.
+ *
+ * A date that has passed on unfinished work is the one the reader needs,
+ * so it stays red whether or not the cell is editable. Clearing the field
+ * sets the date back to nothing, which is a real state: the client
+ * confirmed due dates are wanted but not required.
+ */
+function DueDateCell({
+  task,
+  canEdit,
+  onChange,
+}: {
+  task: Task;
+  canEdit: boolean;
+  onChange: (due: string | null) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(task.due_date ?? "");
+
+  const done = task.state === "complete";
+  const date = task.due_date ? new Date(`${task.due_date}T00:00:00`) : null;
+  const overdue = date !== null && !done && date < new Date(new Date().toDateString());
+  const shown = date ? date.toLocaleDateString(undefined, { day: "numeric", month: "short" }) : null;
+
+  if (editing) {
+    const commit = () => {
+      setEditing(false);
+      const next = value || null;
+      if (next !== task.due_date) onChange(next);
+    };
+    return (
+      <input
+        type="date"
+        autoFocus
+        value={value}
+        aria-label={`Due date for ${task.title}`}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") {
+            setValue(task.due_date ?? "");
+            setEditing(false);
+          }
+        }}
+        className="w-[118px] rounded border border-secondary-500 px-1.5 py-0.5 text-body-sm tabular-nums text-neutral-900 outline-none"
+      />
+    );
+  }
+
+  if (!canEdit) {
+    return shown ? (
+      <span className={`text-body-sm tabular-nums ${overdue ? "font-semibold text-error-700" : "text-neutral-600"}`}>
+        {shown}
+      </span>
+    ) : (
+      <span className="text-body-sm text-neutral-300">—</span>
+    );
+  }
+
   return (
-    <span className={`text-body-sm tabular-nums ${overdue ? "font-semibold text-error-700" : "text-neutral-600"}`}>
-      {date.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
-    </span>
+    <button
+      type="button"
+      onClick={() => {
+        setValue(task.due_date ?? "");
+        setEditing(true);
+      }}
+      aria-label={shown ? `Due ${shown} — click to change` : `No due date for ${task.title} — click to set one`}
+      className={`rounded px-1.5 py-0.5 text-body-sm tabular-nums hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 ${
+        shown ? (overdue ? "font-semibold text-error-700" : "text-neutral-600") : "text-neutral-300 hover:text-neutral-500"
+      }`}
+    >
+      {shown ?? "—"}
+    </button>
   );
 }
 
