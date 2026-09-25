@@ -19,6 +19,7 @@ import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { SHORT_TITLE } from "@/lib/gos-dashboard/hours";
 import { PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
 import { createClient } from "@/lib/supabase/client";
+import { CAPACITY_CLASS, capacityFor, capacityLabel, formatCapacityHours } from "@/lib/team/capacity";
 import { allocatedHours, initialsOf, type TeamKind, type TeamMember } from "@/lib/team/members";
 
 const stepLabel = (slug: string) => SHORT_TITLE[slug] ?? slug;
@@ -55,10 +56,13 @@ const emptyDraft = (): Draft => ({ id: null, name: "", title: "", weekly_hours: 
 export function TeamRoster({
   accountId,
   members,
+  memberLoad,
   canEdit,
 }: {
   accountId: string;
   members: TeamMember[];
+  /** Unfinished task hours per member, across all 14 workstreams. */
+  memberLoad: Record<string, number>;
   canEdit: boolean;
 }) {
   const covered = new Set(members.flatMap((m) => m.assignments.map((a) => a.step_slug))).size;
@@ -69,8 +73,9 @@ export function TeamRoster({
         <div>
           <h2 className="text-h3 text-primary-900">Who does what</h2>
           <p className="mt-1 max-w-[62ch] text-body-sm leading-relaxed text-neutral-500">
-            Everyone responsible for a workstream, whether they work here or for someone else. Hours are weekly, and
-            separate from the quarterly hours logged in the Command Center.
+            Everyone responsible for a workstream, whether they work here or for someone else. A weekly commitment is
+            read as thirteen weeks of capacity, and measured against the unfinished tasks they carry in the Command
+            Center.
           </p>
         </div>
         {/* The one figure on this page you cannot work out by looking. It
@@ -90,6 +95,7 @@ export function TeamRoster({
         heading="Sales & Marketing"
         hint="Your own staff"
         members={members.filter((m) => m.kind === "in_house")}
+        memberLoad={memberLoad}
         canEdit={canEdit}
       />
       <RosterTable
@@ -98,6 +104,7 @@ export function TeamRoster({
         heading="Outsourced"
         hint="Third parties delivering a workstream"
         members={members.filter((m) => m.kind === "outsourced")}
+        memberLoad={memberLoad}
         canEdit={canEdit}
         divided
       />
@@ -111,6 +118,7 @@ function RosterTable({
   heading,
   hint,
   members,
+  memberLoad,
   canEdit,
   divided,
 }: {
@@ -118,6 +126,7 @@ function RosterTable({
   kind: TeamKind;
   heading: string;
   hint: string;
+  memberLoad: Record<string, number>;
   members: TeamMember[];
   canEdit: boolean;
   divided?: boolean;
@@ -163,12 +172,18 @@ function RosterTable({
                 <Th>Title</Th>
                 <Th>Areas of responsibility</Th>
                 <Th align="right">Weekly hours</Th>
+                <Th align="right">This quarter</Th>
                 <Th />
               </tr>
             </thead>
             <tbody>
               {members.map((m) => {
                 const allocated = allocatedHours(m);
+                // Client-confirmed (2026-09-25): the weekly commitment is read
+                // as a quarter of capacity and compared with the unfinished
+                // task hours this person carries across all 14 workstreams.
+                const cap = capacityFor(m.weekly_hours, memberLoad[m.id] ?? 0);
+                const tone = CAPACITY_CLASS[cap.tone];
                 return (
                   <tr key={m.id} className="border-b border-neutral-100 last:border-b-0">
                     <td className="px-5 py-3">
@@ -208,6 +223,28 @@ function RosterTable({
                         {m.weekly_hours} <span className="text-caption font-medium text-neutral-400">h/wk</span>
                       </div>
                       <div className="text-caption text-neutral-400">{allocated}h allocated</div>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      {cap.tone === "unset" ? (
+                        <span className="text-body-sm text-neutral-300">Set weekly hours</span>
+                      ) : (
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`text-body-sm font-semibold tabular-nums ${tone.text}`} title={capacityLabel(cap)}>
+                            {formatCapacityHours(cap.assigned)} / {formatCapacityHours(cap.quarterly)} hrs
+                          </span>
+                          <span className="h-1.5 w-24 overflow-hidden rounded-full bg-neutral-100">
+                            <span
+                              className={`block h-full rounded-full ${tone.bar}`}
+                              style={{ width: `${Math.min(100, Math.round(cap.ratio * 100))}%` }}
+                            />
+                          </span>
+                          {cap.over && (
+                            <span className="text-caption font-semibold text-error-700">
+                              {formatCapacityHours(-cap.remaining)} hrs over
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-right">
                       {canEdit && (

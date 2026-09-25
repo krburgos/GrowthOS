@@ -8,7 +8,7 @@ import { StepHoursPanel } from "@/components/gos-dashboard/step-hours-panel";
 import { TaskList } from "@/components/gos-dashboard/task-list";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
-import { getStepDetail, getStepHours, getTasksForStep } from "@/lib/gos-dashboard/queries";
+import { getMemberTaskLoad, getStepDetail, getStepHours, getTasksForStep } from "@/lib/gos-dashboard/queries";
 import { getTeamMembers } from "@/lib/team/queries";
 import { PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
 
@@ -51,11 +51,14 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
   if (!user || !user.account_id) return null;
 
   const quarter = currentQuarter();
-  const [step, hours, tasks, team] = await Promise.all([
+  const [step, hours, tasks, team, memberLoad] = await Promise.all([
     getStepDetail(user.account_id, slug),
     getStepHours(user.account_id, quarter.start),
     getTasksForStep(user.account_id, slug),
     getTeamMembers(user.account_id),
+    // Account-wide: the cap is a person whole commitment, so this board has
+    // to count the tasks they carry on the other thirteen workstreams too.
+    getMemberTaskLoad(user.account_id),
   ]);
   if (!step) notFound();
 
@@ -102,6 +105,7 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
         slug={step.slug}
         tasks={tasks}
         team={team}
+        memberLoad={memberLoad}
         canAssign={canAssign}
         canDefine={canEdit}
       />

@@ -197,6 +197,16 @@ Nothing is deleted behind it: `gos_dashboard_kpis` keeps every row, and the duti
 
 This is the third client-confirmed departure from the source Playbook document in this pass, after the suggestions list and the progress tracker, and is recorded here for the same reason: so it reads as a decision rather than an omission.
 
+**Client-confirmed reversal (2026-09-25) — a person's weekly hours now cap what they can be assigned.** The roster's weekly commitment was deliberately left unconnected to anything on 2026-09-24 ("separate for now"). That is reversed: a commitment is read as capacity and measured against the unfinished task hours a person carries. Three things were settled first, because each had two defensible readings that gave opposite answers on the client's own data — at the time, everyone was either badly overloaded or nowhere near capacity depending only on which reading you took:
+
+- **The period is a quarter**, at `weekly × 13`. A task's hours are a size-of-job estimate rather than a weekly schedule, so a twelve-hour fix is not twelve hours next week. It is also the only reading that works for tasks carrying no due date, and it puts capacity in the same unit as `gos_dashboard_quarter_hours`, which is how the rest of the Command Center counts.
+- **The cap is the person's whole commitment**, not their per-workstream allocation, so it counts their open tasks across all fourteen workstreams. Someone doing SEO and blogging is one person with one week. The per-workstream figures in Areas of Responsibility stay unenforced and are still shown only for visibility.
+- **It warns, it never blocks.** Over-allocation is often the truth that needs recording, and CRO Leader may be overbooking someone knowingly. No database rule refuses the write; the warning is UI only.
+
+Only unfinished work counts — a completed task has already happened and no longer competes for the hours that are left.
+
+**Where it shows.** On the task board (§4.3a), the assignee picker gives each person's remaining hours beside their name, and an amber triangle sits next to an over-allocated owner. On the Company Profile roster (§4.8), a "This quarter" column shows assigned against capacity with a bar, and names the overage when there is one. A person with no weekly hours recorded reads "Set weekly hours" and never warns — zero capacity would otherwise make every assignment an overage on a fresh account and bury the real ones. The arithmetic itself lives in `lib/team/capacity.ts`.
+
 **Client-confirmed rename (2026-09-15):** "Pipeline by Stage" is now labeled "Opportunities by Stage" on the actual Dashboard — a copy-only change, same component and data. Kept as "Pipeline by Stage" in the narrative above and elsewhere in this document where it describes the mockup as originally approved.
 
 **Client-confirmed addition (2026-09-15):** a full-width banner sits above the KPI strip while the account's Growth Questionnaire (§4.9, I5) is incomplete — "Complete your Growth Solution Questionnaire," a short progress line, and its own progress bar.

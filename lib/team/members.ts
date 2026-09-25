@@ -9,12 +9,16 @@
  * `name` is a single free field on purpose (client-confirmed), so a row can
  * read "Rosa Pineda · Northlight Events" as easily as a person alone.
  *
- * These hours are deliberately **not** connected to the Command Center's
- * (client-confirmed, "separate for now"): this is weekly intent, while
- * gos_dashboard_quarter_hours records what was committed and achieved in a
- * quarter. Nothing is enforced between a person's weekly commitment and the
- * sum of their assignments either — the allocated figure is shown so it is
- * visible, and that is all.
+ * These hours were originally kept apart from the Command Center's
+ * (client-confirmed, "separate for now", 2026-09-24). That was reversed on
+ * 2026-09-25: a person's weekly commitment is now read as thirteen weeks of
+ * capacity and measured against the unfinished task hours they carry across
+ * all fourteen workstreams — see lib/team/capacity.ts, which records why the
+ * period is a quarter and why it warns rather than blocks.
+ *
+ * The per-workstream allocations below are still unenforced against that
+ * commitment: the allocated figure is shown so it is visible, and that is
+ * all. Only the task load is measured.
  */
 
 export type TeamKind = "in_house" | "outsourced";

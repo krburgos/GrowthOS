@@ -314,3 +314,29 @@ export async function getTasksForStep(accountId: string, slug: string): Promise<
     .order("sort_order");
   return ((data ?? []) as TaskRow[]).map(toTask);
 }
+
+/**
+ * Hours of unfinished work per person, across every workstream
+ * (client-confirmed capacity warning, 2026-09-25).
+ *
+ * Account-wide on purpose: the cap is a person's whole commitment, so a
+ * board showing one workstream still has to count the tasks they carry on
+ * the other thirteen. Completed tasks are excluded — that work has already
+ * happened and no longer competes for the hours that are left.
+ */
+export async function getMemberTaskLoad(accountId: string): Promise<Record<string, number>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("gos_dashboard_tasks")
+    .select("assignee_id, hours")
+    .eq("account_id", accountId)
+    .is("archived_at", null)
+    .not("assignee_id", "is", null)
+    .neq("state", "complete");
+
+  const load: Record<string, number> = {};
+  for (const row of (data ?? []) as { assignee_id: string; hours: number | string }[]) {
+    load[row.assignee_id] = (load[row.assignee_id] ?? 0) + Number(row.hours);
+  }
+  return load;
+}

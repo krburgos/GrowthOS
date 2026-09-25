@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -23,6 +23,13 @@ import {
   type TaskState,
 } from "@/lib/gos-dashboard/tasks";
 import { createClient } from "@/lib/supabase/client";
+import {
+  CAPACITY_CLASS,
+  capacityFor,
+  capacityLabel,
+  capacityShort,
+  type Capacity,
+} from "@/lib/team/capacity";
 import { initialsOf, type TeamMember } from "@/lib/team/members";
 
 const UNASSIGNED = "__none__";
@@ -70,6 +77,7 @@ export function TaskList({
   slug,
   tasks,
   team,
+  memberLoad,
   canAssign,
   canDefine,
 }: {
@@ -77,6 +85,8 @@ export function TaskList({
   slug: string;
   tasks: Task[];
   team: TeamMember[];
+  /** Unfinished hours per member across all 14 workstreams. */
+  memberLoad: Record<string, number>;
   canAssign: boolean;
   canDefine: boolean;
 }) {
@@ -124,6 +134,12 @@ export function TaskList({
     due_date: task.due_date ?? "",
     assignee_id: task.assignee?.id ?? UNASSIGNED,
   });
+
+  // Capacity is per person, not per row, so it is worked out once here and
+  // read by every row that names them.
+  const capacityOf = new Map<string, Capacity>(
+    team.map((m) => [m.id, capacityFor(m.weekly_hours, memberLoad[m.id] ?? 0)])
+  );
 
   const groups = TASK_PRIORITY_GROUPS.map((g) => ({
     ...g,
@@ -219,20 +235,38 @@ export function TaskList({
                                 aria-label={`Who is doing ${task.title}`}
                                 className="h-auto w-full gap-1.5 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0"
                               >
-                                <Owner assignee={task.assignee} />
+                                <Owner
+                                  assignee={task.assignee}
+                                  capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined}
+                                />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value={UNASSIGNED}>Nobody yet</SelectItem>
-                                {team.map((m) => (
-                                  <SelectItem key={m.id} value={m.id}>
-                                    {m.name}
-                                    {m.kind === "outsourced" ? " (outsourced)" : ""}
-                                  </SelectItem>
-                                ))}
+                                {team.map((m) => {
+                                  const cap = capacityOf.get(m.id);
+                                  return (
+                                    <SelectItem key={m.id} value={m.id}>
+                                      <span className="flex items-baseline gap-2">
+                                        <span>
+                                          {m.name}
+                                          {m.kind === "outsourced" ? " (outsourced)" : ""}
+                                        </span>
+                                        {cap && (
+                                          <span className={`text-caption ${CAPACITY_CLASS[cap.tone].text}`}>
+                                            {capacityShort(cap)}
+                                          </span>
+                                        )}
+                                      </span>
+                                    </SelectItem>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
                           ) : (
-                            <Owner assignee={task.assignee} />
+                            <Owner
+                              assignee={task.assignee}
+                              capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined}
+                            />
                           )}
                         </div>
 
@@ -369,7 +403,7 @@ function formatTaskHours(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
-function Owner({ assignee }: { assignee: Task["assignee"] }) {
+function Owner({ assignee, capacity }: { assignee: Task["assignee"]; capacity?: Capacity }) {
   if (!assignee) {
     return (
       <span className="flex min-w-0 items-center gap-2">
@@ -392,6 +426,14 @@ function Owner({ assignee }: { assignee: Task["assignee"] }) {
         {initialsOf(assignee.name)}
       </span>
       <span className="truncate text-body-sm text-neutral-600">{assignee.name}</span>
+      {/* Client-confirmed (2026-09-25): over-allocation warns, never blocks,
+          so this is a marker beside the name rather than a refused save. */}
+      {capacity?.over && (
+        <TriangleAlert
+          className="size-3.5 shrink-0 text-error-600"
+          aria-label={`Over capacity — ${capacityLabel(capacity)}`}
+        />
+      )}
     </span>
   );
 }
