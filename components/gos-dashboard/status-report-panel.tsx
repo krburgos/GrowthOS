@@ -113,9 +113,6 @@ export function StatusReportPanel({
       <div className="flex flex-wrap items-center gap-3 border-b border-neutral-100 px-5 py-4">
         <h2 className="text-h4 text-primary-900">Status Report</h2>
         <div className="ml-auto flex flex-wrap items-center gap-2.5">
-          <span className="rounded-full bg-secondary-100 px-2.5 py-1 text-caption font-semibold text-secondary-800">
-            CRO Leader writes this
-          </span>
           {canEdit && !editing && (
             <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
               Edit

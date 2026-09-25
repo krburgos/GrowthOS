@@ -145,6 +145,8 @@ Empty and loading states: see §6.
 
 **Client-confirmed rename (2026-09-17):** the page heading (and browser tab title) reads "GrowthOS Strategy and Assignment Dashboard"; the sidebar label stays "GOS Dashboard."
 
+**Client-confirmed rename (2026-09-25):** the sidebar label is now "Command Center," and the back link at the top of a workstream page (C3) reads "Command Center" to match it rather than "GOS Dashboard" — the two were naming the same destination differently. Route paths and table names keep the gos_dashboard prefix; this is a label change only.
+
 **Client-confirmed redesign (2026-09-17), all sourced from the Playbook doc.** Top to bottom, the page now shows:
 
 1. **Readiness check** — the doc's "Before You Begin — STOP": a website on file (Company settings) and a written ICP, counted as the Growth Solution Questionnaire's target-market answer. Both present: one slim "Ready to run the Playbook" line. Either missing: an amber "Before You Begin" warning with a link to fix it. It never blocks the rest of the page.

@@ -18,7 +18,7 @@ export function StepHeader({ step, overviewSlot }: { step: StepDetail; overviewS
     <div>
       <Link href="/gos-dashboard" className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-secondary-700 hover:underline">
         <ArrowLeft className="size-3.5" />
-        GOS Dashboard
+        Command Center
       </Link>
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
