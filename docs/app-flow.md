@@ -221,6 +221,12 @@ The group header counts and totals **open** work now ("4 open · 22.5 hrs left")
 
 This is safe to hide because what a completed task was worth is already recorded in three other places: the quarter's achieved hours, the Mission Card's "X of Y done" progress, and the Status Report PDF — which deliberately still prints completed tasks, since an exported report should show what got done.
 
+**Client-confirmed (2026-09-25) — MSP Owner and Admin author tasks, not only track them.** This is the third and last widening of the same rule on one day: hours, then the due date, then authorship itself. It supersedes the original "CRO Leader only will create the report and tasks." CRO Leader still prescribes the work as a service, but the account can add what it finds itself and correct what is written down, so Owner and Admin now add, edit, assign and retire tasks exactly as CRO Leader does. Every other role, `msp_marketing` included, reads only. **The Status Report is a separate question and stays CRO-authored** — only the task list opened up.
+
+Enforcement is now RLS alone. `prevent_task_definition_change()` is dropped rather than left in place: it existed to confine Owner/Admin to state and assignee, and with those roles holding full authorship — and no other role able to update at all — it guarded nothing. A trigger that always returns NEW is worse than no trigger, because it reads like a control still in force. Migration `20260925000004_msp_owner_admin_author_tasks.sql`; see Backend Schema §6.6f.
+
+Archiving came with authorship, since someone who can add a task needs to be able to retire one. It still subtracts a completed task's hours from the quarter's achieved figure, which is exactly why the board folds completed work away rather than archiving it.
+
 **Client-confirmed rename (2026-09-15):** "Pipeline by Stage" is now labeled "Opportunities by Stage" on the actual Dashboard — a copy-only change, same component and data. Kept as "Pipeline by Stage" in the narrative above and elsewhere in this document where it describes the mockup as originally approved.
 
 **Client-confirmed addition (2026-09-15):** a full-width banner sits above the KPI strip while the account's Growth Questionnaire (§4.9, I5) is incomplete — "Complete your Growth Solution Questionnaire," a short progress line, and its own progress bar.

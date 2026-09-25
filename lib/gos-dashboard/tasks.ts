@@ -8,12 +8,20 @@ import type { TeamKind } from "@/lib/team/members";
  * and a detail line, which is a task without an owner, hours, a state or a
  * due date. The six existing suggestions were migrated across.
  *
- * Who may do what: only CRO Leader creates, edits or archives a task —
- * they prescribe the work. MSP Owner and Admin may change its state and
- * who it is assigned to, because marking work done is not the same as
- * prescribing it, and completing a task moves achieved hours, which those
- * roles already control. A database trigger enforces that split; the UI
- * only mirrors it.
+ * Who may do what (client-confirmed, 2026-09-25, after three widenings on
+ * the same day — hours, then the due date, then authorship): CRO Leader and
+ * the account's own MSP Owner and Admin can all add, edit, assign and
+ * retire tasks. CRO Leader still prescribes the work as a service, but the
+ * account can add what it finds itself and correct what is written down.
+ * Every other role reads only.
+ *
+ * This is now enforced by RLS alone. The prevent_task_definition_change
+ * trigger that used to confine Owner/Admin to state and assignee has been
+ * dropped, because with those roles holding full authorship — and no other
+ * role able to update at all — it guarded nothing, and a trigger that
+ * always returns NEW reads like a control that is still in force.
+ *
+ * The Status Report is a separate question and stays CRO-authored.
  *
  * Completing a task adds its hours to the workstream's achieved hours for
  * the quarter it was completed in, and re-opening subtracts them again. That

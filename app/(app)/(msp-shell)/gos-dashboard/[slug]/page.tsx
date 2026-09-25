@@ -64,9 +64,11 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
 
   const canEdit = user.role === "cro_admin" || user.role === "cro_advisor";
   const canLogHours = HOURS_EDIT_ROLES.includes(user.role);
-  // CRO Leader prescribes the work; Owner/Admin may say who is doing it and
-  // how far along it is. A trigger enforces the same split in the database.
-  const canAssign = HOURS_EDIT_ROLES.includes(user.role);
+  // Client-confirmed (2026-09-25): MSP Owner and Admin author tasks too -
+  // adding, editing and retiring them, not only tracking them. The Status
+  // Report above stays CRO-authored (canEdit), so the two remain separate
+  // checks even though only the task list changed.
+  const canAuthorTasks = HOURS_EDIT_ROLES.includes(user.role);
 
   return (
     <main className="mx-auto flex w-full max-w-[1000px] flex-1 flex-col gap-6 p-6 md:p-8">
@@ -106,8 +108,8 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
         tasks={tasks}
         team={team}
         memberLoad={memberLoad}
-        canAssign={canAssign}
-        canDefine={canEdit}
+        canAssign={canAuthorTasks}
+        canDefine={canAuthorTasks}
       />
     </main>
   );

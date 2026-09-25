@@ -64,14 +64,15 @@ const emptyDraft = (): Draft => ({
  * which is what a kanban would have done: hours, owner and due date all
  * need to be readable at a glance, and a kanban card hides them.
  *
- * Assigning is the main verb here, so state and assignee are changed
- * inline. The dialog is only for defining the work, which is CRO Leader's
- * job.
+ * Assigning is the main verb here, so state, assignee, hours and the due
+ * date are changed inline; the dialog is for writing a task down or
+ * changing what it says.
  *
- * `canAssign` and `canDefine` mirror the database, they do not stand in
- * for it: a trigger rejects any non-CRO change to a task's title, detail,
- * priority, hours or due date, so hiding the controls is courtesy rather
- * than the guard.
+ * `canAssign` and `canDefine` are the same set of roles as of 2026-09-25
+ * — CRO Leader plus the account's Owner and Admin — and are kept as two
+ * props because they answer different questions and have already diverged
+ * once. Either way they mirror the database rather than standing in for
+ * it: RLS decides who may write, so hiding a control is courtesy.
  */
 export function TaskList({
   accountId,
