@@ -198,6 +198,20 @@ This **retires the KPI strip from the approved "Concept B — Command Center" mo
 
 Two differences from the Command Center's band, both client-confirmed: the **Lost** box is omitted here (the Command Center still shows it), and there is no "Edit mapping" control — which statuses and stages feed each box stays a Command Center decision. Clicking a figure opens the same records dialog on both pages (`components/gos-dashboard/kpi-records-dialog.tsx`, shared). Design is the approved mockup "A": two translucent white panels on the hero gradient, the same material as the profile chips above them, each titled by the cyan section mark; figures in white, with Won and Ghosted moved to their light steps (`success-400`, `warning-400`) so they read on navy where the dark steps used on the white page would not.
 
+**Client-confirmed redesign — Company Profile (2026-09-25, approved mockup).** The page is arranged around what it is actually for: the roster maps people onto the fourteen workstreams, which no ordinary settings screen has, so **the people section carries the weight at the foot of the page** and the company's own facts sit above it as a quiet two-column record.
+
+Top to bottom: an **identity bar** (logo, company name, address, and a completeness figure); then **Company details** beside a **"What's filled in" checklist**; then **"Who does what"**, holding the Sales & Marketing and Outsourced rosters in one panel with a `covered of 14` workstream count.
+
+Decisions behind it:
+
+- **Completeness is split in two.** The figure in the identity bar answers *whether*; the checklist beside the record answers *what*. The previous single sentence naming the missing fields did not survive six of them being missing.
+- **The duplicate Sales & Marketing editor is removed.** Between 2026-09-24 and this change the page carried two: the new roster writing to `account_team_members`, and the older chip list in the details form still writing to `accounts.sales_marketing_names`, which nothing had read since the roster replaced it. Editing the chips appeared to work and changed nothing visible. The roster is now the only place people are managed.
+- **The chief executive rejoins the company record.** They had been stranded in a People card beside the rosters, which made them read like a fourteenth workstream assignee. A chief executive is a fact about the company, the same kind of thing as its phone number.
+- **The page cap goes from 900px to 1200px.** A five-column roster cannot breathe in 900px minus the docked Settings nav.
+- **`covered of 14`** is the one figure here that cannot be worked out by looking, so it belongs to the people section rather than to profile completeness, which only counts fields.
+
+Palette, typeface and the type scale are unchanged — Design System §9 fixes them, so this redesign is composition, hierarchy and copy only.
+
 **Client-confirmed addition (2026-09-17):** the **Company Profile card** now leads the Dashboard, above the banners and KPI strip: the account logo and name, then its full mailing address, phone, website and LinkedIn; below that, the CEO (name plus the fixed title "Chief Executive Officer") and one combined **Sales & Marketing** team of typed names shown as chips with a count. It is read-only here — "Edit profile" and the "+" beside Sales & Marketing both link to Settings › Company (the "+" to `#sales-marketing`, which opens that form already editing with a blank name ready), so the profile keeps exactly one edit surface. Both controls show only for the roles that can edit the account (Owner, Admin, CRO Admin/Advisor); everyone else sees the same card without them, and empty fields read "Not set yet" / "None added yet."
 
 **Client-confirmed amendment (2026-09-17):** both Dashboard banners drop the "Complete your…" / "…complete" wording and the extra in-progress sentence — in every state the title is just the document's name ("GrowthOS Solution Questionnaire" / "GrowthOS Vision Board"), the line is just the answered count (e.g. "75 of 75 questions answered"), and the button always reads "View →". Green when complete, blue while in progress, as before.

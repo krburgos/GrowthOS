@@ -19,7 +19,7 @@ import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { SHORT_TITLE } from "@/lib/gos-dashboard/hours";
 import { PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
 import { createClient } from "@/lib/supabase/client";
-import { allocatedHours, initialsOf, type TeamAssignment, type TeamKind, type TeamMember } from "@/lib/team/members";
+import { allocatedHours, initialsOf, type TeamKind, type TeamMember } from "@/lib/team/members";
 
 const stepLabel = (slug: string) => SHORT_TITLE[slug] ?? slug;
 
@@ -61,8 +61,29 @@ export function TeamRoster({
   members: TeamMember[];
   canEdit: boolean;
 }) {
+  const covered = new Set(members.flatMap((m) => m.assignments.map((a) => a.step_slug))).size;
+
   return (
-    <div className="flex flex-col gap-4">
+    <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+      <div className="flex flex-wrap items-end gap-4 border-b border-neutral-100 px-5 py-4">
+        <div>
+          <h2 className="text-h3 text-primary-900">Who does what</h2>
+          <p className="mt-1 max-w-[62ch] text-body-sm leading-relaxed text-neutral-500">
+            Everyone responsible for a workstream, whether they work here or for someone else. Hours are weekly, and
+            separate from the quarterly hours logged in the Command Center.
+          </p>
+        </div>
+        {/* The one figure on this page you cannot work out by looking. It
+            belongs here rather than with profile completeness, which only
+            counts fields. */}
+        <div className="ml-auto text-right">
+          <p className="text-h3 font-bold leading-none tabular-nums text-primary-900">
+            {covered} of {PLAYBOOK_STEPS.length}
+          </p>
+          <p className="mt-1 text-caption text-neutral-500">workstreams covered</p>
+        </div>
+      </div>
+
       <RosterTable
         accountId={accountId}
         kind="in_house"
@@ -78,8 +99,9 @@ export function TeamRoster({
         hint="Third parties delivering a workstream"
         members={members.filter((m) => m.kind === "outsourced")}
         canEdit={canEdit}
+        divided
       />
-    </div>
+    </section>
   );
 }
 
@@ -90,6 +112,7 @@ function RosterTable({
   hint,
   members,
   canEdit,
+  divided,
 }: {
   accountId: string;
   kind: TeamKind;
@@ -97,6 +120,7 @@ function RosterTable({
   hint: string;
   members: TeamMember[];
   canEdit: boolean;
+  divided?: boolean;
 }) {
   const [draft, setDraft] = useState<Draft | null>(null);
 
@@ -111,16 +135,15 @@ function RosterTable({
     });
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white">
-      <div className="flex flex-wrap items-center gap-2.5 border-b border-neutral-100 px-6 py-4">
-        <span aria-hidden="true" className="h-4 w-[3px] shrink-0 rounded-full bg-secondary-500" />
-        <h2 className="text-h4 text-primary-900">{heading}</h2>
-        <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-caption font-bold text-neutral-500">
+    <div className={divided ? "border-t border-neutral-200" : undefined}>
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-neutral-100 bg-neutral-50 px-5 py-3">
+        <h3 className="text-body font-bold text-primary-900">{heading}</h3>
+        <span className="rounded-full border border-neutral-200 bg-white px-2 py-0.5 text-caption font-bold text-neutral-500">
           {members.length}
         </span>
-        <span className="ml-auto text-caption text-neutral-400">{hint}</span>
+        <span className="text-caption text-neutral-400">{hint}</span>
         {canEdit && (
-          <Button size="sm" onClick={openNew}>
+          <Button size="sm" variant={kind === "outsourced" ? "secondary" : "primary"} className="ml-auto" onClick={openNew}>
             <Plus className="mr-1.5 size-4" />
             Add
           </Button>
@@ -128,7 +151,7 @@ function RosterTable({
       </div>
 
       {members.length === 0 ? (
-        <p className="px-6 py-8 text-center text-body-sm text-neutral-400">
+        <p className="px-5 py-8 text-center text-body-sm text-neutral-400">
           Nobody here yet.{canEdit && " Add the people responsible for these workstreams."}
         </p>
       ) : (
@@ -148,7 +171,7 @@ function RosterTable({
                 const allocated = allocatedHours(m);
                 return (
                   <tr key={m.id} className="border-b border-neutral-100 last:border-b-0">
-                    <td className="px-6 py-3">
+                    <td className="px-5 py-3">
                       <div className="flex items-center gap-2.5">
                         <span
                           className={`flex size-[30px] shrink-0 items-center justify-center rounded-full text-caption font-bold text-white ${
@@ -162,8 +185,8 @@ function RosterTable({
                         <span className="text-body-sm font-semibold text-neutral-800">{m.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-3 text-body-sm text-neutral-600">{m.title || "—"}</td>
-                    <td className="px-6 py-3">
+                    <td className="px-5 py-3 text-body-sm text-neutral-600">{m.title || "—"}</td>
+                    <td className="px-5 py-3">
                       {m.assignments.length === 0 ? (
                         <span className="text-body-sm text-neutral-300">None yet</span>
                       ) : (
@@ -180,13 +203,13 @@ function RosterTable({
                         </ul>
                       )}
                     </td>
-                    <td className="px-6 py-3 text-right">
+                    <td className="px-5 py-3 text-right">
                       <div className="text-h4 font-bold tabular-nums text-primary-900">
                         {m.weekly_hours} <span className="text-caption font-medium text-neutral-400">h/wk</span>
                       </div>
                       <div className="text-caption text-neutral-400">{allocated}h allocated</div>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-3 py-3 text-right">
                       {canEdit && (
                         <MemberMenu accountId={accountId} member={m} onEdit={() => openEdit(m)} />
                       )}
@@ -209,7 +232,7 @@ function RosterTable({
           onClose={() => setDraft(null)}
         />
       )}
-    </section>
+    </div>
   );
 }
 
