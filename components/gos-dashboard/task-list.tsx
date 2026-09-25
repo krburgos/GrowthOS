@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { Check, ChevronRight, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ import {
   type TaskPriority,
   type TaskState,
 } from "@/lib/gos-dashboard/tasks";
+import { currentQuarter } from "@/lib/gos-dashboard/hours";
 import { createClient } from "@/lib/supabase/client";
 import {
   CAPACITY_CLASS,
@@ -141,10 +142,45 @@ export function TaskList({
     team.map((m) => [m.id, capacityFor(m.weekly_hours, memberLoad[m.id] ?? 0)])
   );
 
-  const groups = TASK_PRIORITY_GROUPS.map((g) => ({
-    ...g,
-    items: rows.filter((t) => t.priority === g.value),
-  })).filter((g) => g.items.length > 0);
+  /**
+   * Completed work is folded away rather than removed (client-confirmed,
+   * 2026-09-25). A board that listed every finished task would grow without
+   * limit, and this one is called "What to do next" — it should open on what
+   * is next. Nothing is archived to achieve that: archiving a completed task
+   * subtracts its hours from the quarter's achieved figure, by design, so
+   * using it as a tidying mechanism would quietly gut the hours record.
+   *
+   * What a completed task was worth is already kept in three other places —
+   * the quarter's achieved hours, the Mission Card's "X of Y done", and the
+   * Status Report PDF — so hiding the rows loses nothing.
+   */
+  const quarterStart = currentQuarter().start;
+  const groups = TASK_PRIORITY_GROUPS.map((g) => {
+    const items = rows.filter((t) => t.priority === g.value);
+    const done = items.filter((t) => t.state === "complete");
+    return {
+      ...g,
+      items,
+      open: items.filter((t) => t.state !== "complete"),
+      done,
+      // Finished this quarter is recent enough to still be interesting;
+      // everything older sits behind a second click.
+      doneThisQuarter: done.filter((t) => (t.completed_at ?? "") >= quarterStart),
+      doneEarlier: done.filter((t) => (t.completed_at ?? "") < quarterStart),
+    };
+  }).filter((g) => g.items.length > 0);
+
+  const [shownDone, setShownDone] = useState<Set<string>>(new Set());
+  const [shownEarlier, setShownEarlier] = useState<Set<string>>(new Set());
+  const toggleDone = (key: string) =>
+    setShownDone((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  const showEarlier = (key: string) => setShownEarlier((prev) => new Set(prev).add(key));
+
+  const rowProps = { team, canAssign, canDefine, capacityOf, patch, onEdit: (t: Task) => setDraft(editDraft(t)) };
 
   return (
     <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
@@ -179,20 +215,23 @@ export function TaskList({
         <div className="overflow-x-auto px-5 py-5">
           <div className="min-w-[768px]">
             {groups.map((group) => {
-              const groupHours = group.items.reduce((sum, t) => sum + t.hours, 0);
+              const groupHours = group.open.reduce((sum, t) => sum + t.hours, 0);
               return (
                 <div key={group.value} className="mb-6 last:mb-0">
                   <div className="flex items-center gap-2.5 pb-2 pl-3.5">
                     <h3 className={`text-body font-bold ${group.text}`}>{group.label}</h3>
                     <span className="text-body-sm text-neutral-500">
-                      {group.items.length} {group.items.length === 1 ? "task" : "tasks"}
+                      {group.open.length === 0
+                        ? "all done"
+                        : `${group.open.length} open`}
                     </span>
                     <span className="ml-auto text-body-sm tabular-nums text-neutral-500">
-                      {formatTaskHours(groupHours)} hrs
+                      {formatTaskHours(groupHours)} hrs left
                     </span>
                   </div>
 
                   <div className={`overflow-hidden rounded-md border border-l-4 border-neutral-200 ${group.bar}`}>
+                    {group.open.length > 0 && (
                     <div className={`${ROW} bg-neutral-50`}>
                       <div className={`${CELL} py-2.5 ${HEAD}`}>Task</div>
                       <div className={`${CELL} py-2.5 ${HEAD}`}>Owner</div>
@@ -200,112 +239,22 @@ export function TaskList({
                       <div className={`${CELL} py-2.5 ${HEAD}`}>Due</div>
                       <div className={`${CELL} justify-center py-2.5 ${HEAD}`}>Hrs</div>
                     </div>
+                    )}
 
-                    {group.items.map((task) => (
-                      <div key={task.id} className={`${ROW} border-t border-neutral-100`}>
-                        <div className={`${CELL} min-w-0 flex-col items-start gap-0`}>
-                          <span
-                            className={`max-w-full truncate text-body-sm font-semibold ${
-                              task.state === "complete" ? "text-neutral-400 line-through" : "text-neutral-900"
-                            }`}
-                            title={task.title}
-                          >
-                            {task.title}
-                          </span>
-                          {task.detail && (
-                            <span className="max-w-full truncate text-caption text-neutral-500" title={task.detail}>
-                              {task.detail}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className={`${CELL} min-w-0`}>
-                          {canAssign ? (
-                            <Select
-                              value={task.assignee?.id ?? UNASSIGNED}
-                              onValueChange={(v) =>
-                                void patch(
-                                  task.id,
-                                  { assignee_id: v === UNASSIGNED ? null : v },
-                                  { assignee: team.find((m) => m.id === v) ?? null }
-                                )
-                              }
-                            >
-                              <SelectTrigger
-                                aria-label={`Who is doing ${task.title}`}
-                                className="h-auto w-full gap-1.5 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0"
-                              >
-                                <Owner
-                                  assignee={task.assignee}
-                                  capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined}
-                                />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value={UNASSIGNED}>Nobody yet</SelectItem>
-                                {team.map((m) => {
-                                  const cap = capacityOf.get(m.id);
-                                  return (
-                                    <SelectItem key={m.id} value={m.id}>
-                                      <span className="flex items-baseline gap-2">
-                                        <span>
-                                          {m.name}
-                                          {m.kind === "outsourced" ? " (outsourced)" : ""}
-                                        </span>
-                                        {cap && (
-                                          <span className={`text-caption ${CAPACITY_CLASS[cap.tone].text}`}>
-                                            {capacityShort(cap)}
-                                          </span>
-                                        )}
-                                      </span>
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Owner
-                              assignee={task.assignee}
-                              capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined}
-                            />
-                          )}
-                        </div>
-
-                        {/* Monday's tell: the status fills its whole cell. */}
-                        <div className="flex">
-                          <StatusCell
-                            task={task}
-                            canAssign={canAssign}
-                            onChange={(state) => void patch(task.id, { state }, { state })}
-                          />
-                        </div>
-
-                        <div className={CELL}>
-                          <DueDateCell
-                            task={task}
-                            canEdit={canAssign}
-                            onChange={(due_date) => void patch(task.id, { due_date }, { due_date })}
-                          />
-                        </div>
-
-                        <div className={`${CELL} justify-center gap-1`}>
-                          <HoursCell
-                            task={task}
-                            canEdit={canAssign}
-                            onChange={(hours) => void patch(task.id, { hours }, { hours })}
-                          />
-                          {canDefine && (
-                            <button
-                              type="button"
-                              onClick={() => setDraft(editDraft(task))}
-                              aria-label={`Edit ${task.title}`}
-                              className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-secondary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
-                            >
-                              <Pencil className="size-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                    {group.open.map((task) => (
+                      <TaskRow key={task.id} task={task} {...rowProps} />
                     ))}
+
+                    {group.done.length > 0 && (
+                      <DoneSection
+                        group={group}
+                        expanded={shownDone.has(group.value)}
+                        onToggle={() => toggleDone(group.value)}
+                        showingEarlier={shownEarlier.has(group.value)}
+                        onShowEarlier={() => showEarlier(group.value)}
+                        rowProps={rowProps}
+                      />
+                    )}
 
                     {canDefine && (
                       <button
@@ -480,6 +429,222 @@ function HoursCell({
       {formatTaskHours(task.hours)}
     </button>
   );
+}
+
+/**
+ * Completed work in a priority group, folded away (client-confirmed,
+ * 2026-09-25).
+ *
+ * Shut by default: the board opens on what is left to do. Opening it shows
+ * what finished this quarter, and anything older sits behind a second
+ * click, so a workstream in its second year does not open onto two hundred
+ * rows of history.
+ *
+ * Nothing here is archived. Archiving a completed task subtracts its hours
+ * from the quarter's achieved figure — that is deliberate, and it is
+ * exactly why archiving must not be used as a way to tidy the board.
+ */
+function DoneSection({
+  group,
+  expanded,
+  onToggle,
+  showingEarlier,
+  onShowEarlier,
+  rowProps,
+}: {
+  group: {
+    value: string;
+    done: Task[];
+    doneThisQuarter: Task[];
+    doneEarlier: Task[];
+  };
+  expanded: boolean;
+  onToggle: () => void;
+  showingEarlier: boolean;
+  onShowEarlier: () => void;
+  rowProps: RowProps;
+}) {
+  const visible = showingEarlier ? [...group.doneThisQuarter, ...group.doneEarlier] : group.doneThisQuarter;
+  const hidden = group.doneEarlier.length;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="flex w-full items-center gap-2 border-t border-neutral-100 bg-neutral-50 px-3.5 py-2.5 text-left text-body-sm text-neutral-500 hover:text-primary-900"
+      >
+        <ChevronRight
+          className={`size-3.5 transition-transform motion-reduce:transition-none ${expanded ? "rotate-90" : ""}`}
+        />
+        <span className="font-semibold">
+          {group.done.length} done
+        </span>
+        {!expanded && hidden > 0 && (
+          <span className="text-caption text-neutral-400">
+            {group.doneThisQuarter.length} this quarter
+          </span>
+        )}
+      </button>
+
+      {expanded && (
+        <>
+          {visible.length === 0 ? (
+            <p className="border-t border-neutral-100 px-3.5 py-3 text-body-sm text-neutral-400">
+              Nothing finished this quarter.
+              {hidden > 0 && (
+                <button type="button" onClick={onShowEarlier} className="ml-1.5 font-semibold text-secondary-700 hover:underline">
+                  Show {hidden} from earlier
+                </button>
+              )}
+            </p>
+          ) : (
+            visible.map((task) => <TaskRow key={task.id} task={task} {...rowProps} />)
+          )}
+
+          {visible.length > 0 && !showingEarlier && hidden > 0 && (
+            <button
+              type="button"
+              onClick={onShowEarlier}
+              className="w-full border-t border-neutral-100 px-3.5 py-2.5 text-left text-body-sm font-semibold text-secondary-700 hover:underline"
+            >
+              Show {hidden} finished before this quarter
+            </button>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+/**
+ * One row of the board. Extracted so the open rows and the collapsed
+ * completed rows render identically rather than drifting apart.
+ */
+function TaskRow({
+  task,
+  team,
+  canAssign,
+  canDefine,
+  capacityOf,
+  patch,
+  onEdit,
+}: RowProps & { task: Task }) {
+  return (
+    <div key={task.id} className={`${ROW} border-t border-neutral-100`}>
+      <div className={`${CELL} min-w-0 flex-col items-start gap-0`}>
+        <span
+          className={`max-w-full truncate text-body-sm font-semibold ${
+            task.state === "complete" ? "text-neutral-400 line-through" : "text-neutral-900"
+          }`}
+          title={task.title}
+        >
+          {task.title}
+        </span>
+        {task.detail && (
+          <span className="max-w-full truncate text-caption text-neutral-500" title={task.detail}>
+            {task.detail}
+          </span>
+        )}
+      </div>
+
+      <div className={`${CELL} min-w-0`}>
+        {canAssign ? (
+          <Select
+            value={task.assignee?.id ?? UNASSIGNED}
+            onValueChange={(v) =>
+              void patch(
+                task.id,
+                { assignee_id: v === UNASSIGNED ? null : v },
+                { assignee: team.find((m) => m.id === v) ?? null }
+              )
+            }
+          >
+            <SelectTrigger
+              aria-label={`Who is doing ${task.title}`}
+              className="h-auto w-full gap-1.5 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0"
+            >
+              <Owner
+                assignee={task.assignee}
+                capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={UNASSIGNED}>Nobody yet</SelectItem>
+              {team.map((m) => {
+                const cap = capacityOf.get(m.id);
+                return (
+                  <SelectItem key={m.id} value={m.id}>
+                    <span className="flex items-baseline gap-2">
+                      <span>
+                        {m.name}
+                        {m.kind === "outsourced" ? " (outsourced)" : ""}
+                      </span>
+                      {cap && (
+                        <span className={`text-caption ${CAPACITY_CLASS[cap.tone].text}`}>
+                          {capacityShort(cap)}
+                        </span>
+                      )}
+                    </span>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Owner
+            assignee={task.assignee}
+            capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined}
+          />
+        )}
+      </div>
+
+      {/* Monday's tell: the status fills its whole cell. */}
+      <div className="flex">
+        <StatusCell
+          task={task}
+          canAssign={canAssign}
+          onChange={(state) => void patch(task.id, { state }, { state })}
+        />
+      </div>
+
+      <div className={CELL}>
+        <DueDateCell
+          task={task}
+          canEdit={canAssign}
+          onChange={(due_date) => void patch(task.id, { due_date }, { due_date })}
+        />
+      </div>
+
+      <div className={`${CELL} justify-center gap-1`}>
+        <HoursCell
+          task={task}
+          canEdit={canAssign}
+          onChange={(hours) => void patch(task.id, { hours }, { hours })}
+        />
+        {canDefine && (
+          <button
+            type="button"
+            onClick={() => onEdit(task)}
+            aria-label={`Edit ${task.title}`}
+            className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-secondary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
+          >
+            <Pencil className="size-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface RowProps {
+  team: TeamMember[];
+  canAssign: boolean;
+  canDefine: boolean;
+  capacityOf: Map<string, Capacity>;
+  patch: (id: string, values: Record<string, unknown>, optimistic: Partial<Task>) => void;
+  onEdit: (task: Task) => void;
 }
 
 /** Five columns, one definition — the header row and the data rows share it. */

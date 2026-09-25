@@ -213,6 +213,14 @@ Both are now shown, and never silently reconciled. In Areas of Responsibility a 
 
 Deriving declarations from tasks was considered and rejected: it would invent a plan with zero weekly hours for every workstream a task touched, which would make the declared list meaningless and quietly destroy the distinction. The client's standing preference on these two sources is to keep both and let them disagree, so the UI marks which is which rather than picking a winner. The merge itself lives in `lib/team/involvement.ts`.
 
+**Client-confirmed (2026-09-25) — completed tasks fold away, and are never archived to tidy up.** A board that listed every finished task would grow without limit, and this one is called "What to do next," so it opens on what is left. Within each priority group the finished tasks collapse behind a single `N done` row, shut by default. Opening it shows what finished **this quarter**, with anything older behind a second "show N finished before this quarter" click — so a workstream in its second year opens onto the current quarter's work rather than two hundred rows of history. A group with nothing left reads "all done" and drops its column header, leaving only the disclosure.
+
+The group header counts and totals **open** work now ("4 open · 22.5 hrs left"), since what remains is the question the board answers.
+
+**Archiving is explicitly not the mechanism.** Archiving a completed task subtracts its hours from that quarter's `achieved_hours`, by design (Backend Schema §6.6f) — that is what archiving means, "this should not have counted." Using it to clean up the board would therefore gut the achieved-hours record and quietly move the Hours panel and the KPI figures. Nothing is archived on a schedule, and the disclosure hides rows without touching a single one.
+
+This is safe to hide because what a completed task was worth is already recorded in three other places: the quarter's achieved hours, the Mission Card's "X of Y done" progress, and the Status Report PDF — which deliberately still prints completed tasks, since an exported report should show what got done.
+
 **Client-confirmed rename (2026-09-15):** "Pipeline by Stage" is now labeled "Opportunities by Stage" on the actual Dashboard — a copy-only change, same component and data. Kept as "Pipeline by Stage" in the narrative above and elsewhere in this document where it describes the mockup as originally approved.
 
 **Client-confirmed addition (2026-09-15):** a full-width banner sits above the KPI strip while the account's Growth Questionnaire (§4.9, I5) is incomplete — "Complete your Growth Solution Questionnaire," a short progress line, and its own progress bar.

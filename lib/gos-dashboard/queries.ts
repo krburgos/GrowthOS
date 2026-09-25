@@ -267,6 +267,7 @@ interface TaskRow {
   state: TaskState;
   hours: number | string;
   due_date: string | null;
+  completed_at: string | null;
   account_team_members: { id: string; name: string; kind: TeamKind } | { id: string; name: string; kind: TeamKind }[] | null;
 }
 
@@ -284,11 +285,13 @@ function toTask(row: TaskRow): Task {
     state: row.state,
     hours: Number(row.hours),
     due_date: row.due_date,
+    completed_at: row.completed_at,
     assignee: unwrap(row.account_team_members),
   };
 }
 
-const SELECT = "id, step_slug, title, detail, priority, state, hours, due_date, account_team_members(id, name, kind)";
+const SELECT =
+  "id, step_slug, title, detail, priority, state, hours, due_date, completed_at, account_team_members(id, name, kind)";
 
 /** Every live task for an account, for the Mission Card counts. */
 export async function getTasks(accountId: string): Promise<Task[]> {

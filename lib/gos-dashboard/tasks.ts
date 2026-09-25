@@ -88,6 +88,8 @@ export interface Task {
   state: TaskState;
   hours: number;
   due_date: string | null;
+  /** Stamped when the task first reached 'complete'; null otherwise. */
+  completed_at: string | null;
   assignee: { id: string; name: string; kind: TeamKind } | null;
 }
 
