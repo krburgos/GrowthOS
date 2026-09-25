@@ -167,7 +167,14 @@ function Panel({
         <span aria-hidden="true" className="h-3.5 w-[3px] shrink-0 rounded-full bg-secondary-500" />
         <h3 className="flex-1 truncate text-body-sm font-semibold">{title}</h3>
         <span
-          className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-caption font-bold uppercase tracking-wide ${
+          /* Client-confirmed (2026-09-25, mockup "C"): the status reads at
+             text-h3 rather than text-caption — 18px against the figure's
+             28px. Matching the figure exactly was mocked up and rejected:
+             the block already carries three rows of numbers at 24–28px, and
+             a fourth element at that size flattened the hierarchy instead of
+             raising the status. leading-none keeps the pill from inheriting
+             h3's 26px line height and growing the header row. */
+          className={`inline-flex shrink-0 items-center rounded-full px-3 py-1 text-h3 font-bold uppercase leading-none tracking-wide ${
             complete ? "bg-success-400/15 text-success-400" : "bg-warning-400/15 text-warning-400"
           }`}
         >
