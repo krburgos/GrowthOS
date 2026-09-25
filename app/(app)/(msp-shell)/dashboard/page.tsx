@@ -18,7 +18,7 @@ import {
   countAnswered as countVisionBoardAnswered,
 } from "@/lib/vision-board/sections";
 
-export const metadata: Metadata = { title: "Dashboard — GrowthOS" };
+export const metadata: Metadata = { title: "Homepage — GrowthOS" };
 
 /** Same set as Settings › Company (accounts_update RLS, Backend Schema §6.1). */
 const PROFILE_EDIT_ROLES = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"];
@@ -174,7 +174,7 @@ export default async function DashboardPage() {
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-6 md:p-8">
       <div>
-        <h1 className="text-h1 text-primary-900">Dashboard</h1>
+        <h1 className="text-h1 text-primary-900">Homepage</h1>
         <p className="text-body text-neutral-500">
           Welcome back, {user.full_name.split(" ")[0]} — here&apos;s what&apos;s happening across the account today.
         </p>

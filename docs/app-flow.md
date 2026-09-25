@@ -227,6 +227,8 @@ Enforcement is now RLS alone. `prevent_task_definition_change()` is dropped rath
 
 Archiving came with authorship, since someone who can add a task needs to be able to retire one. It still subtracts a completed task's hours from the quarter's achieved figure, which is exactly why the board folds completed work away rather than archiving it.
 
+**Client-confirmed rename (2026-09-25):** the Dashboard's page heading and browser tab title now read **"Homepage,"** matching the sidebar label, which already said Homepage. The two had been naming the same screen differently. The route stays `/dashboard` and this document keeps calling the screen "Dashboard (B1)" in the narrative below, the same way the Pipeline by Stage rename was handled — this is a label change only, not a restructure.
+
 **Client-confirmed rename (2026-09-15):** "Pipeline by Stage" is now labeled "Opportunities by Stage" on the actual Dashboard — a copy-only change, same component and data. Kept as "Pipeline by Stage" in the narrative above and elsewhere in this document where it describes the mockup as originally approved.
 
 **Client-confirmed addition (2026-09-15):** a full-width banner sits above the KPI strip while the account's Growth Questionnaire (§4.9, I5) is incomplete — "Complete your Growth Solution Questionnaire," a short progress line, and its own progress bar.
