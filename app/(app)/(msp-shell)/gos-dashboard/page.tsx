@@ -10,7 +10,14 @@ import { SectionHeading } from "@/components/shell/section-heading";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
 import { PLAYBOOK_PHASES } from "@/lib/gos-dashboard/playbook";
-import { getKpiBand, getReadiness, getStepHours, getStepOverviews, getTasks } from "@/lib/gos-dashboard/queries";
+import {
+  getKpiBand,
+  getMemberStepTasks,
+  getReadiness,
+  getStepHours,
+  getStepOverviews,
+  getTasks,
+} from "@/lib/gos-dashboard/queries";
 import { membersForStep } from "@/lib/team/members";
 import { getTeamMembers } from "@/lib/team/queries";
 
@@ -29,13 +36,16 @@ export default async function GosDashboardPage() {
   if (!user || !user.account_id) return null;
 
   const quarter = currentQuarter();
-  const [steps, hours, kpiBand, readiness, teamMembers, tasks] = await Promise.all([
+  const [steps, hours, kpiBand, readiness, teamMembers, tasks, stepTasks] = await Promise.all([
     getStepOverviews(user.account_id),
     getStepHours(user.account_id, quarter.start),
     getKpiBand(user.account_id),
     getReadiness(user.account_id),
     getTeamMembers(user.account_id),
     getTasks(user.account_id),
+    // Who holds tasks where, so a card can name people nobody declared
+    // against the workstream in the Company Profile.
+    getMemberStepTasks(user.account_id),
   ]);
 
   // One read for all 14 cards, bucketed here rather than a query per card.
@@ -107,7 +117,7 @@ export default async function GosDashboardPage() {
               quarter={quarter}
               accountId={user.account_id!}
               canLogHours={canLogHours}
-              assignees={membersForStep(teamMembers, step.slug)}
+              assignees={membersForStep(teamMembers, step.slug, stepTasks)}
               tasks={tasksByStep.get(step.slug) ?? []}
             />
           ))}

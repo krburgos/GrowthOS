@@ -33,8 +33,13 @@ export function HoursCard({
   quarter: QuarterInfo;
   accountId: string;
   canLogHours: boolean;
-  /** Who is responsible for this workstream, from the Company Profile rosters. */
-  assignees: { member: TeamMember; hours: number }[];
+  /**
+   * Who is on this workstream: people declared against it in the Company
+   * Profile, plus anyone simply holding tasks in it (client-confirmed fix,
+   * 2026-09-25 — reading only the declared list made every card say
+   * "Nobody assigned" while the tasks all had owners).
+   */
+  assignees: { member: TeamMember; hours: number; declared: boolean }[];
   /** This workstream's tasks, summarised on the card. */
   tasks: Task[];
 }) {
@@ -111,10 +116,10 @@ export function HoursCard({
                 <span className="text-caption text-neutral-400">Nobody assigned</span>
               ) : (
                 <div className="flex items-center">
-                  {assignees.slice(0, 4).map(({ member }, i) => (
+                  {assignees.slice(0, 4).map(({ member, declared }, i) => (
                     <span
                       key={member.id}
-                      title={member.name}
+                      title={declared ? member.name : `${member.name} — has tasks here, not assigned in the Company Profile`}
                       className={`flex size-6 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white ${
                         member.kind === "outsourced"
                           ? "bg-gradient-to-br from-neutral-500 to-neutral-400"

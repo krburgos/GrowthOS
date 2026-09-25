@@ -340,3 +340,49 @@ export async function getMemberTaskLoad(accountId: string): Promise<Record<strin
   }
   return load;
 }
+
+/** Tasks a person holds in one workstream. */
+export interface StepTaskTally {
+  open: number;
+  total: number;
+  hours: number;
+}
+
+/**
+ * Which workstreams each person actually has tasks in, and how many
+ * (client-confirmed fix, 2026-09-25).
+ *
+ * `account_team_assignments` records a *plan* — "Nerm does SEO, 8h/wk" —
+ * while this records what has actually landed on them. The two are
+ * deliberately separate and may disagree, but the roster and the Mission
+ * Cards were reading only the plan, so a person with tasks in ten
+ * workstreams and no declared assignment showed as doing nothing.
+ */
+export async function getMemberStepTasks(
+  accountId: string
+): Promise<Record<string, Record<string, StepTaskTally>>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("gos_dashboard_tasks")
+    .select("assignee_id, step_slug, hours, state")
+    .eq("account_id", accountId)
+    .is("archived_at", null)
+    .not("assignee_id", "is", null);
+
+  const out: Record<string, Record<string, StepTaskTally>> = {};
+  for (const row of (data ?? []) as {
+    assignee_id: string;
+    step_slug: string;
+    hours: number | string;
+    state: string;
+  }[]) {
+    const perStep = (out[row.assignee_id] ??= {});
+    const tally = (perStep[row.step_slug] ??= { open: 0, total: 0, hours: 0 });
+    tally.total += 1;
+    if (row.state !== "complete") {
+      tally.open += 1;
+      tally.hours += Number(row.hours);
+    }
+  }
+  return out;
+}

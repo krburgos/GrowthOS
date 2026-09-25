@@ -19,7 +19,9 @@ import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { SHORT_TITLE } from "@/lib/gos-dashboard/hours";
 import { PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
 import { createClient } from "@/lib/supabase/client";
+import type { StepTaskTally } from "@/lib/gos-dashboard/queries";
 import { CAPACITY_CLASS, capacityFor, capacityLabel, formatCapacityHours } from "@/lib/team/capacity";
+import { involvementFor, type Involvement } from "@/lib/team/involvement";
 import { allocatedHours, initialsOf, type TeamKind, type TeamMember } from "@/lib/team/members";
 
 const stepLabel = (slug: string) => SHORT_TITLE[slug] ?? slug;
@@ -57,12 +59,15 @@ export function TeamRoster({
   accountId,
   members,
   memberLoad,
+  stepTasks,
   canEdit,
 }: {
   accountId: string;
   members: TeamMember[];
   /** Unfinished task hours per member, across all 14 workstreams. */
   memberLoad: Record<string, number>;
+  /** Which workstreams each person actually has tasks in. */
+  stepTasks: Record<string, Record<string, StepTaskTally>>;
   canEdit: boolean;
 }) {
   const covered = new Set(members.flatMap((m) => m.assignments.map((a) => a.step_slug))).size;
@@ -96,6 +101,7 @@ export function TeamRoster({
         hint="Your own staff"
         members={members.filter((m) => m.kind === "in_house")}
         memberLoad={memberLoad}
+        stepTasks={stepTasks}
         canEdit={canEdit}
       />
       <RosterTable
@@ -105,6 +111,7 @@ export function TeamRoster({
         hint="Third parties delivering a workstream"
         members={members.filter((m) => m.kind === "outsourced")}
         memberLoad={memberLoad}
+        stepTasks={stepTasks}
         canEdit={canEdit}
         divided
       />
@@ -119,6 +126,7 @@ function RosterTable({
   hint,
   members,
   memberLoad,
+  stepTasks,
   canEdit,
   divided,
 }: {
@@ -127,6 +135,7 @@ function RosterTable({
   heading: string;
   hint: string;
   memberLoad: Record<string, number>;
+  stepTasks: Record<string, Record<string, StepTaskTally>>;
   members: TeamMember[];
   canEdit: boolean;
   divided?: boolean;
@@ -183,6 +192,7 @@ function RosterTable({
                 // as a quarter of capacity and compared with the unfinished
                 // task hours this person carries across all 14 workstreams.
                 const cap = capacityFor(m.weekly_hours, memberLoad[m.id] ?? 0);
+                const involvement = involvementFor(m, stepTasks[m.id]);
                 const tone = CAPACITY_CLASS[cap.tone];
                 return (
                   <tr key={m.id} className="border-b border-neutral-100 last:border-b-0">
@@ -202,18 +212,12 @@ function RosterTable({
                     </td>
                     <td className="px-5 py-3 text-body-sm text-neutral-600">{m.title || "—"}</td>
                     <td className="px-5 py-3">
-                      {m.assignments.length === 0 ? (
+                      {involvement.length === 0 ? (
                         <span className="text-body-sm text-neutral-300">None yet</span>
                       ) : (
                         <ul className="flex flex-wrap gap-1">
-                          {m.assignments.map((a) => (
-                            <li
-                              key={a.step_slug}
-                              className="inline-flex items-center gap-1.5 rounded-full border border-secondary-200 bg-secondary-50 px-2.5 py-0.5 text-caption font-semibold text-secondary-800"
-                            >
-                              {stepLabel(a.step_slug)}
-                              <b className="font-bold text-primary-900">{a.weekly_hours}h</b>
-                            </li>
+                          {involvement.map((i) => (
+                            <AreaChip key={i.step_slug} involvement={i} />
                           ))}
                         </ul>
                       )}
@@ -270,6 +274,40 @@ function RosterTable({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * One workstream on a person's row. A declared assignment is solid and
+ * carries its planned weekly hours; a workstream known only from the tasks
+ * they hold is outlined and dashed, and says so on hover. The two are
+ * never merged into one look, because "we planned this" and "this landed
+ * on them" are different facts and the client wants both visible.
+ */
+function AreaChip({ involvement: i }: { involvement: Involvement }) {
+  const declared = i.declaredHours !== null;
+  const tasks = i.openTasks > 0 ? `${i.openTasks} open` : i.totalTasks > 0 ? "all done" : null;
+
+  return (
+    <li
+      title={
+        declared
+          ? `Assigned in the Company Profile · ${i.declaredHours}h/wk${i.totalTasks ? ` · ${i.totalTasks} tasks` : ""}`
+          : `Not assigned here — has ${i.totalTasks} ${i.totalTasks === 1 ? "task" : "tasks"} in the Command Center`
+      }
+      className={
+        declared
+          ? "inline-flex items-center gap-1.5 rounded-full border border-secondary-200 bg-secondary-50 px-2.5 py-0.5 text-caption font-semibold text-secondary-800"
+          : "inline-flex items-center gap-1.5 rounded-full border border-dashed border-neutral-300 bg-white px-2.5 py-0.5 text-caption font-medium text-neutral-500"
+      }
+    >
+      {stepLabel(i.step_slug)}
+      {declared ? (
+        <b className="font-bold text-primary-900">{i.declaredHours}h</b>
+      ) : (
+        tasks && <span className="text-neutral-400">{tasks}</span>
+      )}
+    </li>
   );
 }
 

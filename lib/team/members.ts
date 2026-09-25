@@ -48,14 +48,31 @@ export function allocatedHours(member: Pick<TeamMember, "assignments">): number 
   return member.assignments.reduce((sum, a) => sum + a.weekly_hours, 0);
 }
 
-/** Everyone assigned to one workstream, in roster order, both kinds together. */
-export function membersForStep(members: TeamMember[], slug: string): { member: TeamMember; hours: number }[] {
+/**
+ * Everyone on one workstream, in roster order, both kinds together.
+ *
+ * Counts two things (client-confirmed fix, 2026-09-25): people declared
+ * against the workstream in the Company Profile, and people who simply
+ * hold tasks in it on the Command Center board. Reading only the first
+ * made every Mission Card say "Nobody assigned yet" while sixty-seven
+ * tasks had owners. `hours` is the declared weekly figure and is 0 for
+ * someone known only from their tasks, so a caller totalling it must not
+ * present the sum as everybody's commitment.
+ */
+export function membersForStep(
+  members: TeamMember[],
+  slug: string,
+  stepTasks?: Record<string, Record<string, { open: number; total: number; hours: number }>>
+): { member: TeamMember; hours: number; declared: boolean }[] {
   return members
     .map((member) => {
       const assignment = member.assignments.find((a) => a.step_slug === slug);
-      return assignment ? { member, hours: assignment.weekly_hours } : null;
+      if (assignment) return { member, hours: assignment.weekly_hours, declared: true };
+      const tally = stepTasks?.[member.id]?.[slug];
+      if (tally && tally.total > 0) return { member, hours: 0, declared: false };
+      return null;
     })
-    .filter((x): x is { member: TeamMember; hours: number } => x !== null);
+    .filter((x): x is { member: TeamMember; hours: number; declared: boolean } => x !== null);
 }
 
 export function initialsOf(name: string): string {

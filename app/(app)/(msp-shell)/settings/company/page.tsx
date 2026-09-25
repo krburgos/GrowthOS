@@ -12,7 +12,7 @@ import {
 } from "@/lib/accounts/company-profile";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
-import { getMemberTaskLoad } from "@/lib/gos-dashboard/queries";
+import { getMemberStepTasks, getMemberTaskLoad } from "@/lib/gos-dashboard/queries";
 import { getTeamMembers } from "@/lib/team/queries";
 
 export const metadata: Metadata = { title: "Company Profile — GrowthOS" };
@@ -47,10 +47,11 @@ export default async function CompanyProfilePage() {
   const canEdit = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"].includes(user.role);
 
   const supabase = await createClient();
-  const [accountResult, teamMembers, memberLoad] = await Promise.all([
+  const [accountResult, teamMembers, memberLoad, stepTasks] = await Promise.all([
     supabase.from("accounts").select(COMPANY_PROFILE_COLUMNS).eq("id", user.account_id).single(),
     getTeamMembers(user.account_id!),
     getMemberTaskLoad(user.account_id!),
+    getMemberStepTasks(user.account_id!),
   ]);
   const account = accountResult.data as CompanyProfile | null;
 
@@ -147,7 +148,13 @@ export default async function CompanyProfilePage() {
       </div>
 
       {/* The people, at the foot of the page — the thing this record is for. */}
-      <TeamRoster accountId={account.id} members={teamMembers} memberLoad={memberLoad} canEdit={canEdit} />
+      <TeamRoster
+        accountId={account.id}
+        members={teamMembers}
+        memberLoad={memberLoad}
+        stepTasks={stepTasks}
+        canEdit={canEdit}
+      />
     </main>
   );
 }
