@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { DutiesList } from "@/components/gos-dashboard/duties-list";
-import { EditKpiList } from "@/components/gos-dashboard/edit-kpi-list";
 import { EditOverviewPanel } from "@/components/gos-dashboard/edit-overview-panel";
-import { KpiGrid } from "@/components/gos-dashboard/kpi-grid";
 import { StatusReportPanel } from "@/components/gos-dashboard/status-report-panel";
 import { StepHeader } from "@/components/gos-dashboard/step-header";
 import { StepHoursPanel } from "@/components/gos-dashboard/step-hours-panel";
@@ -39,6 +36,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
  * sub-shape (App Flow §4.3a, Backend Schema §6.6c);
  * gos_dashboard_tracker_items keeps its rows and is simply no longer read,
  * the same way gos_dashboard_suggestions was left in place.
+ *
+ * Client-confirmed (2026-09-25, same pass): the Duties list and the KPIs
+ * grid are removed from the foot of the page too. The status report says
+ * where the workstream stands and the board says what to do about it;
+ * a standing duties list and a second grid of targets underneath were
+ * restating the engagement rather than telling anyone anything actionable.
+ * gos_dashboard_kpis keeps its rows, and duties stay in the playbook shape,
+ * so neither is lost.
  */
 export default async function GosDashboardStepPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -100,20 +105,6 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
         canAssign={canAssign}
         canDefine={canEdit}
       />
-
-      <div>
-        <h2 className="mb-3 text-h4 text-primary-900">Duties</h2>
-        <DutiesList duties={step.duties} />
-      </div>
-
-      <div>
-        <h2 className="mb-3 text-h4 text-primary-900">KPIs</h2>
-        {canEdit ? (
-          <EditKpiList accountId={user.account_id} stepSlug={step.slug} initialKpis={step.kpis} canEdit={canEdit} />
-        ) : (
-          <KpiGrid kpis={step.kpis} />
-        )}
-      </div>
     </main>
   );
 }

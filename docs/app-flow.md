@@ -74,7 +74,7 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 | B1 | Onboarding | Onboarding Profile Wizard | New MSP Owner, first login |
 | C1 | Dashboard | Dashboard (Home) | All MSP roles |
 | C2 | GOS Dashboard | GOS Dashboard (client-confirmed addition, 2026-09-16; backed by a real per-account schema per client-confirmed amendment, 2026-09-16 — Backend Schema §6.6c; readiness check, KPI band and hours cards added 2026-09-17 — §6.6d) — 14 GrowthOS Playbook steps as clickable hours cards, sits directly below Dashboard in the sidebar | All roles view; hours: MSP Owner/Admin + CRO Admin/Advisor edit; everything else: CRO Admin/Advisor edit |
-| C3 | GOS Dashboard | Playbook Step Detail — no tabs: Hours, then Status Report (all 14, exportable as PDF), then the "What to do next" task board, then Duties + KPIs | All roles view; hours: MSP Owner/Admin + CRO Admin/Advisor edit; everything else: CRO Admin/Advisor edit |
+| C3 | GOS Dashboard | Playbook Step Detail — no tabs: Hours, then Status Report (all 14, exportable as PDF), then the "What to do next" task board. Duties and KPIs removed 2026-09-25 | All roles view; hours: MSP Owner/Admin + CRO Admin/Advisor edit; everything else: CRO Admin/Advisor edit |
 | D1 | Contacts | Contacts List | All MSP roles |
 | D2 | Contacts | Contact Detail (tabs: Overview, Activity, Opportunities, Emails) | All MSP roles |
 | D3 | Contacts | Add Contact (manual) | Owner, Admin, Marketing |
@@ -188,6 +188,12 @@ Two of those are fixes rather than taste: the teal rail was a colour weight no o
 **What this supersedes.** The source Playbook document ("GrowthOS Dashboard.docx") specifies a three-part sub-shape for SEO and GEO only — status report, suggestions/fixes list, quarterly progress tracker. All three parts are now superseded: the suggestions list became the task board (2026-09-25, above), the progress tracker is removed because tasks carry progress with an owner, hours and a state, and the status report is no longer limited to two steps. `gos_dashboard_tracker_items` keeps every row and is simply no longer read, the same treatment `gos_dashboard_suggestions` got. This is a deliberate, client-confirmed departure from the source document rather than an oversight, recorded here so the next reader does not "restore" it.
 
 **Seeded content (2026-09-25).** The CRO Leader account now carries a written Status Report, three to four figures and four to six tasks for each of the fourteen workstreams, replacing the placeholder content that came across from the Playbook document. The figures are set against that document's own KPI targets, and the tasks name real owners from the Company Profile rosters. Fourteen of those tasks are complete, which fed 45 hours into the quarter's achieved figure through the normal trigger.
+
+**Client-confirmed removal (2026-09-25) — Duties and KPIs come off the workstream page.** The two sections that sat at the foot of every step are gone, leaving the page at three panels: Hours, Status Report, What to do next. The reasoning the client acted on is that the report already says where the workstream stands and the board already says what to do about it, so a standing duties list and a second grid of targets underneath restated the engagement rather than telling anyone anything they could act on. The Status Report's own figures carry the targets that matter, in the place someone is actually reading.
+
+Nothing is deleted behind it: `gos_dashboard_kpis` keeps every row, and the duties list stays in the playbook shape at `lib/gos-dashboard/playbook.ts`, so both can be put back by rendering them again. `getStepDetail` still reads the KPI rows — left in place deliberately, so restoring the section is a UI change rather than a query change.
+
+This is the third client-confirmed departure from the source Playbook document in this pass, after the suggestions list and the progress tracker, and is recorded here for the same reason: so it reads as a decision rather than an omission.
 
 **Client-confirmed rename (2026-09-15):** "Pipeline by Stage" is now labeled "Opportunities by Stage" on the actual Dashboard — a copy-only change, same component and data. Kept as "Pipeline by Stage" in the narrative above and elsewhere in this document where it describes the mockup as originally approved.
 
