@@ -31,7 +31,7 @@ export interface StepOverview extends PlaybookShape {
 export interface StepDetail extends StepOverview {
   kpis: (KpiStat & { id: string })[];
   statusReportSummary: string | null;
-  statusReportStats: KpiStat[];
+  statusReportStats: (KpiStat & { id: string })[];
   suggestions: (SuggestionItem & { id: string })[];
   tracker: (TrackerItem & { id: string })[];
 }
@@ -80,7 +80,7 @@ export async function getStepDetail(accountId: string, slug: string): Promise<St
         .order("created_at", { ascending: true }),
       supabase
         .from("gos_dashboard_status_report_stats")
-        .select("label, value, target")
+        .select("id, label, value, target")
         .eq("account_id", accountId)
         .eq("step_slug", slug)
         .is("archived_at", null)
@@ -110,7 +110,7 @@ export async function getStepDetail(accountId: string, slug: string): Promise<St
         : null,
     kpis: (kpiRows ?? []).map((r) => ({ id: r.id, label: r.label, value: r.value, target: r.target ?? undefined })),
     statusReportSummary: statusRow?.status_report_summary ?? null,
-    statusReportStats: (statRows ?? []).map((r) => ({ label: r.label, value: r.value, target: r.target ?? undefined })),
+    statusReportStats: (statRows ?? []).map((r) => ({ id: r.id, label: r.label, value: r.value, target: r.target ?? undefined })),
     suggestions: (suggestionRows ?? []).map((r) => ({
       id: r.id,
       title: r.title,

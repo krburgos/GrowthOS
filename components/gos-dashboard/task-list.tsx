@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -12,9 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import {
-  TASK_PRIORITY_CLASS,
+  TASK_PRIORITY_GROUPS,
   TASK_STATES,
-  TASK_STATE_CLASS,
+  TASK_STATE_CELL,
   TASK_STATE_LABEL,
   taskSummary,
   type Task,
@@ -47,14 +47,20 @@ const emptyDraft = (): Draft => ({
 });
 
 /**
- * "What to do next" — a workstream's tasks (client-confirmed, 2026-09-25).
+ * "What to do next" — a workstream's tasks as a board (client-confirmed,
+ * 2026-09-25, grouped rows over kanban).
  *
- * Assigning is the main verb on this page, so state and assignee are
- * changed inline rather than in a dialog. The dialog is only for defining
- * the work, which is CRO Leader's job.
+ * Rows are grouped by priority, so the board reads top to bottom as an
+ * order of work. State stays a column rather than becoming the grouping,
+ * which is what a kanban would have done: hours, owner and due date all
+ * need to be readable at a glance, and a kanban card hides them.
  *
- * `canAssign` and `canDefine` mirror the database, they do not stand in for
- * it: a trigger rejects any non-CRO change to a task's title, detail,
+ * Assigning is the main verb here, so state and assignee are changed
+ * inline. The dialog is only for defining the work, which is CRO Leader's
+ * job.
+ *
+ * `canAssign` and `canDefine` mirror the database, they do not stand in
+ * for it: a trigger rejects any non-CRO change to a task's title, detail,
  * priority, hours or due date, so hiding the controls is courtesy rather
  * than the guard.
  */
@@ -90,6 +96,21 @@ export function TaskList({
     router.refresh();
   };
 
+  const editDraft = (task: Task): Draft => ({
+    id: task.id,
+    title: task.title,
+    detail: task.detail ?? "",
+    priority: task.priority,
+    hours: String(task.hours),
+    due_date: task.due_date ?? "",
+    assignee_id: task.assignee?.id ?? UNASSIGNED,
+  });
+
+  const groups = TASK_PRIORITY_GROUPS.map((g) => ({
+    ...g,
+    items: tasks.filter((t) => t.priority === g.value),
+  })).filter((g) => g.items.length > 0);
+
   return (
     <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
       <div className="flex flex-wrap items-center gap-3 border-b border-neutral-100 px-5 py-4">
@@ -98,7 +119,9 @@ export function TaskList({
           <p className="mt-0.5 text-body-sm text-neutral-500">
             {tasks.length === 0
               ? "No tasks yet."
-              : `${summary.total} ${summary.total === 1 ? "task" : "tasks"} from the report above. Assign each to someone and set the hours it will take.`}
+              : `${summary.done} of ${summary.total} done · ${formatTaskHours(summary.hours)} hrs of work${
+                  summary.unassigned > 0 ? ` · ${summary.unassigned} unassigned` : ""
+                }`}
           </p>
         </div>
         {canDefine && (
@@ -116,149 +139,146 @@ export function TaskList({
             : "CRO Leader has not set any tasks for this workstream yet."}
         </p>
       ) : (
-        <ul>
-          {tasks.map((task) => {
-            const done = task.state === "complete";
-            return (
-              <li key={task.id} className="border-b border-neutral-100 px-5 py-4 last:border-b-0">
-                <div className="flex items-start gap-3">
-                  {canAssign ? (
-                    <Select
-                      value={task.state}
-                      onValueChange={(state) => void patch(task.id, { state: state as TaskState })}
-                      disabled={busy === task.id}
-                    >
-                      <SelectTrigger
-                        aria-label={`State of ${task.title}`}
-                        className={`h-auto w-auto shrink-0 gap-1.5 rounded-md border-0 px-2.5 py-1 text-caption font-bold ${TASK_STATE_CLASS[task.state]}`}
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TASK_STATES.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>
-                            {s.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <span
-                      className={`shrink-0 rounded-md px-2.5 py-1 text-caption font-bold ${TASK_STATE_CLASS[task.state]}`}
-                    >
-                      {TASK_STATE_LABEL[task.state]}
+        /* The board scrolls sideways rather than dropping columns: an owner
+           or a due date you cannot see is the reason a task gets missed. */
+        <div className="overflow-x-auto px-5 py-5">
+          <div className="min-w-[720px]">
+            {groups.map((group) => {
+              const groupHours = group.items.reduce((sum, t) => sum + t.hours, 0);
+              return (
+                <div key={group.value} className="mb-6 last:mb-0">
+                  <div className="flex items-center gap-2.5 pb-2 pl-3.5">
+                    <h3 className={`text-body font-bold ${group.text}`}>{group.label}</h3>
+                    <span className="text-body-sm text-neutral-500">
+                      {group.items.length} {group.items.length === 1 ? "task" : "tasks"}
                     </span>
-                  )}
+                    <span className="ml-auto text-body-sm tabular-nums text-neutral-500">
+                      {formatTaskHours(groupHours)} hrs
+                    </span>
+                  </div>
 
-                  <div className="min-w-0 flex-1">
-                    <p className={`text-body font-semibold leading-snug ${done ? "text-neutral-400 line-through" : "text-neutral-800"}`}>
-                      {task.title}
-                    </p>
-                    {task.detail && <p className="mt-1 max-w-[72ch] text-body-sm leading-relaxed text-neutral-500">{task.detail}</p>}
-
-                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                      <span className={`rounded-md px-2 py-0.5 text-caption font-bold capitalize ${TASK_PRIORITY_CLASS[task.priority]}`}>
-                        {task.priority}
-                      </span>
-
-                      {canAssign ? (
-                        <Select
-                          value={task.assignee?.id ?? UNASSIGNED}
-                          onValueChange={(value) =>
-                            void patch(task.id, { assignee_id: value === UNASSIGNED ? null : value })
-                          }
-                          disabled={busy === task.id}
-                        >
-                          <SelectTrigger
-                            aria-label={`Who is doing ${task.title}`}
-                            className="h-8 w-auto gap-2 rounded-full border-neutral-200 py-0 pl-1.5 pr-3 text-body-sm font-medium"
-                          >
-                            {task.assignee ? (
-                              <span className="flex items-center gap-2">
-                                <span
-                                  className={`flex size-[22px] items-center justify-center rounded-full text-[8.5px] font-bold text-white ${
-                                    task.assignee.kind === "outsourced"
-                                      ? "bg-gradient-to-br from-neutral-500 to-neutral-400"
-                                      : "bg-gradient-to-br from-primary-700 to-secondary-700"
-                                  }`}
-                                >
-                                  {initialsOf(task.assignee.name)}
-                                </span>
-                                {task.assignee.name}
-                              </span>
-                            ) : (
-                              <span className="px-1 text-neutral-400">Assign someone</span>
-                            )}
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={UNASSIGNED}>Nobody yet</SelectItem>
-                            {team.map((m) => (
-                              <SelectItem key={m.id} value={m.id}>
-                                {m.name}
-                                {m.kind === "outsourced" ? " (outsourced)" : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span className="text-body-sm text-neutral-500">
-                          {task.assignee ? task.assignee.name : "Unassigned"}
-                        </span>
-                      )}
-
-                      <span className="rounded-md border border-neutral-200 px-2.5 py-1 text-body-sm text-neutral-700">
-                        <b className="font-bold text-primary-900">{task.hours}</b> hrs
-                      </span>
-
-                      {task.due_date && (
-                        <span className="text-body-sm text-neutral-400">
-                          Due {new Date(`${task.due_date}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
-                        </span>
-                      )}
-
-                      {canDefine && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setDraft({
-                              id: task.id,
-                              title: task.title,
-                              detail: task.detail ?? "",
-                              priority: task.priority,
-                              hours: String(task.hours),
-                              due_date: task.due_date ?? "",
-                              assignee_id: task.assignee?.id ?? UNASSIGNED,
-                            })
-                          }
-                          className="text-body-sm font-semibold text-secondary-700 hover:underline"
-                        >
-                          Edit
-                        </button>
-                      )}
+                  <div className={`overflow-hidden rounded-md border border-l-4 border-neutral-200 ${group.bar}`}>
+                    <div className={`${ROW} bg-neutral-50`}>
+                      <div className={`${CELL} py-2.5 ${HEAD}`}>Task</div>
+                      <div className={`${CELL} py-2.5 ${HEAD}`}>Owner</div>
+                      <div className={`${CELL} justify-center py-2.5 ${HEAD}`}>Status</div>
+                      <div className={`${CELL} py-2.5 ${HEAD}`}>Due</div>
+                      <div className={`${CELL} justify-center py-2.5 ${HEAD}`}>Hrs</div>
                     </div>
+
+                    {group.items.map((task) => (
+                      <div key={task.id} className={`${ROW} border-t border-neutral-100`}>
+                        <div className={`${CELL} min-w-0 flex-col items-start gap-0`}>
+                          <span
+                            className={`max-w-full truncate text-body-sm font-semibold ${
+                              task.state === "complete" ? "text-neutral-400 line-through" : "text-neutral-900"
+                            }`}
+                            title={task.title}
+                          >
+                            {task.title}
+                          </span>
+                          {task.detail && (
+                            <span className="max-w-full truncate text-caption text-neutral-500" title={task.detail}>
+                              {task.detail}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className={`${CELL} min-w-0`}>
+                          {canAssign ? (
+                            <Select
+                              value={task.assignee?.id ?? UNASSIGNED}
+                              onValueChange={(v) => void patch(task.id, { assignee_id: v === UNASSIGNED ? null : v })}
+                              disabled={busy === task.id}
+                            >
+                              <SelectTrigger
+                                aria-label={`Who is doing ${task.title}`}
+                                className="h-auto w-full gap-1.5 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0"
+                              >
+                                <Owner assignee={task.assignee} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={UNASSIGNED}>Nobody yet</SelectItem>
+                                {team.map((m) => (
+                                  <SelectItem key={m.id} value={m.id}>
+                                    {m.name}
+                                    {m.kind === "outsourced" ? " (outsourced)" : ""}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Owner assignee={task.assignee} />
+                          )}
+                        </div>
+
+                        {/* Monday's tell: the status fills its whole cell. */}
+                        <div className="flex">
+                          {canAssign ? (
+                            <Select
+                              value={task.state}
+                              onValueChange={(v) => void patch(task.id, { state: v as TaskState })}
+                              disabled={busy === task.id}
+                            >
+                              <SelectTrigger
+                                aria-label={`State of ${task.title}`}
+                                className={`h-auto w-full justify-center gap-1.5 rounded-none border-0 px-2 py-3 text-caption font-bold text-white shadow-none focus:ring-0 focus:ring-offset-0 [&>svg]:opacity-70 ${TASK_STATE_CELL[task.state]}`}
+                              >
+                                {TASK_STATE_LABEL[task.state]}
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TASK_STATES.map((s) => (
+                                  <SelectItem key={s.value} value={s.value}>
+                                    {s.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span
+                              className={`flex w-full items-center justify-center px-2 py-3 text-caption font-bold text-white ${TASK_STATE_CELL[task.state]}`}
+                            >
+                              {TASK_STATE_LABEL[task.state]}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className={CELL}>
+                          <DueDate value={task.due_date} done={task.state === "complete"} />
+                        </div>
+
+                        <div className={`${CELL} justify-center gap-1.5`}>
+                          <span className="text-body-sm font-semibold tabular-nums text-neutral-700">
+                            {formatTaskHours(task.hours)}
+                          </span>
+                          {canDefine && (
+                            <button
+                              type="button"
+                              onClick={() => setDraft(editDraft(task))}
+                              aria-label={`Edit ${task.title}`}
+                              className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-secondary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
+                            >
+                              <Pencil className="size-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {canDefine && (
+                      <button
+                        type="button"
+                        onClick={() => setDraft({ ...emptyDraft(), priority: group.value })}
+                        className="w-full border-t border-dashed border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-left text-body-sm text-neutral-400 hover:text-secondary-700"
+                      >
+                        + Add task
+                      </button>
+                    )}
                   </div>
                 </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {tasks.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-neutral-100 bg-neutral-50 px-5 py-3 text-body-sm text-neutral-600">
-          <span>
-            <b className="font-bold text-primary-900">{summary.hours} hrs</b> across {summary.total}{" "}
-            {summary.total === 1 ? "task" : "tasks"}
-            {summary.unassigned > 0 && (
-              <>
-                {" · "}
-                <b className="font-bold text-warning-800">{summary.unassigned}</b> unassigned
-              </>
-            )}
-          </span>
-          <span className="ml-auto">
-            {summary.done} of {summary.total} complete
-          </span>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -273,6 +293,55 @@ export function TaskList({
         />
       )}
     </section>
+  );
+}
+
+/** Five columns, one definition — the header row and the data rows share it. */
+const ROW = "grid grid-cols-[minmax(0,1fr)_128px_128px_92px_78px] items-stretch";
+const CELL = "flex items-center gap-2 px-3.5 py-2.5";
+const HEAD = "text-caption font-bold uppercase tracking-wide text-neutral-400";
+
+/** Hours read as whole numbers when they are whole ones: 12, not 12.0. */
+function formatTaskHours(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function Owner({ assignee }: { assignee: Task["assignee"] }) {
+  if (!assignee) {
+    return (
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full border border-dashed border-neutral-300 text-caption text-neutral-400">
+          ?
+        </span>
+        <span className="truncate text-body-sm text-neutral-400">Unassigned</span>
+      </span>
+    );
+  }
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span
+        className={`flex size-[26px] shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white ${
+          assignee.kind === "outsourced"
+            ? "bg-gradient-to-br from-neutral-500 to-neutral-400"
+            : "bg-gradient-to-br from-primary-700 to-secondary-700"
+        }`}
+      >
+        {initialsOf(assignee.name)}
+      </span>
+      <span className="truncate text-body-sm text-neutral-600">{assignee.name}</span>
+    </span>
+  );
+}
+
+/** A date that has passed on unfinished work is the one the reader needs. */
+function DueDate({ value, done }: { value: string | null; done: boolean }) {
+  if (!value) return <span className="text-body-sm text-neutral-300">—</span>;
+  const date = new Date(`${value}T00:00:00`);
+  const overdue = !done && date < new Date(new Date().toDateString());
+  return (
+    <span className={`text-body-sm tabular-nums ${overdue ? "font-semibold text-error-700" : "text-neutral-600"}`}>
+      {date.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+    </span>
   );
 }
 

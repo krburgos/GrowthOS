@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { DutiesList } from "@/components/gos-dashboard/duties-list";
-import { TaskList } from "@/components/gos-dashboard/task-list";
 import { EditKpiList } from "@/components/gos-dashboard/edit-kpi-list";
 import { EditOverviewPanel } from "@/components/gos-dashboard/edit-overview-panel";
 import { KpiGrid } from "@/components/gos-dashboard/kpi-grid";
-import { PlaybookDetailTabs } from "@/components/gos-dashboard/playbook-detail-tabs";
+import { StatusReportPanel } from "@/components/gos-dashboard/status-report-panel";
 import { StepHeader } from "@/components/gos-dashboard/step-header";
 import { StepHoursPanel } from "@/components/gos-dashboard/step-hours-panel";
+import { TaskList } from "@/components/gos-dashboard/task-list";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
 import { getStepDetail, getStepHours, getTasksForStep } from "@/lib/gos-dashboard/queries";
@@ -22,11 +22,23 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 /**
- * GOS Dashboard step detail (live, per-account, 2026-09-16). Reads user's
- * account data via getStepDetail (Task 2). SEO and GEO render the 3-tab
- * dashboard shape (Status Report / Suggestions & Fixes / Progress Tracker)
- * when hasDashboardShape is true; all 14 steps render Duties + KPIs.
- * On a new account with zero data, tabs/KPIs show their empty states.
+ * GOS Dashboard step detail.
+ *
+ * Client-confirmed restructure (2026-09-25): the tab strip is gone. The
+ * page now reads straight down — where the workstream stands, then what to
+ * do about it, then the standing duties and targets behind both:
+ *
+ *   Hours → Status Report → What to do next → Duties → KPIs
+ *
+ * Two things changed to get there. The Status Report used to be the first
+ * of three tabs, on SEO and GEO alone; it is now on all 14 workstreams,
+ * because the client wants every workstream to say where it stands. And
+ * Progress Tracker is removed — tasks carry progress now, each with an
+ * owner, hours and a state, which is what that tab was approximating.
+ * This supersedes the source doc's own three-part "GrowthOS Dashboard"
+ * sub-shape (App Flow §4.3a, Backend Schema §6.6c);
+ * gos_dashboard_tracker_items keeps its rows and is simply no longer read,
+ * the same way gos_dashboard_suggestions was left in place.
  */
 export default async function GosDashboardStepPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -71,6 +83,15 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
         canLogHours={canLogHours}
       />
 
+      <StatusReportPanel
+        accountId={user.account_id}
+        stepSlug={step.slug}
+        stepTitle={step.title}
+        initialSummary={step.statusReportSummary}
+        initialStats={step.statusReportStats}
+        canEdit={canEdit}
+      />
+
       <TaskList
         accountId={user.account_id}
         slug={step.slug}
@@ -79,17 +100,6 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
         canAssign={canAssign}
         canDefine={canEdit}
       />
-
-      {step.hasDashboardShape && (
-        <PlaybookDetailTabs
-          accountId={user.account_id}
-          stepSlug={step.slug}
-          statusReportSummary={step.statusReportSummary}
-          statusReportStats={step.statusReportStats}
-          tracker={step.tracker}
-          canEdit={canEdit}
-        />
-      )}
 
       <div>
         <h2 className="mb-3 text-h4 text-primary-900">Duties</h2>
