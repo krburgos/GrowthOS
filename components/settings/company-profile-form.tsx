@@ -105,7 +105,7 @@ export function CompanyProfileForm({
       <div className="flex flex-wrap items-center gap-3 border-b border-neutral-100 px-5 py-3.5">
         <h2 className="text-h4 text-primary-900">Company details</h2>
         {canEdit && !editing && (
-          <Button size="sm" variant="secondary" className="ml-auto" onClick={() => setEditing(true)}>
+          <Button size="sm" className="ml-auto" onClick={() => setEditing(true)}>
             <Pencil className="mr-1.5 size-4" />
             Edit
           </Button>

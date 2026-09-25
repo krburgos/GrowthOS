@@ -83,7 +83,6 @@ export function PasswordForm() {
         </div>
         <Button
           type="submit"
-          variant="secondary"
           size="sm"
           className="self-start"
           disabled={passwordForm.formState.isSubmitting}

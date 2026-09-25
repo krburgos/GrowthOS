@@ -216,7 +216,7 @@ export function ContactOverviewForm({
       {canEdit && (
         <div className="flex justify-end">
           {!editing ? (
-            <Button type="button" variant="secondary" size="sm" onClick={handleEdit}>
+            <Button type="button" size="sm" onClick={handleEdit}>
               <Pencil className="mr-1.5 size-4" />
               Edit
             </Button>

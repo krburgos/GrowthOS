@@ -41,7 +41,7 @@ export function StepHoursPanel({
         <div className="flex items-center gap-3">
           <OutsourcedChip outsourced={hours.outsourced} />
           {canLogHours && (
-            <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+            <Button size="sm" onClick={() => setOpen(true)}>
               <Clock className="mr-1.5 size-3.5" />
               Log hours
             </Button>

@@ -161,7 +161,7 @@ function RosterTable({
         </span>
         <span className="text-caption text-neutral-400">{hint}</span>
         {canEdit && (
-          <Button size="sm" variant={kind === "outsourced" ? "secondary" : "primary"} className="ml-auto" onClick={openNew}>
+          <Button size="sm" className="ml-auto" onClick={openNew}>
             <Plus className="mr-1.5 size-4" />
             Add
           </Button>
