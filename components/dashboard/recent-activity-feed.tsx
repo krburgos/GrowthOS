@@ -24,7 +24,7 @@ function relativeTime(iso: string): string {
 /** App Flow §4.3 — "recent calls, emails, status changes across the account." */
 export function RecentActivityFeed({ items }: { items: FeedItem[] }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white">
+    <div className="rounded-xl border border-card-edge bg-white shadow-lift">
       <div className="border-b border-neutral-100 px-4 py-3.5">
         <h2 className="text-h4 text-primary-900">Recent Activity</h2>
       </div>

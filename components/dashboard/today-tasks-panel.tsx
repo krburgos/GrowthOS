@@ -57,7 +57,7 @@ export function TodayTasksPanel({ tasks }: { tasks: DueTask[] }) {
   };
 
   return (
-    <div className="rounded-lg border border-secondary-200 bg-secondary-50">
+    <div className="rounded-xl border border-secondary-200 bg-secondary-50 shadow-lift">
       <div className="flex items-center justify-between border-b border-secondary-100 px-4 py-3.5">
         <h2 className="text-h4 text-primary-900">Today</h2>
         <span className="text-caption text-neutral-500">{tasks.length} due</span>

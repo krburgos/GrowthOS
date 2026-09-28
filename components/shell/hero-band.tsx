@@ -29,7 +29,30 @@ export function HeroBand({ className, children }: { className?: string; children
 export const HERO_ACTION_CLASS =
   "inline-flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-1.5 text-body-sm font-semibold text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-300";
 
-/** Small uppercase label used above a group inside the band. */
-export function HeroLabel({ children }: { children: React.ReactNode }) {
+/**
+ * Small uppercase label used above a group inside the band.
+ *
+ * `tone` exists because this label is shared (client-confirmed, 2026-09-28):
+ * the Command Center and the CRO portfolio band are still navy and need
+ * white-on-dark, while the Homepage's setup block is now pale cyan and needs
+ * dark-on-light. Recolouring it outright would have inverted the other two.
+ * The light tone carries a short cyan dash, which is the mark the approved
+ * "A1 — Cyan accent" treatment uses to open every section.
+ */
+export function HeroLabel({
+  children,
+  tone = "dark",
+}: {
+  children: React.ReactNode;
+  tone?: "dark" | "light";
+}) {
+  if (tone === "light") {
+    return (
+      <p className="mb-2 flex items-center gap-2 text-caption font-bold uppercase tracking-wide text-neutral-400">
+        <span aria-hidden="true" className="h-[2px] w-3.5 shrink-0 rounded-full bg-secondary-500" />
+        {children}
+      </p>
+    );
+  }
   return <p className="mb-2 text-caption font-semibold uppercase tracking-wide text-white/55">{children}</p>;
 }

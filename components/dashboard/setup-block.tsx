@@ -70,7 +70,22 @@ export function SetupBlock({
   teamCount: number;
 }) {
   return (
-    <section className="flex flex-col gap-4 rounded-xl p-4 text-white md:p-5 bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]">
+    /* Client-confirmed (2026-09-28, approved mockup "A1 — Cyan accent"):
+       the block moves from a navy field to a pale cyan one. The layout is
+       unchanged — same three cards, same hours strip, same KPI band, same
+       order — only the finish differs. Cyan (secondary-500) now carries
+       every structural mark: this top rule, the tick beside each card
+       title, the dash before each section label, the meters and the bars.
+
+       White cards on a tinted ground read as raised; the translucent
+       white-on-navy cards they replace read as cut-out holes, which is
+       most of what made the block look dated. */
+    <section className="relative flex flex-col gap-4 overflow-hidden rounded-xl border border-edge p-4 md:p-5 bg-[linear-gradient(160deg,var(--color-mist-1),var(--color-mist-2)_58%,var(--color-mist-3))]">
+      {/* The cyan rule is a child rather than a border-top colour: stacking
+          `border-edge` and `border-t-secondary-500` would leave which wins
+          up to Tailwind's output order, and a silently-grey rule is exactly
+          the sort of thing that ships unnoticed. */}
+      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-secondary-500" />
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {account && <CompanyPanel account={account} canEdit={canEditProfile} teamCount={teamCount} />}
 
@@ -111,17 +126,17 @@ export function SetupBlock({
         />
       </div>
 
-      <div className="h-px bg-white/15" />
+      <div className="h-px bg-edge" />
 
       <div>
-        <HeroLabel>
+        <HeroLabel tone="light">
           Workstream hours · {quarter.label} · {quarter.range}
         </HeroLabel>
-        <HoursTotalsStrip hours={hours} quarter={quarter} variant="hero" />
+        <HoursTotalsStrip hours={hours} quarter={quarter} variant="hero-light" />
       </div>
 
       <div>
-        <HeroLabel>KPI Dashboard</HeroLabel>
+        <HeroLabel tone="light">KPI Dashboard</HeroLabel>
         <KpiBandHero accountId={accountId} sources={kpiSources} />
       </div>
     </section>
@@ -140,10 +155,12 @@ const SLOT_ID = "flex h-10 items-center gap-2.5";
 const SLOT_FIG = "h-20 pt-3";
 const SLOT_DETAIL = "flex-1 pt-3";
 
+/* On a pale ground the primary action has to be the solid one — the old
+   pair was inverted for navy, where white was the loud choice. */
 const CTA_CLASS =
-  "inline-flex items-center gap-1.5 rounded-md bg-white px-3.5 py-1.5 text-body-sm font-semibold text-primary-900 transition-colors hover:bg-white/90";
+  "inline-flex items-center gap-1.5 rounded-md bg-primary-700 px-3.5 py-1.5 text-body-sm font-semibold text-white transition-colors hover:bg-primary-800";
 const QUIET_CLASS =
-  "inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/10 px-3.5 py-1.5 text-body-sm font-semibold text-white transition-colors hover:bg-white/20";
+  "inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3.5 py-1.5 text-body-sm font-semibold text-primary-900 transition-colors hover:bg-neutral-50";
 
 function Panel({
   title,
@@ -161,11 +178,11 @@ function Panel({
   action: ReactNode;
 }) {
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-xl border border-white/15 bg-white/5">
+    <div className="relative flex flex-col overflow-hidden rounded-xl border border-edge bg-white shadow-panel">
       <span aria-hidden="true" className={`absolute inset-x-0 top-0 h-[3px] ${complete ? "bg-success-400" : "bg-warning-400"}`} />
       <div className="flex items-center gap-2.5 px-4 pt-3.5">
         <span aria-hidden="true" className="h-3.5 w-[3px] shrink-0 rounded-full bg-secondary-500" />
-        <h3 className="flex-1 truncate text-body-sm font-semibold">{title}</h3>
+        <h3 className="flex-1 truncate text-body-sm font-semibold text-primary-900">{title}</h3>
         <span
           /* Client-confirmed (2026-09-25, mockup "C"): the status reads at
              text-h3 rather than text-caption — 18px against the figure's
@@ -175,15 +192,15 @@ function Panel({
              raising the status. leading-none keeps the pill from inheriting
              h3's 26px line height and growing the header row. */
           className={`inline-flex shrink-0 items-center rounded-full px-3 py-1 text-h3 font-bold uppercase leading-none tracking-wide ${
-            complete ? "bg-success-400/15 text-success-400" : "bg-warning-400/15 text-warning-400"
+            complete ? "bg-success-100 text-success-700" : "bg-warning-100 text-warning-800"
           }`}
         >
           {status}
         </span>
       </div>
       <div className="flex flex-1 flex-col px-4 pb-3.5 pt-3">{children}</div>
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-white/12 px-4 py-2.5">
-        <span className="text-caption text-white/55">{footNote}</span>
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-neutral-100 px-4 py-2.5">
+        <span className="text-caption text-neutral-400">{footNote}</span>
         {action}
       </div>
     </div>
@@ -191,22 +208,24 @@ function Panel({
 }
 
 function SlotLabel({ children }: { children: ReactNode }) {
-  return <p className="mb-1.5 text-caption font-bold uppercase tracking-widest text-white/55">{children}</p>;
+  return <p className="mb-1.5 text-caption font-bold uppercase tracking-widest text-neutral-400">{children}</p>;
 }
 
 function Figure({ value, of, complete }: { value: number; of: string; complete: boolean }) {
+  /* The 400-weight greens and ambers were chosen to sit on navy. On white
+     they fail contrast, so the figure drops to the 700/800 steps. */
   return (
-    <p className={`text-h1 font-bold leading-none tracking-tight tabular-nums ${complete ? "text-success-400" : "text-warning-400"}`}>
-      {value.toLocaleString()} <span className="text-h4 font-semibold text-white/50">/ {of}</span>
+    <p className={`text-h1 font-bold leading-none tracking-tight tabular-nums ${complete ? "text-success-700" : "text-warning-800"}`}>
+      {value.toLocaleString()} <span className="text-h4 font-semibold text-neutral-400">/ {of}</span>
     </p>
   );
 }
 
 function Meter({ pct, complete }: { pct: number; complete: boolean }) {
   return (
-    <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/20">
+    <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-edge">
       <div
-        className={`h-full rounded-full ${complete ? "bg-success-400" : "bg-warning-400"}`}
+        className={`h-full rounded-full ${complete ? "bg-success-600" : "bg-warning-400"}`}
         style={{ width: `${Math.min(100, Math.max(pct, 1))}%` }}
       />
     </div>
@@ -216,7 +235,7 @@ function Meter({ pct, complete }: { pct: number; complete: boolean }) {
 /** The 34px plate in the identity slot — the logo, or an icon for a document. */
 function Plate({ children }: { children: ReactNode }) {
   return (
-    <span className="flex size-[34px] shrink-0 items-center justify-center rounded-lg bg-white/15 text-white/85">
+    <span className="flex size-[34px] shrink-0 items-center justify-center rounded-lg bg-secondary-100 text-secondary-800">
       {children}
     </span>
   );
@@ -227,8 +246,8 @@ function Identity({ plate, title, sub }: { plate: ReactNode; title: string; sub:
     <div className={SLOT_ID}>
       {plate}
       <span className="min-w-0">
-        <span className="block truncate text-body-sm font-bold leading-tight">{title}</span>
-        <span className="block truncate text-caption text-white/50">{sub}</span>
+        <span className="block truncate text-body-sm font-bold leading-tight text-primary-900">{title}</span>
+        <span className="block truncate text-caption text-neutral-500">{sub}</span>
       </span>
     </div>
   );
@@ -284,7 +303,7 @@ function CompanyPanel({ account, canEdit, teamCount }: { account: CompanyProfile
               {c.missing.map((field) => (
                 <li
                   key={field}
-                  className="rounded-full border border-dashed border-white/25 px-2.5 py-0.5 text-caption font-semibold capitalize text-white/70"
+                  className="rounded-full border border-dashed border-neutral-300 px-2.5 py-0.5 text-caption font-semibold capitalize text-neutral-600"
                 >
                   {field}
                 </li>
@@ -294,7 +313,7 @@ function CompanyPanel({ account, canEdit, teamCount }: { account: CompanyProfile
         ) : (
           <>
             <SlotLabel>All set</SlotLabel>
-            <p className="text-caption leading-relaxed text-white/55">
+            <p className="text-caption leading-relaxed text-neutral-500">
               Every field is filled in, so the profile reads correctly everywhere it appears.
             </p>
           </>
@@ -353,7 +372,7 @@ function DocumentPanel({
 
       <div className={SLOT_DETAIL}>
         <SlotLabel>{detailLabel}</SlotLabel>
-        <p className="text-caption leading-relaxed text-white/55">{detail}</p>
+        <p className="text-caption leading-relaxed text-neutral-500">{detail}</p>
       </div>
     </Panel>
   );

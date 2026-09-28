@@ -125,6 +125,35 @@
   --sidebar-width-collapsed: 4rem;
   --topbar-height: 3.5rem;
   --banner-height: 2.5rem;
+
+  /* ----------------------------------------------------------------------
+     Client-confirmed additions (2026-09-28, approved mockup "A1 — Cyan
+     accent"). The Homepage setup block moves from a navy field to a pale
+     cyan one, with #02b8df — one hex step from secondary-500 — carrying
+     every structural mark.
+
+     All of these are ADDITIONS. No existing colour, type step or radius is
+     redefined, so every screen built before today renders unchanged.
+     ---------------------------------------------------------------------- */
+
+  /* The block's ground: secondary-500 mixed into white, not hand-picked. */
+  --color-mist-1: #eaf6fa;
+  --color-mist-2: #f5fbfd;
+  --color-mist-3: #edf8fb;
+
+  /* Hairlines and panel edges inside the pale block. */
+  --color-edge: #dcedf5;
+  /* Card borders on the page itself — one step bluer than neutral-200, so
+     an edge belongs to the palette rather than sitting outside it. */
+  --color-card-edge: #e6edf7;
+  /* The page ground, biased very slightly toward navy vs neutral-100. */
+  --color-surface: #f7fafc;
+
+  /* §7 names shadow-sm/md/lg but never defines them, so cards have been
+     falling back to Tailwind's grey defaults. These are navy-tinted, which
+     is what makes a white card read as lifted rather than as an outline. */
+  --shadow-panel: 0 1px 2px rgb(2 42 102 / 0.04), 0 8px 20px -12px rgb(2 42 102 / 0.16);
+  --shadow-lift: 0 1px 2px rgb(2 42 102 / 0.04), 0 10px 26px -16px rgb(2 42 102 / 0.16);
 }
 
 body {

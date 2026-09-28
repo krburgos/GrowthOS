@@ -36,7 +36,7 @@ export function PipelineByStage({ stages }: { stages: StageCount[] }) {
   const maxCount = Math.max(1, ...stages.map((s) => s.count));
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white">
+    <div className="rounded-xl border border-card-edge bg-white shadow-lift">
       <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3.5">
         <h2 className="text-h4 text-primary-900">Opportunities by Stage</h2>
         <Link href="/opportunities" className="text-caption font-semibold text-secondary-700 hover:text-secondary-800">

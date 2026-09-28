@@ -39,11 +39,14 @@ import {
  */
 const OMITTED_ON_HOMEPAGE: KpiBoxKey[] = ["lost"];
 
+/* Client-confirmed (2026-09-28, "A1 — Cyan accent"): the block is pale now,
+   so these flip from their light steps to their dark ones. The 400 steps
+   were picked to read on navy and are close to invisible on white. */
 const TONE_CLASS: Record<string, string> = {
-  won: "text-success-400",
-  ghosted: "text-warning-400",
-  lost: "text-white/60",
-  default: "text-white",
+  won: "text-success-700",
+  ghosted: "text-warning-800",
+  lost: "text-neutral-400",
+  default: "text-primary-900",
 };
 
 function Panel({
@@ -62,10 +65,10 @@ function Panel({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-white/10 bg-white/5">
-      <div className="flex items-center gap-2 border-b border-white/10 px-3.5 py-2">
+    <div className="flex flex-col overflow-hidden rounded-lg border border-edge bg-white shadow-panel">
+      <div className="flex items-center gap-2 border-b border-neutral-100 px-3.5 py-2">
         <span aria-hidden="true" className="h-3.5 w-[3px] shrink-0 rounded-full bg-secondary-500" />
-        <h3 className="text-body-sm font-semibold text-white">{title}</h3>
+        <h3 className="text-body-sm font-semibold text-primary-900">{title}</h3>
         {children}
       </div>
       <div className={`grid flex-1 ${columns}`}>
@@ -74,11 +77,11 @@ function Panel({
             key={box.key}
             type="button"
             onClick={() => onOpen(box)}
-            className={`flex min-w-0 flex-col items-center justify-center gap-1.5 px-2 pb-4 pt-3.5 text-center transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary-300 ${
-              i > 0 ? "border-l border-white/10" : ""
+            className={`flex min-w-0 flex-col items-center justify-center gap-1.5 px-2 pb-4 pt-3.5 text-center transition-colors hover:bg-secondary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary-500 ${
+              i > 0 ? "border-l border-neutral-100" : ""
             }`}
           >
-            <span className="text-caption font-semibold uppercase tracking-wide text-white/55">{box.label}</span>
+            <span className="text-caption font-semibold uppercase tracking-wide text-neutral-400">{box.label}</span>
             <CountUp
               value={boxTotal(sources, box.key)}
               className={`text-h1 font-bold leading-none tracking-tight tabular-nums ${TONE_CLASS[box.tone ?? "default"]}`}
@@ -113,11 +116,11 @@ export function KpiBandHero({ accountId, sources }: { accountId: string; sources
         columns="grid-cols-2 sm:grid-cols-4"
       >
         <span
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-caption font-semibold text-white/85"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-secondary-100 px-2.5 py-0.5 text-caption font-semibold text-secondary-800"
           title="Every stage except Won, Lost and Lost Resurrected"
         >
           Active
-          <CountUp value={activeOpportunities(sources)} className="font-bold tabular-nums text-white" />
+          <CountUp value={activeOpportunities(sources)} className="font-bold tabular-nums text-primary-900" />
         </span>
       </Panel>
 

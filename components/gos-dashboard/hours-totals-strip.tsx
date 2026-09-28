@@ -48,9 +48,17 @@ export function HoursTotalsStrip({
 }: {
   hours: StepHours[];
   quarter: QuarterInfo;
-  variant?: "card" | "hero";
+  /**
+   * "hero-light" (client-confirmed, 2026-09-28) is the same strip sitting
+   * inside the Homepage's pale cyan block rather than the Command Center's
+   * navy one. It exists as a third variant rather than a recolour because
+   * the two pages share this component and the Command Center stays navy —
+   * flipping the colours outright would have inverted that page's text.
+   */
+  variant?: "card" | "hero" | "hero-light";
 }) {
   const hero = variant === "hero";
+  const onMist = variant === "hero-light";
   const needed = hours.reduce((s, h) => s + h.needed, 0);
   const committed = hours.reduce((s, h) => s + h.committed, 0);
   const achieved = hours.reduce((s, h) => s + h.achieved, 0);
@@ -65,7 +73,9 @@ export function HoursTotalsStrip({
     <div
       className={cn(
         "grid grid-cols-2 rounded-lg border lg:grid-cols-[1fr_1fr_1fr_1fr_1.4fr] lg:divide-x",
-        hero ? "border-white/15 bg-white/10 lg:divide-white/15" : "border-neutral-200 bg-white lg:divide-neutral-100"
+        hero && "border-white/15 bg-white/10 lg:divide-white/15",
+        onMist && "border-edge bg-white shadow-panel lg:divide-edge",
+        !hero && !onMist && "border-neutral-200 bg-white lg:divide-neutral-100"
       )}
     >
       <Stat label="Hours required" value={formatHours(needed)} unit="hrs" hero={hero} />
@@ -75,7 +85,7 @@ export function HoursTotalsStrip({
       <div
         className={cn(
           "col-span-2 flex flex-col justify-center gap-1.5 border-t px-4 py-4 lg:col-span-1 lg:border-t-0",
-          hero ? "border-white/15" : "border-neutral-100"
+          hero ? "border-white/15" : onMist ? "border-edge" : "border-neutral-100"
         )}
       >
         <span className={labelClass(hero)}>Quarter progress</span>
@@ -83,7 +93,11 @@ export function HoursTotalsStrip({
           <span className={`text-h1 font-bold leading-none tracking-tight tabular-nums ${pctColor}`}>{pct}%</span>
           <span className={unitClass(hero)}>of committed</span>
         </span>
-        <HoursBar pct={pct} elapsedPct={quarter.elapsedPct} className={hero ? "bg-white/20" : undefined} />
+        <HoursBar
+          pct={pct}
+          elapsedPct={quarter.elapsedPct}
+          className={hero ? "bg-white/20" : onMist ? "bg-edge" : undefined}
+        />
         <span className={`text-caption tabular-nums ${hero ? "text-white/55" : "text-neutral-400"}`}>
           {quarter.elapsedPct}% of the quarter elapsed
         </span>
