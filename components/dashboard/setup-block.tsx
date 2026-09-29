@@ -70,21 +70,29 @@ export function SetupBlock({
   teamCount: number;
 }) {
   return (
-    /* Client-confirmed (2026-09-28, approved mockup "A1 — Cyan accent"):
-       the block moves from a navy field to a pale cyan one. The layout is
-       unchanged — same three cards, same hours strip, same KPI band, same
-       order — only the finish differs. Cyan (secondary-500) now carries
-       every structural mark: this top rule, the tick beside each card
-       title, the dash before each section label, the meters and the bars.
+    /* Client-confirmed (2026-09-29, approved mockup "3 — Navy block, white
+       cards"). The navy ground is back, and this is deliberately *not* a
+       revert to what shipped before 2026-09-28.
 
-       White cards on a tinted ground read as raised; the translucent
-       white-on-navy cards they replace read as cut-out holes, which is
-       most of what made the block look dated. */
-    <section className="relative flex flex-col gap-4 overflow-hidden rounded-xl border border-edge p-4 md:p-5 bg-[linear-gradient(160deg,var(--color-mist-1),var(--color-mist-2)_58%,var(--color-mist-3))]">
-      {/* The cyan rule is a child rather than a border-top colour: stacking
-          `border-edge` and `border-t-secondary-500` would leave which wins
-          up to Tailwind's output order, and a silently-grey rule is exactly
-          the sort of thing that ships unnoticed. */}
+       That original had two things at once: a navy block, and translucent
+       cards cut into it. Going pale (A1) fixed the cards — they became
+       solid white and began reading as raised objects rather than holes —
+       but it also removed the navy, and those were separate improvements
+       bundled into one change. The feedback, "too white", was about the
+       missing navy rather than the cards.
+
+       So the ground returns and the solid white cards stay. That pairing
+       has never shipped before, and it carries more contrast than either
+       the original or the pale version: a white card on navy separates
+       harder than a white card on a tint, and much harder than a
+       translucent one on navy.
+
+       Layout is untouched throughout — same three cards, same hours strip,
+       same KPI band, same order. */
+    <section className="relative flex flex-col gap-4 overflow-hidden rounded-xl p-4 shadow-lift md:p-5 bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]">
+      {/* The cyan rule survives the move to navy — it is the one place the
+          accent colour appears on the block itself. A child span rather
+          than a border-top, so nothing else can win the colour. */}
       <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-secondary-500" />
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {account && <CompanyPanel account={account} canEdit={canEditProfile} teamCount={teamCount} />}
@@ -126,17 +134,21 @@ export function SetupBlock({
         />
       </div>
 
-      <div className="h-px bg-edge" />
+      <div className="h-px bg-white/18" />
 
+      {/* Section labels go back to the dark tone the Command Center uses.
+          The strip takes "raised" rather than plain "card": on navy the
+          card variant's light border adds nothing, and its shadow — tuned
+          for pale grounds — is invisible. */}
       <div>
-        <HeroLabel tone="light">
+        <HeroLabel>
           Workstream hours · {quarter.label} · {quarter.range}
         </HeroLabel>
-        <HoursTotalsStrip hours={hours} quarter={quarter} variant="hero-light" />
+        <HoursTotalsStrip hours={hours} quarter={quarter} variant="raised" />
       </div>
 
       <div>
-        <HeroLabel tone="light">KPI Dashboard</HeroLabel>
+        <HeroLabel>KPI Dashboard</HeroLabel>
         <KpiBandHero accountId={accountId} sources={kpiSources} />
       </div>
     </section>
@@ -178,7 +190,9 @@ function Panel({
   action: ReactNode;
 }) {
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-xl border border-edge bg-white shadow-panel">
+    /* No border: on navy, a pale edge round a white card reads as a halo.
+       Depth comes from shadow-raised instead. */
+    <div className="relative flex flex-col overflow-hidden rounded-xl bg-white shadow-raised">
       <span aria-hidden="true" className={`absolute inset-x-0 top-0 h-[3px] ${complete ? "bg-success-400" : "bg-warning-400"}`} />
       <div className="flex items-center gap-2.5 px-4 pt-3.5">
         <span aria-hidden="true" className="h-3.5 w-[3px] shrink-0 rounded-full bg-secondary-500" />

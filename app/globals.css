@@ -136,12 +136,7 @@
      redefined, so every screen built before today renders unchanged.
      ---------------------------------------------------------------------- */
 
-  /* The block's ground: secondary-500 mixed into white, not hand-picked. */
-  --color-mist-1: #eaf6fa;
-  --color-mist-2: #f5fbfd;
-  --color-mist-3: #edf8fb;
-
-  /* Hairlines and panel edges inside the pale block. */
+  /* Hairlines and panel edges. */
   --color-edge: #dcedf5;
   /* Card borders on the page itself — one step bluer than neutral-200, so
      an edge belongs to the palette rather than sitting outside it. */
@@ -152,8 +147,13 @@
   /* §7 names shadow-sm/md/lg but never defines them, so cards have been
      falling back to Tailwind's grey defaults. These are navy-tinted, which
      is what makes a white card read as lifted rather than as an outline. */
-  --shadow-panel: 0 1px 2px rgb(2 42 102 / 0.04), 0 8px 20px -12px rgb(2 42 102 / 0.16);
   --shadow-lift: 0 1px 2px rgb(2 42 102 / 0.04), 0 10px 26px -16px rgb(2 42 102 / 0.16);
+
+  /* Client-confirmed (2026-09-29, approved mockup "3 — Navy block, white
+     cards"): a white card sitting on the navy block needs a much darker,
+     deeper shadow than one on a pale ground — the two above are tuned for
+     white-on-light and all but vanish against navy. */
+  --shadow-raised: 0 2px 4px rgb(2 20 50 / 0.18), 0 14px 30px -14px rgb(2 20 50 / 0.5);
 }
 
 body {

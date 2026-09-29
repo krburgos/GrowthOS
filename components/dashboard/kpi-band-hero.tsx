@@ -65,7 +65,7 @@ function Panel({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-edge bg-white shadow-panel">
+    <div className="flex flex-col overflow-hidden rounded-lg bg-white shadow-raised">
       <div className="flex items-center gap-2 border-b border-neutral-100 px-3.5 py-2">
         <span aria-hidden="true" className="h-3.5 w-[3px] shrink-0 rounded-full bg-secondary-500" />
         <h3 className="text-body-sm font-semibold text-primary-900">{title}</h3>
