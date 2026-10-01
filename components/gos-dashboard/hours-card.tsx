@@ -57,7 +57,11 @@ export function HoursCard({
   ];
 
   return (
-    <div className="relative flex flex-col gap-3.5 rounded-lg border border-neutral-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-secondary-300 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+    /* Client-confirmed (2026-10-01): the card now sits on a navy panel, so
+       it drops its border — white against navy is already a hard edge, and
+       the old hover-border-cyan cue is invisible without one. Depth and the
+       hover cue both come from shadow instead. */
+    <div className="relative flex flex-col gap-3.5 rounded-lg bg-white p-4 shadow-raised transition-all hover:-translate-y-0.5 hover:shadow-xl motion-reduce:transition-none motion-reduce:hover:translate-y-0">
       <div className="flex items-center gap-2.5">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-100 text-primary-700">
           <Icon className="size-[18px]" />

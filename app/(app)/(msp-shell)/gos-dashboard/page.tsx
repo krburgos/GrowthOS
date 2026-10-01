@@ -93,19 +93,32 @@ export default async function GosDashboardPage() {
         canEditMapping={isCroLeaderEditor}
       />
 
-      <section className="mt-2 flex flex-col gap-3">
-        <SectionHeading title="Mission Cards">
+      {/* Client-confirmed (2026-10-01, approved mockup "C — Navy panel"): the
+          Mission Cards get a navy ground rather than sitting straight on the
+          page. The cards themselves are unchanged apart from losing a border
+          they no longer need — colouring them was mocked up and rejected,
+          because a white card on navy separates harder than a coloured card
+          on grey, and because tinting the cards would have pushed the green
+          and amber status pills onto translucent grounds at their lighter
+          steps, softening exactly the signal those pills exist to carry.
+
+          It is the hero band's own gradient, so the page reads navy header →
+          white KPI band → navy card field. The white band between the two
+          keeps them from merging into one mass, and it matches what the
+          Homepage block now does. */}
+      <section className="mt-2 flex flex-col gap-3 rounded-xl p-4 shadow-lift md:p-5 bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]">
+        <SectionHeading title="Mission Cards" tone="dark">
           {/* The removed hero sentence was the only thing telling anyone the
               cards open. Said here instead, where someone about to click is
               actually looking. */}
-          <span className="text-caption text-neutral-400">
+          <span className="text-caption text-white/55">
             {steps.length} workstreams · {PLAYBOOK_PHASES.length} phases · click any card for its status report,
             tasks and KPIs
           </span>
         </SectionHeading>
 
         {!canLogHours && (
-          <p className="text-caption text-neutral-400">View only — MSP Owner/Admin and CRO Leader log hours</p>
+          <p className="text-caption text-white/55">View only — MSP Owner/Admin and CRO Leader log hours</p>
         )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
