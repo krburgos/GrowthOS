@@ -192,6 +192,24 @@ function MappingDialog({
  * cn("text-display", "text-primary-900") silently drops the size. See the
  * comment on cn() in lib/utils.ts.
  */
+/**
+ * Both group labels, from one definition — only the text colour differs.
+ *
+ * They were written out twice and drifted: the Opportunities row carries
+ * the "Active" chip, which is taller than bare text, so with padding-based
+ * sizing that row grew about 4px and the rule beneath the two titles came
+ * out stepped rather than level. A fixed `h-10` with centred content makes
+ * both rows the same height whatever they contain, and sharing one string
+ * means they cannot drift apart again.
+ *
+ * `h-10` not `min-h-10`: the chip must not be able to grow the row at all,
+ * or the step returns the moment anything else is added beside a title.
+ * Below `lg` the two halves stack, so there is no row to align against and
+ * nothing to clip.
+ */
+const GROUP_LABEL =
+  "flex h-10 items-center gap-2 overflow-hidden border-b border-neutral-300 px-3.5 text-caption font-bold uppercase tracking-wide";
+
 const TONE_CLASS: Record<string, string> = {
   won: "text-success-700",
   lost: "text-neutral-500",
@@ -278,7 +296,7 @@ export function KpiBand({
           divides the titles from their figures. */}
       <div className="grid grid-cols-1 overflow-hidden rounded-lg bg-white shadow-raised lg:grid-cols-[2fr_6fr]">
         <div>
-          <div className="flex items-center gap-2 border-b border-neutral-300 px-3.5 py-2.5 text-caption font-bold uppercase tracking-wide text-primary-900">
+          <div className={`${GROUP_LABEL} text-primary-900`}>
             <span aria-hidden="true" className="h-3.5 w-[3px] shrink-0 rounded-full bg-primary-700" />
             Prospects
           </div>
@@ -292,7 +310,7 @@ export function KpiBand({
           </div>
         </div>
         <div className="border-t border-neutral-300 lg:border-l lg:border-t-0">
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-neutral-300 px-3.5 py-2.5 text-caption font-bold uppercase tracking-wide text-secondary-800">
+          <div className={`${GROUP_LABEL} text-secondary-800`}>
             <span aria-hidden="true" className="h-3.5 w-[3px] shrink-0 rounded-full bg-secondary-500" />
             Opportunities
             <span
