@@ -233,9 +233,19 @@ export function KpiBand({
   );
 
   return (
-    <section className="flex flex-col gap-2">
-      <SectionHeading title="GrowthOS KPI Dashboard">
-        <span className="inline-flex items-center gap-1 text-caption text-neutral-400">
+    /* Client-confirmed (2026-10-01, approved mockup "C"): the band gets the
+       same navy panel the hero and the Mission Cards use, with its white
+       card raised inside. It was the only section on the page without a
+       ground of its own, which left it reading as leftover content between
+       two designed bands.
+
+       Noted at the time and accepted: three navy bands means the hero no
+       longer reads as the page's header — the earlier white band between
+       them was what kept the two dark masses apart. The client chose
+       consistency over that rhythm. */
+    <section className="flex flex-col gap-2 rounded-xl p-4 shadow-lift md:p-5 bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]">
+      <SectionHeading title="GrowthOS KPI Dashboard" tone="dark">
+        <span className="inline-flex items-center gap-1 text-caption text-white/55">
           <Radio className="size-3.5" />
           Live from the CRM{customized ? "" : " · default mapping"}
         </span>
@@ -243,7 +253,7 @@ export function KpiBand({
           <button
             type="button"
             onClick={() => setMapOpen(true)}
-            className="inline-flex items-center gap-1 text-caption font-semibold text-secondary-700 hover:underline"
+            className="inline-flex items-center gap-1 text-caption font-semibold text-secondary-300 hover:underline"
           >
             <SlidersHorizontal className="size-3.5" />
             Edit mapping
@@ -251,7 +261,11 @@ export function KpiBand({
         )}
       </SectionHeading>
 
-      <div className="grid grid-cols-1 overflow-hidden rounded-lg border border-neutral-200 bg-white lg:grid-cols-[2fr_6fr]">
+      {/* No border: against navy the white card already has a hard edge, and
+          the figures inside keep their dark steps because the card stays
+          white — which is what preserves Won/Ghosted/Lost as four
+          distinguishable colours at a glance. */}
+      <div className="grid grid-cols-1 overflow-hidden rounded-lg bg-white shadow-raised lg:grid-cols-[2fr_6fr]">
         <div>
           <div className="flex items-center justify-center gap-1.5 bg-primary-900 px-3 py-2 text-body-sm font-semibold text-white">
             <Users className="size-3.5" />
