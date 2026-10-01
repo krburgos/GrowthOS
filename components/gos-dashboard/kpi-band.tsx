@@ -1,6 +1,6 @@
 "use client";
 
-import { KanbanSquare, Plus, Radio, SlidersHorizontal, Users, X } from "lucide-react";
+import { Plus, Radio, SlidersHorizontal, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -212,15 +212,14 @@ export function KpiBand({
   const [openBox, setOpenBox] = useState<KpiBox | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
 
-  const renderCell = (box: KpiBox, i: number) => (
+  /* The cell paints its own white ground: the grid around it is tinted and
+     separated by a 1px gap, which is what draws the rules. */
+  const renderCell = (box: KpiBox) => (
     <button
       key={box.key}
       type="button"
       onClick={() => setOpenBox(box)}
-      className={cn(
-        "group flex min-w-0 flex-col items-center justify-center gap-1.5 border-t border-neutral-100 px-2 pb-5 pt-4 transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary-500",
-        i > 0 && "border-l"
-      )}
+      className="group flex min-w-0 flex-col items-center justify-center gap-1.5 bg-white px-2 pb-5 pt-4 transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary-500"
     >
       <span className="text-caption font-semibold uppercase tracking-wide text-neutral-400 transition-colors group-hover:text-neutral-500">
         {box.label}
@@ -265,29 +264,48 @@ export function KpiBand({
           the figures inside keep their dark steps because the card stays
           white — which is what preserves Won/Ghosted/Lost as four
           distinguishable colours at a glance. */}
+      {/* Client-confirmed (2026-10-01, mockup "C" + strongest rules). The two
+          solid header strips are gone: they were primary-900 and
+          secondary-700, which are the two ends of the gradient now behind
+          this card, so each dark bar read as a hole punched through the
+          white card rather than as a header. They become quiet label rows
+          with a coloured tick, which keeps the navy/cyan coding without
+          competing with the panel.
+
+          With the bars gone, the rules are the only thing separating one
+          figure from the next, so they move from neutral-100 to
+          neutral-300 — the client's pick — and a rule under each label row
+          divides the titles from their figures. */}
       <div className="grid grid-cols-1 overflow-hidden rounded-lg bg-white shadow-raised lg:grid-cols-[2fr_6fr]">
         <div>
-          <div className="flex items-center justify-center gap-1.5 bg-primary-900 px-3 py-2 text-body-sm font-semibold text-white">
-            <Users className="size-3.5" />
+          <div className="flex items-center gap-2 border-b border-neutral-300 px-3.5 py-2.5 text-caption font-bold uppercase tracking-wide text-primary-900">
+            <span aria-hidden="true" className="h-3.5 w-[3px] shrink-0 rounded-full bg-primary-700" />
             Prospects
           </div>
-          <div className="grid grid-cols-2">{KPI_BOXES.filter((b) => b.group === "prospects").map(renderCell)}</div>
+          {/* gap-px over a tinted ground draws every rule, horizontal and
+              vertical, at any column count. Per-cell borders could not: the
+              pipeline grid reflows from five columns to three, and a
+              left-border rule left a stray stub at the start of the second
+              row - invisible at neutral-100, obvious at neutral-300. */}
+          <div className="grid grid-cols-2 gap-px bg-neutral-300">
+            {KPI_BOXES.filter((b) => b.group === "prospects").map(renderCell)}
+          </div>
         </div>
-        <div className="border-t border-neutral-200 lg:border-l lg:border-t-0">
-          <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 bg-secondary-700 px-3 py-2 text-body-sm font-semibold text-white">
-            <span className="inline-flex items-center gap-1.5">
-              <KanbanSquare className="size-3.5" />
-              Opportunities
-            </span>
+        <div className="border-t border-neutral-300 lg:border-l lg:border-t-0">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-neutral-300 px-3.5 py-2.5 text-caption font-bold uppercase tracking-wide text-secondary-800">
+            <span aria-hidden="true" className="h-3.5 w-[3px] shrink-0 rounded-full bg-secondary-500" />
+            Opportunities
             <span
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-0.5 text-caption font-semibold"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-secondary-100 px-2.5 py-0.5 text-caption font-semibold normal-case tracking-normal text-secondary-800"
               title="Every stage except Won, Lost and Lost Resurrected"
             >
               Active
               <CountUp value={activeOpportunities(sources)} className="tabular-nums" />
             </span>
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-5">{KPI_BOXES.filter((b) => b.group === "pipeline").map(renderCell)}</div>
+          <div className="grid grid-cols-3 gap-px bg-neutral-300 sm:grid-cols-5">
+            {KPI_BOXES.filter((b) => b.group === "pipeline").map(renderCell)}
+          </div>
         </div>
       </div>
 
