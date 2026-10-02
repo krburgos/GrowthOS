@@ -2,13 +2,19 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { EditOverviewPanel } from "@/components/gos-dashboard/edit-overview-panel";
-import { StatusReportPanel } from "@/components/gos-dashboard/status-report-panel";
+import { ReportPanel } from "@/components/gos-dashboard/report-panel";
 import { StepHeader } from "@/components/gos-dashboard/step-header";
 import { StepHoursPanel } from "@/components/gos-dashboard/step-hours-panel";
 import { TaskList } from "@/components/gos-dashboard/task-list";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
-import { getMemberTaskLoad, getStepDetail, getStepHours, getTasksForStep } from "@/lib/gos-dashboard/queries";
+import {
+  getMemberTaskLoad,
+  getReports,
+  getStepDetail,
+  getStepHours,
+  getTasksForStep,
+} from "@/lib/gos-dashboard/queries";
 import { getTeamMembers } from "@/lib/team/queries";
 import { PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
 
@@ -51,7 +57,7 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
   if (!user || !user.account_id) return null;
 
   const quarter = currentQuarter();
-  const [step, hours, tasks, team, memberLoad] = await Promise.all([
+  const [step, hours, tasks, team, memberLoad, reports] = await Promise.all([
     getStepDetail(user.account_id, slug),
     getStepHours(user.account_id, quarter.start),
     getTasksForStep(user.account_id, slug),
@@ -59,6 +65,7 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
     // Account-wide: the cap is a person whole commitment, so this board has
     // to count the tasks they carry on the other thirteen workstreams too.
     getMemberTaskLoad(user.account_id),
+    getReports(user.account_id, slug),
   ]);
   if (!step) notFound();
 
@@ -93,13 +100,17 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
         canLogHours={canLogHours}
       />
 
-      <StatusReportPanel
+      {/* Client-confirmed (2026-10-02): the typed Status Report panel is
+          replaced by the uploaded report. One row instead of a tall panel,
+          so "What to do next" sits directly under the hours — which was the
+          point: open a Mission Card and see what to do, not read an essay
+          first. */}
+      <ReportPanel
         accountId={user.account_id}
-        stepSlug={step.slug}
+        slug={step.slug}
         stepTitle={step.title}
-        initialSummary={step.statusReportSummary}
-        initialStats={step.statusReportStats}
-        canEdit={canEdit}
+        reports={reports}
+        canUpload={canEdit}
       />
 
       <TaskList

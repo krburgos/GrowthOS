@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { Check, ChevronRight, ChevronUp, Flag, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import {
-  TASK_PRIORITY_GROUPS,
+  TASK_PRIORITY_INK,
   TASK_STATES,
   TASK_STATE_CELL,
   TASK_STATE_LABEL,
@@ -55,24 +55,47 @@ const emptyDraft = (): Draft => ({
   assignee_id: UNASSIGNED,
 });
 
+type SortKey = "title" | "state" | "assignee" | "due_date" | "priority" | "hours";
+
+/** Sort orders that are meaningful rather than alphabetical. */
+const STATE_ORDER: Record<TaskState, number> = { in_progress: 0, active: 1, on_hold: 2, complete: 3 };
+const PRIORITY_ORDER: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2 };
+
+/** Unassigned and undated sort last whichever direction is chosen. */
+function sortValue(task: Task, key: SortKey): string | number {
+  switch (key) {
+    case "title":
+      return task.title.toLowerCase();
+    case "state":
+      return STATE_ORDER[task.state];
+    case "assignee":
+      return task.assignee?.name.toLowerCase() ?? "￿";
+    case "due_date":
+      return task.due_date ?? "9999-12-31";
+    case "priority":
+      return PRIORITY_ORDER[task.priority];
+    case "hours":
+      return task.hours;
+  }
+}
+
 /**
- * "What to do next" — a workstream's tasks as a board (client-confirmed,
- * 2026-09-25, grouped rows over kanban).
+ * "What to do next" — a workstream's tasks as a flat, sortable sheet
+ * (client-confirmed, 2026-10-02, "C — flat and sortable").
  *
- * Rows are grouped by priority, so the board reads top to bottom as an
- * order of work. State stays a column rather than becoming the grouping,
- * which is what a kanban would have done: hours, owner and due date all
- * need to be readable at a glance, and a kanban card hides them.
+ * It replaced a board grouped by priority. Grouping answers one question
+ * well and others badly: a sheet you can sort answers "everything due this
+ * week", "everything on Nerm" and "the biggest jobs" with one click each,
+ * which is what a spreadsheet is for. Priority stays a column, so nothing
+ * is lost by no longer grouping on it.
  *
- * Assigning is the main verb here, so state, assignee, hours and the due
- * date are changed inline; the dialog is for writing a task down or
- * changing what it says.
+ * The detail line survives as a Notes column rather than being dropped,
+ * which is the thing a wide sheet buys over a compact card row.
  *
- * `canAssign` and `canDefine` are the same set of roles as of 2026-09-25
- * — CRO Leader plus the account's Owner and Admin — and are kept as two
- * props because they answer different questions and have already diverged
- * once. Either way they mirror the database rather than standing in for
- * it: RLS decides who may write, so hiding a control is courtesy.
+ * Assigning is still the main verb, so state, owner, hours and the due date
+ * are edited in place; the pencil opens the dialog for what the work is.
+ * `canAssign` and `canDefine` are the same set of roles and mirror the
+ * database rather than standing in for it — RLS decides who may write.
  */
 export function TaskList({
   accountId,
@@ -94,24 +117,19 @@ export function TaskList({
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<Draft | null>(null);
-  // The board keeps its own copy of the rows so an inline change lands the
-  // instant it is clicked. Waiting for the write and then re-rendering the
-  // whole server page - which is what this did before - put a visible dead
-  // beat between the click and the colour changing.
+  // The sheet keeps its own copy of the rows so an inline change lands the
+  // instant it is clicked rather than after a server round trip.
   const [rows, setRows] = useState(tasks);
   useEffect(() => setRows(tasks), [tasks]);
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "priority", dir: 1 });
+  const [showDone, setShowDone] = useState(false);
+
   const summary = taskSummary(rows);
 
-  /**
-   * Applies the change locally first, then writes. On failure the row goes
-   * back to what it was and says so; nothing is left showing a value the
-   * database rejected.
-   *
-   * The refresh on success is still worth doing but no longer blocks
-   * anything visible: completing a task moves the workstream's achieved
-   * hours through a database trigger, so the Hours panel above this board
-   * has to catch up.
-   */
+  const capacityOf = new Map<string, Capacity>(
+    team.map((m) => [m.id, capacityFor(m.weekly_hours, memberLoad[m.id] ?? 0)])
+  );
+
   const patch = async (id: string, values: Record<string, unknown>, optimistic: Partial<Task>) => {
     const before = rows.find((t) => t.id === id);
     if (!before) return;
@@ -137,51 +155,45 @@ export function TaskList({
     assignee_id: task.assignee?.id ?? UNASSIGNED,
   });
 
-  // Capacity is per person, not per row, so it is worked out once here and
-  // read by every row that names them.
-  const capacityOf = new Map<string, Capacity>(
-    team.map((m) => [m.id, capacityFor(m.weekly_hours, memberLoad[m.id] ?? 0)])
+  const rowProps = {
+    team,
+    canAssign,
+    canDefine,
+    capacityOf,
+    patch,
+    onEdit: (t: Task) => setDraft(editDraft(t)),
+  };
+
+  const by = (a: Task, b: Task) => {
+    const av = sortValue(a, sort.key);
+    const bv = sortValue(b, sort.key);
+    if (av === bv) return a.title.localeCompare(b.title);
+    return (av < bv ? -1 : 1) * sort.dir;
+  };
+
+  const open = rows.filter((t) => t.state !== "complete").sort(by);
+  const done = rows.filter((t) => t.state === "complete").sort(by);
+
+  const toggleSort = (key: SortKey) =>
+    setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
+
+  const head = (key: SortKey, label: string, align?: "center" | "right") => (
+    <button
+      type="button"
+      onClick={() => toggleSort(key)}
+      aria-sort={sort.key === key ? (sort.dir === 1 ? "ascending" : "descending") : "none"}
+      className={`flex items-center gap-1 px-2.5 py-2 text-left ${HEAD} hover:text-primary-900 ${
+        align === "center" ? "justify-center" : align === "right" ? "justify-end" : ""
+      }`}
+    >
+      {label}
+      <ChevronUp
+        className={`size-3 transition-transform motion-reduce:transition-none ${
+          sort.key === key ? (sort.dir === 1 ? "text-secondary-600" : "rotate-180 text-secondary-600") : "opacity-0"
+        }`}
+      />
+    </button>
   );
-
-  /**
-   * Completed work is folded away rather than removed (client-confirmed,
-   * 2026-09-25). A board that listed every finished task would grow without
-   * limit, and this one is called "What to do next" — it should open on what
-   * is next. Nothing is archived to achieve that: archiving a completed task
-   * subtracts its hours from the quarter's achieved figure, by design, so
-   * using it as a tidying mechanism would quietly gut the hours record.
-   *
-   * What a completed task was worth is already kept in three other places —
-   * the quarter's achieved hours, the Mission Card's "X of Y done", and the
-   * Status Report PDF — so hiding the rows loses nothing.
-   */
-  const quarterStart = currentQuarter().start;
-  const groups = TASK_PRIORITY_GROUPS.map((g) => {
-    const items = rows.filter((t) => t.priority === g.value);
-    const done = items.filter((t) => t.state === "complete");
-    return {
-      ...g,
-      items,
-      open: items.filter((t) => t.state !== "complete"),
-      done,
-      // Finished this quarter is recent enough to still be interesting;
-      // everything older sits behind a second click.
-      doneThisQuarter: done.filter((t) => (t.completed_at ?? "") >= quarterStart),
-      doneEarlier: done.filter((t) => (t.completed_at ?? "") < quarterStart),
-    };
-  }).filter((g) => g.items.length > 0);
-
-  const [shownDone, setShownDone] = useState<Set<string>>(new Set());
-  const [shownEarlier, setShownEarlier] = useState<Set<string>>(new Set());
-  const toggleDone = (key: string) =>
-    setShownDone((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(key)) next.add(key);
-      return next;
-    });
-  const showEarlier = (key: string) => setShownEarlier((prev) => new Set(prev).add(key));
-
-  const rowProps = { team, canAssign, canDefine, capacityOf, patch, onEdit: (t: Task) => setDraft(editDraft(t)) };
 
   return (
     <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
@@ -207,69 +219,55 @@ export function TaskList({
       {rows.length === 0 ? (
         <p className="px-5 py-10 text-center text-body-sm text-neutral-400">
           {canDefine
-            ? "Add the first task once the status report says what needs fixing."
+            ? "Add the first task once the report says what needs fixing."
             : "CRO Leader has not set any tasks for this workstream yet."}
         </p>
       ) : (
-        /* The board scrolls sideways rather than dropping columns: an owner
-           or a due date you cannot see is the reason a task gets missed. */
+        /* The sheet scrolls sideways rather than dropping columns: a due
+           date or an owner you cannot see is how a task gets missed. */
         <div className="overflow-x-auto px-5 py-5">
-          <div className="min-w-[768px]">
-            {groups.map((group) => {
-              const groupHours = group.open.reduce((sum, t) => sum + t.hours, 0);
-              return (
-                <div key={group.value} className="mb-6 last:mb-0">
-                  <div className="flex items-center gap-2.5 pb-2 pl-3.5">
-                    <h3 className={`text-body font-bold ${group.text}`}>{group.label}</h3>
-                    <span className="text-body-sm text-neutral-500">
-                      {group.open.length === 0
-                        ? "all done"
-                        : `${group.open.length} open`}
-                    </span>
-                    <span className="ml-auto text-body-sm tabular-nums text-neutral-500">
-                      {formatTaskHours(groupHours)} hrs left
-                    </span>
-                  </div>
+          <div className="min-w-[1020px] overflow-hidden rounded-md border border-neutral-200">
+            <div className={`${ROW} border-b border-neutral-200 bg-neutral-50`}>
+              <span />
+              {head("title", "Task")}
+              {head("state", "Status", "center")}
+              {head("assignee", "Owner")}
+              {head("due_date", "Due")}
+              {head("priority", "Priority")}
+              {head("hours", "Est", "right")}
+              <span className={`px-2.5 py-2 ${HEAD}`}>Notes</span>
+            </div>
 
-                  <div className={`overflow-hidden rounded-md border border-l-4 border-neutral-200 ${group.bar}`}>
-                    {group.open.length > 0 && (
-                    <div className={`${ROW} bg-neutral-50`}>
-                      <div className={`${CELL} py-2.5 ${HEAD}`}>Task</div>
-                      <div className={`${CELL} py-2.5 ${HEAD}`}>Owner</div>
-                      <div className={`${CELL} justify-center py-2.5 ${HEAD}`}>Status</div>
-                      <div className={`${CELL} py-2.5 ${HEAD}`}>Due</div>
-                      <div className={`${CELL} justify-center py-2.5 ${HEAD}`}>Hrs</div>
-                    </div>
-                    )}
+            {open.map((task) => (
+              <TaskRow key={task.id} task={task} {...rowProps} />
+            ))}
 
-                    {group.open.map((task) => (
-                      <TaskRow key={task.id} task={task} {...rowProps} />
-                    ))}
+            {done.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowDone((v) => !v)}
+                  aria-expanded={showDone}
+                  className="flex w-full items-center gap-2 border-t border-neutral-200 bg-neutral-50 px-2.5 py-2.5 text-left text-body-sm text-neutral-500 hover:text-primary-900"
+                >
+                  <ChevronRight
+                    className={`size-3.5 transition-transform motion-reduce:transition-none ${showDone ? "rotate-90" : ""}`}
+                  />
+                  <span className="font-semibold">{done.length} done</span>
+                </button>
+                {showDone && done.map((task) => <TaskRow key={task.id} task={task} {...rowProps} />)}
+              </>
+            )}
 
-                    {group.done.length > 0 && (
-                      <DoneSection
-                        group={group}
-                        expanded={shownDone.has(group.value)}
-                        onToggle={() => toggleDone(group.value)}
-                        showingEarlier={shownEarlier.has(group.value)}
-                        onShowEarlier={() => showEarlier(group.value)}
-                        rowProps={rowProps}
-                      />
-                    )}
-
-                    {canDefine && (
-                      <button
-                        type="button"
-                        onClick={() => setDraft({ ...emptyDraft(), priority: group.value })}
-                        className="w-full border-t border-dashed border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-left text-body-sm text-neutral-400 hover:text-secondary-700"
-                      >
-                        + Add task
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            {canDefine && (
+              <button
+                type="button"
+                onClick={() => setDraft(emptyDraft())}
+                className="w-full border-t border-neutral-200 bg-neutral-50 px-2.5 py-2.5 text-left text-body-sm text-neutral-400 hover:text-secondary-700"
+              >
+                + Task
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -288,17 +286,6 @@ export function TaskList({
   );
 }
 
-/**
- * The status cell (client-confirmed, 2026-09-25, "status palette").
- *
- * A colour palette rather than a Select: one click opens it, one more
- * sets the state. The Select that was here before was a form control
- * doing a board cell's job — it carried a chevron and a listbox, and it
- * read as something you fill in rather than something you flip.
- *
- * The popover portals, so the group's rounded overflow-hidden frame
- * cannot clip it.
- */
 function StatusCell({
   task,
   canAssign,
@@ -432,97 +419,7 @@ function HoursCell({
   );
 }
 
-/**
- * Completed work in a priority group, folded away (client-confirmed,
- * 2026-09-25).
- *
- * Shut by default: the board opens on what is left to do. Opening it shows
- * what finished this quarter, and anything older sits behind a second
- * click, so a workstream in its second year does not open onto two hundred
- * rows of history.
- *
- * Nothing here is archived. Archiving a completed task subtracts its hours
- * from the quarter's achieved figure — that is deliberate, and it is
- * exactly why archiving must not be used as a way to tidy the board.
- */
-function DoneSection({
-  group,
-  expanded,
-  onToggle,
-  showingEarlier,
-  onShowEarlier,
-  rowProps,
-}: {
-  group: {
-    value: string;
-    done: Task[];
-    doneThisQuarter: Task[];
-    doneEarlier: Task[];
-  };
-  expanded: boolean;
-  onToggle: () => void;
-  showingEarlier: boolean;
-  onShowEarlier: () => void;
-  rowProps: RowProps;
-}) {
-  const visible = showingEarlier ? [...group.doneThisQuarter, ...group.doneEarlier] : group.doneThisQuarter;
-  const hidden = group.doneEarlier.length;
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        className="flex w-full items-center gap-2 border-t border-neutral-100 bg-neutral-50 px-3.5 py-2.5 text-left text-body-sm text-neutral-500 hover:text-primary-900"
-      >
-        <ChevronRight
-          className={`size-3.5 transition-transform motion-reduce:transition-none ${expanded ? "rotate-90" : ""}`}
-        />
-        <span className="font-semibold">
-          {group.done.length} done
-        </span>
-        {!expanded && hidden > 0 && (
-          <span className="text-caption text-neutral-400">
-            {group.doneThisQuarter.length} this quarter
-          </span>
-        )}
-      </button>
-
-      {expanded && (
-        <>
-          {visible.length === 0 ? (
-            <p className="border-t border-neutral-100 px-3.5 py-3 text-body-sm text-neutral-400">
-              Nothing finished this quarter.
-              {hidden > 0 && (
-                <button type="button" onClick={onShowEarlier} className="ml-1.5 font-semibold text-secondary-700 hover:underline">
-                  Show {hidden} from earlier
-                </button>
-              )}
-            </p>
-          ) : (
-            visible.map((task) => <TaskRow key={task.id} task={task} {...rowProps} />)
-          )}
-
-          {visible.length > 0 && !showingEarlier && hidden > 0 && (
-            <button
-              type="button"
-              onClick={onShowEarlier}
-              className="w-full border-t border-neutral-100 px-3.5 py-2.5 text-left text-body-sm font-semibold text-secondary-700 hover:underline"
-            >
-              Show {hidden} finished before this quarter
-            </button>
-          )}
-        </>
-      )}
-    </>
-  );
-}
-
-/**
- * One row of the board. Extracted so the open rows and the collapsed
- * completed rows render identically rather than drifting apart.
- */
+/** One row of the sheet. */
 function TaskRow({
   task,
   team,
@@ -532,25 +429,48 @@ function TaskRow({
   patch,
   onEdit,
 }: RowProps & { task: Task }) {
+  const done = task.state === "complete";
+
   return (
-    <div key={task.id} className={`${ROW} border-t border-neutral-100`}>
-      <div className={`${CELL} min-w-0 flex-col items-start gap-0`}>
+    <div className={`${ROW} border-t border-neutral-100 hover:bg-neutral-50/70`}>
+      {/* Ticking the box completes the task, which is the one action worth a
+          single click — and completing moves its hours into the quarter's
+          achieved figure, so it is the row's most consequential control. */}
+      <span className={`${CELL} justify-center`}>
+        {canAssign ? (
+          <button
+            type="button"
+            onClick={() => void patch(task.id, { state: done ? "active" : "complete" }, { state: done ? "active" : "complete" })}
+            aria-label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
+            className={`flex size-[15px] items-center justify-center rounded border-[1.5px] transition-colors ${
+              done ? "border-success-600 bg-success-600 text-white" : "border-neutral-300 hover:border-secondary-500"
+            }`}
+          >
+            {done && <Check className="size-2.5" strokeWidth={3} />}
+          </button>
+        ) : (
+          <span
+            className={`block size-[15px] rounded border-[1.5px] ${
+              done ? "border-success-600 bg-success-600" : "border-neutral-300"
+            }`}
+          />
+        )}
+      </span>
+
+      <span className={`${CELL} min-w-0`}>
         <span
-          className={`max-w-full truncate text-body-sm font-semibold ${
-            task.state === "complete" ? "text-neutral-400 line-through" : "text-neutral-900"
-          }`}
+          className={`truncate text-body-sm font-medium ${done ? "text-neutral-400 line-through" : "text-neutral-900"}`}
           title={task.title}
         >
           {task.title}
         </span>
-        {task.detail && (
-          <span className="max-w-full truncate text-caption text-neutral-500" title={task.detail}>
-            {task.detail}
-          </span>
-        )}
-      </div>
+      </span>
 
-      <div className={`${CELL} min-w-0`}>
+      <span className="flex border-l border-neutral-100">
+        <StatusCell task={task} canAssign={canAssign} onChange={(state) => void patch(task.id, { state }, { state })} />
+      </span>
+
+      <span className={`${CELL} min-w-0 border-l border-neutral-100`}>
         {canAssign ? (
           <Select
             value={task.assignee?.id ?? UNASSIGNED}
@@ -566,10 +486,7 @@ function TaskRow({
               aria-label={`Who is doing ${task.title}`}
               className="h-auto w-full gap-1.5 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0"
             >
-              <Owner
-                assignee={task.assignee}
-                capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined}
-              />
+              <Owner assignee={task.assignee} capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={UNASSIGNED}>Nobody yet</SelectItem>
@@ -583,9 +500,7 @@ function TaskRow({
                         {m.kind === "outsourced" ? " (outsourced)" : ""}
                       </span>
                       {cap && (
-                        <span className={`text-caption ${CAPACITY_CLASS[cap.tone].text}`}>
-                          {capacityShort(cap)}
-                        </span>
+                        <span className={`text-caption ${CAPACITY_CLASS[cap.tone].text}`}>{capacityShort(cap)}</span>
                       )}
                     </span>
                   </SelectItem>
@@ -594,36 +509,27 @@ function TaskRow({
             </SelectContent>
           </Select>
         ) : (
-          <Owner
-            assignee={task.assignee}
-            capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined}
-          />
+          <Owner assignee={task.assignee} capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined} />
         )}
-      </div>
+      </span>
 
-      {/* Monday's tell: the status fills its whole cell. */}
-      <div className="flex">
-        <StatusCell
-          task={task}
-          canAssign={canAssign}
-          onChange={(state) => void patch(task.id, { state }, { state })}
-        />
-      </div>
-
-      <div className={CELL}>
+      <span className={`${CELL} border-l border-neutral-100`}>
         <DueDateCell
           task={task}
           canEdit={canAssign}
           onChange={(due_date) => void patch(task.id, { due_date }, { due_date })}
         />
-      </div>
+      </span>
 
-      <div className={`${CELL} justify-center gap-1`}>
-        <HoursCell
-          task={task}
-          canEdit={canAssign}
-          onChange={(hours) => void patch(task.id, { hours }, { hours })}
-        />
+      <span className={`${CELL} border-l border-neutral-100`}>
+        <span className={`inline-flex items-center gap-1.5 text-body-sm font-semibold ${TASK_PRIORITY_INK[task.priority]}`}>
+          <Flag className="size-3.5" />
+          <span className="capitalize">{task.priority}</span>
+        </span>
+      </span>
+
+      <span className={`${CELL} justify-end gap-1 border-l border-neutral-100`}>
+        <HoursCell task={task} canEdit={canAssign} onChange={(hours) => void patch(task.id, { hours }, { hours })} />
         {canDefine && (
           <button
             type="button"
@@ -634,7 +540,13 @@ function TaskRow({
             <Pencil className="size-3.5" />
           </button>
         )}
-      </div>
+      </span>
+
+      <span className={`${CELL} min-w-0 border-l border-neutral-100`}>
+        <span className="truncate text-caption text-neutral-500" title={task.detail ?? undefined}>
+          {task.detail ?? ""}
+        </span>
+      </span>
     </div>
   );
 }
@@ -648,9 +560,10 @@ interface RowProps {
   onEdit: (task: Task) => void;
 }
 
-/** Five columns, one definition — the header row and the data rows share it. */
-const ROW = "grid grid-cols-[minmax(0,1fr)_128px_128px_132px_78px] items-stretch";
-const CELL = "flex items-center gap-2 px-3.5 py-2.5";
+/** Eight columns, one definition — the header and the rows share it. */
+const ROW =
+  "grid grid-cols-[34px_minmax(0,1.4fr)_132px_136px_120px_104px_86px_minmax(0,1fr)] items-stretch";
+const CELL = "flex items-center gap-2 px-2.5 py-2";
 const HEAD = "text-caption font-bold uppercase tracking-wide text-neutral-400";
 
 /** Hours read as whole numbers when they are whole ones: 12, not 12.0. */

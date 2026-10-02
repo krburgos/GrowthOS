@@ -74,7 +74,7 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 | B1 | Onboarding | Onboarding Profile Wizard | New MSP Owner, first login |
 | C1 | Dashboard | Dashboard (Home) | All MSP roles |
 | C2 | GOS Dashboard | GOS Dashboard (client-confirmed addition, 2026-09-16; backed by a real per-account schema per client-confirmed amendment, 2026-09-16 — Backend Schema §6.6c; readiness check, KPI band and hours cards added 2026-09-17 — §6.6d) — 14 GrowthOS Playbook steps as clickable hours cards, sits directly below Dashboard in the sidebar | All roles view; hours: MSP Owner/Admin + CRO Admin/Advisor edit; everything else: CRO Admin/Advisor edit |
-| C3 | GOS Dashboard | Playbook Step Detail — no tabs: Hours, then Status Report (all 14, exportable as PDF), then the "What to do next" task board. Duties and KPIs removed 2026-09-25 | All roles view; hours: MSP Owner/Admin + CRO Admin/Advisor edit; everything else: CRO Admin/Advisor edit |
+| C3 | GOS Dashboard | Playbook Step Detail — no tabs: Hours, then the uploaded report (View in a modal, CRO Leader uploads), then "What to do next" as a flat sortable sheet. Duties and KPIs removed 2026-09-25 | All roles view; hours: MSP Owner/Admin + CRO Admin/Advisor edit; everything else: CRO Admin/Advisor edit |
 | D1 | Contacts | Contacts List | All MSP roles |
 | D2 | Contacts | Contact Detail (tabs: Overview, Activity, Opportunities, Emails) | All MSP roles |
 | D3 | Contacts | Add Contact (manual) | Owner, Admin, Marketing |
@@ -236,6 +236,15 @@ Archiving came with authorship, since someone who can add a task needs to be abl
 Each field owns its own toggle, so on the two screens with a "new" and a "confirm" pair, revealing one does not reveal the other — the confirm field exists to catch a typo, and tying them together would weaken that.
 
 Two behaviours worth recording because they are easy to regress: the toggle is `type="button"` (inside a form a button defaults to submit, so revealing a password would otherwise post the form), and it stays in the tab order (dropping it out shortens the tab path for a mouse user while leaving a keyboard user unable to reveal what they typed, which is the group the feature helps most). It announces its next action — "Show password" / "Hide password" — rather than its current state.
+
+**Client-confirmed restructure (2026-10-02) — the report becomes a file, and the tasks become a sheet.** Two changes to the workstream page (C3), both aimed at one thing: open a Mission Card and see what to do, rather than read an essay first.
+
+- **The typed Status Report panel is replaced by one row** carrying the report's title, who uploaded it and when, and a **View report** button. The PDF opens in a modal with a Download button; CRO Leader sees an Upload/Replace control beside it. Past reports are kept and reachable from an "N earlier" disclosure on the same row — replacing a report archives the previous one rather than overwriting it. The upload is a recorded exception to the no-attachments rule; Backend Schema §6.6g sets out why and how narrowly it is drawn.
+- **"What to do next" becomes a flat, sortable sheet** rather than a board grouped by priority. Grouping answers one question well and others badly; a sheet sorted by a click answers "everything due this week", "everything on Nerm" and "the biggest jobs" in turn. Columns: a completion checkbox, Task, Status, Owner, Due, Priority, Est and **Notes** — the detail line survives as its own column rather than being dropped, which is what the wider layout buys. Priority is a column now, so nothing is lost by no longer grouping on it. Completed work still folds to one line. Status, owner, hours and the due date stay editable in place; the pencil opens the CRO-authored dialog.
+
+The ticked checkbox completes a task in one click, which is deliberate: completing moves its hours into the quarter's achieved figure, so it is the row's most consequential control and should be its easiest.
+
+**Left in place but no longer reachable from the UI:** `GET /api/gos-dashboard/[slug]/export`, the generated Status Report PDF. Its only link was the panel that has now gone. The route still works and still renders the typed summary and figures, which remain in the database — so it is a decision for the client whether to relink it, repurpose it as a task-sheet export, or retire it.
 
 **Client-confirmed rename (2026-09-15):** "Pipeline by Stage" is now labeled "Opportunities by Stage" on the actual Dashboard — a copy-only change, same component and data. Kept as "Pipeline by Stage" in the narrative above and elsewhere in this document where it describes the mockup as originally approved.
 

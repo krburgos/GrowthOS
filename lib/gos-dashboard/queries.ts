@@ -7,6 +7,7 @@ import {
   type CompanyProfile,
 } from "@/lib/accounts/company-profile";
 import { TOTAL_QUESTION_COUNT, countAnswered as countQuestionnaireAnswered } from "@/lib/questionnaire/questions";
+import type { WorkstreamReport } from "@/lib/gos-dashboard/reports";
 import type { Task, TaskPriority, TaskState } from "@/lib/gos-dashboard/tasks";
 import type { TeamKind } from "@/lib/team/members";
 import { createClient } from "@/lib/supabase/server";
@@ -388,4 +389,39 @@ export async function getMemberStepTasks(
     }
   }
   return out;
+}
+
+/**
+ * Every report ever uploaded for one workstream, newest first
+ * (client-confirmed, 2026-10-02 — history is kept, so this returns the
+ * archive rather than only the current one). Archived rows are excluded;
+ * replacing a report archives its predecessor.
+ */
+export async function getReports(accountId: string, slug: string): Promise<WorkstreamReport[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("gos_dashboard_reports")
+    .select("id, title, file_path, file_size, created_at, users(full_name)")
+    .eq("account_id", accountId)
+    .eq("step_slug", slug)
+    .is("archived_at", null)
+    .order("created_at", { ascending: false });
+
+  return ((data ?? []) as ReportRow[]).map((r) => ({
+    id: r.id,
+    title: r.title,
+    file_path: r.file_path,
+    file_size: r.file_size,
+    created_at: r.created_at,
+    uploadedBy: unwrap(r.users)?.full_name ?? null,
+  }));
+}
+
+interface ReportRow {
+  id: string;
+  title: string;
+  file_path: string;
+  file_size: number | null;
+  created_at: string;
+  users: { full_name: string } | { full_name: string }[] | null;
 }

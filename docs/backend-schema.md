@@ -1111,6 +1111,19 @@ create policy gos_dashboard_tasks_update on gos_dashboard_tasks for update
 Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream at 28.0 achieved hours went to 35.5 on completing a 7.5-hour task, back to 28.0 on re-opening it, to 38.0 when the completed task's hours were edited to 10.0, and back to 28.0 when it was archived.
 
 
+### 6.6g gos_dashboard_reports
+
+**Client-confirmed addition (2026-10-02) — and a recorded exception to §12.** CRO Leader uploads a PDF report per workstream; the MSP opens it in a modal on the workstream page and may download it; every past report is kept. Migration: `supabase/migrations/20261002000001_gos_dashboard_reports.sql`.
+
+**Why this is flagged rather than assumed.** §12 and PRD §6.8/§10 rule out file attachments for Phase 1. Four exceptions already exist — company logo, user avatar, contact avatar, CRM company logo — and each backs a *single image field*, with §12 stating there is "no general-purpose attachments feature." This is a fifth exception and a larger one: keeping history means a table rather than a column. It was raised with the client before building and confirmed. It stays deliberately narrow — reports only, one workstream each, uploaded by CRO Leader alone, with no way to attach a file to a contact, company, opportunity or task.
+
+- **The bucket is private**, unlike the four image buckets. Those hold logos and avatars meant to be fetched by URL; a workstream report is a client's own analytics, so a guessable path must be worth nothing to another tenant. Reads go through a signed URL minted when the modal opens, valid for five minutes, never stored on the row.
+- **The object path is the authorisation boundary**: `<account_id>/<step_slug>/<uuid>.pdf`. The storage policy checks the first folder segment against `auth_account_id()`, so it needs no join back to the table. Paths are therefore built in code, never from user input.
+- **Write is CRO-only, read is the account's.** Insert and update require `cro_admin`/`cro_advisor`; select admits the account, CRO Leader and a partner for that account. There is no delete policy — replacing a report sets `archived_at` on the previous one.
+- **Known gap:** the *storage* policy admits the account and CRO Leader but not partners, because checking `is_partner_for()` there would mean casting a path segment to uuid inside a policy. A partner can therefore see a report's title and date through the table but cannot open the file. Worth closing if partner access to reports is wanted.
+
+**What it replaced.** The typed Status Report panel is gone from the workstream page (App Flow §4.3a): CRO Leader hands over the real analytics instead of retyping its findings, and collapsing a tall panel into one row is what puts "What to do next" directly under the hours. `gos_dashboard_step_status.status_report_summary` and `gos_dashboard_status_report_stats` keep their rows and are no longer read by the page — the same treatment `gos_dashboard_suggestions` and `gos_dashboard_tracker_items` received.
+
 ### 6.6 campaigns, campaign_recipients, campaign_events
 
 ```

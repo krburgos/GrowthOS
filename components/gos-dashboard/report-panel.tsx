@@ -1,0 +1,284 @@
+"use client";
+
+import { Download, FileText, History, Upload, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
+import {
+  REPORTS_BUCKET,
+  SIGNED_URL_TTL_SECONDS,
+  defaultReportTitle,
+  formatFileSize,
+  formatReportDate,
+  reportPath,
+  type WorkstreamReport,
+} from "@/lib/gos-dashboard/reports";
+import { createClient } from "@/lib/supabase/client";
+
+/**
+ * The workstream's report (client-confirmed, 2026-10-02).
+ *
+ * This replaced the typed Status Report panel. The client would rather hand
+ * over the real analytics PDF than have CRO Leader retype its findings, and
+ * collapsing a tall panel into one row is what puts "What to do next"
+ * directly under the hours — which was the point of the change.
+ *
+ * Reads go through a short-lived signed URL rather than a public URL: the
+ * bucket holds a client's own analytics, so a guessable path must be worth
+ * nothing to another tenant. The URL is minted when the modal opens and is
+ * not stored.
+ *
+ * History is kept (client-confirmed). Uploading does not overwrite — the
+ * previous report is archived and stays readable under "Earlier reports".
+ */
+export function ReportPanel({
+  accountId,
+  slug,
+  stepTitle,
+  reports,
+  canUpload,
+}: {
+  accountId: string;
+  slug: string;
+  stepTitle: string;
+  reports: WorkstreamReport[];
+  canUpload: boolean;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState<WorkstreamReport | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const latest = reports[0] ?? null;
+  const earlier = reports.slice(1);
+
+  const upload = async (file: File) => {
+    if (file.type !== "application/pdf") {
+      toast.error("Reports must be a PDF.");
+      return;
+    }
+    setBusy(true);
+    const supabase = createClient();
+    const path = reportPath(accountId, slug, file.name);
+
+    const { error: uploadError } = await supabase.storage
+      .from(REPORTS_BUCKET)
+      .upload(path, file, { contentType: "application/pdf" });
+    if (uploadError) {
+      setBusy(false);
+      toast.error(getFriendlyErrorMessage(uploadError));
+      return;
+    }
+
+    // The row is what the app reads; the object is just bytes. Insert it
+    // second so a failed upload never leaves a row pointing at nothing.
+    const { error: rowError } = await supabase.from("gos_dashboard_reports").insert({
+      account_id: accountId,
+      step_slug: slug,
+      title: defaultReportTitle(stepTitle),
+      file_path: path,
+      file_size: file.size,
+    });
+
+    setBusy(false);
+    if (rowError) {
+      // Leave no orphan object behind if the row could not be written.
+      await supabase.storage.from(REPORTS_BUCKET).remove([path]);
+      toast.error(getFriendlyErrorMessage(rowError));
+      return;
+    }
+    toast.success("Report uploaded.");
+    router.refresh();
+  };
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+      <div className="flex flex-wrap items-center gap-3 px-5 py-4">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary-100 text-secondary-800">
+          <FileText className="size-[18px]" />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          {latest ? (
+            <>
+              <p className="truncate text-body font-semibold text-primary-900">{latest.title}</p>
+              <p className="text-caption text-neutral-500">
+                {[
+                  latest.uploadedBy ? `Uploaded by ${latest.uploadedBy}` : "Uploaded by CRO Leader",
+                  formatReportDate(latest.created_at),
+                  formatFileSize(latest.file_size),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-body font-semibold text-primary-900">No report yet</p>
+              <p className="text-caption text-neutral-500">
+                {canUpload
+                  ? "Upload the workstream's latest analytics as a PDF."
+                  : "CRO Leader has not uploaded a report for this workstream yet."}
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          {earlier.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowHistory((v) => !v)}
+              className="inline-flex items-center gap-1.5 text-caption font-semibold text-secondary-700 hover:underline"
+            >
+              <History className="size-3.5" />
+              {earlier.length} earlier
+            </button>
+          )}
+          {canUpload && (
+            <>
+              <input
+                ref={fileInput}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void upload(file);
+                }}
+              />
+              <Button size="sm" variant="secondary" onClick={() => fileInput.current?.click()} disabled={busy}>
+                <Upload className="mr-1.5 size-4" />
+                {busy ? "Uploading…" : latest ? "Replace" : "Upload"}
+              </Button>
+            </>
+          )}
+          {latest && (
+            <Button size="sm" onClick={() => setOpen(latest)}>
+              View report
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {showHistory && earlier.length > 0 && (
+        <ul className="border-t border-neutral-100">
+          {earlier.map((r) => (
+            <li
+              key={r.id}
+              className="flex flex-wrap items-center gap-3 border-b border-neutral-100 px-5 py-2.5 last:border-b-0"
+            >
+              <span className="min-w-0 flex-1 truncate text-body-sm text-neutral-700">{r.title}</span>
+              <span className="text-caption text-neutral-400">
+                {[formatReportDate(r.created_at), formatFileSize(r.file_size)].filter(Boolean).join(" · ")}
+              </span>
+              <button
+                type="button"
+                onClick={() => setOpen(r)}
+                className="text-caption font-semibold text-secondary-700 hover:underline"
+              >
+                View
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {open && <ReportViewer report={open} onClose={() => setOpen(null)} />}
+    </section>
+  );
+}
+
+/**
+ * The modal. The signed URL is minted on open and lives only as long as the
+ * dialog — it is never written to the row, so a stale link cannot leak.
+ */
+function ReportViewer({ report, onClose }: { report: WorkstreamReport; onClose: () => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase.storage
+        .from(REPORTS_BUCKET)
+        .createSignedUrl(report.file_path, SIGNED_URL_TTL_SECONDS);
+      if (cancelled) return;
+      if (error || !data) {
+        setFailed(true);
+        return;
+      }
+      setUrl(data.signedUrl);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [report.file_path]);
+
+  const download = async () => {
+    const supabase = createClient();
+    const { data, error } = await supabase.storage
+      .from(REPORTS_BUCKET)
+      .createSignedUrl(report.file_path, SIGNED_URL_TTL_SECONDS, { download: `${report.title}.pdf` });
+    if (error || !data) {
+      toast.error(getFriendlyErrorMessage(error));
+      return;
+    }
+    window.location.href = data.signedUrl;
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="flex h-[min(88vh,900px)] max-w-[980px] flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="flex-row items-center gap-3 space-y-0 border-b border-neutral-200 px-5 py-3.5">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary-100 text-secondary-800">
+            <FileText className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="truncate text-body font-semibold text-primary-900">{report.title}</DialogTitle>
+            <p className="text-caption text-neutral-500">
+              {[
+                report.uploadedBy ? `Uploaded by ${report.uploadedBy}` : "Uploaded by CRO Leader",
+                formatReportDate(report.created_at),
+                formatFileSize(report.file_size),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          </div>
+          <Button size="sm" variant="secondary" onClick={() => void download()}>
+            <Download className="mr-1.5 size-4" />
+            Download
+          </Button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex size-8 shrink-0 items-center justify-center rounded-md border border-neutral-200 text-neutral-500 hover:bg-neutral-50"
+          >
+            <X className="size-4" />
+          </button>
+        </DialogHeader>
+
+        <div className="flex-1 bg-neutral-200">
+          {failed ? (
+            <p className="px-5 py-10 text-center text-body-sm text-neutral-600">
+              That report could not be opened. It may have been removed.
+            </p>
+          ) : url ? (
+            <iframe src={url} title={report.title} className="size-full border-0" />
+          ) : (
+            <p className="px-5 py-10 text-center text-body-sm text-neutral-500">Opening…</p>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -45,13 +45,6 @@ export const TASK_STATE_LABEL: Record<TaskState, string> = {
   complete: "Complete",
 };
 
-/** Tailwind classes per state — one place, so the card and the list agree. */
-export const TASK_STATE_CLASS: Record<TaskState, string> = {
-  active: "bg-secondary-100 text-secondary-800",
-  in_progress: "bg-primary-100 text-primary-700",
-  on_hold: "bg-neutral-100 text-neutral-500",
-  complete: "bg-success-100 text-success-700",
-};
 
 /**
  * The board's status cell fills its whole width in colour, which is the
@@ -70,22 +63,17 @@ export const TASK_STATE_CELL: Record<TaskState, string> = {
  * reads top to bottom. State is a column, which keeps it changeable in
  * place without moving the row out from under the pointer.
  */
-export const TASK_PRIORITY_GROUPS: {
-  value: TaskPriority;
-  label: string;
-  bar: string;
-  text: string;
-}[] = [
-  { value: "high", label: "High priority", bar: "border-l-error-500", text: "text-error-700" },
-  { value: "medium", label: "Medium priority", bar: "border-l-warning-400", text: "text-warning-800" },
-  { value: "low", label: "Low priority", bar: "border-l-neutral-300", text: "text-neutral-600" },
-];
-
-export const TASK_PRIORITY_CLASS: Record<TaskPriority, string> = {
-  high: "bg-error-100 text-error-700",
-  medium: "bg-warning-100 text-warning-800",
-  low: "bg-neutral-100 text-neutral-500",
+/**
+ * Priority as a column (client-confirmed, 2026-10-02). The board used to
+ * group by priority; the sheet sorts by it instead, so what is left is the
+ * colour of the flag on each row.
+ */
+export const TASK_PRIORITY_INK: Record<TaskPriority, string> = {
+  high: "text-error-700",
+  medium: "text-warning-800",
+  low: "text-neutral-400",
 };
+
 
 export interface Task {
   id: string;
