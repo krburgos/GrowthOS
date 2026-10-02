@@ -97,83 +97,82 @@ export function ReportPanel({
   };
 
   return (
-    <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-      <div className="flex flex-wrap items-center gap-3 px-5 py-4">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary-100 text-secondary-800">
-          <FileText className="size-[18px]" />
+    <>
+      {/* Inline, not a card (client-confirmed, 2026-10-02). A full-width
+          panel spent a whole row of the page on one filename; here the
+          report rides the hours header, and the page gets that row back
+          for the task sheet. */}
+      <span className="flex min-w-0 flex-wrap items-center gap-2">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-secondary-100 text-secondary-800">
+          <FileText className="size-4" />
         </span>
 
-        <div className="min-w-0 flex-1">
-          {latest ? (
-            <>
-              <p className="truncate text-body font-semibold text-primary-900">{latest.title}</p>
-              <p className="text-caption text-neutral-500">
-                {[
-                  latest.uploadedBy ? `Uploaded by ${latest.uploadedBy}` : "Uploaded by CRO Leader",
-                  formatReportDate(latest.created_at),
-                  formatFileSize(latest.file_size),
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-body font-semibold text-primary-900">No report yet</p>
-              <p className="text-caption text-neutral-500">
-                {canUpload
-                  ? "Upload the workstream's latest analytics as a PDF."
-                  : "CRO Leader has not uploaded a report for this workstream yet."}
-              </p>
-            </>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          {earlier.length > 0 && (
+        {latest ? (
+          <>
             <button
               type="button"
-              onClick={() => setShowHistory((v) => !v)}
-              className="inline-flex items-center gap-1.5 text-caption font-semibold text-secondary-700 hover:underline"
+              onClick={() => setOpen(latest)}
+              className="min-w-0 truncate text-body-sm font-semibold text-primary-900 hover:text-secondary-700 hover:underline"
+              title={latest.title}
             >
-              <History className="size-3.5" />
-              {earlier.length} earlier
+              {latest.title}
             </button>
-          )}
-          {canUpload && (
-            <>
-              <input
-                ref={fileInput}
-                type="file"
-                accept="application/pdf"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (file) void upload(file);
-                }}
-              />
-              <Button size="sm" variant="secondary" onClick={() => fileInput.current?.click()} disabled={busy}>
-                <Upload className="mr-1.5 size-4" />
-                {busy ? "Uploading…" : latest ? "Replace" : "Upload"}
-              </Button>
-            </>
-          )}
-          {latest && (
-            <Button size="sm" onClick={() => setOpen(latest)}>
+            <span className="hidden text-caption text-neutral-400 lg:inline">
+              {[formatReportDate(latest.created_at), formatFileSize(latest.file_size)].filter(Boolean).join(" · ")}
+            </span>
+            <Button size="sm" variant="secondary" onClick={() => setOpen(latest)}>
               View report
             </Button>
-          )}
-        </div>
-      </div>
+          </>
+        ) : (
+          <span className="text-body-sm text-neutral-400">
+            {canUpload ? "No report uploaded yet" : "No report yet"}
+          </span>
+        )}
 
-      {showHistory && earlier.length > 0 && (
-        <ul className="border-t border-neutral-100">
-          {earlier.map((r) => (
-            <li
-              key={r.id}
-              className="flex flex-wrap items-center gap-3 border-b border-neutral-100 px-5 py-2.5 last:border-b-0"
+        {earlier.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowHistory((v) => !v)}
+            className="inline-flex items-center gap-1 text-caption font-semibold text-secondary-700 hover:underline"
+          >
+            <History className="size-3.5" />
+            {earlier.length} earlier
+          </button>
+        )}
+
+        {canUpload && (
+          <>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void upload(file);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInput.current?.click()}
+              disabled={busy}
+              className="inline-flex items-center gap-1 text-caption font-semibold text-secondary-700 hover:underline disabled:opacity-50"
             >
+              <Upload className="size-3.5" />
+              {busy ? "Uploading…" : latest ? "Replace" : "Upload"}
+            </button>
+          </>
+        )}
+      </span>
+
+      {/* The archive drops below the whole header rather than inside the
+          inline run, so it is not squeezed into one line. */}
+      {showHistory && earlier.length > 0 && (
+        <ul className="order-last w-full border-t border-neutral-100 pt-2">
+          {earlier.map((r) => (
+            <li key={r.id} className="flex flex-wrap items-center gap-3 py-1.5">
               <span className="min-w-0 flex-1 truncate text-body-sm text-neutral-700">{r.title}</span>
               <span className="text-caption text-neutral-400">
                 {[formatReportDate(r.created_at), formatFileSize(r.file_size)].filter(Boolean).join(" · ")}
@@ -191,7 +190,7 @@ export function ReportPanel({
       )}
 
       {open && <ReportViewer report={open} onClose={() => setOpen(null)} />}
-    </section>
+    </>
   );
 }
 

@@ -78,7 +78,7 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
   const canAuthorTasks = HOURS_EDIT_ROLES.includes(user.role);
 
   return (
-    <main className="mx-auto flex w-full max-w-[1000px] flex-1 flex-col gap-6 p-6 md:p-8">
+    <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-6 md:p-8">
       <StepHeader
         step={step}
         overviewSlot={
@@ -92,25 +92,25 @@ export default async function GosDashboardStepPage({ params }: { params: Promise
         }
       />
 
+      {/* Client-confirmed (2026-10-02): the report rides the hours header
+          rather than taking a card of its own. Two stacked panels spent a
+          whole row on one filename and pushed the tasks down; one line now
+          carries the quarter, the report and both actions. */}
       <StepHoursPanel
         accountId={user.account_id}
         slug={step.slug}
         hours={hours[step.slug]}
         quarter={quarter}
         canLogHours={canLogHours}
-      />
-
-      {/* Client-confirmed (2026-10-02): the typed Status Report panel is
-          replaced by the uploaded report. One row instead of a tall panel,
-          so "What to do next" sits directly under the hours — which was the
-          point: open a Mission Card and see what to do, not read an essay
-          first. */}
-      <ReportPanel
-        accountId={user.account_id}
-        slug={step.slug}
-        stepTitle={step.title}
-        reports={reports}
-        canUpload={canEdit}
+        reportSlot={
+          <ReportPanel
+            accountId={user.account_id}
+            slug={step.slug}
+            stepTitle={step.title}
+            reports={reports}
+            canUpload={canEdit}
+          />
+        }
       />
 
       <TaskList

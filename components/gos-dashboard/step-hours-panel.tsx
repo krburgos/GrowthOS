@@ -1,7 +1,7 @@
 "use client";
 
 import { Clock } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { HoursBar, OutsourcedChip } from "@/components/gos-dashboard/hours-ui";
 import { LogHoursDialog } from "@/components/gos-dashboard/log-hours-dialog";
@@ -14,12 +14,21 @@ export function StepHoursPanel({
   hours,
   quarter,
   canLogHours,
+  reportSlot,
 }: {
   accountId: string;
   slug: string;
   hours: StepHours;
   quarter: QuarterInfo;
   canLogHours: boolean;
+  /**
+   * The workstream's report, rendered on this panel's header line
+   * (client-confirmed, 2026-10-02). It had its own full-width card, which
+   * spent a whole row of the page on one filename. Passed in as a slot
+   * rather than imported here so this panel stays a presentation component,
+   * the same way StepHeader takes its overview slot.
+   */
+  reportSlot?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const pct = quarterPct(hours);
@@ -34,11 +43,14 @@ export function StepHoursPanel({
 
   return (
     <section className="rounded-lg border border-neutral-200 bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 px-5 py-3">
-        <h2 className="text-h4 text-primary-900">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-neutral-100 px-5 py-3">
+        <h2 className="shrink-0 text-h4 text-primary-900">
           Hours <span className="font-normal text-neutral-400">· {quarter.label}</span>
         </h2>
-        <div className="flex items-center gap-3">
+        {/* The report sits between the title and the actions, so one line
+            carries everything about this workstream that is not a number. */}
+        {reportSlot}
+        <div className="ml-auto flex items-center gap-3">
           <OutsourcedChip outsourced={hours.outsourced} />
           {canLogHours && (
             <Button size="sm" onClick={() => setOpen(true)}>
