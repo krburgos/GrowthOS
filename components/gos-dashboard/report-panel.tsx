@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileText, History, Upload, X } from "lucide-react";
+import { Download, FileText, History, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -235,8 +235,8 @@ function ReportViewer({ report, onClose }: { report: WorkstreamReport; onClose: 
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="flex h-[min(88vh,900px)] max-w-[980px] flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="flex-row items-center gap-3 space-y-0 border-b border-neutral-200 px-5 py-3.5">
+      <DialogContent className="flex h-[94vh] w-[96vw] max-w-[1280px] flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="flex-row items-center gap-3 space-y-0 border-b border-neutral-200 py-3.5 pl-5 pr-14">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary-100 text-secondary-800">
             <FileText className="size-4" />
           </span>
@@ -256,14 +256,6 @@ function ReportViewer({ report, onClose }: { report: WorkstreamReport; onClose: 
             <Download className="mr-1.5 size-4" />
             Download
           </Button>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="flex size-8 shrink-0 items-center justify-center rounded-md border border-neutral-200 text-neutral-500 hover:bg-neutral-50"
-          >
-            <X className="size-4" />
-          </button>
         </DialogHeader>
 
         <div className="flex-1 bg-neutral-200">
@@ -272,7 +264,11 @@ function ReportViewer({ report, onClose }: { report: WorkstreamReport; onClose: 
               That report could not be opened. It may have been removed.
             </p>
           ) : url ? (
-            <iframe src={url} title={report.title} className="size-full border-0" />
+            <iframe
+              src={`${url}#view=Fit&zoom=page-fit&navpanes=0`}
+              title={report.title}
+              className="size-full border-0"
+            />
           ) : (
             <p className="px-5 py-10 text-center text-body-sm text-neutral-500">Opening…</p>
           )}
