@@ -52,7 +52,7 @@ export function ListsTable({ lists, canEdit }: { lists: ListRow[]; canEdit: bool
         />
       </div>
 
-      <Table>
+      <Table stacked>
         <TableHeader variant="solid">
           <TableRow className="border-b-0 hover:bg-transparent">
             <TableHead variant="solid"><SortableHeader variant="solid" field="name" label="Name" /></TableHead>
@@ -81,19 +81,19 @@ export function ListsTable({ lists, canEdit }: { lists: ListRow[]; canEdit: bool
           ) : (
             filtered.map((list) => (
               <TableRow key={list.id}>
-                <TableCell className="font-medium text-neutral-800">
+                <TableCell label="Name" className="font-medium text-neutral-800">
                   <Link href={`/lists/${list.id}`} className="block">
                     {list.name}
                   </Link>
                 </TableCell>
-                <TableCell className="text-center tabular-nums">{list.memberCount}</TableCell>
-                <TableCell className="text-center text-neutral-500">
+                <TableCell label="Contacts" className="text-center tabular-nums">{list.memberCount}</TableCell>
+                <TableCell label="Updated" className="text-center text-neutral-500">
                   {new Date(list.created_at).toLocaleDateString()}
                 </TableCell>
-                <TableCell className={cn("text-center tabular-nums", list.bounced === 0 && "text-neutral-400")}>
+                <TableCell label="Bounced" className={cn("text-center tabular-nums", list.bounced === 0 && "text-neutral-400")}>
                   {list.bounced}
                 </TableCell>
-                <TableCell className={cn("text-center tabular-nums", list.unsubscribed === 0 && "text-neutral-400")}>
+                <TableCell label="Unsubscribed" className={cn("text-center tabular-nums", list.unsubscribed === 0 && "text-neutral-400")}>
                   {list.unsubscribed}
                 </TableCell>
                 {canEdit && (

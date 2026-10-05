@@ -49,7 +49,7 @@ export function CompaniesTable({ companies }: { companies: CompanyRow[] }) {
         />
       </div>
 
-      <Table>
+      <Table stacked>
         <TableHeader variant="solid">
           <TableRow className="border-b-0 hover:bg-transparent">
             <TableHead variant="solid"><SortableHeader variant="solid" field="name" label="Company Name" /></TableHead>
@@ -71,12 +71,12 @@ export function CompaniesTable({ companies }: { companies: CompanyRow[] }) {
           ) : (
             filtered.map((c) => (
               <TableRow key={c.id}>
-                <TableCell className="font-medium text-neutral-800">
+                <TableCell label="Company" className="font-medium text-neutral-800">
                   <Link href={`/companies/${c.id}`} className="block">
                     {c.name}
                   </Link>
                 </TableCell>
-                <TableCell className="whitespace-nowrap">
+                <TableCell label="Website" className="whitespace-nowrap">
                   {c.website ? (
                     <a href={c.website} target="_blank" rel="noreferrer" className="text-primary-700 hover:underline">
                       {c.website}
@@ -85,11 +85,11 @@ export function CompaniesTable({ companies }: { companies: CompanyRow[] }) {
                     "—"
                   )}
                 </TableCell>
-                <TableCell className="whitespace-nowrap">{c.industry ?? "—"}</TableCell>
-                <TableCell className="whitespace-nowrap">{c.company_size ?? "—"}</TableCell>
-                <TableCell className="whitespace-nowrap">{c.city ?? "—"}</TableCell>
-                <TableCell className="whitespace-nowrap">{c.state ?? "—"}</TableCell>
-                <TableCell className="tabular-nums">{c.contactCount}</TableCell>
+                <TableCell label="Industry" className="whitespace-nowrap">{c.industry ?? "—"}</TableCell>
+                <TableCell label="Employees" className="whitespace-nowrap">{c.company_size ?? "—"}</TableCell>
+                <TableCell label="City" className="whitespace-nowrap">{c.city ?? "—"}</TableCell>
+                <TableCell label="State" className="whitespace-nowrap">{c.state ?? "—"}</TableCell>
+                <TableCell label="Contacts" className="tabular-nums">{c.contactCount}</TableCell>
               </TableRow>
             ))
           )}

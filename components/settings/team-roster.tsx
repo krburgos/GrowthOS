@@ -173,7 +173,83 @@ function RosterTable({
           Nobody here yet.{canEdit && " Add the people responsible for these workstreams."}
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Below lg, one card per person (client-confirmed, 2026-10-05). The
+            five columns here are not equally important on a phone: who they
+            are and what they are on carry the page, and the two hours
+            figures read better stacked under them than scrolled to. */}
+        <div className="flex flex-col gap-2.5 px-4 pb-4 lg:hidden">
+          {members.map((m) => {
+            const allocated = allocatedHours(m);
+            const cap = capacityFor(m.weekly_hours, memberLoad[m.id] ?? 0);
+            const involvement = involvementFor(m, stepTasks[m.id]);
+            const tone = CAPACITY_CLASS[cap.tone];
+            return (
+              <article key={m.id} className="rounded-xl border border-neutral-200 bg-white p-3.5">
+                <div className="flex items-start gap-2.5">
+                  <span
+                    className={`flex size-[34px] shrink-0 items-center justify-center rounded-full text-caption font-bold text-white ${
+                      kind === "outsourced"
+                        ? "bg-gradient-to-br from-neutral-500 to-neutral-400"
+                        : "bg-gradient-to-br from-primary-700 to-secondary-700"
+                    }`}
+                  >
+                    {initialsOf(m.name)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-body font-semibold leading-snug text-neutral-800">{m.name}</h3>
+                    {m.title && <p className="text-caption text-neutral-500">{m.title}</p>}
+                  </div>
+                  {canEdit && <MemberMenu accountId={accountId} member={m} onEdit={() => openEdit(m)} />}
+                </div>
+
+                {involvement.length > 0 && (
+                  <ul className="mt-2.5 flex flex-wrap gap-1">
+                    {involvement.map((i) => (
+                      <AreaChip key={i.step_slug} involvement={i} />
+                    ))}
+                  </ul>
+                )}
+
+                <div className="mt-3 flex items-end justify-between gap-3 border-t border-neutral-100 pt-3">
+                  <div>
+                    <span className="block text-caption text-neutral-500">Weekly hours</span>
+                    <span className="text-h4 font-bold tabular-nums text-primary-900">
+                      {m.weekly_hours}
+                      <span className="ml-0.5 text-caption font-medium text-neutral-400">h/wk</span>
+                    </span>
+                    <span className="block text-caption text-neutral-400">{allocated}h allocated</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="block text-caption text-neutral-500">This quarter</span>
+                    {cap.tone === "unset" ? (
+                      <span className="text-body-sm text-neutral-300">Set weekly hours</span>
+                    ) : (
+                      <>
+                        <span className={`text-body-sm font-semibold tabular-nums ${tone.text}`}>
+                          {formatCapacityHours(cap.assigned)} / {formatCapacityHours(cap.quarterly)} hrs
+                        </span>
+                        <span className="mt-1 block h-1.5 w-24 overflow-hidden rounded-full bg-neutral-100">
+                          <span
+                            className={`block h-full rounded-full ${tone.bar}`}
+                            style={{ width: `${Math.min(100, Math.round(cap.ratio * 100))}%` }}
+                          />
+                        </span>
+                        {cap.over && (
+                          <span className="mt-0.5 block text-caption font-semibold text-error-700">
+                            {formatCapacityHours(-cap.remaining)} hrs over
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+
+        <div className="hidden overflow-x-auto lg:block">
           <table className="w-full">
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-50">
@@ -261,6 +337,7 @@ function RosterTable({
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {draft && (

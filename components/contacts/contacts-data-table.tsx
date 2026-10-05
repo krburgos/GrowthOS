@@ -398,7 +398,28 @@ export function ContactsDataTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 shadow-sm">
+      {/* Below lg the table becomes one card per contact (client-confirmed,
+          2026-10-05). Eighteen toggleable columns cannot be made good at
+          390px, and the Columns menu is no answer — picking three of
+          eighteen is configuration work nobody does on a phone. The card
+          shows a fixed identity set instead: name, title, company, email,
+          status and score. Selection is kept, because the bulk action bar
+          is how list membership and status changes happen in quantity.
+          Editing is not: inline row editing opens on double-click, which
+          touch has no equivalent for, so a card links through to Contact
+          Detail where every field is editable anyway. */}
+      <div className="flex flex-col gap-2.5 lg:hidden">
+        {contacts.map((c) => (
+          <ContactCard
+            key={c.id}
+            contact={c}
+            selected={isSelected(c.id)}
+            onSelect={(checked) => toggleOne(c.id, checked)}
+          />
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-lg border border-neutral-200 shadow-sm lg:block">
         <table
           className="w-full border-collapse text-body"
           style={{ minWidth: `${560 + visibleColumns.size * 130}px` }}
@@ -794,6 +815,102 @@ export function ContactsDataTable({
         </table>
       </div>
     </div>
+  );
+}
+
+/**
+ * One contact as a card, for widths below `lg`.
+ *
+ * A fixed identity set rather than whatever the Columns menu happens to
+ * have on: name, title, company, email, status and score. Tapping the name
+ * goes to Contact Detail, which is where everything is editable — the
+ * table's own inline editing is double-click driven and unreachable by
+ * touch.
+ */
+function ContactCard({
+  contact,
+  selected,
+  onSelect,
+}: {
+  contact: ContactListRow;
+  selected: boolean;
+  onSelect: (checked: boolean) => void;
+}) {
+  return (
+    <article
+      className={`rounded-xl border p-3.5 ${
+        selected ? "border-secondary-500 bg-secondary-50" : "border-neutral-200 bg-white"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={selected}
+          aria-label={`Select ${contact.full_name}`}
+          onClick={() => onSelect(!selected)}
+          className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded border-[1.5px] ${
+            selected ? "border-secondary-800 bg-secondary-800 text-white" : "border-neutral-300 bg-white"
+          }`}
+        >
+          {selected && <Check className="size-3.5" strokeWidth={3} />}
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <Link
+            href={`/contacts/${contact.id}`}
+            className="block truncate text-body font-semibold text-primary-900 hover:text-secondary-700 hover:underline"
+          >
+            {contact.full_name}
+          </Link>
+          {(contact.title || contact.companies?.name) && (
+            <p className="truncate text-caption text-neutral-500">
+              {[contact.title, contact.companies?.name].filter(Boolean).join(" · ")}
+            </p>
+          )}
+        </div>
+
+        {contact.contact_statuses?.name && (
+          <span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-1 text-caption font-semibold text-neutral-600">
+            {contact.contact_statuses.name}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-2 flex flex-col gap-1">
+        <a
+          href={`mailto:${contact.email}`}
+          className="flex min-h-[32px] items-center gap-1.5 truncate text-body-sm text-secondary-700 hover:underline"
+        >
+          <Mail className="size-3.5 shrink-0" />
+          <span className="truncate">{contact.email}</span>
+        </a>
+        {contact.phone && (
+          <a
+            href={`tel:${contact.phone}`}
+            className="flex min-h-[32px] items-center gap-1.5 text-body-sm text-secondary-700 hover:underline"
+          >
+            <Phone className="size-3.5 shrink-0" />
+            {contact.phone}
+          </a>
+        )}
+      </div>
+
+      {(contact.score !== null || contact.temperature) && (
+        <div className="mt-2 flex items-center gap-3 border-t border-neutral-100 pt-2 text-caption text-neutral-500">
+          {contact.score !== null && <span className="tabular-nums">Score {contact.score}</span>}
+          {contact.temperature && (
+            <span
+              className={`font-semibold capitalize ${
+                contact.temperature === "hot" ? "text-error-600" : "text-primary-500"
+              }`}
+            >
+              {contact.temperature}
+            </span>
+          )}
+        </div>
+      )}
+    </article>
   );
 }
 

@@ -206,7 +206,15 @@ Tailwind defaults, unmodified: sm 640px, md 768px, lg 1024px, xl 1280px, 2xl 153
 
 **Corrected 2026-10-05.** This previously said the sidebar "collapses to icon-only below lg (1024px), per the App Flow Document's automatic-collapse behavior." **That behaviour does not exist and never shipped.** There are no media queries in `app/globals.css` and no width logic in `components/shell/sidebar.tsx`. The Concept C "Toggleable Rail" redesign (§8.9, 2026-09-06) replaced width-based collapsing with a manual toggle: the sidebar opens expanded at 240px at every width and the user's collapse choice persists in `localStorage`. App Flow §2.2 records what this means on a phone.
 
-So there is no breakpoint that changes the shell. The breakpoints above are used only inside pages — card grids, stat rows and form field pairs.
+**Client-confirmed (2026-10-05) — `lg` is now the one breakpoint that changes the shell.** Below it the sidebar becomes an off-canvas drawer behind a hamburger in the top bar, the logo shrinks, and the command palette collapses to an icon-only button. Above it everything is as described in §8.9 — the 240px rail and its manual collapse toggle. App Flow §2.2 records the whole phone pass and what was and was not converted.
+
+`lg` is also where tables change shape: every converted list renders as one card per row below it, either hand-built (Contacts, the task sheet, the drop-by sheet, the team roster, campaign performance) or through the shared `Table`'s new `stacked` prop (Companies, Lists, Campaigns, Opportunities list).
+
+**`<Table stacked>` and `<TableCell label>`.** Opt in on the table, then give each body cell the label of its column; below `lg` each row becomes a bordered card and each cell a label/value line, with the caption drawn from the cell's own `data-label` so it can never disagree with the column it came from. Cells holding a control rather than a field — a checkbox, an actions menu — omit the label and fill the line instead. The rules are real CSS in `app/globals.css`, not arbitrary Tailwind variants: as `[&_tr]:max-lg:…` chains the eight descendant selectors were unreadable and easy to break. The media query hard-codes 1023.98px, so if `lg` ever moves, that moves with it.
+
+Touch targets below `lg` are 44px for primary rows and 40px for chips and toggles, relaxing to the denser desktop sizing at `sm`/`lg`.
+
+Inside pages the other breakpoints still do what they always did — card grids, stat rows and form field pairs.
 
 ## 6. Elevation, Radius & Borders
 

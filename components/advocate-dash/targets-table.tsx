@@ -202,9 +202,43 @@ export function TargetsTable({
             : "No drop-by targets have been set for this account yet."}
         </p>
       ) : (
-        /* Scrolls sideways rather than dropping columns: an address or an
-           advocate you cannot see is how a drop-by gets missed. */
-        <div className="overflow-x-auto px-5 py-5">
+        <>
+        {/* Below lg the sheet becomes one card per target (client-confirmed,
+            2026-10-05). Eight columns cannot be made good at 390px by CSS —
+            the sheet would be 1150px of sideways dragging to read one row.
+            A card carries the four things that identify a drop-by and keeps
+            the two controls worth having on a phone: the status, and the
+            report. Everything else edits through the pencil, which opens
+            the same dialog the desktop sheet uses. */}
+        <div className="flex flex-col gap-2.5 px-4 py-4 lg:hidden">
+          {sorted.map((target) => (
+            <TargetCard
+              key={target.id}
+              accountId={accountId}
+              target={target}
+              canEdit={canEdit}
+              setStatus={setStatus}
+              onLetter={(letter) =>
+                setRows((prev) => prev.map((t) => (t.id === target.id ? { ...t, letter } : t)))
+              }
+              onOpenReport={() => setReportFor(target)}
+              onEdit={() =>
+                setDraft({
+                  id: target.id,
+                  target_name: target.target_name,
+                  company_name: target.company_name ?? "",
+                  address: target.address ?? "",
+                  advocate_member_id: target.advocate?.id ?? UNASSIGNED,
+                  scheduled_for: target.scheduled_for ?? "",
+                })
+              }
+            />
+          ))}
+        </div>
+
+        {/* Scrolls sideways rather than dropping columns: an address or an
+           advocate you cannot see is how a drop-by gets missed. */}
+        <div className="hidden overflow-x-auto px-5 py-5 lg:block">
           <div className="min-w-[1150px] overflow-hidden rounded-md border border-neutral-200">
             <div className={`${ROW} border-b border-neutral-200 bg-neutral-50`}>
               {head("target", "Target")}
@@ -254,6 +288,7 @@ export function TargetsTable({
             )}
           </div>
         </div>
+        </>
       )}
 
       {draft && (
@@ -395,6 +430,92 @@ function TargetRow({
         )}
       </span>
     </div>
+  );
+}
+
+/**
+ * One target as a card, for widths below `lg`.
+ *
+ * Not a shrunken row — a different selection of the same data. Name,
+ * company, address, advocate and the booked or visited date identify the
+ * drop-by; status and the report are the two things somebody changes from a
+ * phone. Advocate and address edit through the pencil rather than inline,
+ * because a Select and a date input stacked in a card is a form, and there
+ * is already a form behind the pencil.
+ */
+function TargetCard({
+  accountId,
+  target,
+  canEdit,
+  setStatus,
+  onLetter,
+  onOpenReport,
+  onEdit,
+}: {
+  accountId: string;
+  target: AdvocateTarget;
+  canEdit: boolean;
+  setStatus: (target: AdvocateTarget, status: TargetStatus) => void;
+  onLetter: (letter: TargetLetter | null) => void;
+  onOpenReport: () => void;
+  onEdit: () => void;
+}) {
+  return (
+    <article className="rounded-xl border border-neutral-200 bg-white p-3.5">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-body font-semibold leading-snug text-primary-900">{target.target_name}</h3>
+          {target.company_name && (
+            <p className="text-caption text-neutral-500">{target.company_name}</p>
+          )}
+        </div>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label={`Edit ${target.target_name}`}
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-secondary-700"
+          >
+            <Pencil className="size-4" />
+          </button>
+        )}
+      </div>
+
+      {target.address && (
+        <a
+          href={mapsUrl(target.address)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1.5 flex min-h-[32px] items-start gap-1.5 text-body-sm leading-snug text-secondary-700 hover:underline"
+        >
+          <MapPin className="mt-0.5 size-3.5 shrink-0" />
+          {target.address}
+        </a>
+      )}
+
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-neutral-500">
+        <span className="flex items-center gap-1.5">
+          <Advocate advocate={target.advocate} />
+        </span>
+        {target.status === "completed" && target.completed_on ? (
+          <span>Visited {formatTargetDate(target.completed_on)}</span>
+        ) : (
+          target.scheduled_for && <span>Booked {formatTargetDate(target.scheduled_for)}</span>
+        )}
+      </div>
+
+      <div className="mt-3 flex items-stretch gap-2 border-t border-neutral-100 pt-3">
+        {/* The status palette is the one inline control worth keeping: it is
+            a single tap to the thing that changes most often. */}
+        <div className="flex w-[124px] shrink-0 overflow-hidden rounded-lg">
+          <StatusCell target={target} canEdit={canEdit} onChange={(s) => setStatus(target, s)} />
+        </div>
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+          <LetterCell accountId={accountId} target={target} canEdit={canEdit} onUploaded={onLetter} />
+          <ReportCell target={target} canEdit={canEdit} onOpen={onOpenReport} />
+        </div>
+      </div>
+    </article>
   );
 }
 

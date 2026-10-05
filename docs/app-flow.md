@@ -54,6 +54,43 @@ Per the PRD, GrowthOS Phase 1 is desktop-first with no tablet- or phone-specific
 
 Dialogs are sized `w-[96vw]`, so modals fit. The seventeen-section Victory Visit Report form (§4.3c) is the one complex surface that already stacks properly — its checklist grid is `sm:grid-cols-2`, so it is single-column below 640px.
 
+**Client-confirmed implementation (2026-10-05) — all three tiers.** The client asked for the phone work after reviewing a six-frame mockup of the above. What shipped:
+
+**Tier 1, the shell.** Below `lg` the sidebar is no longer a column: it is an off-canvas drawer behind a hamburger in the top bar, and the content column gets the full viewport. Above `lg` nothing changed — same 240px rail, same manual collapse toggle, same `localStorage`. The drawer closes on navigation, Escape and backdrop tap, locks body scroll while open, and goes `visibility: hidden` when shut so its links leave the tab order. Rail and drawer share one `NavList`, so they cannot drift on destinations or permissions. The top bar's logo shrinks below `lg` and the command palette becomes an icon-only button — a 390px bar has no room for a search field, but the trigger is a real button, so removing it would take search from touch users who have no Cmd+K.
+
+Of the eight grids with no responsive fallback, **four needed stacking** — the side-by-side input pairs on the contact form, opportunity overview and log-hours dialog. The other four were already fine at 390px and were left alone: two-column number grids read well at that width, the questionnaire's Yes/No toggle is a fixed 160px, and the Mission Card's three figures get about 119px each once the drawer frees the width.
+
+**Tier 2, the Advocate's path.** `/my-visits` (§4.3d) and larger touch targets on the report form — 44px checklist rows with the label inside the hit area, 40px chips and Yes/No buttons, all relaxing at `sm`.
+
+**Tier 3, the tables.** Seven surfaces, handled three ways:
+
+| Surface | Treatment |
+| --- | --- |
+| Drop-by targets, task sheet, Contacts | A hand-built card per row below `lg` |
+| Team roster, campaign performance | A hand-built card per row below `lg` |
+| Companies, Lists, Campaigns, Opportunities list | `<Table stacked>` — the shared primitive's new label/value card mode |
+| Opportunity board (kanban) | Kept horizontal, with scroll-snap and touch sensors |
+
+The shared `Table` gained a `stacked` prop and `TableCell` a `label`; below `lg` each row becomes a card and each cell a label/value line, with the caption coming from the cell's own `data-label` so it cannot disagree with its column. The rules live in `app/globals.css` rather than as arbitrary Tailwind variants, because eight descendant selectors written as `[&_tr]:max-lg:…` chains were unreadable.
+
+**The kanban was the one real bug, not just a cramped layout.** `DndContext` had no sensors configured, so dnd-kit's default PointerSensor started a drag on the first pointer movement — on a touch screen that stole every horizontal swipe from the board's own scroller, making the stages unbrowsable on a phone. It now has a PointerSensor with an 8px distance threshold and a TouchSensor with a 220ms hold, so a flick scrolls and a press-and-hold drags. Columns are 280px, which gives a phone one stage plus a peek of the next — the right mobile kanban, so it was not converted to cards.
+
+**Not converted, and deliberately so:** the Import Contacts preview (`import-wizard.tsx`) — a column-mapping preview whose whole purpose is showing many columns at once, and not a thing anybody does from a phone. **Not yet converted:** Users & Roles, the CRO Leader accounts list, campaign recipients, and the linked-records tables on Company Detail. All four keep today's horizontal scroll and are unchanged; they can be moved to `<Table stacked>` cheaply now the primitive exists.
+
+**Still unfixed, and the only genuinely broken thing:** Contacts inline row editing fires on `onDoubleClick` with no alternative trigger, and touch has no double-click. The card view sidesteps it by linking through to Contact Detail, where every field is editable — but the table's own inline edit remains unreachable by touch.
+
+### 4.3d My Visits (C2–C3)
+
+**Client-confirmed (2026-10-05).** The Advocate's field screen: what is next, and what do I still owe. Deliberately not a responsive version of the drop-by table — that table is a review surface for an MSP Owner at a desk, with eight sortable columns and every field editable in place. This is a short stack of tap targets ordered by urgency.
+
+**Buckets, not statuses.** Missed (scheduled before today, still not done) · Today · Coming up · Not booked in yet · **Report owed** · Done. A completed visit whose report is unsubmitted is pulled out of Done regardless of when it happened, because otherwise it sinks behind more recent work and never gets written up. The report is the deliverable, so an unfiled one is the Advocate's real debt.
+
+**Capped narrow even on a desktop** (`max-w-[560px]`): a field screen stretched across 1440px would be a worse version of the table that already exists there. It appears in the navigation drawer only, via a `mobileOnly` flag on the nav item — on a desktop the AdvocateDash workstream page says more, so a ninth rail destination would duplicate one already there. The route is not width-gated, though: a link or bookmark opens it at any size.
+
+**This needed `scheduled_for date` on `advocate_dash_targets`** (migration `20261005000003`). The mockup promised "today's drop-bys" and the schema could not say when a scheduled visit was scheduled for — a target carried only its three states and the date it was *completed*. There is deliberately **no ordering column**: route order would need a hand-maintained sequence or geocoded addresses, and these addresses are free text, so a day is ordered by name and "Open next in Maps" hands over one address rather than claiming to plan a route. It is edited in the target dialog rather than as a ninth sheet column, since the client's column list was explicit.
+
+**Scoping is unfinished and the fallback is deliberate.** It reads `account_team_members.user_id`, a column that already existed in the schema but which nothing in the app reads or writes. So no viewer is currently linked to a roster entry, and every viewer falls through to the whole account with an Advocate filter chip. Scoping to a link nobody has made would render an empty screen that reads as broken. Making this per-Advocate for real needs either that column populated (a picker on the team roster) or logins for Advocates, which would be a new role — PRD §4's role table has no Advocate.
+
 ### 2.3 Search
 
 The top-bar search box searches **Contacts only** (name, company, email) and returns results in a dropdown or a Contacts-list results view. It does not search Opportunities, Lists, or Campaigns in Phase 1.

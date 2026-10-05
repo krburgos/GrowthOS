@@ -19,7 +19,36 @@ export function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPer
   }
 
   return (
-    <div className="overflow-x-auto">
+    <>
+      {/* Below lg, one card per campaign (client-confirmed, 2026-10-05). Six
+          metric columns scroll sideways badly on a phone, and these are
+          figures somebody compares against each other rather than reads in
+          a row — a 3x2 grid per campaign keeps them all on screen. */}
+      <div className="flex flex-col gap-2.5 px-4 pb-4 lg:hidden">
+        {campaigns.map((c) => (
+          <article key={c.id} className="rounded-xl border border-neutral-200 bg-white p-3.5">
+            <h3 className="text-body font-semibold text-primary-900">{c.name}</h3>
+            <dl className="mt-2.5 grid grid-cols-3 gap-y-3">
+              {(
+                [
+                  ["Sent", String(c.sent)],
+                  ["Open rate", pct(c.openRate)],
+                  ["Click rate", pct(c.clickRate)],
+                  ["Bounced", String(c.bounced)],
+                  ["Unsub", String(c.unsubscribed)],
+                ] as const
+              ).map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-caption text-neutral-500">{label}</dt>
+                  <dd className="text-body font-semibold tabular-nums text-primary-900">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </article>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto lg:block">
       <Table>
         <TableHeader variant="solid">
           <TableRow className="border-b-0 hover:bg-transparent">
@@ -44,6 +73,7 @@ export function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPer
           ))}
         </TableBody>
       </Table>
-    </div>
+      </div>
+    </>
   );
 }

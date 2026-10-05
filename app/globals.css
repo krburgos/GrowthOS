@@ -159,3 +159,67 @@
 body {
   font-family: var(--font-sans);
 }
+
+/**
+ * Stacked tables below `lg` — opt in with `<Table stacked>` and give each
+ * `<TableCell>` a `label`. Client-confirmed, 2026-10-05.
+ *
+ * Written as real CSS rather than arbitrary Tailwind variants because it
+ * needs eight descendant selectors; as `[&_tr]:max-lg:…` chains it was
+ * unreadable and easy to break. The breakpoint is hard-coded to Tailwind's
+ * own `lg` (1024px) — if that ever moves, this moves with it.
+ *
+ * Each row becomes a card and each cell a label/value line, with the label
+ * coming from the cell's own `data-label` so it can never disagree with the
+ * column it came from. A cell with no label (an actions menu, a checkbox)
+ * renders as a plain block and keeps its alignment.
+ */
+@media (max-width: 1023.98px) {
+  .table-stacked,
+  .table-stacked tbody {
+    display: block;
+  }
+
+  .table-stacked thead {
+    display: none;
+  }
+
+  .table-stacked tr {
+    display: block;
+    height: auto;
+    margin-bottom: 0.625rem;
+    border: 1px solid var(--color-neutral-200);
+    border-radius: 0.75rem;
+    background: #fff;
+    padding: 0.5rem 0.875rem;
+  }
+
+  .table-stacked tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .table-stacked td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--color-neutral-100);
+  }
+
+  .table-stacked tr td:last-child {
+    border-bottom: 0;
+  }
+
+  .table-stacked td[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    font-size: var(--text-caption);
+    color: var(--color-neutral-500);
+  }
+
+  /* An unlabelled cell is a control, not a field — let it fill the line. */
+  .table-stacked td:not([data-label]) {
+    justify-content: flex-start;
+  }
+}

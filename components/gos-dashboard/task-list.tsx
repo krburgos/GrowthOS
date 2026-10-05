@@ -223,9 +223,38 @@ export function TaskList({
             : "CRO Leader has not set any tasks for this workstream yet."}
         </p>
       ) : (
-        /* The sheet scrolls sideways rather than dropping columns: a due
-           date or an owner you cannot see is how a task gets missed. */
-        <div className="overflow-x-auto px-5 py-5">
+        <>
+        {/* Below lg the sheet becomes one card per task (client-confirmed,
+            2026-10-05). Nine columns at 390px is 1066px of sideways
+            dragging to read one row. The card keeps the controls worth
+            having on a phone — complete, state, owner — and sends the rest
+            to the pencil, which opens the same dialog as the sheet. */}
+        <div className="flex flex-col gap-2.5 px-4 py-4 lg:hidden">
+          {open.map((task) => (
+            <TaskCard key={task.id} task={task} {...rowProps} />
+          ))}
+
+          {done.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowDone((v) => !v)}
+                aria-expanded={showDone}
+                className="flex min-h-[44px] items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-left text-body-sm text-neutral-500"
+              >
+                <ChevronRight
+                  className={`size-3.5 transition-transform motion-reduce:transition-none ${showDone ? "rotate-90" : ""}`}
+                />
+                <span className="font-semibold">{done.length} done</span>
+              </button>
+              {showDone && done.map((task) => <TaskCard key={task.id} task={task} {...rowProps} />)}
+            </>
+          )}
+        </div>
+
+        {/* The sheet scrolls sideways rather than dropping columns: a due
+           date or an owner you cannot see is how a task gets missed. */}
+        <div className="hidden overflow-x-auto px-5 py-5 lg:block">
           <div className="min-w-[1066px] overflow-hidden rounded-md border border-neutral-200">
             <div className={`${ROW} border-b border-neutral-200 bg-neutral-50`}>
               <span />
@@ -271,6 +300,7 @@ export function TaskList({
             )}
           </div>
         </div>
+        </>
       )}
 
       {draft && (
@@ -417,6 +447,125 @@ function HoursCell({
     >
       {formatTaskHours(task.hours)}
     </button>
+  );
+}
+
+/**
+ * One task as a card, for widths below `lg`.
+ *
+ * Complete, state and owner stay editable in place — they are what gets
+ * changed while away from a desk, and completing is the row's most
+ * consequential control because it moves hours into the quarter's achieved
+ * figure. Due date, estimate and notes are read-only here and edit through
+ * the pencil, so a card never becomes a four-input form.
+ */
+function TaskCard({ task, team, canAssign, canDefine, capacityOf, patch, onEdit }: RowProps & { task: Task }) {
+  const done = task.state === "complete";
+
+  return (
+    <article className={`rounded-xl border bg-white p-3.5 ${done ? "border-neutral-200" : "border-neutral-200"}`}>
+      <div className="flex items-start gap-3">
+        {canAssign ? (
+          <button
+            type="button"
+            onClick={() =>
+              void patch(task.id, { state: done ? "active" : "complete" }, { state: done ? "active" : "complete" })
+            }
+            aria-label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
+            className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded border-[1.5px] transition-colors ${
+              done ? "border-success-600 bg-success-600 text-white" : "border-neutral-300"
+            }`}
+          >
+            {done && <Check className="size-3.5" strokeWidth={3} />}
+          </button>
+        ) : (
+          <span
+            className={`mt-0.5 block size-6 shrink-0 rounded border-[1.5px] ${
+              done ? "border-success-600 bg-success-600" : "border-neutral-300"
+            }`}
+          />
+        )}
+
+        <div className="min-w-0 flex-1">
+          <h3
+            className={`text-body font-medium leading-snug ${done ? "text-neutral-400 line-through" : "text-neutral-900"}`}
+          >
+            {task.title}
+          </h3>
+          {task.detail && <p className="mt-0.5 text-caption text-neutral-500">{task.detail}</p>}
+        </div>
+
+        {canDefine && (
+          <button
+            type="button"
+            onClick={() => onEdit(task)}
+            aria-label={`Edit ${task.title}`}
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-secondary-700"
+          >
+            <Pencil className="size-4" />
+          </button>
+        )}
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-neutral-500">
+        <span className={`inline-flex items-center gap-1 font-semibold ${TASK_PRIORITY_INK[task.priority]}`}>
+          <Flag className="size-3" />
+          <span className="capitalize">{task.priority}</span>
+        </span>
+        <span className="tabular-nums">{formatTaskHours(task.hours)} hrs</span>
+        {task.due_date && (
+          <span className="tabular-nums">
+            Due {new Date(`${task.due_date}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-3 flex items-stretch gap-2 border-t border-neutral-100 pt-3">
+        <div className="flex w-[124px] shrink-0 overflow-hidden rounded-lg">
+          <StatusCell task={task} canAssign={canAssign} onChange={(state) => void patch(task.id, { state }, { state })} />
+        </div>
+        <div className="flex min-w-0 flex-1 items-center justify-end">
+          {canAssign ? (
+            <Select
+              value={task.assignee?.id ?? UNASSIGNED}
+              onValueChange={(v) =>
+                void patch(
+                  task.id,
+                  { assignee_id: v === UNASSIGNED ? null : v },
+                  { assignee: team.find((m) => m.id === v) ?? null }
+                )
+              }
+            >
+              <SelectTrigger
+                aria-label={`Who is doing ${task.title}`}
+                className="h-auto w-auto gap-1.5 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0"
+              >
+                <Owner assignee={task.assignee} capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNASSIGNED}>Nobody yet</SelectItem>
+                {team.map((m) => {
+                  const cap = capacityOf.get(m.id);
+                  return (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span className="flex items-baseline gap-2">
+                        <span>
+                          {m.name}
+                          {m.kind === "outsourced" ? " (outsourced)" : ""}
+                        </span>
+                        {cap && <span className={`text-caption ${CAPACITY_CLASS[cap.tone].text}`}>{capacityShort(cap)}</span>}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Owner assignee={task.assignee} capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined} />
+          )}
+        </div>
+      </div>
+    </article>
   );
 }
 

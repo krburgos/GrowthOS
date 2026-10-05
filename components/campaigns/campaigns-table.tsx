@@ -60,7 +60,7 @@ export function CampaignsTable({ campaigns }: { campaigns: CampaignRow[] }) {
   }
 
   return (
-    <Table>
+    <Table stacked>
       <TableHeader variant="solid">
         <TableRow className="border-b-0 hover:bg-transparent">
           <TableHead variant="solid">Campaign</TableHead>
@@ -74,23 +74,23 @@ export function CampaignsTable({ campaigns }: { campaigns: CampaignRow[] }) {
       <TableBody>
         {campaigns.map((c) => (
           <TableRow key={c.id}>
-            <TableCell className="font-medium text-neutral-800">
+            <TableCell label="Campaign" className="font-medium text-neutral-800">
               <Link href={`/campaigns/${c.id}`} className="hover:underline">
                 {c.name}
               </Link>
               <p className="mt-0.5 text-caption text-neutral-400">{c.listName}</p>
             </TableCell>
-            <TableCell>
+            <TableCell label="Status">
               <Badge variant={STATUS_BADGE[c.status]}>{STATUS_LABEL[c.status]}</Badge>
             </TableCell>
-            <TableCell className="tabular-nums">{c.recipients || "—"}</TableCell>
-            <TableCell>
+            <TableCell label="Recipients" className="tabular-nums">{c.recipients || "—"}</TableCell>
+            <TableCell label="Open rate">
               <RateMeter rate={c.openRate} tone="open" />
             </TableCell>
-            <TableCell>
+            <TableCell label="Click rate">
               <RateMeter rate={c.clickRate} tone="click" />
             </TableCell>
-            <TableCell className="text-neutral-500">
+            <TableCell label="Date" className="text-neutral-500">
               {c.dateLabel === "Created"
                 ? "Not sent"
                 : new Date(c.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}

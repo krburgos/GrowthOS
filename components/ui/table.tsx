@@ -13,13 +13,29 @@ import { cn } from "@/lib/utils";
  * elsewhere (e.g. the Import Contacts preview) keep the original
  * neutral-50 header by omitting the prop.
  */
-const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div className="w-full overflow-x-auto rounded-lg border border-neutral-200">
-      <table ref={ref} className={cn("w-full caption-bottom text-body", className)} {...props} />
-    </div>
-  )
-);
+const Table = React.forwardRef<
+  HTMLTableElement,
+  React.HTMLAttributes<HTMLTableElement> & { stacked?: boolean }
+>(({ className, stacked, ...props }, ref) => (
+  /* `stacked` turns each row into a card below `lg` (rules in
+     app/globals.css). The wrapper then drops its own border and scroller,
+     because the cards carry their own edges and there is nothing left to
+     scroll sideways. Client-confirmed, 2026-10-05. */
+  <div
+    className={cn(
+      "w-full",
+      stacked
+        ? "lg:overflow-x-auto lg:rounded-lg lg:border lg:border-neutral-200"
+        : "overflow-x-auto rounded-lg border border-neutral-200"
+    )}
+  >
+    <table
+      ref={ref}
+      className={cn("w-full caption-bottom text-body", stacked && "table-stacked", className)}
+      {...props}
+    />
+  </div>
+));
 Table.displayName = "Table";
 
 const TableHeader = React.forwardRef<
@@ -79,9 +95,22 @@ TableHead.displayName = "TableHead";
 
 const TableCell = React.forwardRef<
   HTMLTableCellElement,
-  React.TdHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
-  <td ref={ref} className={cn("px-3 py-2 align-middle text-neutral-800", className)} {...props} />
+  React.TdHTMLAttributes<HTMLTableCellElement> & {
+    /**
+     * The column this cell belongs to, shown beside its value when the
+     * table is `stacked` on a phone. Omit it on a cell holding a control
+     * rather than a field — a checkbox or an actions menu needs no label
+     * and reads better filling the line.
+     */
+    label?: string;
+  }
+>(({ className, label, ...props }, ref) => (
+  <td
+    ref={ref}
+    data-label={label}
+    className={cn("px-3 py-2 align-middle text-neutral-800", className)}
+    {...props}
+  />
 ));
 TableCell.displayName = "TableCell";
 

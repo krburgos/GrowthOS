@@ -23,7 +23,7 @@ const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "
  */
 export function OpportunityListTable({ opportunities }: { opportunities: OpportunityListRow[] }) {
   return (
-    <Table>
+    <Table stacked>
       <TableHeader variant="solid">
         <TableRow className="border-b-0 hover:bg-transparent">
           <TableHead variant="solid"><SortableHeader variant="solid" field="contact" label="Contact" /></TableHead>
@@ -35,14 +35,14 @@ export function OpportunityListTable({ opportunities }: { opportunities: Opportu
       <TableBody>
         {opportunities.map((o) => (
           <TableRow key={o.id}>
-            <TableCell className="font-medium text-neutral-800">
+            <TableCell label="Contact" className="font-medium text-neutral-800">
               <Link href={`/opportunities/${o.id}`}>{o.contact_name}</Link>
             </TableCell>
-            <TableCell>{o.company_name ?? "—"}</TableCell>
-            <TableCell>
+            <TableCell label="Company">{o.company_name ?? "—"}</TableCell>
+            <TableCell label="Stage">
               <Badge variant={STAGE_GROUP_BADGE_VARIANT[o.stage_group]}>{o.stage_name}</Badge>
             </TableCell>
-            <TableCell>{o.value != null ? currency.format(o.value) : "—"}</TableCell>
+            <TableCell label="Value">{o.value != null ? currency.format(o.value) : "—"}</TableCell>
           </TableRow>
         ))}
       </TableBody>

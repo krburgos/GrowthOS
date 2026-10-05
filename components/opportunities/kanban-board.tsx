@@ -1,6 +1,13 @@
 "use client";
 
-import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -56,6 +63,22 @@ export function KanbanBoard({
   const [opportunities, setOpportunities] = useState(initial);
   const [query, setQuery] = useState("");
   const sortedStages = [...stages].sort((a, b) => a.sort_order - b.sort_order);
+
+  /**
+   * Sensors, added 2026-10-05 for touch. dnd-kit's default is a
+   * PointerSensor with no activation constraint, which starts a drag on the
+   * first pointer movement — on a touch screen that stole every horizontal
+   * swipe from the board's own scroller, so the stages could not be browsed
+   * on a phone at all.
+   *
+   * A small distance threshold keeps the mouse behaving as before, and a
+   * short press-and-hold on touch separates the two gestures: a flick
+   * scrolls the board, holding then moving drags a card.
+   */
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } })
+  );
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -134,8 +157,12 @@ export function KanbanBoard({
         </div>
       </div>
 
-      <DndContext onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4">
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        {/* snap-x so a swipe lands on a stage rather than between two. The
+            columns are 280px, so a phone shows one with a peek of the next
+            — which is the right mobile kanban, not something to replace
+            with cards. */}
+        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 lg:snap-none">
           {sortedStages.map((stage) => (
             <KanbanColumn
               key={stage.id}
