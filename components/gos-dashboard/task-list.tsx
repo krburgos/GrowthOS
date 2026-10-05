@@ -226,7 +226,7 @@ export function TaskList({
         /* The sheet scrolls sideways rather than dropping columns: a due
            date or an owner you cannot see is how a task gets missed. */
         <div className="overflow-x-auto px-5 py-5">
-          <div className="min-w-[1020px] overflow-hidden rounded-md border border-neutral-200">
+          <div className="min-w-[1066px] overflow-hidden rounded-md border border-neutral-200">
             <div className={`${ROW} border-b border-neutral-200 bg-neutral-50`}>
               <span />
               {head("title", "Task")}
@@ -236,6 +236,7 @@ export function TaskList({
               {head("priority", "Priority")}
               {head("hours", "Est", "right")}
               <span className={`px-2.5 py-2 ${HEAD}`}>Notes</span>
+              <span />
             </div>
 
             {open.map((task) => (
@@ -528,8 +529,17 @@ function TaskRow({
         </span>
       </span>
 
-      <span className={`${CELL} justify-end gap-1 border-l border-neutral-100`}>
+      <span className={`${CELL} justify-end border-l border-neutral-100`}>
         <HoursCell task={task} canEdit={canAssign} onChange={(hours) => void patch(task.id, { hours }, { hours })} />
+      </span>
+
+      <span className={`${CELL} min-w-0 border-l border-neutral-100`}>
+        <span className="truncate text-caption text-neutral-500" title={task.detail ?? undefined}>
+          {task.detail ?? ""}
+        </span>
+      </span>
+
+      <span className={`${CELL} justify-center border-l border-neutral-100`}>
         {canDefine && (
           <button
             type="button"
@@ -540,12 +550,6 @@ function TaskRow({
             <Pencil className="size-3.5" />
           </button>
         )}
-      </span>
-
-      <span className={`${CELL} min-w-0 border-l border-neutral-100`}>
-        <span className="truncate text-caption text-neutral-500" title={task.detail ?? undefined}>
-          {task.detail ?? ""}
-        </span>
       </span>
     </div>
   );
@@ -562,7 +566,7 @@ interface RowProps {
 
 /** Eight columns, one definition — the header and the rows share it. */
 const ROW =
-  "grid grid-cols-[34px_minmax(0,1.4fr)_132px_136px_120px_104px_86px_minmax(0,1fr)] items-stretch";
+  "grid grid-cols-[34px_minmax(0,1.4fr)_132px_136px_120px_104px_86px_minmax(0,1fr)_46px] items-stretch";
 const CELL = "flex items-center gap-2 px-2.5 py-2";
 const HEAD = "text-caption font-bold uppercase tracking-wide text-neutral-400";
 
