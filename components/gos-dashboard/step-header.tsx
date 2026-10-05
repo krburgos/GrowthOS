@@ -3,7 +3,6 @@ import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { PLAYBOOK_ICON } from "@/components/gos-dashboard/icon-map";
-import { getPhaseName } from "@/lib/gos-dashboard/playbook";
 import type { StepDetail } from "@/lib/gos-dashboard/queries";
 
 /**
@@ -28,7 +27,7 @@ export function StepHeader({ step, overviewSlot }: { step: StepDetail; overviewS
           </span>
           <div>
             <p className="text-caption font-semibold uppercase tracking-wide text-neutral-400">
-              Step {step.number} · {getPhaseName(step.phase)}
+              Step {step.number}
             </p>
             <h1 className="text-h1 text-primary-900">{step.title}</h1>
             {step.responsible && <p className="text-body-sm text-neutral-500">Responsible: {step.responsible}</p>}

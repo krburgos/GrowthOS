@@ -1,6 +1,10 @@
 /**
  * GrowthOS Dashboard (GOS Dashboard) — client-confirmed addition
- * (2026-09-16). Sourced from "GrowthOS Playbook - Dev Plan.docx": 4 phases,
+ * (2026-09-16). Sourced from "GrowthOS Playbook - Dev Plan.docx", then
+ * extended by the client on 2026-10-05 to sixteen workstreams with the
+ * four phases dropped: the new order interleaved them, so a step header
+ * would have read "Step 12 · Phase 4" above "Step 14 · Phase 3". The 1–16
+ * order is the structure now. Originally
  * 14 numbered steps, each with its own Duties and KPIs. The doc only
  * spells out a "GrowthOS Dashboard" sub-shape (status report,
  * suggestions/fixes list, progress tracker) for step 1 (SEO) and step 2
@@ -8,7 +12,7 @@
  * (Duties + KPIs only, no report/suggestions/tracker tabs).
  *
  * This file holds only the static shape of the 14 steps — identity, title,
- * icon, phase, duties, and which steps get the SEO/GEO 3-tab treatment.
+ * icon, duties, and which steps get the SEO/GEO 3-tab treatment.
  * The per-account values (status, headline stat, KPIs, status report
  * summary, suggestions, tracker progress) live in the `gos_dashboard_*`
  * tables (Backend Schema §6.6c) and are read via lib/gos-dashboard/queries.ts
@@ -60,7 +64,6 @@ export type IconKey =
 export interface PlaybookShape {
   slug: string;
   number: number;
-  phase: 1 | 2 | 3 | 4;
   title: string;
   icon: IconKey;
   responsible?: string;
@@ -69,18 +72,11 @@ export interface PlaybookShape {
   hasDashboardShape?: boolean;
 }
 
-export const PLAYBOOK_PHASES: { phase: 1 | 2 | 3 | 4; name: string; goal: string }[] = [
-  { phase: 1, name: "Foundation & Visibility", goal: "Establish visibility, fix discoverability gaps, and build the baseline for outbound." },
-  { phase: 2, name: "Pipeline & Outbound Engine", goal: "Build predictable outbound pipeline and define the ICP." },
-  { phase: 3, name: "Authority, Trust & Demand Creation", goal: "Build credibility and increase inbound demand." },
-  { phase: 4, name: "SDR Outreach & Sales Execution", goal: "Build consistent outbound activity and convert intent into meetings." },
-];
 
 export const PLAYBOOK_STEPS: PlaybookShape[] = [
   {
     slug: "seo",
     number: 1,
-    phase: 1,
     title: "SEO — Search Engine Optimization",
     icon: "search",
     duties: [
@@ -97,7 +93,6 @@ export const PLAYBOOK_STEPS: PlaybookShape[] = [
   {
     slug: "geo",
     number: 2,
-    phase: 1,
     title: "GEO — Generative Engine Optimization",
     icon: "sparkles",
     responsible: "Claude, Lance & Vernon",
@@ -116,7 +111,6 @@ export const PLAYBOOK_STEPS: PlaybookShape[] = [
   {
     slug: "blogging-content",
     number: 3,
-    phase: 1,
     title: "Blogging & Content Development",
     icon: "pen-tool",
     responsible: "Claude & Lance",
@@ -129,10 +123,9 @@ export const PLAYBOOK_STEPS: PlaybookShape[] = [
     ],
   },
   {
-    slug: "social-media",
+    slug: "social-media-marketing",
     number: 4,
-    phase: 1,
-    title: "Social Media Posting & Connections",
+    title: "Social Media Marketing",
     icon: "share2",
     duties: [
       "Weekly posting schedule",
@@ -145,7 +138,6 @@ export const PLAYBOOK_STEPS: PlaybookShape[] = [
   {
     slug: "website-oversight",
     number: 5,
-    phase: 1,
     title: "Website Oversight & Optimization",
     icon: "layout",
     responsible: "Claude & Lance",
@@ -160,7 +152,6 @@ export const PLAYBOOK_STEPS: PlaybookShape[] = [
   {
     slug: "icp-development",
     number: 6,
-    phase: 2,
     title: "ICP Development & Targeting Strategy",
     icon: "target",
     duties: [
@@ -173,7 +164,6 @@ export const PLAYBOOK_STEPS: PlaybookShape[] = [
   {
     slug: "list-building",
     number: 7,
-    phase: 2,
     title: "List Building & Data Acquisition",
     icon: "database",
     duties: [
@@ -184,9 +174,28 @@ export const PLAYBOOK_STEPS: PlaybookShape[] = [
     ],
   },
   {
-    slug: "email-campaigning",
+    slug: "crm-administration",
     number: 8,
-    phase: 2,
+    title: "CRM Administration & Optimization",
+    icon: "settings",
+    duties: [
+      "Pipeline configuration",
+      "Automation setup",
+      "Reporting dashboards",
+      "Data hygiene",
+      "Lifecycle stage definitions",
+    ],
+  },
+  {
+    slug: "opportunities-pipeline",
+    number: 9,
+    title: "Opportunities — Pipeline",
+    icon: "trending-up",
+    duties: ["Stage definitions", "Conversion tracking", "Deal velocity reporting", "Forecasting"],
+  },
+  {
+    slug: "email-campaigning",
+    number: 10,
     title: "Email Campaigning & Nurture Sequences",
     icon: "mail",
     budgetNote: "Estimated Monthly Budget: CRO Leader + SDR",
@@ -199,59 +208,22 @@ export const PLAYBOOK_STEPS: PlaybookShape[] = [
     ],
   },
   {
-    slug: "crm-administration",
-    number: 9,
-    phase: 2,
-    title: "CRM Administration & Optimization",
-    icon: "settings",
-    duties: [
-      "Pipeline configuration",
-      "Automation setup",
-      "Reporting dashboards",
-      "Data hygiene",
-      "Lifecycle stage definitions",
-    ],
-  },
-  {
-    slug: "pipeline-metrics",
-    number: 10,
-    phase: 2,
-    title: "Opportunity Pipeline Metrics & Oversight",
-    icon: "trending-up",
-    duties: ["Stage definitions", "Conversion tracking", "Deal velocity reporting", "Forecasting"],
-  },
-  {
-    slug: "reviews-testimonials",
+    slug: "social-communication",
     number: 11,
-    phase: 3,
-    title: "Reviews & Testimonies",
-    icon: "star",
-    responsible: "Lance & Vernon",
+    title: "Social Media Invites & Communication",
+    icon: "phone",
     duties: [
-      "Review acquisition program",
-      "Testimonial collection",
-      "Case study development",
-      "Video testimonials (optional)",
-    ],
-  },
-  {
-    slug: "events",
-    number: 12,
-    phase: 3,
-    title: "Events (Virtual & In-Person)",
-    icon: "calendar-days",
-    responsible: "Lance & Vernon",
-    duties: [
-      "Event selection (webinars, tradeshows, lunch & learns)",
-      "Booth strategy & materials",
-      "Pre-event outreach",
-      "Post-event follow-up sequences",
+      "Connection and invite strategy by platform",
+      "Personalised invite copy per ICP segment",
+      "Follow-up message sequences after a connection is accepted",
+      "Daily invite and reply volume tracking",
+      "Social listening on ICP accounts and competitors",
+      "Handover of warm conversations to the SDR",
     ],
   },
   {
     slug: "sdr-outreach",
-    number: 13,
-    phase: 4,
+    number: 12,
     title: "SDR Outreach (Internal or Outsourced)",
     icon: "phone",
     responsible: "CRO Leader Team, SDR & Vernon",
@@ -264,9 +236,41 @@ export const PLAYBOOK_STEPS: PlaybookShape[] = [
     ],
   },
   {
-    slug: "sales-enablement",
+    slug: "advocate-dash",
+    number: 13,
+    title: "AdvocateDash",
+    icon: "star",
+    duties: [],
+  },
+  {
+    slug: "reviews-testimonials",
     number: 14,
-    phase: 4,
+    title: "Reviews & Testimonies",
+    icon: "star",
+    responsible: "Lance & Vernon",
+    duties: [
+      "Review acquisition program",
+      "Testimonial collection",
+      "Case study development",
+      "Video testimonials (optional)",
+    ],
+  },
+  {
+    slug: "events",
+    number: 15,
+    title: "Events (Virtual & In-Person)",
+    icon: "calendar-days",
+    responsible: "Lance & Vernon",
+    duties: [
+      "Event selection (webinars, tradeshows, lunch & learns)",
+      "Booth strategy & materials",
+      "Pre-event outreach",
+      "Post-event follow-up sequences",
+    ],
+  },
+  {
+    slug: "sales-enablement",
+    number: 16,
     title: "Sales Enablement & Support",
     icon: "clipboard-check",
     responsible: "CRO Leader Team & Vernon",
@@ -282,8 +286,4 @@ export const PLAYBOOK_STEPS: PlaybookShape[] = [
 
 export function getPlaybookStep(slug: string): PlaybookShape | undefined {
   return PLAYBOOK_STEPS.find((s) => s.slug === slug);
-}
-
-export function getPhaseName(phase: 1 | 2 | 3 | 4): string {
-  return PLAYBOOK_PHASES.find((p) => p.phase === phase)?.name ?? "";
 }

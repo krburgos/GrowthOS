@@ -18,17 +18,19 @@ export const SHORT_TITLE: Record<string, string> = {
   seo: "SEO",
   geo: "GEO",
   "blogging-content": "Blogging & Content",
-  "social-media": "Social Media",
+  "social-media-marketing": "Social Media Marketing",
   "website-oversight": "Website Optimization",
   "icp-development": "ICP Development",
   "list-building": "List Building",
   "email-campaigning": "Email Campaigns",
   "crm-administration": "CRM Administration",
-  "pipeline-metrics": "Pipeline Metrics",
+  "opportunities-pipeline": "Opportunities — Pipeline",
   "reviews-testimonials": "Reviews & Testimonials",
   events: "Events",
   "sdr-outreach": "SDR Outreach",
   "sales-enablement": "Sales Enablement",
+  "social-communication": "Social Communication",
+  "advocate-dash": "AdvocateDash",
 };
 
 export const HOURS_EDIT_ROLES = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"];

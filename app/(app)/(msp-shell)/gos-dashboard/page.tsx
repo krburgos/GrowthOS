@@ -9,7 +9,6 @@ import { HeroBand, HeroLabel } from "@/components/shell/hero-band";
 import { SectionHeading } from "@/components/shell/section-heading";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
-import { PLAYBOOK_PHASES } from "@/lib/gos-dashboard/playbook";
 import {
   getKpiBand,
   getMemberStepTasks,
@@ -112,8 +111,7 @@ export default async function GosDashboardPage() {
               cards open. Said here instead, where someone about to click is
               actually looking. */}
           <span className="text-caption text-white/55">
-            {steps.length} workstreams · {PLAYBOOK_PHASES.length} phases · click any card for its status report,
-            tasks and KPIs
+            {steps.length} workstreams · click any card for its report and tasks
           </span>
         </SectionHeading>
 
@@ -127,9 +125,6 @@ export default async function GosDashboardPage() {
               key={step.slug}
               step={step}
               hours={hours[step.slug]}
-              quarter={quarter}
-              accountId={user.account_id!}
-              canLogHours={canLogHours}
               assignees={membersForStep(teamMembers, step.slug, stepTasks)}
               tasks={tasksByStep.get(step.slug) ?? []}
             />

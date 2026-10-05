@@ -73,7 +73,7 @@ The **Exit to My Dashboard** control lives inside the banner itself, always visi
 | A4 | Auth | Accept Invite / Set Password (new user) | Public (tokened link) |
 | B1 | Onboarding | Onboarding Profile Wizard | New MSP Owner, first login |
 | C1 | Dashboard | Dashboard (Home) | All MSP roles |
-| C2 | GOS Dashboard | GOS Dashboard (client-confirmed addition, 2026-09-16; backed by a real per-account schema per client-confirmed amendment, 2026-09-16 — Backend Schema §6.6c; readiness check, KPI band and hours cards added 2026-09-17 — §6.6d) — 14 GrowthOS Playbook steps as clickable hours cards, sits directly below Dashboard in the sidebar | All roles view; hours: MSP Owner/Admin + CRO Admin/Advisor edit; everything else: CRO Admin/Advisor edit |
+| C2 | GOS Dashboard | GOS Dashboard (client-confirmed addition, 2026-09-16; backed by a real per-account schema per client-confirmed amendment, 2026-09-16 — Backend Schema §6.6c; readiness check, KPI band and hours cards added 2026-09-17 — §6.6d) — 16 GrowthOS Playbook workstreams as clickable cards, sits directly below Dashboard in the sidebar | All roles view; hours: MSP Owner/Admin + CRO Admin/Advisor edit; everything else: CRO Admin/Advisor edit |
 | C3 | GOS Dashboard | Playbook Step Detail — no tabs: Hours, then the uploaded report (View in a modal, CRO Leader uploads), then "What to do next" as a flat sortable sheet. Duties and KPIs removed 2026-09-25 | All roles view; hours: MSP Owner/Admin + CRO Admin/Advisor edit; everything else: CRO Admin/Advisor edit |
 | D1 | Contacts | Contacts List | All MSP roles |
 | D2 | Contacts | Contact Detail (tabs: Overview, Activity, Opportunities, Emails) | All MSP roles |
@@ -245,6 +245,18 @@ Two behaviours worth recording because they are easy to regress: the toggle is `
 The ticked checkbox completes a task in one click, which is deliberate: completing moves its hours into the quarter's achieved figure, so it is the row's most consequential control and should be its easiest.
 
 **Left in place but no longer reachable from the UI:** `GET /api/gos-dashboard/[slug]/export`, the generated Status Report PDF. Its only link was the panel that has now gone. The route still works and still renders the typed summary and figures, which remain in the database — so it is a decision for the client whether to relink it, repurpose it as a task-sheet export, or retire it.
+
+**Client-confirmed restructure (2026-10-05) — sixteen workstreams, no phases.** The Playbook grows from fourteen to sixteen, two are renamed, and the order changes. This supersedes the source document, which defines fourteen steps in four phases, and is the fourth recorded departure from it after the suggestions list, the progress tracker, and Duties/KPIs.
+
+**The phases are dropped.** The new order interleaves them: SDR Outreach moves to 12 while Reviews and Events sit at 14 and 15, and Sales Enablement at 16 belongs to SDR's old phase. They no longer group into blocks, so a step header would have read "Step 12 · SDR Outreach & Sales Execution" above "Step 14 · Authority, Trust & Demand". The 1–16 order is the structure now; step pages read "Step 12" with no phase line, and the Command Center says "16 workstreams".
+
+**The order, as confirmed:** 1 SEO · 2 GEO · 3 Blogging & Content · 4 Social Media Marketing · 5 Website Optimization · 6 ICP Development · 7 List Building · 8 CRM Administration · 9 Opportunities — Pipeline · 10 Email Campaigns · 11 Social Communication · 12 SDR Outreach · 13 AdvocateDash · 14 Reviews & Testimonials · 15 Events · 16 Sales Enablement.
+
+**Two renames, URLs included** (client-confirmed): `social-media` → `social-media-marketing` and `pipeline-metrics` → `opportunities-pipeline`. The enum value is renamed in place, so every existing task, report, hours and status row follows automatically — nine tasks moved across with no data migration. Old bookmarks to the previous slugs will 404.
+
+**Two new workstreams.** Social Communication (11) covers invites and outreach that is not campaign email, and ships with duties. **AdvocateDash (13) is deliberately empty** — the client has separate instructions for it, so its duties list is blank rather than invented, and the page shows its empty state until they arrive.
+
+**The Mission Card loses its quarter bar and Log hours** (client-confirmed). The bar measured achieved against committed, so with no commitment recorded it rendered empty beneath a caption reading "No hours committed this quarter" on every card. Both are gone; the card keeps Needed · Committed · Achieved, the task summary and the Outsourced chip. Logging hours is unchanged on the workstream page, one click away — this was explicitly scoped to the cards only.
 
 **Client-confirmed rename (2026-09-15):** "Pipeline by Stage" is now labeled "Opportunities by Stage" on the actual Dashboard — a copy-only change, same component and data. Kept as "Pipeline by Stage" in the narrative above and elsewhere in this document where it describes the mockup as originally approved.
 

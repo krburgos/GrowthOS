@@ -1,38 +1,33 @@
 "use client";
 
-import { CircleAlert, Clock, Wallet } from "lucide-react";
+import { CircleAlert, Wallet } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 
-import { HoursBar, OutsourcedChip } from "@/components/gos-dashboard/hours-ui";
+import { OutsourcedChip } from "@/components/gos-dashboard/hours-ui";
 import { PLAYBOOK_ICON } from "@/components/gos-dashboard/icon-map";
-import { LogHoursDialog } from "@/components/gos-dashboard/log-hours-dialog";
 import { StatusBadge } from "@/components/gos-dashboard/status-badge";
-import { SHORT_TITLE, formatHours, quarterPct, type QuarterInfo, type StepHours } from "@/lib/gos-dashboard/hours";
+import { SHORT_TITLE, formatHours, type StepHours } from "@/lib/gos-dashboard/hours";
 import type { StepOverview } from "@/lib/gos-dashboard/queries";
 import { taskSummary, type Task } from "@/lib/gos-dashboard/tasks";
 import { initialsOf, type TeamMember } from "@/lib/team/members";
 
 /**
  * Client-confirmed (2026-09-17), "B — Ledger": short title + status pill,
- * then Needed · Committed · Achieved side by side, the quarter bar, and the
- * Outsourced label. The whole card links to the step detail page through a
+ * then Needed · Committed · Achieved side by side, and the Outsourced
+ * label. The quarter bar and Log hours left on 2026-10-05 (client-
+ * confirmed): the bar measured achieved against committed, so with no
+ * commitment recorded it read empty under a caption saying exactly that,
+ * on every card. Logging hours stays on the workstream page. The whole card links to the step detail page through a
  * stretched link; "Log hours" sits above that layer so it opens the dialog.
  */
 export function HoursCard({
   step,
   hours,
-  quarter,
-  accountId,
-  canLogHours,
   assignees,
   tasks,
 }: {
   step: StepOverview;
   hours: StepHours;
-  quarter: QuarterInfo;
-  accountId: string;
-  canLogHours: boolean;
   /**
    * Who is on this workstream: people declared against it in the Company
    * Profile, plus anyone simply holding tasks in it (client-confirmed fix,
@@ -43,8 +38,6 @@ export function HoursCard({
   /** This workstream's tasks, summarised on the card. */
   tasks: Task[];
 }) {
-  const [open, setOpen] = useState(false);
-  const pct = quarterPct(hours);
   const title = SHORT_TITLE[step.slug] ?? step.title;
   const Icon = PLAYBOOK_ICON[step.icon];
 
@@ -164,37 +157,9 @@ export function HoursCard({
         </div>
       )}
 
-      <div className="mt-auto flex flex-col gap-2">
-        <HoursBar pct={pct} elapsedPct={quarter.elapsedPct} />
-        <div className="flex items-center justify-between gap-2 text-caption text-neutral-500">
-          <span className="tabular-nums">
-            {hours.committed > 0 ? `${pct}% of this quarter's commitment` : "No hours committed this quarter"}
-          </span>
-          <OutsourcedChip outsourced={hours.outsourced} />
-        </div>
-        {canLogHours && (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="relative z-10 -mb-1 inline-flex items-center gap-1.5 self-start rounded-md px-1.5 py-1 text-body-sm font-semibold text-secondary-700 hover:bg-secondary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
-          >
-            <Clock className="size-3.5" />
-            Log hours
-          </button>
-        )}
+      <div className="mt-auto flex items-center justify-end">
+        <OutsourcedChip outsourced={hours.outsourced} />
       </div>
-
-      {canLogHours && (
-        <LogHoursDialog
-          accountId={accountId}
-          slug={step.slug}
-          title={title}
-          hours={hours}
-          quarter={quarter}
-          open={open}
-          onOpenChange={setOpen}
-        />
-      )}
     </div>
   );
 }

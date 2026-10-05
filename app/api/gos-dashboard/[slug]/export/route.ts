@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { currentQuarter } from "@/lib/gos-dashboard/hours";
-import { PLAYBOOK_PHASES, PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
+import { PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
 import { getStepDetail, getStepHours, getTasksForStep } from "@/lib/gos-dashboard/queries";
 import { registerPoppins } from "@/lib/pdf/poppins";
 import { renderStatusReport } from "@/lib/pdf/status-report-doc";
@@ -49,7 +49,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   }
 
   const stepHours = hours[step.slug];
-  const phase = PLAYBOOK_PHASES.find((p) => p.phase === shape.phase);
 
   const doc = new PDFDocument({ size: "LETTER", margin: 54, bufferPages: true });
   registerPoppins(doc);
@@ -60,7 +59,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   renderStatusReport(doc, {
     accountName: account?.name ?? "GrowthOS Account",
     stepTitle: step.title,
-    phaseTitle: phase?.name ?? "GrowthOS Playbook",
+    phaseTitle: `Step ${shape.number} of ${PLAYBOOK_STEPS.length}`,
     quarterLabel: `${quarter.label} · ${quarter.range}`,
     summary: step.statusReportSummary,
     stats: step.statusReportStats,
