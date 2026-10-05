@@ -37,7 +37,22 @@ Every authenticated screen shares one shell: a **left sidebar** for primary navi
 
 ### 2.2 Responsive Behavior
 
-**Client-confirmed redesign:** the sidebar is now icon-only at every window width, not just narrower ones — labels are dropped in favor of a hover tooltip (Design System §8.9). This replaces the originally-spec'd width-based collapse/expand behavior. Per the PRD, GrowthOS Phase 1 is desktop-first with no other tablet-specific redesign.
+Per the PRD, GrowthOS Phase 1 is desktop-first with no tablet- or phone-specific redesign. PRD §3: "Native mobile app | No (CRM is web-based)". Implementation Plan §17/§19 sets the bar as "usable at a narrow desktop/laptop width — full mobile optimization isn't required for Phase 1".
+
+**Sidebar behaviour, corrected 2026-10-05.** Two earlier statements here and in Design System §9 were both out of date and contradicted each other and the code:
+
+- This section said the sidebar is "icon-only at every window width". That was the 2026-09-06 *predecessor*, replaced the same day by Concept C, "Toggleable Rail" (Design System §8.9), after an Impeccable critique flagged tooltip-only labels as a Recognition-vs-Recall and accessible-name problem.
+- Design System §9 said it "collapses to icon-only below lg (1024px)". **No such behaviour exists.** There are no media queries in `app/globals.css` and no width logic in `components/shell/sidebar.tsx`.
+
+**What it actually does:** opens **expanded at 240px** at every width, with a bottom toggle to collapse it to the 64px icon rail. The choice persists per browser in `localStorage` under `growthos.sidebar.collapsed`. There is no automatic collapse at any breakpoint.
+
+**Verified behaviour in a mobile browser (2026-10-05).** The app loads and is operable; nothing gates or redirects by user agent, and Next.js emits `<meta name="viewport" content="width=device-width, initial-scale=1">` by default, so pages render at device width rather than as a zoomed-out desktop page. Three caveats, in order of how much they hurt:
+
+1. **The 240px sidebar is the real problem.** On a 390px-wide phone it takes 62% of the screen, leaving ~150px of content, and nothing collapses it automatically — the user has to find the toggle at the foot of the sidebar once per browser. This is the single change that would make the app tolerable on a phone.
+2. **Wide tables scroll inside their own container rather than breaking the page**, thanks to the `min-w-0` fix on the shell's content column (§8.5). Contacts is 18 columns, the task sheet needs 1066px and the drop-by sheet 1150px, so on a phone that is a great deal of sideways dragging — but the page itself never overflows.
+3. **Eight grids have no mobile fallback** (hard `grid-cols-2`/`-3` with no responsive prefix) — the Mission Card's three-figure row, the KPI band pairs, and several two-up form field rows. Cramped at phone width, not broken.
+
+Dialogs are sized `w-[96vw]`, so modals fit. The seventeen-section Victory Visit Report form (§4.3c) is the one complex surface that already stacks properly — its checklist grid is `sm:grid-cols-2`, so it is single-column below 640px.
 
 ### 2.3 Search
 
@@ -312,7 +327,13 @@ Palette, typeface and the type scale are unchanged — Design System §9 fixes t
 
 **Client-confirmed (2026-10-05).** AdvocateDash is a drop-by service CRO Leader runs, or trains somebody else to run. An **Advocate** visits a target business in person, leaves the drop-by letter, and files a VictoryVisit After-Action Report back to the MSP Owner. Sourced from the client's own two documents — "AdvocateDash Dropby letter.docx" and "Victory Visit Report.pdf", a completed report for ABTech - Boston.
 
-None of the six source documents mentions this workstream, so most of what follows fills a gap. Four points genuinely cut across something already written down and are recorded as departures:
+**Correction (2026-10-05, same day).** An earlier draft of this section said none of the six source documents mentions this workstream. That was wrong, and the mistake mattered: **PRD §3's scope table names AdvocateDash twice** — "AdvocateDash | No | Yes, as a separate mobile app" and "Native mobile app | No (CRM is web-based) | AdvocateDash only". So building it at all overrides a PRD scope line, and building it as a desktop-first web surface overrides the delivery form that line anticipated.
+
+Both overrides are client-directed: the client asked for this workstream in detail and answered eight design questions about it on 2026-10-05. That is the client revising their own earlier scope decision, which is theirs to do — the same thing happened to the "14-step growth plan / four-quarter roadmap | No | Yes" row when the GOS Dashboard was built in September. It is recorded as a departure rather than described as a gap so the next reader is not told a decision was absent when it was overridden.
+
+**The "separate mobile app" intent is still worth weighing**, because it points at something real rather than being a stale preference. The Advocate is the one role in this product who is definitionally not at a desk — they are standing outside the target's office. The *review* surfaces here (the table, the Mission Card) are read by an MSP Owner or CRO Leader at a desk and are rightly desktop-shaped. The *capture* surface — the seventeen-section report — is filled in by the Advocate in the field. See §2.2 on what currently works and does not work at phone width.
+
+With that correction made, four further points cut across something already written down:
 
 **1. It is measured in drop-bys, not hours.** Every other workstream is hours-measured, with `gos_dashboard_step_hours` behind the Mission Card's Needed · Committed · Achieved triad. AdvocateDash's card reads **Targets · Scheduled · Completed** instead, all three derived from the table rather than entered anywhere, and its workstream page shows a Drop-bys panel in place of the Hours panel — no quarter commitment, no progress bar against one, no Log hours button. It is also **left out of the Command Center's quarter hours strip** rather than summed in as a zero, which would have quietly understated the average across the workstreams that do carry hours. The `gos_dashboard_step_hours` row still exists and is simply no longer read, the same treatment `gos_dashboard_tracker_items` got.
 

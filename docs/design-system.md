@@ -202,7 +202,11 @@ Data-heavy views (Contacts list, Opportunity table) are **compact**:
 
 ### 5.4 Breakpoints
 
-Tailwind defaults, unmodified: sm 640px, md 768px, lg 1024px, xl 1280px, 2xl 1536px. The sidebar collapses to icon-only **below ****lg**** (1024px)**, per the App Flow Document's automatic-collapse behavior — this is the one responsive breakpoint that matters in this desktop-first product.
+Tailwind defaults, unmodified: sm 640px, md 768px, lg 1024px, xl 1280px, 2xl 1536px.
+
+**Corrected 2026-10-05.** This previously said the sidebar "collapses to icon-only below lg (1024px), per the App Flow Document's automatic-collapse behavior." **That behaviour does not exist and never shipped.** There are no media queries in `app/globals.css` and no width logic in `components/shell/sidebar.tsx`. The Concept C "Toggleable Rail" redesign (§8.9, 2026-09-06) replaced width-based collapsing with a manual toggle: the sidebar opens expanded at 240px at every width and the user's collapse choice persists in `localStorage`. App Flow §2.2 records what this means on a phone.
+
+So there is no breakpoint that changes the shell. The breakpoints above are used only inside pages — card grids, stat rows and form field pairs.
 
 ## 6. Elevation, Radius & Borders
 
