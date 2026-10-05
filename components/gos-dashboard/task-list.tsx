@@ -520,50 +520,57 @@ function TaskCard({ task, team, canAssign, canDefine, capacityOf, patch, onEdit 
         )}
       </div>
 
-      <div className="mt-3 flex items-stretch gap-2 border-t border-neutral-100 pt-3">
-        <div className="flex w-[124px] shrink-0 overflow-hidden rounded-lg">
+      {/* Two rows, not one (client-confirmed fix, 2026-10-05). Side by side,
+          the status pill and the owner collided — the owner's avatar sat
+          hard against the pill's rounded edge and read as overlapping it.
+          The status keeps its own line at its natural width; the owner gets
+          the next one as a full-width control.
+
+          The owner also drops the table cell's borderless trigger here. That
+          override exists so a Select can sit inside a 136px column without
+          looking like a form field; in a card it just read as floating text
+          with a stray chevron, and it was below a comfortable tap size. */}
+      <div className="mt-3 flex flex-col gap-2 border-t border-neutral-100 pt-3">
+        <div className="flex w-[132px] overflow-hidden rounded-lg">
           <StatusCell task={task} canAssign={canAssign} onChange={(state) => void patch(task.id, { state }, { state })} />
         </div>
-        <div className="flex min-w-0 flex-1 items-center justify-end">
-          {canAssign ? (
-            <Select
-              value={task.assignee?.id ?? UNASSIGNED}
-              onValueChange={(v) =>
-                void patch(
-                  task.id,
-                  { assignee_id: v === UNASSIGNED ? null : v },
-                  { assignee: team.find((m) => m.id === v) ?? null }
-                )
-              }
-            >
-              <SelectTrigger
-                aria-label={`Who is doing ${task.title}`}
-                className="h-auto w-auto gap-1.5 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0"
-              >
-                <Owner assignee={task.assignee} capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={UNASSIGNED}>Nobody yet</SelectItem>
-                {team.map((m) => {
-                  const cap = capacityOf.get(m.id);
-                  return (
-                    <SelectItem key={m.id} value={m.id}>
-                      <span className="flex items-baseline gap-2">
-                        <span>
-                          {m.name}
-                          {m.kind === "outsourced" ? " (outsourced)" : ""}
-                        </span>
-                        {cap && <span className={`text-caption ${CAPACITY_CLASS[cap.tone].text}`}>{capacityShort(cap)}</span>}
+        {canAssign ? (
+          <Select
+            value={task.assignee?.id ?? UNASSIGNED}
+            onValueChange={(v) =>
+              void patch(
+                task.id,
+                { assignee_id: v === UNASSIGNED ? null : v },
+                { assignee: team.find((m) => m.id === v) ?? null }
+              )
+            }
+          >
+            <SelectTrigger aria-label={`Who is doing ${task.title}`} className="h-auto min-h-[44px]">
+              <Owner assignee={task.assignee} capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={UNASSIGNED}>Nobody yet</SelectItem>
+              {team.map((m) => {
+                const cap = capacityOf.get(m.id);
+                return (
+                  <SelectItem key={m.id} value={m.id}>
+                    <span className="flex items-baseline gap-2">
+                      <span>
+                        {m.name}
+                        {m.kind === "outsourced" ? " (outsourced)" : ""}
                       </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          ) : (
+                      {cap && <span className={`text-caption ${CAPACITY_CLASS[cap.tone].text}`}>{capacityShort(cap)}</span>}
+                    </span>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="flex min-h-[44px] items-center rounded-md border border-neutral-200 px-3">
             <Owner assignee={task.assignee} capacity={task.assignee ? capacityOf.get(task.assignee.id) : undefined} />
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </article>
   );
