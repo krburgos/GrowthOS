@@ -131,7 +131,9 @@ export function KanbanBoard({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative w-full max-w-xs self-end">
+      {/* Full width on a phone, where `max-w-xs` left a short search field
+          stranded against the right edge with nothing beside it. */}
+      <div className="relative w-full sm:max-w-xs sm:self-end">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
         <Input
           value={query}

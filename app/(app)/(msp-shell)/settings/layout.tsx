@@ -11,7 +11,10 @@ import { SettingsPanel } from "@/components/shell/settings-panel";
  */
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-1">
+    /* Stacks below `lg`: the panel can render two 192px nav columns at
+       once, which on a phone left the page they navigate to with nothing.
+       Each becomes a full-width strip above the content instead. */
+    <div className="flex flex-1 flex-col lg:flex-row">
       <SettingsPanel />
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
     </div>

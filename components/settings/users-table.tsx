@@ -92,7 +92,7 @@ export function UsersTable({
 
   return (
     <>
-      <Table>
+      <Table stacked>
         <TableHeader variant="solid">
           <TableRow className="border-b-0 hover:bg-transparent">
             <TableHead variant="solid">Name</TableHead>
@@ -106,9 +106,9 @@ export function UsersTable({
         <TableBody>
           {users.map((u) => (
             <TableRow key={u.id}>
-              <TableCell className="font-medium text-neutral-800">{u.full_name}</TableCell>
-              <TableCell>{u.email}</TableCell>
-              <TableCell>
+              <TableCell label="Name" className="font-medium text-neutral-800">{u.full_name}</TableCell>
+              <TableCell label="Email" className="break-all">{u.email}</TableCell>
+              <TableCell label="Role">
                 {canEdit && u.id !== currentUserId ? (
                   <Select
                     value={u.role}
@@ -129,10 +129,10 @@ export function UsersTable({
                   <Badge variant="info">{ROLE_LABELS[u.role]}</Badge>
                 )}
               </TableCell>
-              <TableCell>
+              <TableCell label="Last login">
                 {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : "Never"}
               </TableCell>
-              <TableCell>
+              <TableCell label="Status">
                 {u.archived_at ? (
                   <Badge variant="neutral">Deactivated</Badge>
                 ) : (

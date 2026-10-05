@@ -17,7 +17,13 @@ const TabsList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn("flex items-center border-b border-neutral-200", className)}
+    /* Scrolls rather than squashing: four tabs do not fit a 390px screen,
+       and a strip that wraps to two rows stops reading as one strip. The
+       scrollbar is hidden so it never sits on the bottom border. */
+    className={cn(
+      "flex items-center overflow-x-auto border-b border-neutral-200 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+      className
+    )}
     {...props}
   />
 ));
@@ -30,7 +36,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "relative flex h-10 items-center px-4 text-body text-neutral-500 transition-colors",
+      "relative flex h-10 shrink-0 items-center whitespace-nowrap px-4 text-body text-neutral-500 transition-colors",
       "hover:text-neutral-800",
       "data-[state=active]:text-primary-700 data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:bottom-0 data-[state=active]:after:h-0.5 data-[state=active]:after:bg-primary-700",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 focus-visible:ring-offset-2",

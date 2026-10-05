@@ -94,7 +94,7 @@ export default async function OpportunitiesPage({
 
   return (
     <main className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col p-6 md:p-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-h1 text-primary-900">Opportunities</h1>
         <div className="flex items-center gap-3">
           <div className="flex rounded-md border border-neutral-200 bg-neutral-50 p-1 shadow-inner">

@@ -439,17 +439,32 @@ function Row({
   fieldId: string;
   children: ReactNode;
 }) {
+  /* Below `sm` the label sits above the value rather than in a 112px
+     gutter beside it (client-confirmed fix, 2026-10-05). On a 390px screen
+     that gutter plus the icon left about 158px for the value, which an
+     ordinary email address overruns — the reported "email extends off to
+     the right". Stacked, the value gets the full width. */
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <Icon className="size-4 shrink-0 text-neutral-400" />
-      <label htmlFor={fieldId} className="w-28 shrink-0 text-body-sm text-neutral-500">
-        {label}
-      </label>
-      {children}
+    <div className="flex items-start gap-3 px-4 py-3 sm:items-center">
+      <Icon className="mt-0.5 size-4 shrink-0 text-neutral-400 sm:mt-0" />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
+        <label htmlFor={fieldId} className="shrink-0 text-body-sm text-neutral-500 sm:w-28">
+          {label}
+        </label>
+        {children}
+      </div>
     </div>
   );
 }
 
 function Value({ children }: { children?: ReactNode }) {
-  return <span className="flex-1 truncate text-body text-neutral-800">{children || "—"}</span>;
+  /* Wraps on a phone, ellipsises from `sm` up. Truncating an email on the
+     one screen where it is the thing you came to read hides it with no way
+     to get it back; on a desktop the row is wide enough that the ellipsis
+     is the rarer, tidier case. */
+  return (
+    <span className="min-w-0 flex-1 break-words text-body text-neutral-800 sm:truncate">
+      {children || "—"}
+    </span>
+  );
 }

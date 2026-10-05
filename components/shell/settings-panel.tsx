@@ -83,7 +83,12 @@ function NavColumn({
   backHref?: string;
 }) {
   return (
-    <div className="flex w-48 shrink-0 flex-col border-r border-neutral-200 bg-white py-4">
+    /* Below `lg` the column becomes a full-width band with its links in a
+       horizontal scrolling strip (client-confirmed fix, 2026-10-05).
+       Settings can render *two* of these at once — Account Settings plus a
+       sub-section — which at 192px each took 384px of a 390px screen and
+       left no room for the page they navigate to. */
+    <div className="flex w-full shrink-0 flex-col border-b border-neutral-200 bg-white py-3 lg:w-48 lg:border-b-0 lg:border-r lg:py-4">
       {backHref ? (
         <Link
           href={backHref}
@@ -94,7 +99,11 @@ function NavColumn({
         </Link>
       ) : null}
       <h2 className="mb-2 px-4 text-h4 text-primary-900">{title}</h2>
-      <nav className="flex flex-col gap-0.5 px-2">
+      {/* A horizontal strip below lg, the column it has always been from lg
+          up. The active rail moves from the left edge to underneath,
+          because a 3px bar to the left of a pill in a horizontal row reads
+          as a divider between two links rather than a marker on one. */}
+      <nav className="flex gap-0.5 overflow-x-auto px-2 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-col [&::-webkit-scrollbar]:hidden">
         {rows.map((row) =>
           row.href ? (
             <Link
@@ -102,9 +111,9 @@ function NavColumn({
               href={row.href}
               title={row.label}
               className={cn(
-                "relative flex h-11 items-center truncate rounded-md px-3 text-body transition-colors",
+                "relative flex h-11 shrink-0 items-center whitespace-nowrap rounded-md px-3 text-body transition-colors lg:shrink lg:truncate",
                 activeHref === row.href
-                  ? "bg-secondary-50 font-medium text-primary-700 before:absolute before:-left-2 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-secondary-500"
+                  ? "bg-secondary-50 font-medium text-primary-700 before:absolute before:inset-x-3 before:bottom-0 before:h-[3px] before:rounded-full before:bg-secondary-500 lg:before:inset-x-auto lg:before:-left-2 lg:before:top-1/2 lg:before:h-5 lg:before:w-[3px] lg:before:-translate-y-1/2"
                   : "text-neutral-700 hover:bg-neutral-50"
               )}
             >
@@ -115,7 +124,7 @@ function NavColumn({
               key={row.label}
               aria-disabled="true"
               title={row.label}
-              className="flex h-11 cursor-not-allowed items-center truncate rounded-md px-3 text-body text-neutral-300"
+              className="flex h-11 shrink-0 cursor-not-allowed items-center whitespace-nowrap rounded-md px-3 text-body text-neutral-300 lg:shrink lg:truncate"
             >
               {row.label}
             </span>
