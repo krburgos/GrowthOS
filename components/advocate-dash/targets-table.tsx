@@ -671,7 +671,7 @@ function ReportCell({
 
   if (!started && !canEdit) {
     return block ? (
-      <span className="flex min-h-[44px] flex-1 items-center justify-center rounded-lg border border-dashed border-neutral-200 text-body-sm text-neutral-400">
+      <span className="flex min-h-[44px] min-w-0 flex-1 items-center justify-center rounded-lg border border-dashed border-neutral-200 text-body-sm text-neutral-400">
         No report yet
       </span>
     ) : (
@@ -687,7 +687,7 @@ function ReportCell({
       <button
         type="button"
         onClick={onOpen}
-        className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg px-3 text-body-sm font-semibold transition-colors motion-reduce:transition-none ${
+        className={`flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-body-sm font-semibold transition-colors motion-reduce:transition-none ${
           submitted
             ? "border border-success-200 bg-success-50 text-success-800 hover:bg-success-100"
             : started

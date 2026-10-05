@@ -138,7 +138,7 @@ export function LetterCell({
           type="button"
           disabled={busy || (!target.letter && !canEdit)}
           onClick={() => (target.letter ? setViewing(true) : input.current?.click())}
-          className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg border px-3 text-body-sm font-semibold transition-colors disabled:opacity-50 motion-reduce:transition-none ${
+          className={`flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border px-3 text-body-sm font-semibold transition-colors disabled:opacity-50 motion-reduce:transition-none ${
             target.letter
               ? "border-neutral-300 bg-white text-primary-700 hover:border-primary-700"
               : "border-dashed border-neutral-300 bg-white text-neutral-500 hover:border-secondary-500 hover:text-secondary-700"
