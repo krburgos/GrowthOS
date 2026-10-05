@@ -217,7 +217,7 @@ export function ContactForm({
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex max-w-2xl flex-col gap-6">
       <section className="flex flex-col gap-4">
         <h2 className="text-h4 text-primary-900">Contact</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="first_name" required>
               First name
@@ -303,7 +303,7 @@ export function ContactForm({
 
       <section className="flex flex-col gap-4">
         <h2 className="text-h4 text-primary-900">Company</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="company_name">Company name</Label>
             <Input id="company_name" {...register("company_name")} />

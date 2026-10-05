@@ -187,14 +187,20 @@ function ChecklistField({
           const id = `${field.key}-${slug(option)}`;
           const checked = ticked.includes(option);
           return (
-            <div key={option} className="flex items-start gap-2">
+            <div key={option} className="flex items-start gap-2.5">
               <Checkbox
                 id={id}
-                className="mt-0.5"
+                className="mt-2.5 size-5 sm:mt-0.5 sm:size-4"
                 checked={checked}
                 onCheckedChange={() => toggle(option)}
               />
-              <label htmlFor={id} className="text-body-sm leading-snug text-neutral-700">
+              {/* The label is the rest of the hit area, and the row is tall
+                  enough to hit with a thumb. Both relax at sm, where this is
+                  a pointer and the form can be denser. */}
+              <label
+                htmlFor={id}
+                className="flex min-h-[44px] flex-1 items-center text-body-sm leading-snug text-neutral-700 sm:min-h-0"
+              >
                 {option}
               </label>
             </div>
@@ -258,7 +264,7 @@ function ChoiceField({
               role="radio"
               aria-checked={selected}
               onClick={() => onChange(field.key, selected ? "" : option)}
-              className={`rounded-full border px-3 py-1.5 text-body-sm font-medium transition-colors motion-reduce:transition-none ${
+              className={`flex min-h-[40px] items-center rounded-full border px-4 text-body-sm font-medium transition-colors motion-reduce:transition-none sm:min-h-0 sm:px-3 sm:py-1.5 ${
                 selected
                   ? "border-secondary-600 bg-secondary-600 text-white"
                   : "border-neutral-300 bg-white text-neutral-600 hover:border-secondary-500 hover:text-secondary-700"
@@ -317,7 +323,7 @@ function YesNoField({
             type="button"
             aria-pressed={value === option}
             onClick={() => onChange(field.key, value === option ? null : option)}
-            className={`rounded-full border px-3 py-1 text-body-sm font-medium transition-colors motion-reduce:transition-none ${
+            className={`flex min-h-[40px] min-w-[64px] items-center justify-center rounded-full border px-4 text-body-sm font-medium transition-colors motion-reduce:transition-none sm:min-h-0 sm:min-w-0 sm:px-3 sm:py-1 ${
               value === option
                 ? option
                   ? "border-success-600 bg-success-600 text-white"

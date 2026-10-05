@@ -69,6 +69,8 @@ export interface AdvocateTarget {
   company_name: string | null;
   address: string | null;
   status: TargetStatus;
+  /** The date the drop-by is booked for; null until scheduled. */
+  scheduled_for: string | null;
   completed_on: string | null;
   advocate: { id: string; name: string; kind: TeamKind } | null;
   letter: TargetLetter | null;

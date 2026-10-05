@@ -46,6 +46,7 @@ interface Draft {
   company_name: string;
   address: string;
   advocate_member_id: string;
+  scheduled_for: string;
 }
 
 const emptyDraft = (): Draft => ({
@@ -54,6 +55,7 @@ const emptyDraft = (): Draft => ({
   company_name: "",
   address: "",
   advocate_member_id: UNASSIGNED,
+  scheduled_for: "",
 });
 
 /**
@@ -235,6 +237,7 @@ export function TargetsTable({
                     company_name: target.company_name ?? "",
                     address: target.address ?? "",
                     advocate_member_id: target.advocate?.id ?? UNASSIGNED,
+                    scheduled_for: target.scheduled_for ?? "",
                   })
                 }
               />
@@ -617,6 +620,7 @@ function TargetDialog({
       company_name: draft.company_name.trim() || null,
       address: draft.address.trim() || null,
       advocate_member_id: draft.advocate_member_id === UNASSIGNED ? null : draft.advocate_member_id,
+      scheduled_for: draft.scheduled_for || null,
     };
 
     const { error } = draft.id
@@ -693,6 +697,22 @@ function TargetDialog({
               placeholder="123 Main Street, Newton MA"
               onChange={(e) => setDraft({ ...draft, address: e.target.value })}
             />
+          </div>
+          <div>
+            {/* Not a column on the sheet — the client's column list was
+                explicit and this is not on it. It lives here because My
+                Visits needs a date to call something "today", and this is
+                the one place a target is edited as a whole. */}
+            <Label htmlFor="scheduled_for">Scheduled for</Label>
+            <Input
+              id="scheduled_for"
+              type="date"
+              value={draft.scheduled_for}
+              onChange={(e) => setDraft({ ...draft, scheduled_for: e.target.value })}
+            />
+            <p className="mt-1 text-caption text-neutral-500">
+              Optional. Drives what My Visits shows as today&apos;s round.
+            </p>
           </div>
           <div>
             <Label htmlFor="advocate">Advocate</Label>

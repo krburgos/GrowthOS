@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { CroLeaderBanner } from "@/components/shell/cro-leader-banner";
+import { MobileNavProvider } from "@/components/shell/mobile-nav";
 import { Sidebar } from "@/components/shell/sidebar";
 import { TopBar } from "@/components/shell/top-bar";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
@@ -69,23 +70,28 @@ export default async function MspShellLayout({ children }: { children: React.Rea
   const visionBoardComplete = !!visionBoardResponse?.completed_at;
 
   return (
-    <div className="flex flex-1 flex-col">
-      {user.viewingAccountName && <CroLeaderBanner companyName={user.viewingAccountName} />}
-      <div className="flex min-h-0 flex-1">
-        <Sidebar access={SIDEBAR_ACCESS[user.role]} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar
-            fullName={user.full_name}
-            access={SIDEBAR_ACCESS[user.role]}
-            accountId={user.account_id!}
-            questionnaireAnsweredCount={questionnaireAnsweredCount}
-            questionnaireComplete={questionnaireComplete}
-            visionBoardAnsweredCount={visionBoardAnsweredCount}
-            visionBoardComplete={visionBoardComplete}
-          />
-          {children}
+    /* MobileNavProvider joins the top bar's hamburger to the drawer the
+       Sidebar renders below `lg` — the two sit in different subtrees, and
+       the alternative was the top bar owning the navigation markup. */
+    <MobileNavProvider>
+      <div className="flex flex-1 flex-col">
+        {user.viewingAccountName && <CroLeaderBanner companyName={user.viewingAccountName} />}
+        <div className="flex min-h-0 flex-1">
+          <Sidebar access={SIDEBAR_ACCESS[user.role]} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <TopBar
+              fullName={user.full_name}
+              access={SIDEBAR_ACCESS[user.role]}
+              accountId={user.account_id!}
+              questionnaireAnsweredCount={questionnaireAnsweredCount}
+              questionnaireComplete={questionnaireComplete}
+              visionBoardAnsweredCount={visionBoardAnsweredCount}
+              visionBoardComplete={visionBoardComplete}
+            />
+            {children}
+          </div>
         </div>
       </div>
-    </div>
+    </MobileNavProvider>
   );
 }

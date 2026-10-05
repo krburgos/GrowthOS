@@ -84,7 +84,7 @@ export function OpportunityOverviewForm({
           <Label htmlFor="opp-name">Name (optional)</Label>
           <Input id="opp-name" {...register("name")} />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="opp-stage" required>
               Stage

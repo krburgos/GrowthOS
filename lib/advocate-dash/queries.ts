@@ -22,6 +22,7 @@ interface TargetRow {
   company_name: string | null;
   address: string | null;
   status: TargetStatus;
+  scheduled_for: string | null;
   completed_on: string | null;
   letter_path: string | null;
   letter_name: string | null;
@@ -47,7 +48,7 @@ interface ReportRow {
 }
 
 const SELECT = `
-  id, target_name, company_name, address, status, completed_on,
+  id, target_name, company_name, address, status, scheduled_for, completed_on,
   letter_path, letter_name, letter_size, letter_uploaded_at,
   advocate:account_team_members!advocate_dash_targets_advocate_member_id_fkey(id, name, kind)
 `;
@@ -97,6 +98,7 @@ export async function getTargets(accountId: string): Promise<AdvocateTarget[]> {
       company_name: row.company_name,
       address: row.address,
       status: row.status,
+      scheduled_for: row.scheduled_for,
       completed_on: row.completed_on,
       advocate: unwrap(row.advocate),
       letter: row.letter_path

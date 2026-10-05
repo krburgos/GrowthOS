@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { CommandPalette } from "@/components/shell/command-palette";
+import { MobileNavTrigger } from "@/components/shell/mobile-nav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -104,19 +105,26 @@ export function TopBar({
   };
 
   return (
-    <header className="flex h-[var(--topbar-height)] shrink-0 items-center bg-white px-4 shadow-[0_1px_0_var(--color-neutral-200),0_6px_16px_-12px_rgba(10,25,46,0.15)]">
-      <Link href="/dashboard" className="flex w-44 shrink-0 items-center">
+    <header className="flex h-[var(--topbar-height)] shrink-0 items-center gap-2 bg-white px-3 shadow-[0_1px_0_var(--color-neutral-200),0_6px_16px_-12px_rgba(10,25,46,0.15)] lg:gap-0 lg:px-4">
+      {/* Below lg the sidebar is a drawer, so this is the only way to the
+          navigation. Above lg the rail is a real column and this is gone. */}
+      <MobileNavTrigger />
+
+      {/* The fixed 176px cell exists to line the palette's left edge up
+          with the Settings nav column one row down — a desktop concern
+          only, so on a phone the logo takes its natural width. */}
+      <Link href="/dashboard" className="flex shrink-0 items-center lg:w-44">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/growthos-logo.png" alt="GrowthOS" className="h-12 w-auto" />
+        <img src="/growthos-logo.png" alt="GrowthOS" className="h-8 w-auto lg:h-12" />
       </Link>
 
       {access && accountId && (
-        <div className="flex-1">
+        <div className="ml-auto lg:ml-0 lg:flex-1">
           <CommandPalette access={access} accountId={accountId} />
         </div>
       )}
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="flex items-center gap-1 lg:ml-auto lg:gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button

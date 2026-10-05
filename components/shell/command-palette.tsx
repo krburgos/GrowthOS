@@ -99,9 +99,15 @@ export function CommandPalette({
 
   const navItems: PaletteItem[] = useMemo(
     () =>
-      NAV_ITEMS.filter((item) =>
-        item.section === "dashboard" || item.section === "gosDashboard" ? true : access[item.section] !== "disabled"
-      )
+      // `mobileOnly` items are left out here for the same reason they are
+      // left out of the desktop rail: My Visits is a narrow field screen
+      // and the AdvocateDash workstream page says more on a desktop.
+      NAV_ITEMS.filter((item) => !item.mobileOnly)
+        .filter((item) =>
+          item.section === "dashboard" || item.section === "gosDashboard" || item.section === "myVisits"
+            ? true
+            : access[item.section] !== "disabled"
+        )
         .filter((item) => !query.trim() || item.label.toLowerCase().includes(query.trim().toLowerCase()))
         .map((item) => ({ key: `nav-${item.section}`, label: item.label, icon: item.icon, href: item.href })),
     [access, query]
@@ -162,13 +168,18 @@ export function CommandPalette({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
       <DialogPrimitive.Trigger asChild>
+        {/* Icon-only below lg: a 390px top bar has no room for a search
+            field beside the hamburger, logo, bell and avatar — but the
+            trigger is a real button, so dropping it entirely would take
+            search away from touch users who have no Cmd+K. */}
         <button
           type="button"
-          className="flex h-9 w-full max-w-sm items-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 px-3 text-body-sm text-neutral-400 transition-colors hover:border-secondary-300"
+          aria-label="Search or jump to"
+          className="flex size-10 items-center justify-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 text-body-sm text-neutral-400 transition-colors hover:border-secondary-300 lg:h-9 lg:w-full lg:max-w-sm lg:justify-start lg:px-3"
         >
           <Search className="size-4 shrink-0" />
-          <span className="flex-1 text-left">Search or jump to…</span>
-          <span className="hidden items-center gap-0.5 sm:flex">
+          <span className="hidden flex-1 text-left lg:block">Search or jump to…</span>
+          <span className="hidden items-center gap-0.5 lg:flex">
             <kbd className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-caption font-semibold text-neutral-500">
               ⌘
             </kbd>

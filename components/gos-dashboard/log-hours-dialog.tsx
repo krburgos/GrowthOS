@@ -140,7 +140,7 @@ export function LogHoursDialog({
             <HoursInput id={`needed-${slug}`} label="Hours needed to complete" suffix="hrs total" value={needed} onChange={setNeeded} />
             <p className="mt-1 text-caption text-neutral-400">Total for the whole {title} workstream, across quarters.</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <HoursInput id={`committed-${slug}`} label="Committed this quarter" suffix="hrs" value={committed} onChange={setCommitted} />
             <HoursInput id={`achieved-${slug}`} label="Achieved this quarter" suffix="hrs" value={achieved} onChange={setAchieved} />
           </div>
