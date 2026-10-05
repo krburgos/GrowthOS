@@ -229,9 +229,14 @@ function VisitCard({
 
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-neutral-500">
         {/* Once a visit has happened, when it was booked for stops being
-            news — what it was actually done on is the fact that matters. */}
+            news — what it was actually done on is the fact that matters.
+            Both are gated on the status, because `completed_on` survives a
+            row being moved back off Completed (deliberately — the date is
+            history, not state), so an Assigned row can still carry one. */}
         {day && target.status !== "completed" && <span>Booked {day}</span>}
-        {target.completed_on && <span>Visited {formatVisitDay(target.completed_on)}</span>}
+        {target.status === "completed" && target.completed_on && (
+          <span>Visited {formatVisitDay(target.completed_on)}</span>
+        )}
         {showAdvocate && target.advocate && (
           <span className="flex items-center gap-1.5">
             <span className="flex size-5 items-center justify-center rounded-full bg-gradient-to-br from-neutral-500 to-neutral-400 text-[8px] font-bold text-white">
