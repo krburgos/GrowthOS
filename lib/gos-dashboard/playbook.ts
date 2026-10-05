@@ -59,7 +59,8 @@ export type IconKey =
   | "star"
   | "calendar-days"
   | "phone"
-  | "clipboard-check";
+  | "clipboard-check"
+  | "map-pin";
 
 export interface PlaybookShape {
   slug: string;
@@ -239,8 +240,27 @@ export const PLAYBOOK_STEPS: PlaybookShape[] = [
     slug: "advocate-dash",
     number: 13,
     title: "AdvocateDash",
-    icon: "star",
-    duties: [],
+    icon: "map-pin",
+    /**
+     * Shipped empty on 2026-10-05 pending the client's own material, which
+     * arrived the same day: "AdvocateDash Dropby letter.docx" (the personal
+     * note left in the package) and "Victory Visit Report.pdf" (a completed
+     * VictoryVisit After-Action Report for ABTech - Boston). These duties
+     * are read off those two documents — the pre-visit checklist, the
+     * report's own sections, and its Follow-Up Recommendation — rather than
+     * from the Playbook doc, which predates this workstream.
+     */
+    duties: [
+      "Target account selection and Map Plan per visit run",
+      "VictoryVisit package assembly (personal note, brochure, gift, treats)",
+      "Advocate pre-visit checklist (account review, materials, GPS route)",
+      "In-person drop-by visits to target accounts",
+      "Location verification (exterior photo, signage, building directory, GPS)",
+      "Business and technology intelligence capture (incumbent IT, headcount, estate observed)",
+      "VictoryVisit After-Action Report filed per visit",
+      "Follow-up sequence inside 2 business days (personal email, SDR call, LinkedIn request)",
+      "Repeat visit cadence on accounts still in play",
+    ],
   },
   {
     slug: "reviews-testimonials",

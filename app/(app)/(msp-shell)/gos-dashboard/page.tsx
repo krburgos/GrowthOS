@@ -7,6 +7,8 @@ import { KpiBand } from "@/components/gos-dashboard/kpi-band";
 import { ReadinessCheck } from "@/components/gos-dashboard/readiness-check";
 import { HeroBand, HeroLabel } from "@/components/shell/hero-band";
 import { SectionHeading } from "@/components/shell/section-heading";
+import { getTargets } from "@/lib/advocate-dash/queries";
+import { ADVOCATE_DASH_SLUG, advocatesForCard, targetSummary } from "@/lib/advocate-dash/targets";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
 import {
@@ -35,7 +37,7 @@ export default async function GosDashboardPage() {
   if (!user || !user.account_id) return null;
 
   const quarter = currentQuarter();
-  const [steps, hours, kpiBand, readiness, teamMembers, tasks, stepTasks] = await Promise.all([
+  const [steps, hours, kpiBand, readiness, teamMembers, tasks, stepTasks, targets] = await Promise.all([
     getStepOverviews(user.account_id),
     getStepHours(user.account_id, quarter.start),
     getKpiBand(user.account_id),
@@ -45,15 +47,21 @@ export default async function GosDashboardPage() {
     // Who holds tasks where, so a card can name people nobody declared
     // against the workstream in the Company Profile.
     getMemberStepTasks(user.account_id),
+    // AdvocateDash is measured in drop-bys, so its card reads targets
+    // rather than hours and tasks (client-confirmed, 2026-10-05).
+    getTargets(user.account_id),
   ]);
 
-  // One read for all 14 cards, bucketed here rather than a query per card.
+  // One read for all sixteen cards, bucketed here rather than a query per
+  // card.
   const tasksByStep = new Map<string, typeof tasks>();
   for (const task of tasks) {
     const bucket = tasksByStep.get(task.step_slug);
     if (bucket) bucket.push(task);
     else tasksByStep.set(task.step_slug, [task]);
   }
+
+  const dropbys = targetSummary(targets);
 
   const canLogHours = HOURS_EDIT_ROLES.includes(user.role);
   const isCroLeaderEditor = user.role === "cro_admin" || user.role === "cro_advisor";
@@ -81,7 +89,17 @@ export default async function GosDashboardPage() {
         </div>
         <div>
           <HeroLabel>Workstream hours · {quarter.label}</HeroLabel>
-          <HoursTotalsStrip hours={Object.values(hours)} quarter={quarter} variant="hero" />
+          {/* AdvocateDash is left out rather than summed in as a zero
+              (client-confirmed, 2026-10-05): it is measured in drop-bys, so
+              counting it here would quietly understate the average across
+              the workstreams that do carry hours. */}
+          <HoursTotalsStrip
+            hours={Object.entries(hours)
+              .filter(([slug]) => slug !== ADVOCATE_DASH_SLUG)
+              .map(([, value]) => value)}
+            quarter={quarter}
+            variant="hero"
+          />
         </div>
       </HeroBand>
 
@@ -120,15 +138,23 @@ export default async function GosDashboardPage() {
         )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {steps.map((step) => (
-            <HoursCard
-              key={step.slug}
-              step={step}
-              hours={hours[step.slug]}
-              assignees={membersForStep(teamMembers, step.slug, stepTasks)}
-              tasks={tasksByStep.get(step.slug) ?? []}
-            />
-          ))}
+          {steps.map((step) => {
+            const isAdvocateDash = step.slug === ADVOCATE_DASH_SLUG;
+            return (
+              <HoursCard
+                key={step.slug}
+                step={step}
+                hours={hours[step.slug]}
+                assignees={
+                  isAdvocateDash
+                    ? advocatesForCard(teamMembers, targets)
+                    : membersForStep(teamMembers, step.slug, stepTasks)
+                }
+                tasks={tasksByStep.get(step.slug) ?? []}
+                dropbys={isAdvocateDash ? dropbys : undefined}
+              />
+            );
+          })}
         </div>
       </section>
     </main>

@@ -4,6 +4,7 @@ import {
   Database,
   Layout,
   Mail,
+  MapPin,
   PenTool,
   Phone,
   Search,
@@ -33,4 +34,5 @@ export const PLAYBOOK_ICON: Record<IconKey, LucideIcon> = {
   "calendar-days": CalendarDays,
   phone: Phone,
   "clipboard-check": ClipboardCheck,
+  "map-pin": MapPin,
 };

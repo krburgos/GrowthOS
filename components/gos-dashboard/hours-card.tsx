@@ -25,6 +25,7 @@ export function HoursCard({
   hours,
   assignees,
   tasks,
+  dropbys,
 }: {
   step: StepOverview;
   hours: StepHours;
@@ -37,17 +38,34 @@ export function HoursCard({
   assignees: { member: TeamMember; hours: number; declared: boolean }[];
   /** This workstream's tasks, summarised on the card. */
   tasks: Task[];
+  /**
+   * AdvocateDash only (client-confirmed, 2026-10-05). That workstream is
+   * measured in drop-bys rather than hours, so when this is present the
+   * card counts targets instead of showing the hours triad and the task
+   * progress. Absent on the other fifteen, which are unchanged.
+   */
+  dropbys?: { targets: number; scheduled: number; completed: number; awaitingReport: number };
 }) {
   const title = SHORT_TITLE[step.slug] ?? step.title;
   const Icon = PLAYBOOK_ICON[step.icon];
 
   const t = taskSummary(tasks);
 
-  const cells = [
-    { key: "Needed", value: hours.needed, highlight: false },
-    { key: "Committed", value: hours.committed, highlight: false },
-    { key: "Achieved", value: hours.achieved, highlight: true },
-  ];
+  // The progress line counts whichever unit this workstream runs on.
+  const total = dropbys ? dropbys.targets : t.total;
+  const done = dropbys ? dropbys.completed : t.done;
+
+  const cells = dropbys
+    ? [
+        { key: "Targets", value: dropbys.targets, highlight: false },
+        { key: "Scheduled", value: dropbys.scheduled, highlight: false },
+        { key: "Completed", value: dropbys.completed, highlight: true },
+      ]
+    : [
+        { key: "Needed", value: hours.needed, highlight: false },
+        { key: "Committed", value: hours.committed, highlight: false },
+        { key: "Achieved", value: hours.achieved, highlight: true },
+      ];
 
   return (
     /* Client-confirmed (2026-10-01): the card now sits on a navy panel, so
@@ -78,8 +96,9 @@ export function HoursCard({
           >
             <span className="text-[10.5px] font-semibold uppercase tracking-wide text-neutral-400">{c.key}</span>
             <span className="text-h4 font-bold tabular-nums text-primary-900">
-              {formatHours(c.value)}
-              <span className="ml-px text-caption font-medium text-neutral-400">h</span>
+              {dropbys ? c.value : formatHours(c.value)}
+              {/* No unit on a count of visits — "12h" would be a lie. */}
+              {!dropbys && <span className="ml-px text-caption font-medium text-neutral-400">h</span>}
             </span>
           </div>
         ))}
@@ -90,22 +109,24 @@ export function HoursCard({
           tasks themselves live on the step page, one click away. */}
       <div className="border-t border-neutral-100 pt-3">
         <div className="mb-2 flex items-baseline justify-between gap-2">
-          <p className="text-caption font-bold uppercase tracking-wide text-neutral-400">Tasks</p>
-          {t.total > 0 && (
+          <p className="text-caption font-bold uppercase tracking-wide text-neutral-400">
+            {dropbys ? "Drop-bys" : "Tasks"}
+          </p>
+          {total > 0 && (
             <p className="text-caption font-semibold tabular-nums text-primary-900">
-              {t.done} of {t.total} done
+              {done} of {total} done
             </p>
           )}
         </div>
 
-        {t.total === 0 ? (
-          <p className="text-caption text-neutral-400">No tasks yet</p>
+        {total === 0 ? (
+          <p className="text-caption text-neutral-400">{dropbys ? "No targets yet" : "No tasks yet"}</p>
         ) : (
           <div className="flex flex-col gap-2">
             <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100">
               <div
                 className="h-full rounded-full bg-secondary-600 transition-[width] duration-500 motion-reduce:transition-none"
-                style={{ width: `${Math.round((t.done / t.total) * 100)}%` }}
+                style={{ width: `${Math.round((done / total) * 100)}%` }}
               />
             </div>
             <div className="flex items-center justify-between gap-2">
@@ -116,7 +137,11 @@ export function HoursCard({
                   {assignees.slice(0, 4).map(({ member, declared }, i) => (
                     <span
                       key={member.id}
-                      title={declared ? member.name : `${member.name} — has tasks here, not assigned in the Company Profile`}
+                      title={
+                        declared
+                          ? member.name
+                          : `${member.name} — has ${dropbys ? "drop-bys" : "tasks"} here, not assigned in the Company Profile`
+                      }
                       className={`flex size-6 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white ${
                         member.kind === "outsourced"
                           ? "bg-gradient-to-br from-neutral-500 to-neutral-400"
@@ -133,7 +158,18 @@ export function HoursCard({
                   )}
                 </div>
               )}
-              {t.unassigned > 0 ? (
+              {/* The one thing on the card that needs somebody to act. For
+                  AdvocateDash that is a visit made but never written up —
+                  the report is the deliverable, so an unfiled one is the
+                  gap worth flagging, not an estimate of hours left. */}
+              {dropbys ? (
+                dropbys.awaitingReport > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-warning-100 px-2 py-0.5 text-caption font-semibold text-warning-800">
+                    <CircleAlert className="size-3" />
+                    {dropbys.awaitingReport} awaiting a report
+                  </span>
+                )
+              ) : t.unassigned > 0 ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-warning-100 px-2 py-0.5 text-caption font-semibold text-warning-800">
                   <CircleAlert className="size-3" />
                   {t.unassigned} unassigned
