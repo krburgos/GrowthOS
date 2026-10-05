@@ -71,15 +71,23 @@ export function renderVisitReport(doc: InstanceType<typeof PDFDocument>, data: V
   const W = doc.page.width - M * 2;
 
   // ---- Masthead ----------------------------------------------------
-  doc.rect(0, 0, doc.page.width, 158).fill(NAVY_950);
+  // The band is measured, not fixed: a two- or three-line target name used
+  // to push the brand lines off the navy and onto white, since the height
+  // was hard-coded at a figure that only suited a one-line title.
+  const mastheadTitle = data.companyName
+    ? `${data.targetName} — ${data.companyName}`
+    : data.targetName;
+  doc.font(POPPINS.bold).fontSize(22);
+  const titleHeight = doc.heightOfString(mastheadTitle, { width: W });
+  const bandHeight = 62 + titleHeight + 36;
+
+  doc.rect(0, 0, doc.page.width, bandHeight).fill(NAVY_950);
 
   doc.font(POPPINS.semibold).fontSize(9).fillColor(TEAL_300);
   doc.text(REPORT_DOC_TITLE.toUpperCase(), M, 38, { width: W, characterSpacing: 1.1 });
 
   doc.font(POPPINS.bold).fontSize(22).fillColor(WHITE);
-  doc.text(data.companyName ? `${data.targetName} — ${data.companyName}` : data.targetName, M, 62, {
-    width: W,
-  });
+  doc.text(mastheadTitle, M, 62, { width: W });
 
   doc.font(POPPINS.regular).fontSize(9.5).fillColor("#8fa3c4");
   doc.text(REPORT_BRAND_LINE, M, doc.y + 4, { width: W, lineBreak: false });
@@ -87,7 +95,7 @@ export function renderVisitReport(doc: InstanceType<typeof PDFDocument>, data: V
   doc.text(REPORT_STRAPLINE, M, doc.y + 2, { width: W, lineBreak: false });
 
   // ---- Visit facts strip -------------------------------------------
-  let y = 180;
+  let y = bandHeight + 22;
   const facts: [string, string][] = [
     ["Account", data.accountName],
     ["Advocate", data.advocateName ?? "—"],
@@ -155,7 +163,9 @@ export function renderVisitReport(doc: InstanceType<typeof PDFDocument>, data: V
     y = breakFor(doc, y, 30);
     doc.font(POPPINS.regular).fontSize(8.5).fillColor(FAINT);
     doc.text(
-      `${skipped} of ${REPORT_SECTIONS.length} sections were left unfilled and are omitted here.`,
+      skipped === 1
+        ? `1 of ${REPORT_SECTIONS.length} sections was left unfilled and is omitted here.`
+        : `${skipped} of ${REPORT_SECTIONS.length} sections were left unfilled and are omitted here.`,
       M,
       y,
       { width: W, lineBreak: false }
