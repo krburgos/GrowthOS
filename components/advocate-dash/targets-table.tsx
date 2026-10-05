@@ -504,15 +504,24 @@ function TargetCard({
         )}
       </div>
 
-      <div className="mt-3 flex items-stretch gap-2 border-t border-neutral-100 pt-3">
-        {/* The status palette is the one inline control worth keeping: it is
-            a single tap to the thing that changes most often. */}
-        <div className="flex w-[124px] shrink-0 overflow-hidden rounded-lg">
+      {/* Two rows, not one. Three controls across a ~330px card left the
+          letter and report as cramped links with the label truncated to
+          "Fill r…" (client-confirmed fix, 2026-10-05). The status keeps its
+          own line at its natural width; the two actions share the next one
+          as equal full-height buttons. */}
+      <div className="mt-3 flex flex-col gap-2 border-t border-neutral-100 pt-3">
+        <div className="flex w-[132px] overflow-hidden rounded-lg">
           <StatusCell target={target} canEdit={canEdit} onChange={(s) => setStatus(target, s)} />
         </div>
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          <LetterCell accountId={accountId} target={target} canEdit={canEdit} onUploaded={onLetter} />
-          <ReportCell target={target} canEdit={canEdit} onOpen={onOpenReport} />
+        <div className="flex items-stretch gap-2">
+          <LetterCell
+            accountId={accountId}
+            target={target}
+            canEdit={canEdit}
+            onUploaded={onLetter}
+            block
+          />
+          <ReportCell target={target} canEdit={canEdit} onOpen={onOpenReport} block />
         </div>
       </div>
     </article>
@@ -649,16 +658,53 @@ function ReportCell({
   target,
   canEdit,
   onOpen,
+  block = false,
 }: {
   target: AdvocateTarget;
   canEdit: boolean;
   onOpen: () => void;
+  /** Render as one full-width button, for the card layout below `lg`. */
+  block?: boolean;
 }) {
   const submitted = Boolean(target.report?.submitted_at);
   const started = Boolean(target.report);
 
   if (!started && !canEdit) {
-    return <span className="px-1.5 text-body-sm text-neutral-300">Not filed yet</span>;
+    return block ? (
+      <span className="flex min-h-[44px] flex-1 items-center justify-center rounded-lg border border-dashed border-neutral-200 text-body-sm text-neutral-400">
+        No report yet
+      </span>
+    ) : (
+      <span className="px-1.5 text-body-sm text-neutral-300">Not filed yet</span>
+    );
+  }
+
+  /* A card has the room for a real button and no room for a truncated
+     link — "Fill report" was rendering as "Fill r…" beside the status
+     pill (client-confirmed fix, 2026-10-05). */
+  if (block) {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg px-3 text-body-sm font-semibold transition-colors motion-reduce:transition-none ${
+          submitted
+            ? "border border-success-200 bg-success-50 text-success-800 hover:bg-success-100"
+            : started
+              ? "bg-warning-400 text-primary-950 hover:brightness-95"
+              : "bg-primary-700 text-white hover:bg-primary-800"
+        }`}
+      >
+        <ClipboardList className="size-4 shrink-0" />
+        <span className="truncate">
+          {submitted
+            ? "View report"
+            : started
+              ? `Draft · ${target.report?.sections_done ?? 0}/${REPORT_SECTIONS.length}`
+              : "Fill report"}
+        </span>
+      </button>
+    );
   }
 
   return (

@@ -39,11 +39,14 @@ export function LetterCell({
   target,
   canEdit,
   onUploaded,
+  block = false,
 }: {
   accountId: string;
   target: AdvocateTarget;
   canEdit: boolean;
   onUploaded: (letter: TargetLetter | null) => void;
+  /** Render as one full-width button, for the card layout below `lg`. */
+  block?: boolean;
 }) {
   const router = useRouter();
   const [viewing, setViewing] = useState(false);
@@ -107,6 +110,63 @@ export function LetterCell({
     router.refresh();
   };
 
+  const fileInput = canEdit ? (
+    <input
+      ref={input}
+      type="file"
+      accept={LETTER_ACCEPT}
+      className="hidden"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (file) void upload(file);
+      }}
+    />
+  ) : null;
+
+  /**
+   * Card layout (client-confirmed, 2026-10-05): one full-width button
+   * rather than the table cell's inline text plus a separate upload icon.
+   * In a card those read as cramped links and the label truncated to
+   * "Fill r…". Replacing a letter moves into the viewer dialog, so this
+   * stays one control — which is what makes it a button.
+   */
+  if (block) {
+    return (
+      <>
+        <button
+          type="button"
+          disabled={busy || (!target.letter && !canEdit)}
+          onClick={() => (target.letter ? setViewing(true) : input.current?.click())}
+          className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg border px-3 text-body-sm font-semibold transition-colors disabled:opacity-50 motion-reduce:transition-none ${
+            target.letter
+              ? "border-neutral-300 bg-white text-primary-700 hover:border-primary-700"
+              : "border-dashed border-neutral-300 bg-white text-neutral-500 hover:border-secondary-500 hover:text-secondary-700"
+          }`}
+        >
+          {target.letter ? <Mail className="size-4 shrink-0" /> : <Upload className="size-4 shrink-0" />}
+          <span className="truncate">
+            {busy ? "Uploading…" : target.letter ? "Letter" : canEdit ? "Upload letter" : "No letter"}
+          </span>
+        </button>
+        {fileInput}
+
+        {viewing && target.letter && (
+          <LetterViewer
+            letter={target.letter}
+            targetName={target.target_name}
+            canReplace={canEdit}
+            onReplace={() => {
+              setViewing(false);
+              input.current?.click();
+            }}
+            onClose={() => setViewing(false)}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       <span className="flex min-w-0 items-center gap-1.5">
@@ -147,19 +207,7 @@ export function LetterCell({
           <span className="px-1.5 text-body-sm text-neutral-300">—</span>
         )}
 
-        {canEdit && (
-          <input
-            ref={input}
-            type="file"
-            accept={LETTER_ACCEPT}
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              if (file) void upload(file);
-            }}
-          />
-        )}
+        {fileInput}
       </span>
 
       {viewing && target.letter && (
@@ -182,10 +230,16 @@ export function LetterCell({
 function LetterViewer({
   letter,
   targetName,
+  canReplace = false,
+  onReplace,
   onClose,
 }: {
   letter: TargetLetter;
   targetName: string;
+  /** Only the card layout passes this — the table cell has its own
+   *  replace control beside the link. */
+  canReplace?: boolean;
+  onReplace?: () => void;
   onClose: () => void;
 }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -244,6 +298,12 @@ function LetterViewer({
               {[letter.name, formatFileSize(letter.size)].filter(Boolean).join(" · ")}
             </p>
           </div>
+          {canReplace && onReplace && (
+            <Button size="sm" variant="secondary" onClick={onReplace}>
+              <Upload className="mr-1.5 size-4" />
+              Replace
+            </Button>
+          )}
           <Button size="sm" variant="secondary" onClick={() => void download()}>
             <Download className="mr-1.5 size-4" />
             Download
