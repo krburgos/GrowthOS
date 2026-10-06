@@ -48,10 +48,18 @@ export function owesReport(target: AdvocateTarget): boolean {
  * recent work and never get written up.
  */
 export function bucketVisits(targets: AdvocateTarget[], today = todayKey()): VisitBucket[] {
-  const byDateThenAdded = (a: AdvocateTarget, b: AdvocateTarget) => {
+  /**
+   * Date first, then the Advocate's own order (client-confirmed,
+   * 2026-10-06). Within a single day the manual order is the whole point —
+   * it is the order they intend to drive — so it outranks the name it used
+   * to fall back to. Across days the date still wins, because no manual
+   * ordering should put Thursday's visit above Tuesday's.
+   */
+  const byDateThenOrder = (a: AdvocateTarget, b: AdvocateTarget) => {
     const ad = a.scheduled_for ?? "";
     const bd = b.scheduled_for ?? "";
     if (ad !== bd) return ad < bd ? -1 : 1;
+    if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
     return a.target_name.localeCompare(b.target_name);
   };
 
@@ -64,25 +72,25 @@ export function bucketVisits(targets: AdvocateTarget[], today = todayKey()): Vis
       hint: "Scheduled before today and still not done",
       targets: open
         .filter((t) => t.scheduled_for !== null && t.scheduled_for < today)
-        .sort(byDateThenAdded),
+        .sort(byDateThenOrder),
     },
     {
       key: "today",
       title: "Today",
-      targets: open.filter((t) => t.scheduled_for === today).sort(byDateThenAdded),
+      targets: open.filter((t) => t.scheduled_for === today).sort(byDateThenOrder),
     },
     {
       key: "upcoming",
       title: "Coming up",
       targets: open
         .filter((t) => t.scheduled_for !== null && t.scheduled_for > today)
-        .sort(byDateThenAdded),
+        .sort(byDateThenOrder),
     },
     {
       key: "unscheduled",
       title: "Not booked in yet",
       hint: "Assigned to you with no date set",
-      targets: open.filter((t) => t.scheduled_for === null).sort(byDateThenAdded),
+      targets: open.filter((t) => t.scheduled_for === null).sort(byDateThenOrder),
     },
     {
       key: "owed",

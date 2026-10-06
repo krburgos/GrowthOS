@@ -23,6 +23,7 @@ interface TargetRow {
   address: string | null;
   status: TargetStatus;
   scheduled_for: string | null;
+  sort_order: number;
   completed_on: string | null;
   letter_path: string | null;
   letter_name: string | null;
@@ -48,7 +49,7 @@ interface ReportRow {
 }
 
 const SELECT = `
-  id, target_name, company_name, address, status, scheduled_for, completed_on,
+  id, target_name, company_name, address, status, scheduled_for, sort_order, completed_on,
   letter_path, letter_name, letter_size, letter_uploaded_at,
   advocate:account_team_members!advocate_dash_targets_advocate_member_id_fkey(id, name, kind)
 `;
@@ -70,7 +71,10 @@ export async function getTargets(accountId: string): Promise<AdvocateTarget[]> {
       .select(SELECT)
       .eq("account_id", accountId)
       .is("archived_at", null)
-      .order("created_at", { ascending: false }),
+      // Manual order first (client-confirmed, 2026-10-06), insertion
+      // order as the tiebreak so an unmoved row stays where it was.
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
     supabase
       .from("advocate_dash_visit_reports")
       .select("id, target_id, answers, submitted_at")
@@ -99,6 +103,7 @@ export async function getTargets(accountId: string): Promise<AdvocateTarget[]> {
       address: row.address,
       status: row.status,
       scheduled_for: row.scheduled_for,
+      sort_order: row.sort_order,
       completed_on: row.completed_on,
       advocate: unwrap(row.advocate),
       letter: row.letter_path

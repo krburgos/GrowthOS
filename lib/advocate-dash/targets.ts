@@ -71,6 +71,8 @@ export interface AdvocateTarget {
   status: TargetStatus;
   /** The date the drop-by is booked for; null until scheduled. */
   scheduled_for: string | null;
+  /** Manual visit order, lowest first. Ties fall back to insertion order. */
+  sort_order: number;
   completed_on: string | null;
   advocate: { id: string; name: string; kind: TeamKind } | null;
   letter: TargetLetter | null;

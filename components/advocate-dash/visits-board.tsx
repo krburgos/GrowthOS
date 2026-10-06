@@ -1,9 +1,28 @@
 "use client";
 
-import { Check, ChevronRight, ClipboardList, MapPin, Navigation } from "lucide-react";
-import { useState } from "react";
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Check, ChevronRight, ClipboardList, GripVertical, MapPin, Navigation } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { VisitReportDialog } from "@/components/advocate-dash/visit-report-dialog";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
+import { createClient } from "@/lib/supabase/client";
 import { REPORT_SECTIONS } from "@/lib/advocate-dash/report-form";
 import {
   TARGET_STATUS_CELL,
@@ -49,15 +68,73 @@ export function VisitsBoard({
   myMemberId: string | null;
   canEdit: boolean;
 }) {
+  const router = useRouter();
   const [advocateId, setAdvocateId] = useState<string | null>(myMemberId);
   const [reportFor, setReportFor] = useState<AdvocateTarget | null>(null);
+  // Local copy so a drag lands instantly rather than after a round trip.
+  const [rows, setRows] = useState(targets);
+  useEffect(() => setRows(targets), [targets]);
 
-  const mine = advocateId ? targets.filter((t) => t.advocate?.id === advocateId) : targets;
+  /**
+   * A short press-and-hold before a drag starts, so a flick still scrolls
+   * the page — the same split the opportunity board needs. Without it,
+   * dnd-kit's default begins dragging on the first pointer movement and
+   * the list cannot be scrolled on a touch screen at all.
+   */
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } })
+  );
+
+  const mine = advocateId ? rows.filter((t) => t.advocate?.id === advocateId) : rows;
   const buckets = bucketVisits(mine).filter((b) => b.targets.length > 0);
   const next = nextStop(buckets);
 
   const todo = mine.filter((t) => t.status !== "completed").length;
   const owed = mine.filter(owesReport).length;
+
+  /**
+   * Reordering is scoped to the bucket it happened in. Dragging a stop from
+   * "Today" into "Coming up" would mean changing its date, which is a
+   * different decision made in a different place — so a drag only ever
+   * shuffles rows inside one heading.
+   *
+   * The written values are positions within that bucket offset by its
+   * lowest existing sort_order, which keeps each bucket's block of numbers
+   * where it already sat relative to the others.
+   */
+  const reorder = async (bucketTargets: AdvocateTarget[], event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const from = bucketTargets.findIndex((t) => t.id === active.id);
+    const to = bucketTargets.findIndex((t) => t.id === over.id);
+    if (from < 0 || to < 0) return;
+
+    const moved = [...bucketTargets];
+    moved.splice(to, 0, moved.splice(from, 1)[0]);
+
+    const base = Math.min(...bucketTargets.map((t) => t.sort_order));
+    const updates = moved.map((t, i) => ({ id: t.id, sort_order: base + i }));
+
+    const before = rows;
+    const next = new Map(updates.map((u) => [u.id, u.sort_order]));
+    setRows((prev) => prev.map((t) => (next.has(t.id) ? { ...t, sort_order: next.get(t.id)! } : t)));
+
+    const supabase = createClient();
+    const results = await Promise.all(
+      updates.map((u) =>
+        supabase.from("advocate_dash_targets").update({ sort_order: u.sort_order }).eq("id", u.id)
+      )
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      setRows(before);
+      toast.error(getFriendlyErrorMessage(failed.error));
+      return;
+    }
+    router.refresh();
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4">
@@ -123,17 +200,32 @@ export function VisitsBoard({
               {bucket.hint && <p className="text-caption text-neutral-500">{bucket.hint}</p>}
             </div>
 
-            <div className="flex flex-col gap-2.5">
-              {bucket.targets.map((target) => (
-                <VisitCard
-                  key={target.id}
-                  target={target}
-                  urgent={bucket.key === "overdue" || bucket.key === "owed"}
-                  showAdvocate={advocateId === null}
-                  onOpenReport={() => setReportFor(target)}
-                />
-              ))}
-            </div>
+            {/* Each bucket is its own drag scope — see `reorder`. Only the
+                roles that can edit a target get a handle; everyone else
+                reads the order somebody else set. */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={(event) => void reorder(bucket.targets, event)}
+            >
+              <SortableContext
+                items={bucket.targets.map((t) => t.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex flex-col gap-2.5">
+                  {bucket.targets.map((target) => (
+                    <VisitCard
+                      key={target.id}
+                      target={target}
+                      urgent={bucket.key === "overdue" || bucket.key === "owed"}
+                      showAdvocate={advocateId === null}
+                      draggable={canEdit && bucket.targets.length > 1}
+                      onOpenReport={() => setReportFor(target)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           </section>
         ))
       )}
@@ -184,24 +276,47 @@ function VisitCard({
   target,
   urgent,
   showAdvocate,
+  draggable,
   onOpenReport,
 }: {
   target: AdvocateTarget;
   urgent: boolean;
   showAdvocate: boolean;
+  draggable: boolean;
   onOpenReport: () => void;
 }) {
   const submitted = Boolean(target.report?.submitted_at);
   const started = Boolean(target.report);
   const day = formatVisitDay(target.scheduled_for);
 
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: target.id,
+    disabled: !draggable,
+  });
+
   return (
     <article
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`rounded-xl border bg-white p-3.5 ${
         urgent ? "border-warning-400 shadow-[0_0_0_3px_var(--color-warning-100)]" : "border-neutral-200"
-      }`}
+      } ${isDragging ? "relative z-10 shadow-raised" : ""}`}
     >
       <div className="flex items-start gap-3">
+        {/* A handle rather than a draggable card: the card holds a Maps
+            link and a report button, and a press-and-hold anywhere on it
+            would fight both. */}
+        {draggable && (
+          <button
+            type="button"
+            aria-label={`Reorder ${target.target_name}`}
+            {...attributes}
+            {...listeners}
+            className="-ml-1 flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500 active:cursor-grabbing"
+          >
+            <GripVertical className="size-4" />
+          </button>
+        )}
         <div className="min-w-0 flex-1">
           <h3 className="text-body font-semibold leading-snug text-primary-900">{target.target_name}</h3>
           {target.company_name && (
