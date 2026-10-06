@@ -89,6 +89,15 @@ The shared `Table` gained a `stacked` prop and `TableCell` a `label`; below `lg`
 
 **This needed `scheduled_for date` on `advocate_dash_targets`** (migration `20261005000003`). The mockup promised "today's drop-bys" and the schema could not say when a scheduled visit was scheduled for — a target carried only its three states and the date it was *completed*. There is deliberately **no ordering column**: route order would need a hand-maintained sequence or geocoded addresses, and these addresses are free text, so a day is ordered by name and "Open next in Maps" hands over one address rather than claiming to plan a route. It is edited in the target dialog rather than as a ninth sheet column, since the client's column list was explicit.
 
+**The round's order (client-confirmed, 2026-10-06).** Targets carry a `sort_order` integer, and the order is set in exactly one place: the **`#` column** on the drop-by sheet (§4.3c). My Visits reads it and cannot change it.
+
+- **`#` is the sheet's default sort**, replacing Status, so the two screens agree the moment either loads and the handles are live without a click.
+- **`#` is the only sort you can drag under.** A list ordered by Status has no honest answer to where a dropped row belongs — above the other Scheduled rows, or above everything? So the handles appear only while `#` is active and grey out under any other header. The number still shows under every sort, because it is a fact about the target rather than about the view.
+- **The card view below `lg` always renders the round order and is always draggable**, since it has no sort control of its own — otherwise reordering would vanish below 1024px, where the sheet is replaced by cards.
+- **Reordering rewrites every position from 1** rather than patching around the moved row. The list is short, and a contiguous sequence keeps `#` reading 1..n instead of drifting into gaps nobody can explain.
+- **My Visits is read-only on order.** Drag briefly shipped there first and was removed once the client settled that the desk order is authoritative: both screens read and write the same column, so a phone-only order would have meant a second number and a rule for what happens when a day is replanned after the Advocate has resequenced it. The Advocate can still visit in any order — the list is guidance, not a gate.
+- **Dates still outrank the manual order on My Visits.** Ordering applies within a day; nothing puts Thursday's visit above Tuesday's.
+
 **Scoping is unfinished and the fallback is deliberate.** It reads `account_team_members.user_id`, a column that already existed in the schema but which nothing in the app reads or writes. So no viewer is currently linked to a roster entry, and every viewer falls through to the whole account with an Advocate filter chip. Scoping to a link nobody has made would render an empty screen that reads as broken. Making this per-Advocate for real needs either that column populated (a picker on the team roster) or logins for Advocates, which would be a new role — PRD §4's role table has no Advocate.
 
 ### 2.3 Search

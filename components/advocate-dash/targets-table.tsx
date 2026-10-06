@@ -1,6 +1,17 @@
 "use client";
 
-import { Check, ChevronUp, ClipboardList, MapPin, Pencil, Plus } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Check, ChevronUp, ClipboardList, GripVertical, MapPin, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -94,7 +105,10 @@ export function TargetsTable({
   useEffect(() => setRows(targets), [targets]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [reportFor, setReportFor] = useState<AdvocateTarget | null>(null);
-  const [sort, setSort] = useState<{ key: TargetSortKey; dir: 1 | -1 }>({ key: "status", dir: 1 });
+  // Opens on the planned round (client-confirmed, 2026-10-06) so this sheet
+  // and My Visits agree the moment either loads, and the handles are live
+  // without a click.
+  const [sort, setSort] = useState<{ key: TargetSortKey; dir: 1 | -1 }>({ key: "order", dir: 1 });
 
   const summary = targetSummary(rows);
 
@@ -135,6 +149,56 @@ export function TargetsTable({
     );
   };
 
+  /**
+   * A short press-and-hold before a drag starts on touch, so a flick still
+   * scrolls. The same split the opportunity board and the kanban need.
+   */
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } })
+  );
+
+  /**
+   * Writes the new round order (client-confirmed, 2026-10-06). The list
+   * handed in is whatever the reader is looking at, in the order they see
+   * it, so one handler serves both the sheet and the card view.
+   *
+   * Positions are rewritten from 1 across the whole list rather than
+   * patched around the moved row: the list is short, and a contiguous
+   * sequence keeps the "#" column reading 1..n instead of drifting into
+   * gaps nobody can explain.
+   */
+  const reorder = async (list: AdvocateTarget[], event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const from = list.findIndex((t) => t.id === active.id);
+    const to = list.findIndex((t) => t.id === over.id);
+    if (from < 0 || to < 0) return;
+
+    const moved = [...list];
+    moved.splice(to, 0, moved.splice(from, 1)[0]);
+    const updates = moved.map((t, i) => ({ id: t.id, sort_order: i + 1 }));
+
+    const before = rows;
+    const next = new Map(updates.map((u) => [u.id, u.sort_order]));
+    setRows((prev) => prev.map((t) => (next.has(t.id) ? { ...t, sort_order: next.get(t.id)! } : t)));
+
+    const supabase = createClient();
+    const results = await Promise.all(
+      updates.map((u) =>
+        supabase.from("advocate_dash_targets").update({ sort_order: u.sort_order }).eq("id", u.id)
+      )
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      setRows(before);
+      toast.error(getFriendlyErrorMessage(failed.error));
+      return;
+    }
+    router.refresh();
+  };
+
   const by = (a: AdvocateTarget, b: AdvocateTarget) => {
     const av = targetSortValue(a, sort.key);
     const bv = targetSortValue(b, sort.key);
@@ -143,6 +207,16 @@ export function TargetsTable({
   };
 
   const sorted = [...rows].sort(by);
+
+  /* The sheet is draggable only while "#" is the active sort — a list
+     ordered by Status has no honest answer to where a dragged row lands.
+     The card view below `lg` has no sort control at all, so it always
+     renders the round order and is always draggable. */
+  const canDragSheet = canEdit && sort.key === "order" && sorted.length > 1;
+  const cardOrder = [...rows].sort(
+    (a, b) => a.sort_order - b.sort_order || a.target_name.localeCompare(b.target_name)
+  );
+  const canDragCards = canEdit && cardOrder.length > 1;
 
   const toggleSort = (key: TargetSortKey) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
@@ -210,9 +284,17 @@ export function TargetsTable({
             the two controls worth having on a phone: the status, and the
             report. Everything else edits through the pencil, which opens
             the same dialog the desktop sheet uses. */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(event) => void reorder(cardOrder, event)}
+        >
+          <SortableContext items={cardOrder.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col gap-2.5 px-4 py-4 lg:hidden">
-          {sorted.map((target) => (
+          {cardOrder.map((target, i) => (
             <TargetCard
+              position={i + 1}
+              draggable={canDragCards}
               key={target.id}
               accountId={accountId}
               target={target}
@@ -235,12 +317,15 @@ export function TargetsTable({
             />
           ))}
         </div>
+          </SortableContext>
+        </DndContext>
 
         {/* Scrolls sideways rather than dropping columns: an address or an
            advocate you cannot see is how a drop-by gets missed. */}
         <div className="hidden overflow-x-auto px-5 py-5 lg:block">
-          <div className="min-w-[1150px] overflow-hidden rounded-md border border-neutral-200">
+          <div className="min-w-[1202px] overflow-hidden rounded-md border border-neutral-200">
             <div className={`${ROW} border-b border-neutral-200 bg-neutral-50`}>
+              {head("order", "#", "center")}
               {head("target", "Target")}
               {head("address", "Address")}
               {head("advocate", "Advocate")}
@@ -251,8 +336,16 @@ export function TargetsTable({
               <span />
             </div>
 
-            {sorted.map((target) => (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={(event) => void reorder(sorted, event)}
+            >
+              <SortableContext items={sorted.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            {sorted.map((target, i) => (
               <TargetRow
+                position={sort.key === "order" ? i + 1 : target.sort_order}
+                draggable={canDragSheet}
                 key={target.id}
                 accountId={accountId}
                 target={target}
@@ -276,6 +369,8 @@ export function TargetsTable({
                 }
               />
             ))}
+              </SortableContext>
+            </DndContext>
 
             {canEdit && (
               <button
@@ -316,6 +411,8 @@ export function TargetsTable({
 function TargetRow({
   accountId,
   target,
+  position,
+  draggable,
   team,
   canEdit,
   patch,
@@ -326,6 +423,9 @@ function TargetRow({
 }: {
   accountId: string;
   target: AdvocateTarget;
+  /** The number shown in the "#" cell. */
+  position: number;
+  draggable: boolean;
   team: TeamMember[];
   canEdit: boolean;
   patch: (id: string, values: Record<string, unknown>, optimistic: Partial<AdvocateTarget>) => void;
@@ -334,8 +434,20 @@ function TargetRow({
   onOpenReport: () => void;
   onEdit: () => void;
 }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: target.id,
+    disabled: !draggable,
+  });
+
   return (
-    <div className={`${ROW} border-t border-neutral-100 hover:bg-neutral-50/70`}>
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`${ROW} border-t border-neutral-100 hover:bg-neutral-50/70 ${
+        isDragging ? "relative z-10 bg-white shadow-raised" : ""
+      }`}
+    >
+      <OrderCell position={position} draggable={draggable} attributes={attributes} listeners={listeners} />
       {/* Two lines, so this cell sets its own alignment rather than
           overriding CELL's with !important. */}
       <span className="flex min-w-0 flex-col justify-center px-2.5 py-2">
@@ -446,6 +558,8 @@ function TargetRow({
 function TargetCard({
   accountId,
   target,
+  position,
+  draggable,
   canEdit,
   setStatus,
   onLetter,
@@ -454,17 +568,48 @@ function TargetCard({
 }: {
   accountId: string;
   target: AdvocateTarget;
+  /** Its place in the round, shown beside the handle. */
+  position: number;
+  draggable: boolean;
   canEdit: boolean;
   setStatus: (target: AdvocateTarget, status: TargetStatus) => void;
   onLetter: (letter: TargetLetter | null) => void;
   onOpenReport: () => void;
   onEdit: () => void;
 }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: target.id,
+    disabled: !draggable,
+  });
+
   return (
-    <article className="rounded-xl border border-neutral-200 bg-white p-3.5">
+    <article
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`rounded-xl border border-neutral-200 bg-white p-3.5 ${
+        isDragging ? "relative z-10 shadow-raised" : ""
+      }`}
+    >
       <div className="flex items-start gap-3">
+        {/* The handle, not the card: the card holds a Maps link, a status
+            palette and two action buttons that a press-and-hold would
+            fight. */}
+        {draggable && (
+          <button
+            type="button"
+            aria-label={`Reorder ${target.target_name}`}
+            {...attributes}
+            {...listeners}
+            className="-ml-1 flex size-9 shrink-0 cursor-grab touch-none items-center justify-center gap-0.5 rounded-lg text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500 active:cursor-grabbing"
+          >
+            <GripVertical className="size-4" />
+          </button>
+        )}
         <div className="min-w-0 flex-1">
-          <h3 className="text-body font-semibold leading-snug text-primary-900">{target.target_name}</h3>
+          <h3 className="text-body font-semibold leading-snug text-primary-900">
+            <span className="mr-1.5 text-caption font-bold tabular-nums text-neutral-400">{position}</span>
+            {target.target_name}
+          </h3>
           {target.company_name && (
             <p className="text-caption text-neutral-500">{target.company_name}</p>
           )}
@@ -525,6 +670,43 @@ function TargetCard({
         </div>
       </div>
     </article>
+  );
+}
+
+/**
+ * The "#" cell: the row's place in the round, and the grip that moves it.
+ *
+ * The handle only appears while "#" is the active sort. Under any other
+ * sort the number still shows — it is a fact about the target, not about
+ * this view — but there is nothing to drag, because a list ordered by
+ * Status cannot say where a dropped row belongs.
+ */
+function OrderCell({
+  position,
+  draggable,
+  attributes,
+  listeners,
+}: {
+  position: number;
+  draggable: boolean;
+  attributes: React.HTMLAttributes<HTMLElement>;
+  listeners: React.DOMAttributes<HTMLElement> | undefined;
+}) {
+  return (
+    <span className="flex items-center justify-center gap-1 border-r border-neutral-100 px-1.5 py-2">
+      {draggable && (
+        <button
+          type="button"
+          aria-label={`Reorder, currently ${position}`}
+          {...attributes}
+          {...listeners}
+          className="flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded text-neutral-300 hover:bg-neutral-100 hover:text-secondary-700 active:cursor-grabbing"
+        >
+          <GripVertical className="size-3.5" />
+        </button>
+      )}
+      <span className="text-body-sm font-semibold tabular-nums text-neutral-500">{position}</span>
+    </span>
   );
 }
 
@@ -932,6 +1114,6 @@ function TargetDialog({
 
 /** Eight columns, one definition — the header and the rows share it. */
 const ROW =
-  "grid grid-cols-[minmax(0,1.5fr)_minmax(0,1.3fr)_156px_132px_112px_136px_168px_46px] items-stretch";
+  "grid grid-cols-[52px_minmax(0,1.5fr)_minmax(0,1.3fr)_156px_132px_112px_136px_168px_46px] items-stretch";
 const CELL = "flex items-center gap-2 px-2.5 py-2";
 const HEAD = "text-caption font-bold uppercase tracking-wide text-neutral-400";

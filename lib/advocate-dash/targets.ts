@@ -170,6 +170,8 @@ export function formatTargetDate(value: string | null): string {
 /** How the row sorts for a given column. */
 export function targetSortValue(target: AdvocateTarget, key: TargetSortKey): string | number {
   switch (key) {
+    case "order":
+      return target.sort_order;
     case "target":
       return `${target.target_name} ${target.company_name ?? ""}`.toLowerCase();
     case "address":
@@ -184,4 +186,10 @@ export function targetSortValue(target: AdvocateTarget, key: TargetSortKey): str
   }
 }
 
-export type TargetSortKey = "target" | "address" | "advocate" | "status" | "done";
+/**
+ * `order` is the Advocate's planned round and is the sheet's default
+ * (client-confirmed, 2026-10-06). It is also the only key you can drag
+ * under: a list sorted by Status has no honest answer to where a dragged
+ * row lands, so the handles only live while this key is active.
+ */
+export type TargetSortKey = "order" | "target" | "address" | "advocate" | "status" | "done";
