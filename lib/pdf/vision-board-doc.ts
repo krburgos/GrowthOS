@@ -371,25 +371,57 @@ export function renderVisionBoard(
       const gap = 10;
       const perRow = 3;
       const boxW = (CW - gap * (perRow - 1)) / perRow;
-      const boxH = 54;
+      const innerW = boxW - 24;
+
+      /**
+       * These "stats" are free-text questionnaire answers, so one of them
+       * is routinely a sentence rather than a figure — "40 new clients, 30
+       * of them in regulated industries". At a fixed 15pt that overflowed
+       * its card and collided with the Priorities list underneath; the
+       * `ellipsis` option did not save it, and truncating a goal to "40 new
+       * clients, 30 of…" would lose the half that matters.
+       *
+       * So each value picks the largest size at which it fits the card, and
+       * every row is as tall as its tallest card. A figure still reads as a
+       * figure; a sentence wraps and stays inside its box.
+       */
+      const fitted = goals1.map(([k, v]) => {
+        for (const size of [15, 13, 11, 9.5]) {
+          doc.font(POPPINS.bold).fontSize(size);
+          const h = doc.heightOfString(v, { width: innerW });
+          if (h <= 46 || size === 9.5) return { k, v, size, h };
+        }
+        return { k, v, size: 9.5, h: 46 };
+      });
+
+      const rows = Math.ceil(fitted.length / perRow);
+      const rowH: number[] = [];
+      for (let r = 0; r < rows; r++) {
+        const tallest = Math.max(
+          ...fitted.slice(r * perRow, r * perRow + perRow).map((f) => f.h)
+        );
+        rowH.push(Math.max(54, tallest + 34));
+      }
+
       let top = doc.y + 4;
-      goals1.forEach(([k, v], i) => {
+      fitted.forEach((f, i) => {
         const col = i % perRow;
-        if (col === 0 && i > 0) top += boxH + gap;
+        const row = Math.floor(i / perRow);
+        if (col === 0 && i > 0) top += rowH[row - 1] + gap;
         const x = M + col * (boxW + gap);
-        doc.roundedRect(x, top, boxW, boxH, 9).lineWidth(0.8).strokeColor(RULE).stroke();
+        doc.roundedRect(x, top, boxW, rowH[row], 9).lineWidth(0.8).strokeColor(RULE).stroke();
         doc
           .font(POPPINS.semibold)
           .fontSize(7)
           .fillColor(FAINT)
-          .text(k.toUpperCase(), x + 12, top + 12, { width: boxW - 24, characterSpacing: 0.7, lineBreak: false, ellipsis: true });
+          .text(f.k.toUpperCase(), x + 12, top + 12, { width: innerW, characterSpacing: 0.7, lineBreak: false, ellipsis: true });
         doc
           .font(POPPINS.bold)
-          .fontSize(15)
+          .fontSize(f.size)
           .fillColor(NAVY_900)
-          .text(v, x + 12, top + 26, { width: boxW - 24, lineBreak: false, ellipsis: true });
+          .text(f.v, x + 12, top + 26, { width: innerW });
       });
-      doc.y = top + boxH + 24;
+      doc.y = top + rowH[rows - 1] + 24;
     }
 
     if (priorities.length > 0) {
@@ -468,22 +500,35 @@ export function renderVisionBoard(
     if (journey.length > 0) {
       eyebrow("How a client journey runs");
       doc.font(POPPINS.semibold).fontSize(10);
+      const CHIP_H = 26;
+      const ROW_GAP = 10;
       let x = M;
-      const top = doc.y + 2;
+      let top = doc.y + 2;
       journey.forEach((stage, i) => {
         const w = doc.widthOfString(stage) + 28;
-        if (x + w > M + CW) {
+        // Wrapping used to reset x without moving down a row, so a long
+        // journey drew its later chips on top of its earlier ones.
+        if (x > M && x + w > M + CW) {
           x = M;
+          top += CHIP_H + ROW_GAP;
         }
-        doc.roundedRect(x, top, w, 26, 13).lineWidth(0.8).fillAndStroke(WHITE, RULE);
+        doc.roundedRect(x, top, w, CHIP_H, 13).lineWidth(0.8).fillAndStroke(WHITE, RULE);
         doc.font(POPPINS.semibold).fontSize(10).fillColor(NAVY_900).text(stage, x, top + 8, { width: w, align: "center" });
         x += w;
+
         if (i < journey.length - 1) {
-          doc.font(POPPINS.regular).fontSize(11).fillColor(FAINT).text("→", x + 4, top + 7, { width: 16 });
+          // Drawn, not typed: this Poppins has no U+2192, so a literal "→"
+          // rendered as a tofu box between every pair of chips.
+          const ax = x + 6;
+          const ay = top + CHIP_H / 2;
+          doc.save().lineWidth(1.1).strokeColor(FAINT).lineCap("round").lineJoin("round");
+          doc.moveTo(ax, ay).lineTo(ax + 11, ay).stroke();
+          doc.moveTo(ax + 7, ay - 3.5).lineTo(ax + 11, ay).lineTo(ax + 7, ay + 3.5).stroke();
+          doc.restore();
           x += 24;
         }
       });
-      doc.y = top + 26 + 18;
+      doc.y = top + CHIP_H + 18;
     }
   }
 
