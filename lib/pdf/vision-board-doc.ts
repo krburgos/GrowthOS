@@ -261,7 +261,26 @@ export function renderVisionBoard(
     const gap = 12;
     const perRow = 3;
     const cardW = (CW - gap * (perRow - 1)) / perRow;
-    const cardH = 104;
+    const textW = cardW - 30;
+
+    /**
+     * The card used to be a fixed 104pt with its title drawn 34pt off the
+     * bottom — exactly enough for one line at 14pt. A two-line value like
+     * "Leave It Better Than We Found It" put its second line below the
+     * card's edge, outside the gradient.
+     *
+     * Every card now takes the height the longest value needs, and they
+     * all take the same one: these read as a set, and a grid where one card
+     * is taller than its neighbours looks like a mistake rather than a fit.
+     * 85pt is the chrome around the title — the empty gradient above, the
+     * number, and the bottom padding — which reproduces the original 104pt
+     * for a single-line value.
+     */
+    doc.font(POPPINS.bold).fontSize(14);
+    const titleH = Math.max(...values.map((v) => doc.heightOfString(v, { width: textW, lineGap: 1 })));
+    const cardH = Math.max(104, 85 + titleH);
+    const BOTTOM_PAD = 15;
+
     const gradients: [string, string][] = [
       [NAVY_800, NAVY_900],
       [TEAL_800, NAVY_900],
@@ -281,16 +300,19 @@ export function renderVisionBoard(
       const cg = doc.linearGradient(x, top, x + cardW, top + cardH);
       cg.stop(0, from).stop(1, to);
       doc.roundedRect(x, top, cardW, cardH, 11).fill(cg);
+
+      // Both sit off the bottom, so they stay put however tall the card is.
+      const titleY = top + cardH - BOTTOM_PAD - titleH;
       doc
         .font(POPPINS.bold)
         .fontSize(7.5)
         .fillColor(TEAL_300)
-        .text(String(i + 1).padStart(2, "0"), x + 18, top + cardH - 46, { width: cardW - 36, characterSpacing: 1.2 });
+        .text(String(i + 1).padStart(2, "0"), x + 18, titleY - 12, { width: cardW - 36, characterSpacing: 1.2 });
       doc
         .font(POPPINS.bold)
         .fontSize(14)
         .fillColor(WHITE)
-        .text(value, x + 18, top + cardH - 34, { width: cardW - 30, lineGap: 1 });
+        .text(value, x + 18, titleY, { width: textW, lineGap: 1 });
     });
     doc.y = top + cardH + 16;
   }
@@ -317,9 +339,28 @@ export function renderVisionBoard(
     if (figures3.length > 0) {
       const colW = CW / figures3.length;
       const top = doc.y + 6;
-      const boxH = 62;
+      const valW = colW - 20;
+
+      /**
+       * These are free-text answers too, so a figure can arrive as a
+       * sentence. At a fixed 20pt with `lineBreak: false` a long one ran
+       * straight across the column rule and over its neighbour's value.
+       *
+       * Each picks the largest size at which it fits the column, wraps
+       * rather than running on, and the strip is as tall as the tallest.
+       */
+      const fitted = figures3.map(([k, v]) => {
+        for (const size of [20, 16, 13, 11]) {
+          doc.font(POPPINS.bold).fontSize(size);
+          const h = doc.heightOfString(v, { width: valW });
+          if (h <= 30 || size === 11) return { k, v, size, h };
+        }
+        return { k, v, size: 11, h: 30 };
+      });
+      const boxH = Math.max(62, 35 + Math.max(...fitted.map((f) => f.h)));
+
       doc.moveTo(M, top).lineTo(M + CW, top).lineWidth(0.6).strokeColor("#2b3d5c").stroke();
-      figures3.forEach(([k, v], i) => {
+      fitted.forEach((f, i) => {
         const x = M + i * colW;
         if (i > 0) {
           doc.moveTo(x, top).lineTo(x, top + boxH).lineWidth(0.6).strokeColor("#2b3d5c").stroke();
@@ -328,12 +369,12 @@ export function renderVisionBoard(
           .font(POPPINS.semibold)
           .fontSize(7)
           .fillColor("#8fa3c4")
-          .text(k.toUpperCase(), x + 12, top + 14, { width: colW - 20, characterSpacing: 0.9 });
+          .text(f.k.toUpperCase(), x + 12, top + 14, { width: valW, characterSpacing: 0.9 });
         doc
           .font(POPPINS.bold)
-          .fontSize(20)
+          .fontSize(f.size)
           .fillColor(i === 0 ? TEAL_300 : WHITE)
-          .text(v, x + 12, top + 28, { width: colW - 20, lineBreak: false });
+          .text(f.v, x + 12, top + 28, { width: valW });
       });
       doc.moveTo(M, top + boxH).lineTo(M + CW, top + boxH).lineWidth(0.6).strokeColor("#2b3d5c").stroke();
       doc.y = top + boxH + 22;
@@ -540,17 +581,38 @@ export function renderVisionBoard(
     doc.font(POPPINS.semibold).fontSize(11);
     let x = M;
     let top = doc.y + 2;
+    let rowH = 28;
+
     metrics.forEach((m) => {
-      const w = doc.widthOfString(m) + 30;
-      if (x + w > M + CW) {
+      /**
+       * A chip is as wide as its label, which is fine until a label is
+       * wider than the page — then the chip ran off the right edge however
+       * the row wrapped. One that long is capped to the content width and
+       * wraps inside itself instead, growing taller.
+       */
+      const natural = doc.widthOfString(m) + 30;
+      const w = Math.min(natural, CW);
+      const h = natural > CW ? doc.heightOfString(m, { width: w - 30 }) + 14 : 28;
+
+      if (x > M && x + w > M + CW) {
         x = M;
-        top += 38;
+        top += rowH + 10;
+        rowH = h;
+      } else {
+        rowH = Math.max(rowH, h);
       }
-      doc.roundedRect(x, top, w, 28, 14).lineWidth(0.8).fillAndStroke(TEAL_100, TEAL_200);
-      doc.font(POPPINS.semibold).fontSize(11).fillColor(TEAL_800).text(m, x, top + 8, { width: w, align: "center" });
+
+      // A single-line chip keeps its pill radius; a wrapped one gets a
+      // softer corner, because a 14pt radius on a 40pt box reads as a blob.
+      doc.roundedRect(x, top, w, h, Math.min(14, h / 2)).lineWidth(0.8).fillAndStroke(TEAL_100, TEAL_200);
+      doc
+        .font(POPPINS.semibold)
+        .fontSize(11)
+        .fillColor(TEAL_800)
+        .text(m, x + 15, top + 7, { width: w - 30, align: "center" });
       x += w + 10;
     });
-    doc.y = top + 28 + 22;
+    doc.y = top + rowH + 22;
   }
 
   // ====================== WHAT STANDS IN THE WAY ==================
