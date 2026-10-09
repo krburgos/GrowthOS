@@ -1,5 +1,6 @@
 import type PDFDocument from "pdfkit";
 
+import { drawLogoChip } from "@/lib/pdf/brand";
 import { POPPINS } from "@/lib/pdf/poppins";
 
 export type VisionAnswers = Record<string, string | string[] | null>;
@@ -157,6 +158,12 @@ export function renderVisionBoard(
   const g2 = doc.radialGradient(W * 0.12, H * 0.92, 0, W * 0.12, H * 0.92, W * 0.55);
   g2.stop(0, "#2873e1", 0.45).stop(1, NAVY_950, 0);
   doc.rect(0, 0, W, H).fill(g2);
+
+  // The publisher mark, top-centre, on a white chip: this cover is a
+  // dark gradient and half the wordmark is #113c7b (Design System §2).
+  // The lockup below it is the *account's* own logo, which is a
+  // different thing and stays as it is.
+  drawLogoChip(doc, (W - 122) / 2, 46);
 
   // Centred mark-beside-name lockup, matching the page's hero
   // (client-confirmed mockups "C" and "A").

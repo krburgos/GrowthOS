@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { drawLogo, drawLogoChip } from "@/lib/pdf/brand";
 import { POPPINS, registerPoppins } from "@/lib/pdf/poppins";
 import { QUESTIONNAIRE_SECTIONS, TOTAL_QUESTION_COUNT, countAnswered, type QuestionDef } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
@@ -202,7 +203,9 @@ export async function GET(request: NextRequest) {
   doc.restore();
   doc.strokeOpacity(1);
 
-  doc.font(F.bold).fontSize(9).fillColor(TEAL_BRIGHT).text("GROWTHMISSION", M, 34, { characterSpacing: 1.3, lineBreak: false });
+  // The mark replaces the typed wordmark on the cover. It sits on a
+  // white chip: "Growth" is #113c7b and measures 1.64:1 on this navy.
+  drawLogoChip(doc, M, 28);
   doc.font(F.bold).fontSize(26).fillColor("#ffffff").text("GrowthMission Solution Questionnaire", M, 50, { width: 380, lineGap: -4 });
   doc.font(F.regular).fontSize(13).fillColor("#d4dbe6").text(accountName, M, doc.y + 2, { width: 400 });
   const metaY = doc.y + 10;
@@ -377,8 +380,8 @@ export async function GET(request: NextRequest) {
     doc.switchToPage(i);
     const pageNo = i - range.start + 1;
     if (pageNo > 1) {
-      doc.font(F.bold).fontSize(8).fillColor(TEAL).text("GROWTHMISSION", M, 24, { characterSpacing: 0.4, lineBreak: false });
-      const bw = doc.widthOfString("GROWTHMISSION") + 8 * 0.4;
+      // A white page here, so the mark goes on directly — no chip needed.
+      const bw = drawLogo(doc, M, 21, 70).width;
       doc.font(F.regular).fontSize(8).fillColor(FAINT).text("·  SOLUTION QUESTIONNAIRE", M + bw + 4, 24, { characterSpacing: 0.4, lineBreak: false });
       doc.text(accountName.toUpperCase(), M, 24, { width: CONTENT_W, align: "right", characterSpacing: 0.4, lineBreak: false });
     }

@@ -8,6 +8,7 @@ import {
   type ReportAnswers,
   type ReportField,
 } from "@/lib/advocate-dash/report-form";
+import { drawLogoChip } from "@/lib/pdf/brand";
 import { POPPINS } from "@/lib/pdf/poppins";
 
 /** Design System §9 tokens, as hex — pdfkit has no CSS variables. */
@@ -82,6 +83,10 @@ export function renderVisitReport(doc: InstanceType<typeof PDFDocument>, data: V
   const bandHeight = 62 + titleHeight + 36;
 
   doc.rect(0, 0, doc.page.width, bandHeight).fill(NAVY_950);
+
+  // White chip, because half the wordmark is #113c7b and measures
+  // 1.64:1 against this navy (Design System §2).
+  drawLogoChip(doc, doc.page.width - M - 122, 26);
 
   doc.font(POPPINS.semibold).fontSize(9).fillColor(TEAL_300);
   doc.text(REPORT_DOC_TITLE.toUpperCase(), M, 38, { width: W, characterSpacing: 1.1 });

@@ -8,10 +8,10 @@ const nextConfig: NextConfig = {
   // PDF exports read their embedded Poppins fonts from disk at runtime
   // (lib/pdf/poppins.ts), which file tracing can't see on its own.
   outputFileTracingIncludes: {
-    "/api/questionnaire/export": ["./lib/pdf/fonts/**/*"],
-    "/api/vision-board/export": ["./lib/pdf/fonts/**/*"],
-    "/api/growth-mission/[slug]/export": ["./lib/pdf/fonts/**/*"],
-    "/api/advocate-dash/[targetId]/report": ["./lib/pdf/fonts/**/*"],
+    "/api/questionnaire/export": ["./lib/pdf/fonts/**/*", "./public/growthmission-logo.png"],
+    "/api/vision-board/export": ["./lib/pdf/fonts/**/*", "./public/growthmission-logo.png"],
+    "/api/growth-mission/[slug]/export": ["./lib/pdf/fonts/**/*", "./public/growthmission-logo.png"],
+    "/api/advocate-dash/[targetId]/report": ["./lib/pdf/fonts/**/*", "./public/growthmission-logo.png"],
   },
 };
 

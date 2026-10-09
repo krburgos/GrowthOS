@@ -1,5 +1,6 @@
 import type PDFDocument from "pdfkit";
 
+import { drawLogoChip } from "@/lib/pdf/brand";
 import { POPPINS } from "@/lib/pdf/poppins";
 import type { KpiStat } from "@/lib/growth-mission/playbook";
 import { TASK_STATE_LABEL, type Task } from "@/lib/growth-mission/tasks";
@@ -71,6 +72,10 @@ export function renderStatusReport(doc: InstanceType<typeof PDFDocument>, data: 
 
   // ---- Masthead ----------------------------------------------------
   doc.rect(0, 0, doc.page.width, 150).fill(NAVY_950);
+
+  // Top-right, on its own white chip: half the wordmark is #113c7b,
+  // which measures 1.64:1 against this navy and would vanish.
+  drawLogoChip(doc, doc.page.width - M - 122, 30);
 
   doc.font(POPPINS.semibold).fontSize(9).fillColor(TEAL_300);
   doc.text(data.phaseTitle.toUpperCase(), M, 40, { width: W, characterSpacing: 1.1, lineBreak: false });

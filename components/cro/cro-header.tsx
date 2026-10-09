@@ -1,5 +1,7 @@
 import { ROLE_LABELS } from "@/lib/auth/role-labels";
 import type { UserRole } from "@/lib/auth/get-current-user";
+import logo from "@/public/growthmission-logo.png";
+
 import { LogoutButton } from "@/components/auth/logout-button";
 
 function initials(name: string) {
@@ -52,7 +54,7 @@ export function CroHeader({
       </div>
 
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/growthmission-logo.png" alt="GrowthMission" className="h-9 w-auto justify-self-center" />
+      <img src={logo.src} alt="GrowthMission" className="h-9 w-auto justify-self-center" />
 
       <div className="flex items-center justify-end">
         <LogoutButton />

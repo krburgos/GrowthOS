@@ -4,6 +4,8 @@ import { Bell, ClipboardList, Compass } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import logo from "@/public/growthmission-logo.png";
+
 import { CommandPalette } from "@/components/shell/command-palette";
 import { MobileNavTrigger } from "@/components/shell/mobile-nav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -121,7 +123,7 @@ export function TopBar({
           trigger, bell and avatar. */}
       <Link href="/dashboard" className="flex shrink-0 items-center lg:w-44">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/growthmission-logo.png" alt="GrowthMission" className="h-5 w-auto sm:h-6 lg:h-7" />
+        <img src={logo.src} alt="GrowthMission" className="h-5 w-auto sm:h-6 lg:h-7" />
       </Link>
 
       {access && accountId && (
