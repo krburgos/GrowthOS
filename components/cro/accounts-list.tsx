@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatHours, paceTone, quarterPct, type QuarterInfo } from "@/lib/gos-dashboard/hours";
+import { formatHours, paceTone, quarterPct, type QuarterInfo } from "@/lib/growth-mission/hours";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 
@@ -138,8 +138,8 @@ export function AccountsList({ accounts, quarter }: { accounts: CroAccountRow[];
             <TableHeader variant="solid">
               <TableRow className="border-b-0 hover:bg-transparent">
                 <TableHead variant="solid">Account</TableHead>
-                <TableHead variant="solid">GOS Solution Questionnaire</TableHead>
-                <TableHead variant="solid">GOS Vision Board</TableHead>
+                <TableHead variant="solid">GrowthMission Solution Questionnaire</TableHead>
+                <TableHead variant="solid">GrowthMission Vision Board</TableHead>
                 <TableHead variant="solid">Hours this quarter</TableHead>
                 <TableHead variant="solid">Last activity</TableHead>
                 <TableHead variant="solid" />
@@ -163,10 +163,10 @@ export function AccountsList({ accounts, quarter }: { accounts: CroAccountRow[];
                       </div>
                     </TableCell>
                     <TableCell>
-                      <DoneMark done={a.questionnaireComplete} label="GrowthOS Solution Questionnaire" />
+                      <DoneMark done={a.questionnaireComplete} label="GrowthMission Solution Questionnaire" />
                     </TableCell>
                     <TableCell>
-                      <DoneMark done={a.visionBoardComplete} label="GrowthOS Vision Board" />
+                      <DoneMark done={a.visionBoardComplete} label="GrowthMission Vision Board" />
                     </TableCell>
                     <TableCell>
                       {a.committedHours > 0 ? (

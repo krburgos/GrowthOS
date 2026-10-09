@@ -21,8 +21,8 @@ import {
   type Task,
   type TaskPriority,
   type TaskState,
-} from "@/lib/gos-dashboard/tasks";
-import { currentQuarter } from "@/lib/gos-dashboard/hours";
+} from "@/lib/growth-mission/tasks";
+import { currentQuarter } from "@/lib/growth-mission/hours";
 import { createClient } from "@/lib/supabase/client";
 import {
   CAPACITY_CLASS,
@@ -136,7 +136,7 @@ export function TaskList({
     setRows((prev) => prev.map((t) => (t.id === id ? { ...t, ...optimistic } : t)));
 
     const supabase = createClient();
-    const { error } = await supabase.from("gos_dashboard_tasks").update(values).eq("id", id);
+    const { error } = await supabase.from("growth_mission_tasks").update(values).eq("id", id);
     if (error) {
       setRows((prev) => prev.map((t) => (t.id === id ? before : t)));
       toast.error(getFriendlyErrorMessage(error));
@@ -898,8 +898,8 @@ function TaskDialog({
     };
 
     const { error } = draft.id
-      ? await supabase.from("gos_dashboard_tasks").update(payload).eq("id", draft.id)
-      : await supabase.from("gos_dashboard_tasks").insert(payload);
+      ? await supabase.from("growth_mission_tasks").update(payload).eq("id", draft.id)
+      : await supabase.from("growth_mission_tasks").insert(payload);
 
     if (error) return fail(error);
     finish(draft.id ? "Task updated." : "Task added.");
@@ -910,7 +910,7 @@ function TaskDialog({
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase
-      .from("gos_dashboard_tasks")
+      .from("growth_mission_tasks")
       .update({ archived_at: new Date().toISOString() })
       .eq("id", draft.id);
     if (error) return fail(error);

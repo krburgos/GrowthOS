@@ -1,19 +1,19 @@
-﻿> **GROWTHOS** Product Requirements Document — Phase 1: CRM Foundation
-# GrowthOS Product Requirements Document
+﻿> **GROWTHMISSION** Product Requirements Document — Phase 1: CRM Foundation
+# GrowthMission Product Requirements Document
 
-Prepared for CRO Leader · Draft v1 · Based on the _GrowthOS Functional Vision_, _GrowthOS Developer Brief_, and client answers to the open-questions review
+Prepared for CRO Leader · Draft v1 · Based on the _GrowthMission Functional Vision_, _GrowthMission Developer Brief_, and client answers to the open-questions review
 
 
 ## 1. Executive Summary
 
-GrowthOS is a profile-driven growth operating system for Managed Service Providers (MSPs), built by CRO Leader to replace its current use of **GlassHive CRM** and to eventually deliver the full vision described in the source documents: an onboarding-profile-driven recommendation engine, a dynamic 14-step growth plan, a four-quarter roadmap, and AI-guided next-best-actions.
+GrowthMission is a profile-driven growth operating system for Managed Service Providers (MSPs), built by CRO Leader to replace its current use of **GlassHive CRM** and to eventually deliver the full vision described in the source documents: an onboarding-profile-driven recommendation engine, a dynamic 14-step growth plan, a four-quarter roadmap, and AI-guided next-best-actions.
 This PRD scopes **Phase 1** in build-ready detail: a web-based, multi-tenant CRM that centralizes MSP prospects, contacts, opportunities, activities, and email outreach, with a CRO Leader administrative view across all client accounts. Later phases (AI recommendation engine, CallForce, AdvocateDash, website assessment, client-facing portal, LinkedIn integration, billing) are summarized as roadmap so the team understands where Phase 1 is heading without inflating the current build.
 
 ## 2. Goals & Success Metrics
 
-**Primary goal.** Replace GlassHive with a purpose-built CRM that CRO Leader owns and can extend toward the full GrowthOS vision, without taking on cost or scope the team can't support in month one.
+**Primary goal.** Replace GlassHive with a purpose-built CRM that CRO Leader owns and can extend toward the full GrowthMission vision, without taking on cost or scope the team can't support in month one.
 **Phase 1 success metrics:**
-- Number of MSP accounts onboarded and actively using GrowthOS in place of GlassHive
+- Number of MSP accounts onboarded and actively using GrowthMission in place of GlassHive
 - Reduction in CRO Leader staff time spent on manual account management (tracked informally at first — see §11)
 - Successful import of existing GlassHive prospect/contact data with zero data loss
 - Email campaigns sent, opened, and clicked, tracked with timestamps
@@ -47,7 +47,7 @@ These are intentionally lightweight for Phase 1. A dedicated analytics/reporting
 
 ## 4. Users, Roles & Permissions
 
-GrowthOS Phase 1 uses the roles from the Developer Brief, formalized into a permission matrix. MSPs can invite their own additional users; CRO Leader Admins and Advisors have blanket access across **all** MSP accounts (not assigned per-client).
+GrowthMission Phase 1 uses the roles from the Developer Brief, formalized into a permission matrix. MSPs can invite their own additional users; CRO Leader Admins and Advisors have blanket access across **all** MSP accounts (not assigned per-client).
 | **Role** | **Own account data** | **Other MSPs' data** | **Manage users (own account)** | **Admin dashboard (all accounts)** |
 | --- | --- | --- | --- | --- |
 | MSP Owner | Full (view/edit/delete) | None | Yes | No |
@@ -62,7 +62,7 @@ GrowthOS Phase 1 uses the roles from the Developer Brief, formalized into a perm
 
 Notes:
 - MSP technicians are **not** a supported access tier in Phase 1 — no login is provisioned for them.
-- Pricing is intended to scale per user count; the billing mechanism itself is out of scope for Phase 1 (§10), so seat counts should be tracked in-app even though invoicing happens outside GrowthOS for now.
+- Pricing is intended to scale per user count; the billing mechanism itself is out of scope for Phase 1 (§10), so seat counts should be tracked in-app even though invoicing happens outside GrowthMission for now.
 - Authentication: standard email/password plus OAuth against Microsoft 365 and Google Workspace (needed anyway for email integration, §7). Formal SSO/Entra ID federation is not required for Phase 1.
 
 ## 5. Company (Tenant) Environments
@@ -110,11 +110,11 @@ Every prospect/contact record shows a unified, chronological timeline of calls, 
 
 This is the largest single piece of Phase 1 functionality and should be scoped and estimated carefully.
 **Account integration.** Users connect their own mailbox — **Microsoft 365 or Google Workspace** — via OAuth. Only email send/receive/history association is required for Phase 1 (no calendar or Teams sync yet).
-**Sending.** GrowthOS sends email on the user's behalf from within the app (one-off emails and campaigns to a list), rather than only logging emails sent elsewhere. This requires:
+**Sending.** GrowthMission sends email on the user's behalf from within the app (one-off emails and campaigns to a list), rather than only logging emails sent elsewhere. This requires:
 - Deliverability infrastructure (SPF/DKIM/DMARC-aligned sending, sender reputation management, IP/domain warm-up)
 - Unsubscribe handling and CAN-SPAM compliance (footer, opt-out honored automatically)
 - **Open and click tracking**, each recorded with a timestamp, associated back to the contact and campaign
-**Recommendation.** Given the limited budget, GrowthOS should send through a transactional/marketing email API (e.g., Postmark, SendGrid, or Amazon SES) rather than building mail-transfer infrastructure from scratch. The sending experience is still entirely inside GrowthOS from the user's point of view; the ESP is an implementation detail that buys deliverability and tracking without months of infrastructure work. **This should be confirmed with the client before build.**
+**Recommendation.** Given the limited budget, GrowthMission should send through a transactional/marketing email API (e.g., Postmark, SendGrid, or Amazon SES) rather than building mail-transfer infrastructure from scratch. The sending experience is still entirely inside GrowthMission from the user's point of view; the ESP is an implementation detail that buys deliverability and tracking without months of infrastructure work. **This should be confirmed with the client before build.**
 SMS is explicitly **not** in scope (no A2P 10DLC/TCPA burden to take on). Direct mail is not in scope beyond what's noted in §10.
 
 ### 6.7 Reporting & Export
@@ -176,7 +176,7 @@ No formal certification (SOC 2, GDPR, CCPA) is required at this stage. Baseline 
 
 - **Microsoft 365** — email account connection only (send/receive/history)
 - **Google Workspace** — email account connection only, same scope as Microsoft 365
-- No calendar/Teams sync, no SSO/Entra ID federation, no public GrowthOS API, and no LinkedIn integration in Phase 1
+- No calendar/Teams sync, no SSO/Entra ID federation, no public GrowthMission API, and no LinkedIn integration in Phase 1
 
 ## 10. Roadmap: Beyond Phase 1
 

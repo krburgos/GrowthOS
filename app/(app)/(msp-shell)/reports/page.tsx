@@ -10,7 +10,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import type { StageGroup } from "@/lib/opportunities/stages";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Reports — GrowthOS" };
+export const metadata: Metadata = { title: "Reports — GrowthMission" };
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const WEEKS_BACK = 8;

@@ -11,7 +11,7 @@ import type { ContactListRow } from "@/lib/contacts/types";
 import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Contacts — GrowthOS" };
+export const metadata: Metadata = { title: "Contacts — GrowthMission" };
 
 const SORT_COLUMNS: Record<string, string> = {
   name: "full_name",

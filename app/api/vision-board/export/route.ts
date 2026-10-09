@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * Anyone who can view the Vision Board can export it, so the regular
  * session client under vision_board_responses RLS is enough - no service
- * role. Poppins is the brand font for every GrowthOS PDF; its TTFs are
+ * role. Poppins is the brand font for every GrowthMission PDF; its TTFs are
  * read from disk, so this route stays listed under
  * `outputFileTracingIncludes` in next.config.ts.
  *
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "No Vision Board found for this account." }, { status: 404 });
   }
 
-  const name = account?.name ?? "GrowthOS Account";
+  const name = account?.name ?? "GrowthMission Account";
 
   // The cover carries the account's logo beside its name, the same lockup the
   // page uses. A logo that cannot be fetched is not worth failing an export
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="growthos-vision-board-${slug}.pdf"`,
+      "Content-Disposition": `attachment; filename="growthmission-vision-board-${slug}.pdf"`,
     },
   });
 }

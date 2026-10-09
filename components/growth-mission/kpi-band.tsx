@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CountUp } from "@/components/ui/count-up";
-import { RecordsDialog } from "@/components/gos-dashboard/kpi-records-dialog";
+import { RecordsDialog } from "@/components/growth-mission/kpi-records-dialog";
 import { SectionHeading } from "@/components/shell/section-heading";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import {
@@ -21,7 +21,7 @@ import {
   type KpiBox,
   type KpiBoxKey,
   type KpiSource,
-} from "@/lib/gos-dashboard/kpi-band";
+} from "@/lib/growth-mission/kpi-band";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -57,10 +57,10 @@ function MappingDialog({
       .map((s) => ({ account_id: accountId, opportunity_stage_id: s.id, box: s.box }));
     const results = await Promise.all([
       statusRows.length
-        ? supabase.from("gos_dashboard_kpi_mapping").upsert(statusRows, { onConflict: "account_id,contact_status_id" })
+        ? supabase.from("growth_mission_kpi_mapping").upsert(statusRows, { onConflict: "account_id,contact_status_id" })
         : Promise.resolve({ error: null }),
       stageRows.length
-        ? supabase.from("gos_dashboard_kpi_mapping").upsert(stageRows, { onConflict: "account_id,opportunity_stage_id" })
+        ? supabase.from("growth_mission_kpi_mapping").upsert(stageRows, { onConflict: "account_id,opportunity_stage_id" })
         : Promise.resolve({ error: null }),
     ]);
     setSaving(false);
@@ -174,7 +174,7 @@ function MappingDialog({
 }
 
 /**
- * The Playbook doc's "GrowthOS KPI dashboard": Prospects + Opportunities,
+ * The Playbook doc's "GrowthMission KPI dashboard": Prospects + Opportunities,
  * counted live from the CRM. Client-confirmed (2026-09-22): each cell shows
  * its label and figure only - the line naming the statuses or stages behind
  * the figure repeated the label often enough to read as noise, and the same
@@ -261,7 +261,7 @@ export function KpiBand({
        them was what kept the two dark masses apart. The client chose
        consistency over that rhythm. */
     <section className="flex flex-col gap-2 rounded-xl p-4 shadow-lift md:p-5 bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]">
-      <SectionHeading title="GrowthOS KPI Dashboard" tone="dark">
+      <SectionHeading title="GrowthMission KPI Dashboard" tone="dark">
         <span className="inline-flex items-center gap-1 text-caption text-white/55">
           <Radio className="size-3.5" />
           Live from the CRM{customized ? "" : " · default mapping"}

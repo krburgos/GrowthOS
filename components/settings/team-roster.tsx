@@ -16,10 +16,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
-import { SHORT_TITLE } from "@/lib/gos-dashboard/hours";
-import { PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
+import { SHORT_TITLE } from "@/lib/growth-mission/hours";
+import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
 import { createClient } from "@/lib/supabase/client";
-import type { StepTaskTally } from "@/lib/gos-dashboard/queries";
+import type { StepTaskTally } from "@/lib/growth-mission/queries";
 import { CAPACITY_CLASS, capacityFor, capacityLabel, formatCapacityHours } from "@/lib/team/capacity";
 import { involvementFor, type Involvement } from "@/lib/team/involvement";
 import { allocatedHours, initialsOf, type TeamKind, type TeamMember } from "@/lib/team/members";

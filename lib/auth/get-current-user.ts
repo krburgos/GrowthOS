@@ -34,7 +34,7 @@ export interface CurrentUser {
 
 const CRO_LEADER_ROLES: UserRole[] = ["cro_admin", "cro_advisor", "cro_service_team"];
 
-export const VIEWING_ACCOUNT_COOKIE = "growthos_viewing_account_id";
+export const VIEWING_ACCOUNT_COOKIE = "growthmission_viewing_account_id";
 
 export function isCroLeaderRole(role: UserRole) {
   return CRO_LEADER_ROLES.includes(role);

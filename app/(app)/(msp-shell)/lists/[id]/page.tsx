@@ -14,7 +14,7 @@ import type { ContactListRow } from "@/lib/contacts/types";
 import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "List — GrowthOS" };
+export const metadata: Metadata = { title: "List — GrowthMission" };
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 

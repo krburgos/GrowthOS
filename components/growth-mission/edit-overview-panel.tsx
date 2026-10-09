@@ -5,9 +5,9 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StatusBadge } from "@/components/gos-dashboard/status-badge";
+import { StatusBadge } from "@/components/growth-mission/status-badge";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
-import { STATUS_LABEL, type KpiStat, type PlaybookStatus } from "@/lib/gos-dashboard/playbook";
+import { STATUS_LABEL, type KpiStat, type PlaybookStatus } from "@/lib/growth-mission/playbook";
 import { createClient } from "@/lib/supabase/client";
 
 const STATUS_OPTIONS: PlaybookStatus[] = ["on_track", "ahead", "needs_attention"];
@@ -16,7 +16,7 @@ const STATUS_OPTIONS: PlaybookStatus[] = ["on_track", "ahead", "needs_attention"
  * CRO Leader (cro_admin/cro_advisor) edit surface for a step's status pill
  * and headline stat (Task 5). Read-only viewers (MSP roles, cro_service_team,
  * partner) get the plain StatusBadge instead — this component owns its own
- * form state and persists straight to gos_dashboard_step_status on Save, so
+ * form state and persists straight to growth_mission_step_status on Save, so
  * the detail page just conditionally renders it without owning any state.
  */
 export function EditOverviewPanel({
@@ -44,7 +44,7 @@ export function EditOverviewPanel({
   const save = async () => {
     setSaving(true);
     const supabase = createClient();
-    const { error } = await supabase.from("gos_dashboard_step_status").upsert(
+    const { error } = await supabase.from("growth_mission_step_status").upsert(
       {
         account_id: accountId,
         step_slug: stepSlug,

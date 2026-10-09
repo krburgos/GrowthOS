@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Settings — GrowthOS" };
+export const metadata: Metadata = { title: "Settings — GrowthMission" };
 
 /**
  * Level A of the Settings navigation panel (Design System §8.9) — no

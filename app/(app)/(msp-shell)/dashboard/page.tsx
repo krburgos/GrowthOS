@@ -8,8 +8,8 @@ import { TodayTasksPanel, type DueTask } from "@/components/dashboard/today-task
 import { COMPANY_PROFILE_COLUMNS, type CompanyProfile } from "@/lib/accounts/company-profile";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
 import type { StageGroup } from "@/lib/opportunities/stages";
-import { currentQuarter } from "@/lib/gos-dashboard/hours";
-import { getKpiBand, getStepHours } from "@/lib/gos-dashboard/queries";
+import { currentQuarter } from "@/lib/growth-mission/hours";
+import { getKpiBand, getStepHours } from "@/lib/growth-mission/queries";
 import { TOTAL_QUESTION_COUNT, countAnswered } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
 import { getTeamMembers } from "@/lib/team/queries";
@@ -18,7 +18,7 @@ import {
   countAnswered as countVisionBoardAnswered,
 } from "@/lib/vision-board/sections";
 
-export const metadata: Metadata = { title: "Homepage — GrowthOS" };
+export const metadata: Metadata = { title: "Homepage — GrowthMission" };
 
 /** Same set as Settings › Company (accounts_update RLS, Backend Schema §6.1). */
 const PROFILE_EDIT_ROLES = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"];

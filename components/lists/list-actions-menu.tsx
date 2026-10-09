@@ -29,7 +29,7 @@ import { createClient } from "@/lib/supabase/client";
  * "Delete" keeps that exact label, not "Retire": the client
  * specifically asked for a "Delete" action on lists, even though the
  * underlying operation is the same soft-delete (`archived_at`) every
- * other entity in GrowthOS uses — no real SQL DELETE.
+ * other entity in GrowthMission uses — no real SQL DELETE.
  */
 export function ListActionsMenu({
   listId,

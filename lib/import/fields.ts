@@ -1,5 +1,5 @@
 /**
- * GrowthOS import field catalog (PRD §6.1 + App Flow §4.4 D3's field
+ * GrowthMission import field catalog (PRD §6.1 + App Flow §4.4 D3's field
  * list, folded together since there's no separate Companies screen).
  * `synonyms` drive the best-guess auto-mapping (App Flow §4.4, D4).
  *

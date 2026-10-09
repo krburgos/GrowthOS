@@ -8,7 +8,7 @@ import { CRO_LEADER_ROLES, MSP_ROLES } from "@/lib/auth/roles";
 import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Users & Roles — GrowthOS" };
+export const metadata: Metadata = { title: "Users & Roles — GrowthMission" };
 
 /**
  * App Flow §4.9, I1 — Users & Roles. Owner/Admin (own account) or CRO

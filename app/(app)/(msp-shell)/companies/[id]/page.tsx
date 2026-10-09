@@ -9,7 +9,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { STAGE_GROUP_BADGE_VARIANT, type StageGroup } from "@/lib/opportunities/stages";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Company — GrowthOS" };
+export const metadata: Metadata = { title: "Company — GrowthMission" };
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 

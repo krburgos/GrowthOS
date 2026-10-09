@@ -3,11 +3,11 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { KpiBandHero } from "@/components/dashboard/kpi-band-hero";
-import { HoursTotalsStrip } from "@/components/gos-dashboard/hours-totals-strip";
+import { HoursTotalsStrip } from "@/components/growth-mission/hours-totals-strip";
 import { HeroLabel } from "@/components/shell/hero-band";
 import { formatAddress, initials, profileCompleteness, type CompanyProfile } from "@/lib/accounts/company-profile";
-import type { QuarterInfo, StepHours } from "@/lib/gos-dashboard/hours";
-import type { KpiSource } from "@/lib/gos-dashboard/kpi-band";
+import type { QuarterInfo, StepHours } from "@/lib/growth-mission/hours";
+import type { KpiSource } from "@/lib/growth-mission/kpi-band";
 import { QUESTIONNAIRE_SECTIONS } from "@/lib/questionnaire/questions";
 import { VISION_BOARD_SECTIONS } from "@/lib/vision-board/sections";
 
@@ -111,7 +111,7 @@ export function SetupBlock({
           detail={
             questionnaire.complete
               ? "Your ICP is set, and the workstream readiness check reads it."
-              : "The rest of GrowthOS reads your ICP from this. Start here."
+              : "The rest of GrowthMission reads your ICP from this. Start here."
           }
         />
 
@@ -277,7 +277,7 @@ function CompanyPanel({ account, canEdit, teamCount }: { account: CompanyProfile
       title="Company Profile"
       complete={c.complete}
       status={c.complete ? "Complete" : `${c.missing.length} to add`}
-      footNote="Shown across GrowthOS"
+      footNote="Shown across GrowthMission"
       action={
         canEdit ? (
           <Link href="/settings/company" className={c.complete ? QUIET_CLASS : CTA_CLASS}>

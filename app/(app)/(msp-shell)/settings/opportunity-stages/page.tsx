@@ -4,7 +4,7 @@ import { StagesManager } from "@/components/settings/stages-manager";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Opportunity Stages — GrowthOS" };
+export const metadata: Metadata = { title: "Opportunity Stages — GrowthMission" };
 
 /**
  * Settings → Opportunity Stages. Client-confirmed deviation from the

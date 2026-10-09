@@ -13,7 +13,7 @@ export const POPPINS = {
 const FONT_DIR = path.join(process.cwd(), "lib", "pdf", "fonts");
 
 /**
- * Client-confirmed (2026-09-17): every GrowthOS PDF export uses the Poppins
+ * Client-confirmed (2026-09-17): every GrowthMission PDF export uses the Poppins
  * brand font, never pdfkit's built-in Helvetica. The TTFs are read from disk
  * at runtime, so each route that calls this must also be listed under
  * `outputFileTracingIncludes` in next.config.ts or Vercel won't bundle them.

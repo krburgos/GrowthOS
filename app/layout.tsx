@@ -11,8 +11,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "GrowthOS",
-  description: "GrowthOS CRM",
+  title: "GrowthMission",
+  description: "GrowthMission CRM",
 };
 
 /**

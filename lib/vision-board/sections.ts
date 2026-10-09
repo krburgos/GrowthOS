@@ -22,8 +22,8 @@ export interface SectionDef {
 }
 
 /**
- * Client-confirmed addition (2026-09-16) — the GrowthOS Vision Board,
- * sourced from "GrowthOS Vision Board Dev Questions.docx" (9 numbered
+ * Client-confirmed addition (2026-09-16) — the GrowthMission Vision Board,
+ * sourced from "GrowthMission Vision Board Dev Questions.docx" (9 numbered
  * sections + a Leadership Sign-Off). One row per account; answers live
  * in a single `jsonb` column keyed by a stable field key here, not one
  * column per field — same shape as growth_questionnaire_responses and
@@ -32,7 +32,7 @@ export interface SectionDef {
  *
  * The doc's "Ideal Customer Profile" sub-section is deliberately not a
  * field here — client-confirmed (2026-09-16) it's read-only, populated
- * from the account's GrowthOS Solution Questionnaire answers instead of
+ * from the account's GrowthMission Solution Questionnaire answers instead of
  * captured again. The 5-question "Leadership Commitment" self-check is
  * also not stored: it's a reflection prompt for the team, not a
  * deliverable, so it renders as static guidance ahead of the sign-off
@@ -131,7 +131,7 @@ export const VISION_BOARD_SECTIONS: SectionDef[] = [
     key: "signoff",
     name: "Leadership Sign-Off",
     icon: "pen",
-    hint: "GrowthOS works best when leadership is aligned. Before signing off, confirm the team agrees with these answers.",
+    hint: "GrowthMission works best when leadership is aligned. Before signing off, confirm the team agrees with these answers.",
     fields: [
       { key: "signoff_name", label: "Name", type: "text" },
       { key: "signoff_title", label: "Title", type: "text" },

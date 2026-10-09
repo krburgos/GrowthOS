@@ -4,7 +4,7 @@ import { StatusesManager } from "@/components/settings/statuses-manager";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Contact Statuses — GrowthOS" };
+export const metadata: Metadata = { title: "Contact Statuses — GrowthMission" };
 
 /**
  * App Flow §4.9, I3 ("Custom Statuses" in the doc) — renamed to "Contact

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
-import { boxTotal, type KpiBox, type KpiSource } from "@/lib/gos-dashboard/kpi-band";
+import { boxTotal, type KpiBox, type KpiSource } from "@/lib/growth-mission/kpi-band";
 import { createClient } from "@/lib/supabase/client";
 
 /**

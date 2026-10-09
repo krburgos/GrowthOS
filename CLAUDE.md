@@ -1,6 +1,6 @@
-# CLAUDE.md — GrowthOS
+# CLAUDE.md — GrowthMission
 
-This file is read automatically at the start of every Claude Code session in this repository. It governs how work on GrowthOS gets done.
+This file is read automatically at the start of every Claude Code session in this repository. It governs how work on GrowthMission gets done.
 
 ## Before any task
 

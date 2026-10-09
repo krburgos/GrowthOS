@@ -139,7 +139,7 @@ const PRESETS: Record<"all" | "compact" | "sales", ColumnKey[]> = {
   sales: ["title", "status", "score", "temp", "company"],
 };
 
-const COLUMNS_STORAGE_KEY = "growthos.contacts.visibleColumns";
+const COLUMNS_STORAGE_KEY = "growthmission.contacts.visibleColumns";
 
 function loadVisibleColumns(): Set<ColumnKey> {
   if (typeof window === "undefined") return new Set(ALL_COLUMN_KEYS);

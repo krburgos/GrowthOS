@@ -13,7 +13,7 @@ import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Opportunities — GrowthOS" };
+export const metadata: Metadata = { title: "Opportunities — GrowthMission" };
 
 interface OpportunityQueryRow {
   id: string;

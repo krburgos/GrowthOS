@@ -2,15 +2,15 @@ import PDFDocument from "pdfkit";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { currentQuarter } from "@/lib/gos-dashboard/hours";
-import { PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
-import { getStepDetail, getStepHours, getTasksForStep } from "@/lib/gos-dashboard/queries";
+import { currentQuarter } from "@/lib/growth-mission/hours";
+import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
+import { getStepDetail, getStepHours, getTasksForStep } from "@/lib/growth-mission/queries";
 import { registerPoppins } from "@/lib/pdf/poppins";
 import { renderStatusReport } from "@/lib/pdf/status-report-doc";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * GET /api/gos-dashboard/[slug]/export — the workstream Status Report as a
+ * GET /api/growth-mission/[slug]/export — the workstream Status Report as a
  * PDF (client-confirmed, 2026-09-25).
  *
  * Anyone who can view the workstream can export it, so the ordinary session
@@ -18,7 +18,7 @@ import { createClient } from "@/lib/supabase/server";
  * same getStepDetail/getTasksForStep the page uses, so the PDF can never
  * show something the reader is not allowed to see on screen.
  *
- * Poppins is the brand font for every GrowthOS PDF and its TTFs are read
+ * Poppins is the brand font for every GrowthMission PDF and its TTFs are read
  * from disk, so this route stays listed under `outputFileTracingIncludes`
  * in next.config.ts. The layout lives in lib/pdf/status-report-doc.ts.
  */
@@ -57,7 +57,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const done = new Promise<Buffer>((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
 
   renderStatusReport(doc, {
-    accountName: account?.name ?? "GrowthOS Account",
+    accountName: account?.name ?? "GrowthMission Account",
     stepTitle: step.title,
     phaseTitle: `Step ${shape.number} of ${PLAYBOOK_STEPS.length}`,
     quarterLabel: `${quarter.label} · ${quarter.range}`,
@@ -77,7 +77,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="growthos-${slug}-status-report.pdf"`,
+      "Content-Disposition": `attachment; filename="growthmission-${slug}-status-report.pdf"`,
     },
   });
 }

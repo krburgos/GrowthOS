@@ -1,4 +1,4 @@
-import { STATUS_LABEL, type PlaybookStatus } from "@/lib/gos-dashboard/playbook";
+import { STATUS_LABEL, type PlaybookStatus } from "@/lib/growth-mission/playbook";
 import { cn } from "@/lib/utils";
 
 const STATUS_CLASSES: Record<PlaybookStatus, string> = {

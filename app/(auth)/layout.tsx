@@ -23,7 +23,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-[0_20px_50px_-12px_rgba(2,20,50,0.45)]">
           <div className="mb-6 flex justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/growthos-logo.png" alt="GrowthOS" className="h-12 w-auto" />
+            <img src="/growthmission-logo.png" alt="GrowthMission" className="h-12 w-auto" />
           </div>
           {children}
         </div>

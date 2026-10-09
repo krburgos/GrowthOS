@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { CreateListThenUpload } from "@/components/lists/create-list-then-upload";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 
-export const metadata: Metadata = { title: "Upload List — GrowthOS" };
+export const metadata: Metadata = { title: "Upload List — GrowthMission" };
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 

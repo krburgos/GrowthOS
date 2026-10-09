@@ -9,7 +9,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import type { OpportunityStageRow } from "@/lib/opportunities/stages";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Opportunity — GrowthOS" };
+export const metadata: Metadata = { title: "Opportunity — GrowthMission" };
 
 const CAN_EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 

@@ -1,6 +1,6 @@
 /**
  * The read-only Ideal Customer Profile shown inside the Vision Board's
- * Marketing Strategy step. It is sourced from the account's GrowthOS
+ * Marketing Strategy step. It is sourced from the account's GrowthMission
  * Solution Questionnaire rather than captured again (client-confirmed,
  * 2026-09-16), so it is a view of someone else's answers, not a field.
  *

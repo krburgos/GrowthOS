@@ -9,7 +9,7 @@ import { extendTailwindMerge } from "tailwind-merge"
  * element then renders at whatever size it inherits.
  *
  * That bug was live across roughly eighty call sites (found 2026-09-22 via
- * the GOS Dashboard's KPI figures, which were written as text-h2 and
+ * the Command Center's KPI figures, which were written as text-h2 and
  * rendering at body size). Teaching the merger the scale fixes all of them at
  * once, and means a size and a colour can safely meet in the same cn() call
  * again, as every component here already assumes.

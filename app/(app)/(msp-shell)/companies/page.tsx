@@ -8,7 +8,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Companies — GrowthOS" };
+export const metadata: Metadata = { title: "Companies — GrowthMission" };
 
 const SORT_COLUMNS: Record<string, string> = {
   name: "name",

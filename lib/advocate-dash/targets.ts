@@ -4,7 +4,7 @@
  * Pure types and helpers only, so client components can import this without
  * pulling the Supabase server client into the browser bundle. The reads live
  * in lib/advocate-dash/queries.ts, which is server-only — the same split
- * lib/gos-dashboard/tasks.ts and queries.ts already use, and for the same
+ * lib/growth-mission/tasks.ts and queries.ts already use, and for the same
  * reason: that boundary was crossed once and shipped a server client to the
  * browser.
  *

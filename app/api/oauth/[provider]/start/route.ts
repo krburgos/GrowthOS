@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * Backend Schema §10 — GET /api/oauth/[provider]/start. Redirects to the
  * provider's consent screen for connecting a mailbox (App Flow §5.2).
- * Requires an existing GrowthOS session; the mailbox connection itself is
+ * Requires an existing GrowthMission session; the mailbox connection itself is
  * unrelated to login (Backend Schema §3 note).
  */
 export async function GET(

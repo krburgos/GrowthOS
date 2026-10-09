@@ -52,7 +52,7 @@ export function CroHeader({
       </div>
 
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/growthos-logo.png" alt="GrowthOS" className="h-14 w-auto justify-self-center" />
+      <img src="/growthmission-logo.png" alt="GrowthMission" className="h-14 w-auto justify-self-center" />
 
       <div className="flex items-center justify-end">
         <LogoutButton />

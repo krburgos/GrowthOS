@@ -6,7 +6,7 @@ import { CreateAccountDialog } from "@/components/cro/create-account-dialog";
 import { PartnerAccessPanel, type PartnerRow } from "@/components/cro/partner-access-panel";
 import { CroPortfolioSummary } from "@/components/cro/portfolio-summary";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
-import { currentQuarter } from "@/lib/gos-dashboard/hours";
+import { currentQuarter } from "@/lib/growth-mission/hours";
 import { createClient } from "@/lib/supabase/server";
 
 /** No activity in over two weeks marks an account as idle on the list and in the "Needs attention" filter. */
@@ -21,7 +21,7 @@ interface PortfolioRow {
   last_activity_at: string | null;
 }
 
-export const metadata: Metadata = { title: "CRO Leader Dashboard — GrowthOS" };
+export const metadata: Metadata = { title: "CRO Leader Dashboard — GrowthMission" };
 
 /**
  * Client-confirmed (2026-09-17): CRO Leader's own account always sits at the

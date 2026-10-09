@@ -39,7 +39,7 @@ export function LoginForm() {
       return;
     }
 
-    // Bug fix (2026-09-15): the "viewing as" cookie (growthos_viewing_
+    // Bug fix (2026-09-15): the "viewing as" cookie (growthmission_viewing_
     // account_id) is httpOnly and was never cleared on login/logout, so
     // it silently persisted across sessions -- a CRO Leader/partner user
     // who'd ever entered an MSP account would keep landing back inside

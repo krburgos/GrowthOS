@@ -104,7 +104,7 @@ export function CommandPalette({
       // and the AdvocateDash workstream page says more on a desktop.
       NAV_ITEMS.filter((item) => !item.mobileOnly)
         .filter((item) =>
-          item.section === "dashboard" || item.section === "gosDashboard" || item.section === "myVisits"
+          item.section === "dashboard" || item.section === "growthMission" || item.section === "myVisits"
             ? true
             : access[item.section] !== "disabled"
         )

@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
   }
 
   const answers = (response.answers ?? {}) as Record<string, AnswerValue>;
-  const accountName = account?.name ?? "GrowthOS Account";
+  const accountName = account?.name ?? "GrowthMission Account";
   const exportedOn = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const answeredCount = countAnswered(answers as Record<string, unknown>);
 
@@ -202,8 +202,8 @@ export async function GET(request: NextRequest) {
   doc.restore();
   doc.strokeOpacity(1);
 
-  doc.font(F.bold).fontSize(9).fillColor(TEAL_BRIGHT).text("GROWTHOS", M, 34, { characterSpacing: 1.3, lineBreak: false });
-  doc.font(F.bold).fontSize(26).fillColor("#ffffff").text("GrowthOS Solution Questionnaire", M, 50, { width: 380, lineGap: -4 });
+  doc.font(F.bold).fontSize(9).fillColor(TEAL_BRIGHT).text("GROWTHMISSION", M, 34, { characterSpacing: 1.3, lineBreak: false });
+  doc.font(F.bold).fontSize(26).fillColor("#ffffff").text("GrowthMission Solution Questionnaire", M, 50, { width: 380, lineGap: -4 });
   doc.font(F.regular).fontSize(13).fillColor("#d4dbe6").text(accountName, M, doc.y + 2, { width: 400 });
   const metaY = doc.y + 10;
   let mx = M;
@@ -377,14 +377,14 @@ export async function GET(request: NextRequest) {
     doc.switchToPage(i);
     const pageNo = i - range.start + 1;
     if (pageNo > 1) {
-      doc.font(F.bold).fontSize(8).fillColor(TEAL).text("GROWTHOS", M, 24, { characterSpacing: 0.4, lineBreak: false });
-      const bw = doc.widthOfString("GROWTHOS") + 8 * 0.4;
+      doc.font(F.bold).fontSize(8).fillColor(TEAL).text("GROWTHMISSION", M, 24, { characterSpacing: 0.4, lineBreak: false });
+      const bw = doc.widthOfString("GROWTHMISSION") + 8 * 0.4;
       doc.font(F.regular).fontSize(8).fillColor(FAINT).text("·  SOLUTION QUESTIONNAIRE", M + bw + 4, 24, { characterSpacing: 0.4, lineBreak: false });
       doc.text(accountName.toUpperCase(), M, 24, { width: CONTENT_W, align: "right", characterSpacing: 0.4, lineBreak: false });
     }
     doc.moveTo(M, PAGE_H - 40).lineTo(M + CONTENT_W, PAGE_H - 40).lineWidth(0.5).strokeColor(RULE).stroke();
     doc.font(F.regular).fontSize(7.5).fillColor(FAINT);
-    doc.text(`GrowthOS Solution Questionnaire · ${accountName} · Exported ${exportedOn}`, M, PAGE_H - 32, { width: CONTENT_W - 80, lineBreak: false, ellipsis: true });
+    doc.text(`GrowthMission Solution Questionnaire · ${accountName} · Exported ${exportedOn}`, M, PAGE_H - 32, { width: CONTENT_W - 80, lineBreak: false, ellipsis: true });
     doc.text(`Page ${pageNo} of ${range.count}`, M, PAGE_H - 32, { width: CONTENT_W, align: "right", lineBreak: false });
   }
 
@@ -400,7 +400,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="growthos-solution-questionnaire-${slug}.pdf"`,
+      "Content-Disposition": `attachment; filename="growthmission-solution-questionnaire-${slug}.pdf"`,
     },
   });
 }

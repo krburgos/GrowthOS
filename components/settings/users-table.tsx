@@ -162,7 +162,7 @@ export function UsersTable({
           <DialogHeader>
             <DialogTitle>Deactivate user</DialogTitle>
             <DialogDescription>
-              {deactivateTarget?.full_name} will immediately lose access to GrowthOS. This can&apos;t
+              {deactivateTarget?.full_name} will immediately lose access to GrowthMission. This can&apos;t
               be undone from this screen.
             </DialogDescription>
           </DialogHeader>

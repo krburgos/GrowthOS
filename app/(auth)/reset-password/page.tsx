@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Reset Password — GrowthOS" };
+export const metadata: Metadata = { title: "Reset Password — GrowthMission" };
 
 export default async function ResetPasswordPage() {
   const supabase = await createClient();

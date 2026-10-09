@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { ImportWizard } from "@/components/contacts/import-wizard";
 
-export const metadata: Metadata = { title: "Import Contacts — GrowthOS" };
+export const metadata: Metadata = { title: "Import Contacts — GrowthMission" };
 
 export default function ImportContactsPage() {
   return (

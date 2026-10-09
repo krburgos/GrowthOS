@@ -1,6 +1,6 @@
 import { Check, X } from "lucide-react";
 
-import { paceTone } from "@/lib/gos-dashboard/hours";
+import { paceTone } from "@/lib/growth-mission/hours";
 import { cn } from "@/lib/utils";
 
 /** Achieved-vs-committed bar; the dark tick marks how much of the quarter has passed. */

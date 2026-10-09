@@ -17,7 +17,7 @@ function page(message: string) {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Unsubscribed — GrowthOS</title>
+<title>Unsubscribed — GrowthMission</title>
 <style>
   body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f8f9fb; font-family: -apple-system, "Segoe UI", sans-serif; color: #262e40; }
   .card { max-width: 420px; margin: 24px; padding: 32px; background: #fff; border: 1px solid #e2e6ed; border-radius: 12px; text-align: center; }

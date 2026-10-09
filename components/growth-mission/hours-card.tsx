@@ -3,12 +3,12 @@
 import { CircleAlert, Wallet } from "lucide-react";
 import Link from "next/link";
 
-import { OutsourcedChip } from "@/components/gos-dashboard/hours-ui";
-import { PLAYBOOK_ICON } from "@/components/gos-dashboard/icon-map";
-import { StatusBadge } from "@/components/gos-dashboard/status-badge";
-import { SHORT_TITLE, formatHours, type StepHours } from "@/lib/gos-dashboard/hours";
-import type { StepOverview } from "@/lib/gos-dashboard/queries";
-import { taskSummary, type Task } from "@/lib/gos-dashboard/tasks";
+import { OutsourcedChip } from "@/components/growth-mission/hours-ui";
+import { PLAYBOOK_ICON } from "@/components/growth-mission/icon-map";
+import { StatusBadge } from "@/components/growth-mission/status-badge";
+import { SHORT_TITLE, formatHours, type StepHours } from "@/lib/growth-mission/hours";
+import type { StepOverview } from "@/lib/growth-mission/queries";
+import { taskSummary, type Task } from "@/lib/growth-mission/tasks";
 import { initialsOf, type TeamMember } from "@/lib/team/members";
 
 /**
@@ -79,7 +79,7 @@ export function HoursCard({
         </span>
         <h3 className="min-w-0 flex-1 text-body font-semibold leading-snug text-primary-900">
           <Link
-            href={`/gos-dashboard/${step.slug}`}
+            href={`/growth-mission/${step.slug}`}
             className="after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-secondary-500"
           >
             {title}

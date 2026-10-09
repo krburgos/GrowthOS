@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { HoursBar } from "@/components/gos-dashboard/hours-ui";
+import { HoursBar } from "@/components/growth-mission/hours-ui";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
-import { formatHours, quarterPct, type QuarterInfo, type StepHours } from "@/lib/gos-dashboard/hours";
+import { formatHours, quarterPct, type QuarterInfo, type StepHours } from "@/lib/growth-mission/hours";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -51,8 +51,8 @@ function HoursInput({
 const toNum = (v: string) => Math.max(0, Math.round((Number(v) || 0) * 10) / 10);
 
 /**
- * Writes straight to gos_dashboard_step_hours (needed, outsourced) and
- * gos_dashboard_quarter_hours (this quarter's committed/achieved) under
+ * Writes straight to growth_mission_step_hours (needed, outsourced) and
+ * growth_mission_quarter_hours (this quarter's committed/achieved) under
  * RLS — MSP Owner/Admin for their own account, CRO Admin/Advisor for any.
  */
 export function LogHoursDialog({
@@ -97,12 +97,12 @@ export function LogHoursDialog({
     } = await supabase.auth.getUser();
     const [stepRes, quarterRes] = await Promise.all([
       supabase
-        .from("gos_dashboard_step_hours")
+        .from("growth_mission_step_hours")
         .upsert(
           { account_id: accountId, step_slug: slug, needed_hours: toNum(needed), outsourced, updated_by: user?.id ?? null },
           { onConflict: "account_id,step_slug" }
         ),
-      supabase.from("gos_dashboard_quarter_hours").upsert(
+      supabase.from("growth_mission_quarter_hours").upsert(
         {
           account_id: accountId,
           step_slug: slug,

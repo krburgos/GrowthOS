@@ -13,7 +13,7 @@
  *      a quarter at `weekly × 13` and compared against that. It is also
  *      the only reading that works at all for the tasks that carry no due
  *      date, and it puts capacity in the same unit as
- *      `gos_dashboard_quarter_hours`, which is how the rest of the
+ *      `growth_mission_quarter_hours`, which is how the rest of the
  *      Command Center counts.
  *   2. **The cap is the person's whole commitment**, not their
  *      per-workstream allocation, so it counts their open tasks across all

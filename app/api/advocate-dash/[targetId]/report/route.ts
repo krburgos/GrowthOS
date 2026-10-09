@@ -17,7 +17,7 @@ import { createClient } from "@/lib/supabase/server";
  * something the reader is not allowed to see on screen; a target belonging
  * to another tenant simply comes back empty and this answers 404.
  *
- * Poppins is the brand font for every GrowthOS PDF and its TTFs are read
+ * Poppins is the brand font for every GrowthMission PDF and its TTFs are read
  * from disk, so this route must stay listed under
  * `outputFileTracingIncludes` in next.config.ts or Vercel will not bundle
  * them. The layout lives in lib/pdf/visit-report-doc.ts.
@@ -55,7 +55,7 @@ export async function GET(
   const done = new Promise<Buffer>((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
 
   renderVisitReport(doc, {
-    accountName: account?.name ?? "GrowthOS Account",
+    accountName: account?.name ?? "GrowthMission Account",
     targetName: target.target_name,
     companyName: target.company_name,
     address: target.address,

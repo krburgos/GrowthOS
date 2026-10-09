@@ -4,7 +4,7 @@ import { EmailConnectionManager, type EmailConnectionRow } from "@/components/se
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Connected Email Account — GrowthOS" };
+export const metadata: Metadata = { title: "Connected Email Account — GrowthMission" };
 
 /**
  * App Flow §4.9, I2 — Connected Email Accounts. Connecting/disconnecting

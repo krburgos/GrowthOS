@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    let fromName = "GrowthOS";
+    let fromName = "GrowthMission";
     let realAddress = process.env.EMAIL_FROM_ADDRESS ?? "";
     let replyToEmail = realAddress;
 

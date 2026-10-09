@@ -16,7 +16,7 @@ import {
   formatReportDate,
   reportPath,
   type WorkstreamReport,
-} from "@/lib/gos-dashboard/reports";
+} from "@/lib/growth-mission/reports";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -77,7 +77,7 @@ export function ReportPanel({
 
     // The row is what the app reads; the object is just bytes. Insert it
     // second so a failed upload never leaves a row pointing at nothing.
-    const { error: rowError } = await supabase.from("gos_dashboard_reports").insert({
+    const { error: rowError } = await supabase.from("growth_mission_reports").insert({
       account_id: accountId,
       step_slug: slug,
       title: defaultReportTitle(stepTitle),

@@ -1,8 +1,8 @@
 import type PDFDocument from "pdfkit";
 
 import { POPPINS } from "@/lib/pdf/poppins";
-import type { KpiStat } from "@/lib/gos-dashboard/playbook";
-import { TASK_STATE_LABEL, type Task } from "@/lib/gos-dashboard/tasks";
+import type { KpiStat } from "@/lib/growth-mission/playbook";
+import { TASK_STATE_LABEL, type Task } from "@/lib/growth-mission/tasks";
 
 /** Design System §9 tokens, as hex — pdfkit has no CSS variables. */
 const NAVY_950 = "#0a192e";

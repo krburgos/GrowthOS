@@ -3,33 +3,33 @@ import { notFound } from "next/navigation";
 
 import { DropbyPanel } from "@/components/advocate-dash/dropby-panel";
 import { TargetsTable } from "@/components/advocate-dash/targets-table";
-import { EditOverviewPanel } from "@/components/gos-dashboard/edit-overview-panel";
-import { ReportPanel } from "@/components/gos-dashboard/report-panel";
-import { StepHeader } from "@/components/gos-dashboard/step-header";
-import { StepHoursPanel } from "@/components/gos-dashboard/step-hours-panel";
-import { TaskList } from "@/components/gos-dashboard/task-list";
+import { EditOverviewPanel } from "@/components/growth-mission/edit-overview-panel";
+import { ReportPanel } from "@/components/growth-mission/report-panel";
+import { StepHeader } from "@/components/growth-mission/step-header";
+import { StepHoursPanel } from "@/components/growth-mission/step-hours-panel";
+import { TaskList } from "@/components/growth-mission/task-list";
 import { ADVOCATE_DASH_SLUG } from "@/lib/advocate-dash/targets";
 import { getTargets } from "@/lib/advocate-dash/queries";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
+import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/growth-mission/hours";
 import {
   getMemberTaskLoad,
   getReports,
   getStepDetail,
   getStepHours,
   getTasksForStep,
-} from "@/lib/gos-dashboard/queries";
+} from "@/lib/growth-mission/queries";
 import { getTeamMembers } from "@/lib/team/queries";
-import { PLAYBOOK_STEPS } from "@/lib/gos-dashboard/playbook";
+import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const step = PLAYBOOK_STEPS.find((s) => s.slug === slug);
-  return { title: step ? `${step.title} - GOS Dashboard - GrowthOS` : "GOS Dashboard - GrowthOS" };
+  return { title: step ? `${step.title} - Command Center - GrowthMission` : "Command Center - GrowthMission" };
 }
 
 /**
- * GOS Dashboard step detail.
+ * Command Center step detail.
  *
  * Client-confirmed restructure (2026-09-25): the tab strip is gone. The
  * page now reads straight down — where the workstream stands, then what to
@@ -42,20 +42,20 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
  * because the client wants every workstream to say where it stands. And
  * Progress Tracker is removed — tasks carry progress now, each with an
  * owner, hours and a state, which is what that tab was approximating.
- * This supersedes the source doc's own three-part "GrowthOS Dashboard"
+ * This supersedes the source doc's own three-part "GrowthMission Dashboard"
  * sub-shape (App Flow §4.3a, Backend Schema §6.6c);
- * gos_dashboard_tracker_items keeps its rows and is simply no longer read,
- * the same way gos_dashboard_suggestions was left in place.
+ * growth_mission_tracker_items keeps its rows and is simply no longer read,
+ * the same way growth_mission_suggestions was left in place.
  *
  * Client-confirmed (2026-09-25, same pass): the Duties list and the KPIs
  * grid are removed from the foot of the page too. The status report says
  * where the workstream stands and the board says what to do about it;
  * a standing duties list and a second grid of targets underneath were
  * restating the engagement rather than telling anyone anything actionable.
- * gos_dashboard_kpis keeps its rows, and duties stay in the playbook shape,
+ * growth_mission_kpis keeps its rows, and duties stay in the playbook shape,
  * so neither is lost.
  */
-export default async function GosDashboardStepPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function GrowthMissionStepPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await getCurrentUser();
   if (!user || !user.account_id) return null;

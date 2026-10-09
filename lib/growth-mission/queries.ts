@@ -1,5 +1,5 @@
-import { EMPTY_HOURS, type StepHours } from "@/lib/gos-dashboard/hours";
-import { defaultBoxFor, type KpiBoxKey, type KpiSource, type SourceKind } from "@/lib/gos-dashboard/kpi-band";
+import { EMPTY_HOURS, type StepHours } from "@/lib/growth-mission/hours";
+import { defaultBoxFor, type KpiBoxKey, type KpiSource, type SourceKind } from "@/lib/growth-mission/kpi-band";
 import {
   COMPANY_PROFILE_COLUMNS,
   COMPLETENESS_FIELDS,
@@ -7,8 +7,8 @@ import {
   type CompanyProfile,
 } from "@/lib/accounts/company-profile";
 import { TOTAL_QUESTION_COUNT, countAnswered as countQuestionnaireAnswered } from "@/lib/questionnaire/questions";
-import type { WorkstreamReport } from "@/lib/gos-dashboard/reports";
-import type { Task, TaskPriority, TaskState } from "@/lib/gos-dashboard/tasks";
+import type { WorkstreamReport } from "@/lib/growth-mission/reports";
+import type { Task, TaskPriority, TaskState } from "@/lib/growth-mission/tasks";
 import type { TeamKind } from "@/lib/team/members";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -22,7 +22,7 @@ import {
   type PlaybookStatus,
   type SuggestionItem,
   type TrackerItem,
-} from "@/lib/gos-dashboard/playbook";
+} from "@/lib/growth-mission/playbook";
 
 export interface StepOverview extends PlaybookShape {
   status: PlaybookStatus;
@@ -40,7 +40,7 @@ export interface StepDetail extends StepOverview {
 export async function getStepOverviews(accountId: string): Promise<StepOverview[]> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from("gos_dashboard_step_status")
+    .from("growth_mission_step_status")
     .select("step_slug, status, headline_label, headline_value")
     .eq("account_id", accountId);
 
@@ -67,34 +67,34 @@ export async function getStepDetail(accountId: string, slug: string): Promise<St
   const [{ data: statusRow }, { data: kpiRows }, { data: statRows }, { data: suggestionRows }, { data: trackerRows }] =
     await Promise.all([
       supabase
-        .from("gos_dashboard_step_status")
+        .from("growth_mission_step_status")
         .select("status, headline_label, headline_value, status_report_summary")
         .eq("account_id", accountId)
         .eq("step_slug", slug)
         .maybeSingle(),
       supabase
-        .from("gos_dashboard_kpis")
+        .from("growth_mission_kpis")
         .select("id, label, value, target")
         .eq("account_id", accountId)
         .eq("step_slug", slug)
         .is("archived_at", null)
         .order("created_at", { ascending: true }),
       supabase
-        .from("gos_dashboard_status_report_stats")
+        .from("growth_mission_status_report_stats")
         .select("id, label, value, target")
         .eq("account_id", accountId)
         .eq("step_slug", slug)
         .is("archived_at", null)
         .order("created_at", { ascending: true }),
       supabase
-        .from("gos_dashboard_suggestions")
+        .from("growth_mission_suggestions")
         .select("id, title, priority, detail")
         .eq("account_id", accountId)
         .eq("step_slug", slug)
         .is("archived_at", null)
         .order("created_at", { ascending: true }),
       supabase
-        .from("gos_dashboard_tracker_items")
+        .from("growth_mission_tracker_items")
         .select("id, label, percent_complete")
         .eq("account_id", accountId)
         .eq("step_slug", slug)
@@ -125,9 +125,9 @@ export async function getStepDetail(accountId: string, slug: string): Promise<St
 export async function getStepHours(accountId: string, quarterStart: string): Promise<Record<string, StepHours>> {
   const supabase = await createClient();
   const [{ data: stepRows }, { data: quarterRows }] = await Promise.all([
-    supabase.from("gos_dashboard_step_hours").select("step_slug, needed_hours, outsourced").eq("account_id", accountId),
+    supabase.from("growth_mission_step_hours").select("step_slug, needed_hours, outsourced").eq("account_id", accountId),
     supabase
-      .from("gos_dashboard_quarter_hours")
+      .from("growth_mission_quarter_hours")
       .select("step_slug, committed_hours, achieved_hours")
       .eq("account_id", accountId)
       .eq("quarter_start", quarterStart),
@@ -166,8 +166,8 @@ export async function getKpiBand(accountId: string): Promise<KpiBandData> {
       .eq("account_id", accountId)
       .is("archived_at", null)
       .order("sort_order"),
-    supabase.from("gos_dashboard_kpi_mapping").select("box, contact_status_id, opportunity_stage_id").eq("account_id", accountId),
-    supabase.rpc("gos_dashboard_source_counts", { p_account_id: accountId }),
+    supabase.from("growth_mission_kpi_mapping").select("box, contact_status_id, opportunity_stage_id").eq("account_id", accountId),
+    supabase.rpc("growth_mission_source_counts", { p_account_id: accountId }),
   ]);
 
   const countById = new Map<string, number>(
@@ -298,7 +298,7 @@ const SELECT =
 export async function getTasks(accountId: string): Promise<Task[]> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from("gos_dashboard_tasks")
+    .from("growth_mission_tasks")
     .select(SELECT)
     .eq("account_id", accountId)
     .is("archived_at", null)
@@ -310,7 +310,7 @@ export async function getTasks(accountId: string): Promise<Task[]> {
 export async function getTasksForStep(accountId: string, slug: string): Promise<Task[]> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from("gos_dashboard_tasks")
+    .from("growth_mission_tasks")
     .select(SELECT)
     .eq("account_id", accountId)
     .eq("step_slug", slug)
@@ -331,7 +331,7 @@ export async function getTasksForStep(accountId: string, slug: string): Promise<
 export async function getMemberTaskLoad(accountId: string): Promise<Record<string, number>> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from("gos_dashboard_tasks")
+    .from("growth_mission_tasks")
     .select("assignee_id, hours")
     .eq("account_id", accountId)
     .is("archived_at", null)
@@ -367,7 +367,7 @@ export async function getMemberStepTasks(
 ): Promise<Record<string, Record<string, StepTaskTally>>> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from("gos_dashboard_tasks")
+    .from("growth_mission_tasks")
     .select("assignee_id, step_slug, hours, state")
     .eq("account_id", accountId)
     .is("archived_at", null)
@@ -400,7 +400,7 @@ export async function getMemberStepTasks(
 export async function getReports(accountId: string, slug: string): Promise<WorkstreamReport[]> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from("gos_dashboard_reports")
+    .from("growth_mission_reports")
     .select("id, title, file_path, file_size, created_at, users(full_name)")
     .eq("account_id", accountId)
     .eq("step_slug", slug)

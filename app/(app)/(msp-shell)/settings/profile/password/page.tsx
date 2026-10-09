@@ -6,7 +6,7 @@ import { HeroBand } from "@/components/shell/hero-band";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Password — GrowthOS" };
+export const metadata: Metadata = { title: "Password — GrowthMission" };
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);

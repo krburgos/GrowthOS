@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { RecordsDialog } from "@/components/gos-dashboard/kpi-records-dialog";
+import { RecordsDialog } from "@/components/growth-mission/kpi-records-dialog";
 import { CountUp } from "@/components/ui/count-up";
 import {
   KPI_BOXES,
@@ -11,7 +11,7 @@ import {
   type KpiBox,
   type KpiBoxKey,
   type KpiSource,
-} from "@/lib/gos-dashboard/kpi-band";
+} from "@/lib/growth-mission/kpi-band";
 
 /**
  * The KPI band as it appears inside the Homepage's hero (client-confirmed,

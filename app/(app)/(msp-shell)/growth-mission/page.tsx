@@ -1,16 +1,16 @@
 import { CalendarRange, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 
-import { HoursCard } from "@/components/gos-dashboard/hours-card";
-import { HoursTotalsStrip } from "@/components/gos-dashboard/hours-totals-strip";
-import { KpiBand } from "@/components/gos-dashboard/kpi-band";
-import { ReadinessCheck } from "@/components/gos-dashboard/readiness-check";
+import { HoursCard } from "@/components/growth-mission/hours-card";
+import { HoursTotalsStrip } from "@/components/growth-mission/hours-totals-strip";
+import { KpiBand } from "@/components/growth-mission/kpi-band";
+import { ReadinessCheck } from "@/components/growth-mission/readiness-check";
 import { HeroBand, HeroLabel } from "@/components/shell/hero-band";
 import { SectionHeading } from "@/components/shell/section-heading";
 import { getTargets } from "@/lib/advocate-dash/queries";
 import { ADVOCATE_DASH_SLUG, advocatesForCard, targetSummary } from "@/lib/advocate-dash/targets";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/gos-dashboard/hours";
+import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/growth-mission/hours";
 import {
   getKpiBand,
   getMemberStepTasks,
@@ -18,21 +18,21 @@ import {
   getStepHours,
   getStepOverviews,
   getTasks,
-} from "@/lib/gos-dashboard/queries";
+} from "@/lib/growth-mission/queries";
 import { membersForStep } from "@/lib/team/members";
 import { getTeamMembers } from "@/lib/team/queries";
 
-export const metadata: Metadata = { title: "GrowthOS Command Center – Strategy & Assignments Dashboard — GrowthOS" };
+export const metadata: Metadata = { title: "GrowthMission Command Center – Strategy & Assignments Dashboard — GrowthMission" };
 
 /**
- * GOS Dashboard (App Flow §4.3a). Client-confirmed (2026-09-17), all from
- * "GrowthOS Playbook - Dev Plan.docx": the "Before You Begin" readiness
+ * Command Center (App Flow §4.3a). Client-confirmed (2026-09-17), all from
+ * "GrowthMission Playbook - Dev Plan.docx": the "Before You Begin" readiness
  * check, the doc's KPI dashboard band (live contact/opportunity counts),
  * a quarter hours totals strip, and the 14 workstreams as a flat grid of
  * "B — Ledger" hours cards. Hours: MSP Owner/Admin + CRO Admin/Advisor
  * edit; KPI mapping and every step's status/KPIs/report: CRO Admin/Advisor.
  */
-export default async function GosDashboardPage() {
+export default async function GrowthMissionPage() {
   const user = await getCurrentUser();
   if (!user || !user.account_id) return null;
 
@@ -73,7 +73,7 @@ export default async function GosDashboardPage() {
       <HeroBand>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-h1 text-white">GrowthOS Command Center – Strategy & Assignments Dashboard</h1>
+            <h1 className="text-h1 text-white">GrowthMission Command Center – Strategy & Assignments Dashboard</h1>
             {/* Client-confirmed (2026-09-24), treatment "C": a badge in the
                 same material as the quarter pill opposite, rather than the
                 descriptive sentence that used to sit here. */}

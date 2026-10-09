@@ -8,7 +8,7 @@ import { SendCampaignControls } from "@/components/campaigns/send-campaign-contr
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Campaign — GrowthOS" };
+export const metadata: Metadata = { title: "Campaign — GrowthMission" };
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 

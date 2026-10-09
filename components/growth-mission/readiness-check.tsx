@@ -4,7 +4,7 @@ import { Check, ChevronDown, ChevronUp, Minus, OctagonAlert, ShieldCheck } from 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import type { DocReadiness, Readiness } from "@/lib/gos-dashboard/queries";
+import type { DocReadiness, Readiness } from "@/lib/growth-mission/queries";
 
 /**
  * The Playbook doc's "Before You Begin — STOP".
@@ -27,7 +27,7 @@ import type { DocReadiness, Readiness } from "@/lib/gos-dashboard/queries";
  * different, so anyone who hid the old one should see the new one once
  * rather than inherit a dismissal of a different question.
  */
-const STORAGE_KEY = "gos-readiness-hidden-v2";
+const STORAGE_KEY = "growth-mission-readiness-hidden-v2";
 
 interface Item {
   label: string;
@@ -102,7 +102,7 @@ export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
         {ready ? (
           <span className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-neutral-700">
             <ShieldCheck className="size-4 text-success-600" />
-            Ready to run the GrowthOS Strategy &amp; Assignments
+            Ready to run the GrowthMission Strategy &amp; Assignments
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-warning-800">
@@ -120,7 +120,7 @@ export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5">
         <span className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-neutral-700">
           <ShieldCheck className="size-4 text-success-600" />
-          Ready to run the GrowthOS Strategy &amp; Assignments
+          Ready to run the GrowthMission Strategy &amp; Assignments
         </span>
         {items.map((item) => (
           <CheckItem key={item.label} ok>
@@ -140,7 +140,7 @@ export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
       </span>
       <ToggleButton />
       <p className="basis-full text-body-sm leading-relaxed text-neutral-600">
-        Nothing in the GrowthOS Strategy &amp; Assignments will work until all three foundations are complete: your
+        Nothing in the GrowthMission Strategy &amp; Assignments will work until all three foundations are complete: your
         Company Profile, your Solution Questionnaire and your Vision Board.
       </p>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">

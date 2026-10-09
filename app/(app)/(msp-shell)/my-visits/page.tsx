@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 import { VisitsBoard } from "@/components/advocate-dash/visits-board";
 import { getTargets } from "@/lib/advocate-dash/queries";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { HOURS_EDIT_ROLES } from "@/lib/gos-dashboard/hours";
+import { HOURS_EDIT_ROLES } from "@/lib/growth-mission/hours";
 import { getTeamMembers } from "@/lib/team/queries";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "My Visits — GrowthOS" };
+export const metadata: Metadata = { title: "My Visits — GrowthMission" };
 
 /**
  * My Visits (App Flow §4.3d, client-confirmed 2026-10-05) — the Advocate's

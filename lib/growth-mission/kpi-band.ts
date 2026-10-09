@@ -1,5 +1,5 @@
 /**
- * The Playbook doc's "GrowthOS KPI dashboard" band (client-confirmed,
+ * The Playbook doc's "GrowthMission KPI dashboard" band (client-confirmed,
  * 2026-09-17): Prospects and Opportunities, counted live from the account's
  * contacts and opportunities.
  *
@@ -13,7 +13,7 @@
  * Engaged contact status, which was retired from every account in the same
  * change (contacts on it moved to MQC - see the
  * retire_engaged_contact_status migration). Prospects is therefore MQCs and
- * MQLs. The 'engaged' value stays in the gos_dashboard_kpi_box enum because
+ * MQLs. The 'engaged' value stays in the growth_mission_kpi_box enum because
  * removing an enum value in Postgres is a rewrite, and nothing references
  * it: no account had ever mapped a status to that box.
  */

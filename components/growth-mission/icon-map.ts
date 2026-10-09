@@ -17,7 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import type { IconKey } from "@/lib/gos-dashboard/playbook";
+import type { IconKey } from "@/lib/growth-mission/playbook";
 
 export const PLAYBOOK_ICON: Record<IconKey, LucideIcon> = {
   search: Search,

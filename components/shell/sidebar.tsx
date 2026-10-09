@@ -24,7 +24,7 @@ import type { NavAccess, NavSection } from "@/lib/auth/nav-permissions";
 import { cn } from "@/lib/utils";
 
 export interface NavItem {
-  section: NavSection | "dashboard" | "gosDashboard" | "myVisits";
+  section: NavSection | "dashboard" | "growthMission" | "myVisits";
   label: string;
   href: string;
   /** Path prefix used to compute the active state, when it differs from
@@ -46,7 +46,7 @@ export interface NavItem {
  * destination list rather than maintaining a second, drift-prone copy. */
 export const NAV_ITEMS: NavItem[] = [
   { section: "dashboard", label: "Homepage", href: "/dashboard", icon: LayoutDashboard },
-  { section: "gosDashboard", label: "Command Center", href: "/gos-dashboard", icon: LayoutGrid },
+  { section: "growthMission", label: "Command Center", href: "/growth-mission", icon: LayoutGrid },
   {
     section: "myVisits",
     label: "My Visits",
@@ -69,7 +69,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-const SIDEBAR_COLLAPSED_KEY = "growthos.sidebar.collapsed";
+const SIDEBAR_COLLAPSED_KEY = "growthmission.sidebar.collapsed";
 
 /**
  * Design System §8.9 — Sidebar Navigation. primary-900 background (now a
@@ -177,7 +177,7 @@ export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
           )}
         >
           <div className="mb-2 flex items-center justify-between px-3">
-            <span className="text-body-sm font-bold text-white">GrowthOS</span>
+            <span className="text-body-sm font-bold text-white">GrowthMission</span>
             <button
               type="button"
               onClick={close}
@@ -219,7 +219,7 @@ function NavList({
     <nav className="flex flex-col gap-1 px-3">
       {NAV_ITEMS.filter((item) => includeMobileOnly || !item.mobileOnly).map((item) => {
         const itemAccess: NavAccess =
-          item.section === "dashboard" || item.section === "gosDashboard" || item.section === "myVisits"
+          item.section === "dashboard" || item.section === "growthMission" || item.section === "myVisits"
             ? "full"
             : access[item.section];
         const disabled = itemAccess === "disabled";

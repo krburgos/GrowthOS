@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /**
  * A number that counts up to its value (client-confirmed, 2026-09-22, for the
- * GOS Dashboard KPI band).
+ * Command Center KPI band).
  *
  * Three things keep it cheap and quiet:
  *

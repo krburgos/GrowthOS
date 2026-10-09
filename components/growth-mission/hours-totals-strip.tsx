@@ -1,5 +1,5 @@
-import { HoursBar } from "@/components/gos-dashboard/hours-ui";
-import { formatHours, paceTone, quarterPct, type QuarterInfo, type StepHours } from "@/lib/gos-dashboard/hours";
+import { HoursBar } from "@/components/growth-mission/hours-ui";
+import { formatHours, paceTone, quarterPct, type QuarterInfo, type StepHours } from "@/lib/growth-mission/hours";
 import { cn } from "@/lib/utils";
 
 /**

@@ -3,10 +3,10 @@
 import { Clock } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
-import { HoursBar, OutsourcedChip } from "@/components/gos-dashboard/hours-ui";
-import { LogHoursDialog } from "@/components/gos-dashboard/log-hours-dialog";
+import { HoursBar, OutsourcedChip } from "@/components/growth-mission/hours-ui";
+import { LogHoursDialog } from "@/components/growth-mission/log-hours-dialog";
 import { Button } from "@/components/ui/button";
-import { SHORT_TITLE, formatHours, quarterPct, type QuarterInfo, type StepHours } from "@/lib/gos-dashboard/hours";
+import { SHORT_TITLE, formatHours, quarterPct, type QuarterInfo, type StepHours } from "@/lib/growth-mission/hours";
 
 export function StepHoursPanel({
   accountId,

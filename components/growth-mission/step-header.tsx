@@ -2,8 +2,8 @@
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { PLAYBOOK_ICON } from "@/components/gos-dashboard/icon-map";
-import type { StepDetail } from "@/lib/gos-dashboard/queries";
+import { PLAYBOOK_ICON } from "@/components/growth-mission/icon-map";
+import type { StepDetail } from "@/lib/growth-mission/queries";
 
 /**
  * `overviewSlot` renders the status badge (read-only viewers) or the
@@ -15,7 +15,7 @@ export function StepHeader({ step, overviewSlot }: { step: StepDetail; overviewS
 
   return (
     <div>
-      <Link href="/gos-dashboard" className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-secondary-700 hover:underline">
+      <Link href="/growth-mission" className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-secondary-700 hover:underline">
         <ArrowLeft className="size-3.5" />
         Command Center
       </Link>

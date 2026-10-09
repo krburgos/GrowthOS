@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(buffer, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="growthos-${section}-report.xlsx"`,
+      "Content-Disposition": `attachment; filename="growthmission-${section}-report.xlsx"`,
     },
   });
 }

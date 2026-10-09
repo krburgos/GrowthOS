@@ -97,7 +97,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
     await runValidate(selected);
   };
 
-  /** A column (source header) can map to at most one GrowthOS field.
+  /** A column (source header) can map to at most one GrowthMission field.
    * Clears whichever field previously pointed at this header before
    * assigning the new one — the field the user picks may also have
    * pointed at a different header before, which a plain object-key
@@ -180,7 +180,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
     );
   }
 
-  // Which GrowthOS field (if any) each source header currently maps
+  // Which GrowthMission field (if any) each source header currently maps
   // to — recomputed live from `result.mapping` on every render, unlike
   // `autoMatchedHeaders` (frozen at first parse; decides section
   // placement, not current mapping state).

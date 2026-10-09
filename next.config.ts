@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/questionnaire/export": ["./lib/pdf/fonts/**/*"],
     "/api/vision-board/export": ["./lib/pdf/fonts/**/*"],
-    "/api/gos-dashboard/[slug]/export": ["./lib/pdf/fonts/**/*"],
+    "/api/growth-mission/[slug]/export": ["./lib/pdf/fonts/**/*"],
     "/api/advocate-dash/[targetId]/report": ["./lib/pdf/fonts/**/*"],
   },
 };

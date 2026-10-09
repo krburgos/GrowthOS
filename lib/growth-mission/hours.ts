@@ -1,7 +1,7 @@
 /**
- * GOS Dashboard hours (client-confirmed, 2026-09-17). "Needed" spans the
+ * Command Center hours (client-confirmed, 2026-09-17). "Needed" spans the
  * whole workstream; "committed" and "achieved" belong to the current
- * calendar quarter (gos_dashboard_quarter_hours, Backend Schema §6.6c).
+ * calendar quarter (growth_mission_quarter_hours, Backend Schema §6.6c).
  */
 
 export interface StepHours {
@@ -36,7 +36,7 @@ export const SHORT_TITLE: Record<string, string> = {
 export const HOURS_EDIT_ROLES = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"];
 
 export interface QuarterInfo {
-  /** ISO date of the quarter's first day, the gos_dashboard_quarter_hours key. */
+  /** ISO date of the quarter's first day, the growth_mission_quarter_hours key. */
   start: string;
   label: string;
   range: string;

@@ -1,5 +1,5 @@
-﻿GrowthOS Backend Schema Document
-**Purpose:** the complete Supabase/Postgres backend specification for GrowthOS Phase 1 — every table, relationship, authentication and authorization flow, Row Level Security policy, database function and trigger, and the API endpoints that sit alongside direct-to-Supabase access. This is the fifth document in the build-input series (Product Requirements Document → App Flow Document → Tech Stack Lockfile → Design System → Backend Schema) and is written to be implemented literally: Claude Code should not need to invent a table, column, policy, or endpoint that isn't already specified here.
+﻿GrowthMission Backend Schema Document
+**Purpose:** the complete Supabase/Postgres backend specification for GrowthMission Phase 1 — every table, relationship, authentication and authorization flow, Row Level Security policy, database function and trigger, and the API endpoints that sit alongside direct-to-Supabase access. This is the fifth document in the build-input series (Product Requirements Document → App Flow Document → Tech Stack Lockfile → Design System → Backend Schema) and is written to be implemented literally: Claude Code should not need to invent a table, column, policy, or endpoint that isn't already specified here.
 **Source alignment:** table names, status pipelines, and role names below match the terminology already locked in the PRD (§4 Users/Roles, §6 Functional Requirements, §7 Data Model Overview) and the App Flow Document (§4.5 Opportunities, §4.7 Campaigns). Where this document had to introduce a name, table, or structure the earlier documents didn't specify, that's called out explicitly in §12 rather than left implicit.
 
 ## 1. Purpose & Architecture Overview
@@ -17,13 +17,13 @@ Thirteen database tables cover Phase 1 in full: accounts, users, email_connectio
 
 ## 2. Multi-Tenancy & Data Access Model
 
-GrowthOS uses **one shared schema with application-level isolation enforced by Row Level Security** — not a separate database or schema per MSP. The PRD (§5, §9) confirms no compliance driver currently requires stricter isolation than that; if one emerges later, RLS can be tightened without a data migration.
+GrowthMission uses **one shared schema with application-level isolation enforced by Row Level Security** — not a separate database or schema per MSP. The PRD (§5, §9) confirms no compliance driver currently requires stricter isolation than that; if one emerges later, RLS can be tightened without a data migration.
 **Tenant unit.** A tenant is an accounts row — one MSP. Every tenant-scoped table carries an account_id column and an RLS policy that compares it against the caller's own account.
 **Three categories of user** (client-confirmed addition of the third, 2026-09-08 — see §12 for the full flag-and-confirm trail):
 - **MSP staff** (msp_owner, msp_admin, msp_marketing, msp_read_only) — always belong to exactly one account; users.account_id is required (not null) for these roles. **msp_sales was removed 2026-09-15** — its edit rights (Opportunities/Activities) folded into msp_marketing; the enum label itself is still technically present in the database (Postgres can't drop a single enum value without recreating the type) but is unreachable from the app.
 - **CRO Leader staff** (cro_admin, cro_advisor, cro_service_team) — belong to no single account and can act across *all* of them, unconditionally; users.account_id is required to be null for these roles. This is enforced by a CHECK constraint on users (§5), not left to application code to get right.
 - **Partner** — also belongs to no single account (account_id null, same CHECK constraint bucket as CRO Leader), but unlike CRO Leader, a partner can only act on the specific accounts explicitly listed in `partner_account_grants` (§5.2), managed unilaterally by CRO Admin. A vendor/agency relationship, not platform staff.
-**"Viewing as" (also 2026-09-08):** since neither CRO Leader nor partner has a home account, every MSP-shell page (which reads `user.account_id` directly, dozens of call sites) needs *something* to resolve that to once one of them wants to work inside a specific MSP's data. `getCurrentUser()` (`lib/auth/get-current-user.ts`) resolves this from a `growthos_viewing_account_id` cookie set by POST /api/cro/enter (§10) — the cookie is a pure UI convenience for choosing which account to display; it grants nothing by itself; every query is still independently authorized by the RLS policies below (`is_cro_leader()` / `is_partner_for()`), regardless of what the cookie claims.
+**"Viewing as" (also 2026-09-08):** since neither CRO Leader nor partner has a home account, every MSP-shell page (which reads `user.account_id` directly, dozens of call sites) needs *something* to resolve that to once one of them wants to work inside a specific MSP's data. `getCurrentUser()` (`lib/auth/get-current-user.ts`) resolves this from a `growthmission_viewing_account_id` cookie set by POST /api/cro/enter (§10) — the cookie is a pure UI convenience for choosing which account to display; it grants nothing by itself; every query is still independently authorized by the RLS policies below (`is_cro_leader()` / `is_partner_for()`), regardless of what the cookie claims.
 
 **Bug fix, not a new decision (2026-09-15):** the cookie is `httpOnly` and was never cleared on login or logout, only on the banner's explicit "Exit to My Dashboard" (POST /api/cro/exit). A CRO Leader/partner session that had ever entered an MSP account kept silently resuming that same account on every future login instead of landing on the CRO Leader Dashboard — the `needsAccountSelection(role) && !account_id` redirect to `/cro` never fired because the stale cookie made `account_id` truthy again before that check ran. Fixed by calling `POST /api/cro/exit` (a harmless no-op for MSP staff, who never have this cookie) from every login and logout path — `components/auth/login-form.tsx`, `components/shell/top-bar.tsx`'s logout, and `components/auth/logout-button.tsx` (the CRO Leader Dashboard's own lightweight header).
 **Permission matrix.** The PRD's role table (§4) specifies view/edit access per role but only as a single combined "Own account data" description per row. To turn that into concrete per-table RLS policies, this document treats **view (SELECT) as broad** — any role with access to an account can see all of that account's CRM data, since the App Flow Document already assumes cross-navigation (a Sales user needs to see which list a contact belongs to; Marketing needs to see opportunity outcomes to judge campaign impact) — and treats **edit (INSERT/UPDATE) as the PRD's specific per-role grant, applied literally**. This interpretation is flagged as an assumption in §12 for the client to confirm; if narrower view access turns out to be intended, only the SELECT policies in §6 need to change.
@@ -38,11 +38,11 @@ GrowthOS uses **one shared schema with application-level isolation enforced by R
 | Campaign Events (tracking log) | All roles in the account; all CRO Leader roles; a partner, for accounts they're granted | System only — written exclusively by record_campaign_event() (§7) via the public tracking/webhook routes, never by a client |
 | Partner Account Grants (`partner_account_grants`) | A partner sees their own grant rows; CRO Admin sees all | CRO Admin only — insert/delete; unilateral, no MSP-side consent step (client-confirmed) |
 
-**Soft delete, with one exception.** Per the client's decision, nothing in GrowthOS is hard-deleted — every tenant-scoped table has an archived_at timestamp, no DELETE RLS policy is ever granted, and "delete" in the UI always means "set archived_at." **Opportunities are the one exception:** the PRD (§6.4) requires every opportunity retained permanently, so the opportunities table has **no ****archived_at**** column at all** — there is no way to archive or hide one, by design.
+**Soft delete, with one exception.** Per the client's decision, nothing in GrowthMission is hard-deleted — every tenant-scoped table has an archived_at timestamp, no DELETE RLS policy is ever granted, and "delete" in the UI always means "set archived_at." **Opportunities are the one exception:** the PRD (§6.4) requires every opportunity retained permanently, so the opportunities table has **no ****archived_at**** column at all** — there is no way to archive or hide one, by design.
 
 ## 3. Authentication & User Lifecycle
 
-**Login vs. OAuth are two separate things.** Standard email/password (Supabase Auth) is how every user logs into GrowthOS. The Microsoft 365 / Google Workspace OAuth flow (§7, §10) is unrelated to login — it only connects a mailbox for sending campaigns, and is optional per user. The PRD (§4) confirms formal SSO/Entra ID federation is not required for Phase 1.
+**Login vs. OAuth are two separate things.** Standard email/password (Supabase Auth) is how every user logs into GrowthMission. The Microsoft 365 / Google Workspace OAuth flow (§7, §10) is unrelated to login — it only connects a mailbox for sending campaigns, and is optional per user. The PRD (§4) confirms formal SSO/Entra ID federation is not required for Phase 1.
 **Provisioning has no self-service signup.** New users are always invited, never self-registered:
 - An authorized inviter (Owner/Admin for their own account, or a CRO Admin for any account) submits the invite through POST /api/users/invite (§10).
 - That route calls supabase.auth.admin.inviteUserByEmail() with the target account_id and role embedded in raw_user_meta_data, using the service role key — this cannot happen from the browser since it requires an admin-privileged Supabase Auth call.
@@ -785,7 +785,7 @@ create trigger trg_growth_questionnaire_responses_updated_at before update on gr
 
 ### 6.6b vision_board_responses
 
-**Client-confirmed addition (2026-09-16)** — the GrowthOS Vision Board, sourced from "GrowthOS Vision Board Dev Questions.docx" (9 numbered sections + a Leadership Sign-Off). One row per account; answers live in a single `jsonb` column keyed by a stable field key defined in `lib/vision-board/sections.ts`, same reasoning as `growth_questionnaire_responses` (§6.6a) for keeping the question list as app-code rather than schema. Same RLS shape and role set, client-confirmed identical: MSP Owner/Admin write, CRO Admin/Advisor write on the MSP's behalf, a granted partner writes too, and read is account-scoped plus CRO Leader/partner.
+**Client-confirmed addition (2026-09-16)** — the GrowthMission Vision Board, sourced from "GrowthMission Vision Board Dev Questions.docx" (9 numbered sections + a Leadership Sign-Off). One row per account; answers live in a single `jsonb` column keyed by a stable field key defined in `lib/vision-board/sections.ts`, same reasoning as `growth_questionnaire_responses` (§6.6a) for keeping the question list as app-code rather than schema. Same RLS shape and role set, client-confirmed identical: MSP Owner/Admin write, CRO Admin/Advisor write on the MSP's behalf, a granted partner writes too, and read is account-scoped plus CRO Leader/partner.
 
 ```
 create table vision_board_responses (
@@ -823,59 +823,59 @@ create trigger trg_vision_board_responses_updated_at before update on vision_boa
 
 `completed_at` is set by the application once every field in `lib/vision-board/sections.ts` is answered (a "list" field counts as answered once it meets its `minItems`) — it drives the Dashboard banner and the notification bell disappearing, same rule as the Questionnaire's. The doc's "Ideal Customer Profile" sub-section isn't a field here — it's rendered read-only from the account's `growth_questionnaire_responses` answers instead of captured again, client-confirmed (2026-09-16). Its 5-question "Leadership Commitment" self-check also isn't persisted — a reflection prompt for the team ahead of sign-off, not a stored deliverable.
 
-The 8 dashboards/reports the source document promises GrowthOS will generate from a completed Vision Board (Strategic Vision Dashboard, Ideal Customer Profile Dashboard, Growth Scorecard, KPI Tracking Dashboard, Annual Growth Plan, Growth Barrier Analysis Report, AI-Powered Recommendations, Leadership Alignment Report) are explicitly **not** built, and building any of them is new scope for a future pass. The "Coming soon" grid that once advertised them is gone: it was replaced by the strategy-document view (2026-09-17) and then by the Vision Page (2026-09-22, App Flow §4.11), which is where a completed board now lands.
+The 8 dashboards/reports the source document promises GrowthMission will generate from a completed Vision Board (Strategic Vision Dashboard, Ideal Customer Profile Dashboard, Growth Scorecard, KPI Tracking Dashboard, Annual Growth Plan, Growth Barrier Analysis Report, AI-Powered Recommendations, Leadership Alignment Report) are explicitly **not** built, and building any of them is new scope for a future pass. The "Coming soon" grid that once advertised them is gone: it was replaced by the strategy-document view (2026-09-17) and then by the Vision Page (2026-09-22, App Flow §4.11), which is where a completed board now lands.
 
 
-### 6.6c gos_dashboard_step_status, gos_dashboard_kpis, gos_dashboard_status_report_stats, gos_dashboard_suggestions, gos_dashboard_tracker_items
+### 6.6c growth_mission_step_status, growth_mission_kpis, growth_mission_status_report_stats, growth_mission_suggestions, growth_mission_tracker_items
 
-**Client-confirmed addition (2026-09-16)** — the GOS Dashboard (App Flow §4.3a), sourced from "GrowthOS Playbook - Dev Plan.docx." Five tables hold the CRO-Leader-entered per-account values behind the Playbook's 14 steps; step identity itself — title, icon, phase, duties list, and whether a step gets the SEO/GEO three-tab shape — stays in app code at `lib/gos-dashboard/playbook.ts`, the same "structure in code, data in DB" split `growth_questionnaire_responses` (§6.6a) and `vision_board_responses` (§6.6b) use for their question/field lists. `gos_dashboard_step_status` is one row per account per step (unique on `account_id, step_slug`) holding the card's status pill, its headline stat, and — SEO/GEO only, left null for the other 12 — the Status Report tab's narrative summary; it has no `archived_at` since it's a singleton per step updated in place, not a list to retire entries from. The other four tables — `gos_dashboard_kpis`, `gos_dashboard_status_report_stats` (the SEO/GEO Status Report tab's own stat row, a different list than the KPIs grid at the bottom of the same step), `gos_dashboard_suggestions`, and `gos_dashboard_tracker_items` — are one-to-many per account+step and carry `archived_at` so individual rows can be retired without a hard delete, matching this repo's soft-delete convention. Three enums back all five tables: `gos_dashboard_step` (the 14 step slugs), `gos_dashboard_status` (`on_track` / `ahead` / `needs_attention`), and `gos_dashboard_priority` (`high` / `medium` / `low`).
+**Client-confirmed addition (2026-09-16)** — the Command Center (App Flow §4.3a), sourced from "GrowthMission Playbook - Dev Plan.docx." Five tables hold the CRO-Leader-entered per-account values behind the Playbook's 14 steps; step identity itself — title, icon, phase, duties list, and whether a step gets the SEO/GEO three-tab shape — stays in app code at `lib/growth-mission/playbook.ts`, the same "structure in code, data in DB" split `growth_questionnaire_responses` (§6.6a) and `vision_board_responses` (§6.6b) use for their question/field lists. `growth_mission_step_status` is one row per account per step (unique on `account_id, step_slug`) holding the card's status pill, its headline stat, and — SEO/GEO only, left null for the other 12 — the Status Report tab's narrative summary; it has no `archived_at` since it's a singleton per step updated in place, not a list to retire entries from. The other four tables — `growth_mission_kpis`, `growth_mission_status_report_stats` (the SEO/GEO Status Report tab's own stat row, a different list than the KPIs grid at the bottom of the same step), `growth_mission_suggestions`, and `growth_mission_tracker_items` — are one-to-many per account+step and carry `archived_at` so individual rows can be retired without a hard delete, matching this repo's soft-delete convention. Three enums back all five tables: `growth_mission_step` (the 14 step slugs), `growth_mission_status` (`on_track` / `ahead` / `needs_attention`), and `growth_mission_priority` (`high` / `medium` / `low`).
 
 **Client-confirmed amendment (2026-09-25, second pass) — the Status Report goes to all 14 steps, and the Progress Tracker is retired.** Restructuring the workstream page (App Flow §4.3a) changed how three of these five tables are read, without changing any of their shapes:
 
-- `gos_dashboard_step_status.status_report_summary` and `gos_dashboard_status_report_stats` were written only for SEO and GEO, because the source document specifies the three-part dashboard sub-shape for those two steps alone. They are now written and read for **all fourteen** — the client wants every workstream to say where it stands. No migration was needed; the columns were never restricted to two slugs, only the UI was.
-- `gos_dashboard_status_report_stats` rows are now returned with their `id`, because CRO Leader can remove a figure from the Status Report panel (a soft delete via `archived_at`, matching `gos_dashboard_kpis`). The query previously selected only label/value/target.
-- `gos_dashboard_tracker_items` is **no longer read by anything.** The Progress Tracker tab is gone: tasks (§6.6f) carry progress now, each with an owner, hours, a state and a due date, which is what that tab was approximating. The table and every row in it stay exactly as they are, the same treatment `gos_dashboard_suggestions` got when tasks replaced it — this repo does not hard-delete, and a tab being removed is not a reason to drop data the client may want back.
+- `growth_mission_step_status.status_report_summary` and `growth_mission_status_report_stats` were written only for SEO and GEO, because the source document specifies the three-part dashboard sub-shape for those two steps alone. They are now written and read for **all fourteen** — the client wants every workstream to say where it stands. No migration was needed; the columns were never restricted to two slugs, only the UI was.
+- `growth_mission_status_report_stats` rows are now returned with their `id`, because CRO Leader can remove a figure from the Status Report panel (a soft delete via `archived_at`, matching `growth_mission_kpis`). The query previously selected only label/value/target.
+- `growth_mission_tracker_items` is **no longer read by anything.** The Progress Tracker tab is gone: tasks (§6.6f) carry progress now, each with an owner, hours, a state and a due date, which is what that tab was approximating. The table and every row in it stay exactly as they are, the same treatment `growth_mission_suggestions` got when tasks replaced it — this repo does not hard-delete, and a tab being removed is not a reason to drop data the client may want back.
 
-- `gos_dashboard_kpis` is **no longer read by any page** either: the KPIs grid was removed from the foot of the workstream page on the same day, along with the Duties list, because the Status Report's own figures already carry the targets someone is reading for. The rows stay, and `getStepDetail` still selects them, so putting the section back is a UI change rather than a query change.
+- `growth_mission_kpis` is **no longer read by any page** either: the KPIs grid was removed from the foot of the workstream page on the same day, along with the Duties list, because the Status Report's own figures already carry the targets someone is reading for. The rows stay, and `getStepDetail` still selects them, so putting the section back is a UI change rather than a query change.
 
 All three retirements are deliberate departures from the source Playbook document, confirmed by the client on 2026-09-25 and recorded in App Flow §4.3a as well, so that none is mistaken for an oversight and "restored" later.
 
-**Status Report export.** `GET /api/gos-dashboard/[slug]/export` renders the report, its figures, the quarter's hours and the task board as a PDF (`lib/pdf/status-report-doc.ts`, Poppins per §10). It runs on the ordinary session client under RLS — no service role — and reads through the same `getStepDetail`/`getStepHours`/`getTasksForStep` the page uses, so the export can never contain something the reader is not permitted to see on screen. Like the other PDF routes it is listed under `outputFileTracingIncludes` in `next.config.ts` so the font files are bundled.
+**Status Report export.** `GET /api/growth-mission/[slug]/export` renders the report, its figures, the quarter's hours and the task board as a PDF (`lib/pdf/status-report-doc.ts`, Poppins per §10). It runs on the ordinary session client under RLS — no service role — and reads through the same `getStepDetail`/`getStepHours`/`getTasksForStep` the page uses, so the export can never contain something the reader is not permitted to see on screen. Like the other PDF routes it is listed under `outputFileTracingIncludes` in `next.config.ts` so the font files are bundled.
 
 ### 6.6e account_team_members / account_team_assignments
 
 **Client-confirmed addition (2026-09-24)** — the Company Profile's Sales & Marketing list stops being `accounts.sales_marketing_names` (a `text[]` of names) and becomes a real roster: **name, title, weekly hours commitment, and which of the 14 workstreams each person is responsible for**.
 
-**Two rosters, one table.** `kind` is `in_house` (the account's own staff) or `outsourced` (a third party delivering a workstream, which may be CRO Leader or anyone else). The fields are identical, so a kind column beats two tables, and one workstream can carry both kinds at once. `name` is deliberately one free field so a row reads "Rosa Pineda · Northlight Events" as easily as a person alone. `user_id` is an optional link, since some staff are GrowthOS users and some are not.
+**Two rosters, one table.** `kind` is `in_house` (the account's own staff) or `outsourced` (a third party delivering a workstream, which may be CRO Leader or anyone else). The fields are identical, so a kind column beats two tables, and one workstream can carry both kinds at once. `name` is deliberately one free field so a row reads "Rosa Pineda · Northlight Events" as easily as a person alone. `user_id` is an optional link, since some staff are GrowthMission users and some are not.
 
-**`account_team_assignments`** joins a member to a `step_slug` with its own weekly hours, unique per (member, step). The step list stays app code (`lib/gos-dashboard/playbook.ts`), the same as `gos_dashboard_step_hours`.
+**`account_team_assignments`** joins a member to a `step_slug` with its own weekly hours, unique per (member, step). The step list stays app code (`lib/growth-mission/playbook.ts`), the same as `growth_mission_step_hours`.
 
 **RLS** matches the Company Profile exactly, at the client's direction: read like `accounts_select`; write like `accounts_update` — Owner/Admin on their own account, or CRO Admin/Advisor anywhere. Note `accounts_update` has no partner clause, so neither do these: a partner reads an MSP's roster but does not edit it. Members are soft-deleted via `archived_at` and have no delete policy; assignments are a join row rather than a record with history, so they do have one, the same shape `list_members` already uses.
 
-**Deliberately not connected to the Command Center's hours (client-confirmed, "separate for now").** These are weekly intent; `gos_dashboard_quarter_hours` records what was committed and achieved in a quarter. Nothing is enforced between a person's weekly commitment and the sum of their assignments either — the allocated figure is shown beside the commitment so it is visible, and that is all.
+**Deliberately not connected to the Command Center's hours (client-confirmed, "separate for now").** These are weekly intent; `growth_mission_quarter_hours` records what was committed and achieved in a quarter. Nothing is enforced between a person's weekly commitment and the sum of their assignments either — the allocated figure is shown beside the commitment so it is visible, and that is all.
 
-**Two sources of truth for "outsourced" are also accepted knowingly.** `gos_dashboard_step_hours.outsourced` stays a manual per-workstream flag and can disagree with whether an outsourced member is assigned to that step. The client chose to keep both rather than derive one from the other; the Mission Card is where any disagreement shows.
+**Two sources of truth for "outsourced" are also accepted knowingly.** `growth_mission_step_hours.outsourced` stays a manual per-workstream flag and can disagree with whether an outsourced member is assigned to that step. The client chose to keep both rather than derive one from the other; the Mission Card is where any disagreement shows.
 
 Migration: `supabase/migrations/20260924000002_account_team_members_and_assignments.sql`, which also carries existing `sales_marketing_names` values across as `in_house` members with blank title and hours. The column itself is left in place for now rather than dropped.
 
 **Assumption, pending client confirmation (2026-09-16)** — write access is CRO Admin/Advisor only, with the MSP account read-only. This inverts the pattern used by `growth_questionnaire_responses` and `vision_board_responses` (where the MSP owns writes), on the reasoning that this tracks CRO Leader's own service delivery rather than something the MSP self-reports. Widening the INSERT/UPDATE policies to include `cro_service_team` and/or MSP roles is an additive follow-up migration if the client decides otherwise. Read keeps the same three-way pattern used everywhere else in this schema — own account, any CRO Leader role, or a granted partner (`is_partner_for`) — only the write side inverts, and there is no partner write policy on any of the five tables: a granted partner reads like everyone else but does not get the write parity they have on the Questionnaire or Vision Board.
 
 ```
-create type gos_dashboard_step as enum (
+create type growth_mission_step as enum (
   'seo', 'geo', 'blogging-content', 'social-media', 'website-oversight',
   'icp-development', 'list-building', 'email-campaigning', 'crm-administration',
   'pipeline-metrics', 'reviews-testimonials', 'events', 'sdr-outreach', 'sales-enablement'
 );
 
-create type gos_dashboard_status as enum ('on_track', 'ahead', 'needs_attention');
+create type growth_mission_status as enum ('on_track', 'ahead', 'needs_attention');
 
-create type gos_dashboard_priority as enum ('high', 'medium', 'low');
+create type growth_mission_priority as enum ('high', 'medium', 'low');
 
-create table gos_dashboard_step_status (
+create table growth_mission_step_status (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id),
-  step_slug gos_dashboard_step not null,
-  status gos_dashboard_status not null default 'on_track',
+  step_slug growth_mission_step not null,
+  status growth_mission_status not null default 'on_track',
   headline_label text,
   headline_value text,
   status_report_summary text,
@@ -884,12 +884,12 @@ create table gos_dashboard_step_status (
   updated_at timestamptz not null default now(),
   unique (account_id, step_slug)
 );
-create index gos_dashboard_step_status_account_id_idx on gos_dashboard_step_status(account_id);
+create index growth_mission_step_status_account_id_idx on growth_mission_step_status(account_id);
 
-create table gos_dashboard_kpis (
+create table growth_mission_kpis (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id),
-  step_slug gos_dashboard_step not null,
+  step_slug growth_mission_step not null,
   label text not null,
   value text not null,
   target text,
@@ -897,12 +897,12 @@ create table gos_dashboard_kpis (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-create index gos_dashboard_kpis_account_step_idx on gos_dashboard_kpis(account_id, step_slug);
+create index growth_mission_kpis_account_step_idx on growth_mission_kpis(account_id, step_slug);
 
-create table gos_dashboard_status_report_stats (
+create table growth_mission_status_report_stats (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id),
-  step_slug gos_dashboard_step not null,
+  step_slug growth_mission_step not null,
   label text not null,
   value text not null,
   target text,
@@ -910,106 +910,106 @@ create table gos_dashboard_status_report_stats (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-create index gos_dashboard_status_report_stats_account_step_idx on gos_dashboard_status_report_stats(account_id, step_slug);
+create index growth_mission_status_report_stats_account_step_idx on growth_mission_status_report_stats(account_id, step_slug);
 
-create table gos_dashboard_suggestions (
+create table growth_mission_suggestions (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id),
-  step_slug gos_dashboard_step not null,
+  step_slug growth_mission_step not null,
   title text not null,
-  priority gos_dashboard_priority not null default 'medium',
+  priority growth_mission_priority not null default 'medium',
   detail text,
   archived_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-create index gos_dashboard_suggestions_account_step_idx on gos_dashboard_suggestions(account_id, step_slug);
+create index growth_mission_suggestions_account_step_idx on growth_mission_suggestions(account_id, step_slug);
 
-create table gos_dashboard_tracker_items (
+create table growth_mission_tracker_items (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id),
-  step_slug gos_dashboard_step not null,
+  step_slug growth_mission_step not null,
   label text not null,
   percent_complete int not null default 0 check (percent_complete between 0 and 100),
   archived_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-create index gos_dashboard_tracker_items_account_step_idx on gos_dashboard_tracker_items(account_id, step_slug);
+create index growth_mission_tracker_items_account_step_idx on growth_mission_tracker_items(account_id, step_slug);
 
-alter table gos_dashboard_step_status enable row level security;
-alter table gos_dashboard_kpis enable row level security;
-alter table gos_dashboard_status_report_stats enable row level security;
-alter table gos_dashboard_suggestions enable row level security;
-alter table gos_dashboard_tracker_items enable row level security;
+alter table growth_mission_step_status enable row level security;
+alter table growth_mission_kpis enable row level security;
+alter table growth_mission_status_report_stats enable row level security;
+alter table growth_mission_suggestions enable row level security;
+alter table growth_mission_tracker_items enable row level security;
 
-create policy gos_dashboard_step_status_select on gos_dashboard_step_status for select
+create policy growth_mission_step_status_select on growth_mission_step_status for select
   using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
-create policy gos_dashboard_step_status_write on gos_dashboard_step_status for insert
+create policy growth_mission_step_status_write on growth_mission_step_status for insert
   with check (auth_has_any_role('cro_admin', 'cro_advisor'));
-create policy gos_dashboard_step_status_update on gos_dashboard_step_status for update
+create policy growth_mission_step_status_update on growth_mission_step_status for update
   using (auth_has_any_role('cro_admin', 'cro_advisor'));
 
-create policy gos_dashboard_kpis_select on gos_dashboard_kpis for select
+create policy growth_mission_kpis_select on growth_mission_kpis for select
   using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
-create policy gos_dashboard_kpis_write on gos_dashboard_kpis for insert
+create policy growth_mission_kpis_write on growth_mission_kpis for insert
   with check (auth_has_any_role('cro_admin', 'cro_advisor'));
-create policy gos_dashboard_kpis_update on gos_dashboard_kpis for update
+create policy growth_mission_kpis_update on growth_mission_kpis for update
   using (auth_has_any_role('cro_admin', 'cro_advisor'));
 
-create policy gos_dashboard_status_report_stats_select on gos_dashboard_status_report_stats for select
+create policy growth_mission_status_report_stats_select on growth_mission_status_report_stats for select
   using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
-create policy gos_dashboard_status_report_stats_write on gos_dashboard_status_report_stats for insert
+create policy growth_mission_status_report_stats_write on growth_mission_status_report_stats for insert
   with check (auth_has_any_role('cro_admin', 'cro_advisor'));
-create policy gos_dashboard_status_report_stats_update on gos_dashboard_status_report_stats for update
+create policy growth_mission_status_report_stats_update on growth_mission_status_report_stats for update
   using (auth_has_any_role('cro_admin', 'cro_advisor'));
 
-create policy gos_dashboard_suggestions_select on gos_dashboard_suggestions for select
+create policy growth_mission_suggestions_select on growth_mission_suggestions for select
   using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
-create policy gos_dashboard_suggestions_write on gos_dashboard_suggestions for insert
+create policy growth_mission_suggestions_write on growth_mission_suggestions for insert
   with check (auth_has_any_role('cro_admin', 'cro_advisor'));
-create policy gos_dashboard_suggestions_update on gos_dashboard_suggestions for update
+create policy growth_mission_suggestions_update on growth_mission_suggestions for update
   using (auth_has_any_role('cro_admin', 'cro_advisor'));
 
-create policy gos_dashboard_tracker_items_select on gos_dashboard_tracker_items for select
+create policy growth_mission_tracker_items_select on growth_mission_tracker_items for select
   using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
-create policy gos_dashboard_tracker_items_write on gos_dashboard_tracker_items for insert
+create policy growth_mission_tracker_items_write on growth_mission_tracker_items for insert
   with check (auth_has_any_role('cro_admin', 'cro_advisor'));
-create policy gos_dashboard_tracker_items_update on gos_dashboard_tracker_items for update
+create policy growth_mission_tracker_items_update on growth_mission_tracker_items for update
   using (auth_has_any_role('cro_admin', 'cro_advisor'));
 
-create trigger trg_gos_dashboard_step_status_updated_at before update on gos_dashboard_step_status
+create trigger trg_growth_mission_step_status_updated_at before update on growth_mission_step_status
   for each row execute function set_updated_at();
-create trigger trg_gos_dashboard_kpis_updated_at before update on gos_dashboard_kpis
+create trigger trg_growth_mission_kpis_updated_at before update on growth_mission_kpis
   for each row execute function set_updated_at();
-create trigger trg_gos_dashboard_status_report_stats_updated_at before update on gos_dashboard_status_report_stats
+create trigger trg_growth_mission_status_report_stats_updated_at before update on growth_mission_status_report_stats
   for each row execute function set_updated_at();
-create trigger trg_gos_dashboard_suggestions_updated_at before update on gos_dashboard_suggestions
+create trigger trg_growth_mission_suggestions_updated_at before update on growth_mission_suggestions
   for each row execute function set_updated_at();
-create trigger trg_gos_dashboard_tracker_items_updated_at before update on gos_dashboard_tracker_items
+create trigger trg_growth_mission_tracker_items_updated_at before update on growth_mission_tracker_items
   for each row execute function set_updated_at();
 ```
 
-There's no `completed_at` here and nothing gates the Dashboard banner or notification bell — this isn't a wizard the MSP finishes, it's an ongoing worksheet the CRO Leader team keeps current as service delivery continues. Adding or renaming a Playbook step is still a `lib/gos-dashboard/playbook.ts` change plus an `alter type gos_dashboard_step add value` migration to extend the enum — no table shape change required. The five tables share one flat write-role check (`auth_has_any_role('cro_admin', 'cro_advisor')`) rather than the account-scoped `(account_id = auth_account_id() and auth_has_any_role(...))` pattern used elsewhere in this document, because there is no MSP role on either side of that OR to account-scope — write is CRO-Leader-only, full stop, regardless of which account is being edited.
+There's no `completed_at` here and nothing gates the Dashboard banner or notification bell — this isn't a wizard the MSP finishes, it's an ongoing worksheet the CRO Leader team keeps current as service delivery continues. Adding or renaming a Playbook step is still a `lib/growth-mission/playbook.ts` change plus an `alter type growth_mission_step add value` migration to extend the enum — no table shape change required. The five tables share one flat write-role check (`auth_has_any_role('cro_admin', 'cro_advisor')`) rather than the account-scoped `(account_id = auth_account_id() and auth_has_any_role(...))` pattern used elsewhere in this document, because there is no MSP role on either side of that OR to account-scope — write is CRO-Leader-only, full stop, regardless of which account is being edited.
 
 **Client-confirmed (2026-09-17):** the CRO-Admin/Advisor-only write split above is now signed off — "CRO Leader people" edit every step's data, and `cro_service_team` stays read-only.
 
 
-### 6.6d gos_dashboard_step_hours, gos_dashboard_quarter_hours, gos_dashboard_kpi_mapping, gos_dashboard_source_counts()
+### 6.6d growth_mission_step_hours, growth_mission_quarter_hours, growth_mission_kpi_mapping, growth_mission_source_counts()
 
-**Client-confirmed addition (2026-09-17)** — per-workstream hours and the Playbook doc's "GrowthOS KPI dashboard" band on the GOS Dashboard (App Flow §4.3a). Migration: `supabase/migrations/20260917000002_gos_dashboard_hours_and_kpi_band.sql`.
+**Client-confirmed addition (2026-09-17)** — per-workstream hours and the Playbook doc's "GrowthMission KPI dashboard" band on the Command Center (App Flow §4.3a). Migration: `supabase/migrations/20260917000002_growth_mission_hours_and_kpi_band.sql`.
 
-- **Hours.** "Hours needed to complete" is a total for the whole workstream, so it lives on `gos_dashboard_step_hours` (one row per account per step, alongside the Yes/No `outsourced` placeholder). "Committed" and "achieved" belong to a calendar quarter, so they live on `gos_dashboard_quarter_hours` keyed by `quarter_start` (checked to be a real quarter start) — the UI shows only the current quarter, but a new quarter starts fresh without deleting or overwriting the previous one. Both are singletons updated in place, so neither has `archived_at`. **Write access is deliberately different from §6.6c:** the account's own MSP Owner/Admin can edit hours, plus CRO Admin/Advisor for any account (client-confirmed) — the account-scoped `(account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin')) or auth_has_any_role('cro_admin','cro_advisor')` shape.
-- **KPI band mapping.** The band's seven boxes (MQCs, MQLs, Interested, Ghosted, Quoted, Won, Lost) are counted live from `contacts` (by `status_id`) and `opportunities` (by `stage_id`). Status and stage names differ per account, so `gos_dashboard_kpi_mapping` records which status or stage feeds which box: exactly one of `contact_status_id`/`opportunity_stage_id` per row, unique per account, `box` null meaning "counts toward no box." An account with no mapping rows uses the app's name-matching defaults (`lib/gos-dashboard/kpi-band.ts`: MQC/MQL by exact contact status name; Won/Lost by stage group; Ghosted/Quoted/Interested by stage name containing ghost / quote-or-proposal / interest). Saving the mapping writes one row for every status and stage, updated in place — nothing to soft-delete. Write access: CRO Admin/Advisor only.
+- **Hours.** "Hours needed to complete" is a total for the whole workstream, so it lives on `growth_mission_step_hours` (one row per account per step, alongside the Yes/No `outsourced` placeholder). "Committed" and "achieved" belong to a calendar quarter, so they live on `growth_mission_quarter_hours` keyed by `quarter_start` (checked to be a real quarter start) — the UI shows only the current quarter, but a new quarter starts fresh without deleting or overwriting the previous one. Both are singletons updated in place, so neither has `archived_at`. **Write access is deliberately different from §6.6c:** the account's own MSP Owner/Admin can edit hours, plus CRO Admin/Advisor for any account (client-confirmed) — the account-scoped `(account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin')) or auth_has_any_role('cro_admin','cro_advisor')` shape.
+- **KPI band mapping.** The band's seven boxes (MQCs, MQLs, Interested, Ghosted, Quoted, Won, Lost) are counted live from `contacts` (by `status_id`) and `opportunities` (by `stage_id`). Status and stage names differ per account, so `growth_mission_kpi_mapping` records which status or stage feeds which box: exactly one of `contact_status_id`/`opportunity_stage_id` per row, unique per account, `box` null meaning "counts toward no box." An account with no mapping rows uses the app's name-matching defaults (`lib/growth-mission/kpi-band.ts`: MQC/MQL by exact contact status name; Won/Lost by stage group; Ghosted/Quoted/Interested by stage name containing ghost / quote-or-proposal / interest). Saving the mapping writes one row for every status and stage, updated in place — nothing to soft-delete. Write access: CRO Admin/Advisor only.
 
-  **Client-confirmed removal (2026-09-24) — the Engaged box and the Engaged contact status.** There was an eighth box, Engaged, counting contacts with the Engaged status; both it and the status are gone. Migration `20260924000001_retire_engaged_contact_status.sql` moved the 20 contacts on it to their own account's **MQC** (client's direction; every account carrying Engaged also carried MQC, checked first), archived the 17 Engaged status rows rather than deleting them so historical references stay resolvable, and dropped the name from `seed_default_contact_statuses()` so new accounts never get it. The `engaged` value stays in the `gos_dashboard_kpi_box` enum: removing an enum value is a table rewrite, and nothing references it — no account had ever saved a mapping to that box, so there was no mapping data to migrate.
-- **`gos_dashboard_source_counts(p_account_id)`** returns one count per contact status and opportunity stage in a single round trip. It is `security invoker`, so `contacts`/`opportunities` RLS still decides what gets counted.
+  **Client-confirmed removal (2026-09-24) — the Engaged box and the Engaged contact status.** There was an eighth box, Engaged, counting contacts with the Engaged status; both it and the status are gone. Migration `20260924000001_retire_engaged_contact_status.sql` moved the 20 contacts on it to their own account's **MQC** (client's direction; every account carrying Engaged also carried MQC, checked first), archived the 17 Engaged status rows rather than deleting them so historical references stay resolvable, and dropped the name from `seed_default_contact_statuses()` so new accounts never get it. The `engaged` value stays in the `growth_mission_kpi_box` enum: removing an enum value is a table rewrite, and nothing references it — no account had ever saved a mapping to that box, so there was no mapping data to migrate.
+- **`growth_mission_source_counts(p_account_id)`** returns one count per contact status and opportunity stage in a single round trip. It is `security invoker`, so `contacts`/`opportunities` RLS still decides what gets counted.
 
 ```
-create table gos_dashboard_step_hours (
+create table growth_mission_step_hours (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id),
-  step_slug gos_dashboard_step not null,
+  step_slug growth_mission_step not null,
   needed_hours numeric(7,1) not null default 0 check (needed_hours >= 0),
   outsourced boolean not null default false,
   updated_by uuid references users(id),
@@ -1018,10 +1018,10 @@ create table gos_dashboard_step_hours (
   unique (account_id, step_slug)
 );
 
-create table gos_dashboard_quarter_hours (
+create table growth_mission_quarter_hours (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id),
-  step_slug gos_dashboard_step not null,
+  step_slug growth_mission_step not null,
   quarter_start date not null check (quarter_start = date_trunc('quarter', quarter_start)::date),
   committed_hours numeric(7,1) not null default 0 check (committed_hours >= 0),
   achieved_hours numeric(7,1) not null default 0 check (achieved_hours >= 0),
@@ -1031,12 +1031,12 @@ create table gos_dashboard_quarter_hours (
   unique (account_id, step_slug, quarter_start)
 );
 
-create type gos_dashboard_kpi_box as enum ('mqc', 'mql', 'interested', 'engaged', 'ghosted', 'quoted', 'won', 'lost');
+create type growth_mission_kpi_box as enum ('mqc', 'mql', 'interested', 'engaged', 'ghosted', 'quoted', 'won', 'lost');
 
-create table gos_dashboard_kpi_mapping (
+create table growth_mission_kpi_mapping (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id),
-  box gos_dashboard_kpi_box,
+  box growth_mission_kpi_box,
   contact_status_id uuid references contact_statuses(id),
   opportunity_stage_id uuid references opportunity_stages(id),
   created_at timestamptz not null default now(),
@@ -1052,7 +1052,7 @@ create table gos_dashboard_kpi_mapping (
 -- Mapping: select as above; insert/update = auth_has_any_role('cro_admin','cro_advisor').
 -- updated_at triggers on all three; full policy text in the migration file.
 
-create function gos_dashboard_source_counts(p_account_id uuid)
+create function growth_mission_source_counts(p_account_id uuid)
 returns table (source_kind text, source_id uuid, record_count bigint)
 language sql stable security invoker set search_path = public as $$
   select 'contact_status', c.status_id, count(*) from contacts c
@@ -1064,29 +1064,29 @@ $$;
 ```
 
 
-### 6.6f gos_dashboard_tasks
+### 6.6f growth_mission_tasks
 
-**Client-confirmed addition (2026-09-25)** — the GOS Dashboard's Suggestions & Fixes list becomes a task list. Migrations: `supabase/migrations/20260925000001_gos_dashboard_tasks.sql` and `20260925000002_gos_dashboard_tasks_step_slug_enum.sql`.
+**Client-confirmed addition (2026-09-25)** — the Command Center's Suggestions & Fixes list becomes a task list. Migrations: `supabase/migrations/20260925000001_growth_mission_tasks.sql` and `20260925000002_growth_mission_tasks_step_slug_enum.sql`.
 
-The client's framing: GrowthOS is more than a CRM — after reading a workstream's status report, the MSP should see what to do about it and who is doing it. A task is a to-do for a person: it carries an assignee, hours, a state and a due date.
+The client's framing: GrowthMission is more than a CRM — after reading a workstream's status report, the MSP should see what to do about it and who is doing it. A task is a to-do for a person: it carries an assignee, hours, a state and a due date.
 
-**Tasks replace `gos_dashboard_suggestions` (§6.6c) rather than sitting beside it.** That list was already CRO-authored "here is what to fix" with a priority and a detail line — a task missing exactly those four things. The client confirmed the replacement, and the migration carries the existing suggestion rows across as tasks (unassigned, zero hours, no due date, since there was nowhere to have recorded those). The `gos_dashboard_suggestions` table is left in place with its data intact rather than dropped, per this repo's soft-delete convention; the Step Detail page no longer reads it.
+**Tasks replace `growth_mission_suggestions` (§6.6c) rather than sitting beside it.** That list was already CRO-authored "here is what to fix" with a priority and a detail line — a task missing exactly those four things. The client confirmed the replacement, and the migration carries the existing suggestion rows across as tasks (unassigned, zero hours, no due date, since there was nowhere to have recorded those). The `growth_mission_suggestions` table is left in place with its data intact rather than dropped, per this repo's soft-delete convention; the Step Detail page no longer reads it.
 
-- **Shape.** `step_slug` is the `gos_dashboard_step` enum, matching `gos_dashboard_step_hours` and `gos_dashboard_quarter_hours` (the first migration created it as `text`, which broke the achieved-hours trigger; the second corrects it). `priority` reuses the existing `gos_dashboard_priority` enum. `state` is a new `gos_dashboard_task_state` enum — `active` / `in_progress` / `on_hold` / `complete`, the four states the client specified — and is set manually; nothing infers it. `assignee_id` references `account_team_members` (§6.6e) `on delete set null`, so retiring someone from a roster leaves their tasks unassigned rather than destroying the work. Tasks carry `archived_at` and have no delete policy.
-- **Tasks are not tied to a quarter, but achieved hours are.** Completing a task adds its `hours` to `gos_dashboard_quarter_hours.achieved_hours` for the quarter it was *completed* in, so the figure keeps meaning "what got done this quarter." `stamp_task_completed_at()` sets `completed_at` on the transition into `complete` and clears it on the way back out; `sync_task_achieved_hours()` then applies the difference between what the row used to contribute and what it contributes now. Because it is a delta rather than a recount, re-opening subtracts, editing hours on a completed task adjusts, and archiving removes. This lives in a trigger rather than the app so the two figures cannot drift.
+- **Shape.** `step_slug` is the `growth_mission_step` enum, matching `growth_mission_step_hours` and `growth_mission_quarter_hours` (the first migration created it as `text`, which broke the achieved-hours trigger; the second corrects it). `priority` reuses the existing `growth_mission_priority` enum. `state` is a new `growth_mission_task_state` enum — `active` / `in_progress` / `on_hold` / `complete`, the four states the client specified — and is set manually; nothing infers it. `assignee_id` references `account_team_members` (§6.6e) `on delete set null`, so retiring someone from a roster leaves their tasks unassigned rather than destroying the work. Tasks carry `archived_at` and have no delete policy.
+- **Tasks are not tied to a quarter, but achieved hours are.** Completing a task adds its `hours` to `growth_mission_quarter_hours.achieved_hours` for the quarter it was *completed* in, so the figure keeps meaning "what got done this quarter." `stamp_task_completed_at()` sets `completed_at` on the transition into `complete` and clears it on the way back out; `sync_task_achieved_hours()` then applies the difference between what the row used to contribute and what it contributes now. Because it is a delta rather than a recount, re-opening subtracts, editing hours on a completed task adjusts, and archiving removes. This lives in a trigger rather than the app so the two figures cannot drift.
 - **Who may do what — deliberately split across two mechanisms.** RLS grants the row: insert is `auth_has_any_role('cro_admin','cro_advisor')` (only CRO Leader prescribes the work), while update also admits the account's own `msp_owner`/`msp_admin`. A `prevent_task_definition_change()` trigger then confines those MSP roles, raising if they touch title, detail, priority, step or `archived_at`. **Amended the same day (client-confirmed):** `hours` and `due_date` are no longer guarded, so MSP Owner/Admin may set a task's hours, due date, state and assignee. The line moved from "only CRO Leader touches anything but state and assignee" to "CRO Leader says what the work is; the account says how it is tracked" - the account running the work is usually the party that discovers an estimate was wrong, and it already owns the achieved-hours figure a completed task feeds. Migration `20260925000003_task_hours_editable_by_msp_owner_admin.sql`; `sync_task_achieved_hours()` needed no change, since it already applies the difference between what a row used to contribute and what it contributes now. The reasoning the client confirmed: marking work done is not the same as prescribing it, and completing a task moves achieved hours — which MSP Owner/Admin already control under §6.6d. This is the same shape `prevent_self_role_escalation` uses on `users`: RLS decides the row, a trigger decides the columns.
 
 ```
-create type gos_dashboard_task_state as enum ('active', 'in_progress', 'on_hold', 'complete');
+create type growth_mission_task_state as enum ('active', 'in_progress', 'on_hold', 'complete');
 
-create table gos_dashboard_tasks (
+create table growth_mission_tasks (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id) on delete cascade,
-  step_slug gos_dashboard_step not null,
+  step_slug growth_mission_step not null,
   title text not null check (length(trim(title)) > 0),
   detail text,
-  priority gos_dashboard_priority not null default 'medium',
-  state gos_dashboard_task_state not null default 'active',
+  priority growth_mission_priority not null default 'medium',
+  state growth_mission_task_state not null default 'active',
   assignee_id uuid references account_team_members(id) on delete set null,
   hours numeric(6,1) not null default 0 check (hours >= 0),
   due_date date,
@@ -1097,11 +1097,11 @@ create table gos_dashboard_tasks (
   archived_at timestamptz
 );
 
-create policy gos_dashboard_tasks_select on gos_dashboard_tasks for select
+create policy growth_mission_tasks_select on growth_mission_tasks for select
   using (account_id = auth_account_id() or is_cro_leader() or is_partner_for(account_id));
-create policy gos_dashboard_tasks_insert on gos_dashboard_tasks for insert
+create policy growth_mission_tasks_insert on growth_mission_tasks for insert
   with check (auth_has_any_role('cro_admin','cro_advisor'));
-create policy gos_dashboard_tasks_update on gos_dashboard_tasks for update
+create policy growth_mission_tasks_update on growth_mission_tasks for update
   using (
     (account_id = auth_account_id() and auth_has_any_role('msp_owner','msp_admin'))
     or auth_has_any_role('cro_admin','cro_advisor')
@@ -1111,9 +1111,9 @@ create policy gos_dashboard_tasks_update on gos_dashboard_tasks for update
 Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream at 28.0 achieved hours went to 35.5 on completing a 7.5-hour task, back to 28.0 on re-opening it, to 38.0 when the completed task's hours were edited to 10.0, and back to 28.0 when it was archived.
 
 
-### 6.6g gos_dashboard_reports
+### 6.6g growth_mission_reports
 
-**Client-confirmed addition (2026-10-02) — and a recorded exception to §12.** CRO Leader uploads a PDF report per workstream; the MSP opens it in a modal on the workstream page and may download it; every past report is kept. Migration: `supabase/migrations/20261002000001_gos_dashboard_reports.sql`.
+**Client-confirmed addition (2026-10-02) — and a recorded exception to §12.** CRO Leader uploads a PDF report per workstream; the MSP opens it in a modal on the workstream page and may download it; every past report is kept. Migration: `supabase/migrations/20261002000001_growth_mission_reports.sql`.
 
 **Why this is flagged rather than assumed.** §12 and PRD §6.8/§10 rule out file attachments for Phase 1. Four exceptions already exist — company logo, user avatar, contact avatar, CRM company logo — and each backs a *single image field*, with §12 stating there is "no general-purpose attachments feature." This is a fifth exception and a larger one: keeping history means a table rather than a column. It was raised with the client before building and confirmed. It stays deliberately narrow — reports only, one workstream each, uploaded by CRO Leader alone, with no way to attach a file to a contact, company, opportunity or task.
 
@@ -1122,7 +1122,7 @@ Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream 
 - **Write is CRO-only, read is the account's.** Insert and update require `cro_admin`/`cro_advisor`; select admits the account, CRO Leader and a partner for that account. There is no delete policy — replacing a report sets `archived_at` on the previous one.
 - **Known gap:** the *storage* policy admits the account and CRO Leader but not partners, because checking `is_partner_for()` there would mean casting a path segment to uuid inside a policy. A partner can therefore see a report's title and date through the table but cannot open the file. Worth closing if partner access to reports is wanted.
 
-**What it replaced.** The typed Status Report panel is gone from the workstream page (App Flow §4.3a): CRO Leader hands over the real analytics instead of retyping its findings, and collapsing a tall panel into one row is what puts "What to do next" directly under the hours. `gos_dashboard_step_status.status_report_summary` and `gos_dashboard_status_report_stats` keep their rows and are no longer read by the page — the same treatment `gos_dashboard_suggestions` and `gos_dashboard_tracker_items` received.
+**What it replaced.** The typed Status Report panel is gone from the workstream page (App Flow §4.3a): CRO Leader hands over the real analytics instead of retyping its findings, and collapsing a tall panel into one row is what puts "What to do next" directly under the hours. `growth_mission_step_status.status_report_summary` and `growth_mission_status_report_stats` keep their rows and are no longer read by the page — the same treatment `growth_mission_suggestions` and `growth_mission_tracker_items` received.
 
 ### 6.6h advocate_dash_targets, advocate_dash_visit_reports, advocate_dash_visit_photos
 
@@ -1130,9 +1130,9 @@ Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream 
 
 None of the six source documents mentions this workstream, so most of the schema fills a gap rather than contradicting a decision. Four points do cut across something already written down:
 
-**1. Measured in drop-bys, not hours.** Every other workstream is hours-measured through §6.6d. AdvocateDash carries no hours row anything reads: its Mission Card counts Targets · Scheduled · Completed, derived from `advocate_dash_targets` rather than stored, and it is excluded from the Command Center's quarter hours strip rather than summed in as a zero. Its `gos_dashboard_step_hours` row still exists and is simply not read, the same treatment `gos_dashboard_tracker_items` got.
+**1. Measured in drop-bys, not hours.** Every other workstream is hours-measured through §6.6d. AdvocateDash carries no hours row anything reads: its Mission Card counts Targets · Scheduled · Completed, derived from `advocate_dash_targets` rather than stored, and it is excluded from the Command Center's quarter hours strip rather than summed in as a zero. Its `growth_mission_step_hours` row still exists and is simply not read, the same treatment `growth_mission_tracker_items` got.
 
-**2. Targets, not tasks.** This replaces `gos_dashboard_tasks` on that one workstream page. A target carries an address, an advocate, a delivered letter and a seventeen-section report, and its states are `assigned` / `scheduled` / `completed` — nothing but "a row with an owner" survives a translation into tasks.
+**2. Targets, not tasks.** This replaces `growth_mission_tasks` on that one workstream page. A target carries an address, an advocate, a delivered letter and a seventeen-section report, and its states are `assigned` / `scheduled` / `completed` — nothing but "a row with an owner" survives a translation into tasks.
 
 **3. No quarter column.** The list is a running one (client-confirmed): targets accumulate and keep their reports, so a drop-by done in July still reads in October. This is the opposite of how §6.6d behaves and is deliberate.
 
@@ -1580,7 +1580,7 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | POST /api/users/invite | Session (Owner/Admin/CRO Admin) | Calls auth.admin.inviteUserByEmail() with account_id/role metadata (§3) |
 | POST /api/users/[id]/deactivate | Session (Owner/Admin/CRO Admin) | Sets archived_at and revokes the target user's active sessions via the Auth Admin API |
 | POST /api/accounts | Session (CRO Admin only) | Creates a new MSP accounts row and invites its initial Owner in one multi-step call |
-| POST /api/cro/enter | Session (CRO Leader or partner) | Client-confirmed addition (2026-09-08) — sets the `growthos_viewing_account_id` cookie (§2) after verifying a partner actually has a grant for that account; RLS still independently authorizes every subsequent query regardless |
+| POST /api/cro/enter | Session (CRO Leader or partner) | Client-confirmed addition (2026-09-08) — sets the `growthmission_viewing_account_id` cookie (§2) after verifying a partner actually has a grant for that account; RLS still independently authorizes every subsequent query regardless |
 | POST /api/cro/exit | Session (CRO Leader or partner) | Clears the viewing-as cookie, returns to /cro — what the CroLeaderBanner's "Exit to My Dashboard" actually calls |
 | POST /api/cro/partner-grants | Session (CRO Admin only) | Adds a partner_account_grants row |
 | DELETE /api/cro/partner-grants | Session (CRO Admin only) | Removes a partner_account_grants row |
@@ -1596,7 +1596,7 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | GET /api/unsubscribe/[token] | None (public) | Records an 'unsubscribed' event, sets email_opt_out (§9) |
 | POST /api/webhooks/resend | Resend (Svix) signature header (no user session) | Records 'bounced' / 'complained' / 'delivered' events from Resend's webhook |
 | GET /api/reports/export | Session | Streams an XLSX/CSV export of report data (ExcelJS) for volumes too large to build client-side |
-| GET /api/questionnaire/export | Session | Streams a PDF (pdfkit) of the GrowthOS Solution Questionnaire's questions and saved answers for one account (§6.6a). Client-confirmed redesign (2026-09-17): branded cover page (at-a-glance numbers, Yes answers by section, contents with page numbers, answer key), then every question as a numbered row with its answer styled by type, in embedded Poppins |
+| GET /api/questionnaire/export | Session | Streams a PDF (pdfkit) of the GrowthMission Solution Questionnaire's questions and saved answers for one account (§6.6a). Client-confirmed redesign (2026-09-17): branded cover page (at-a-glance numbers, Yes answers by section, contents with page numbers, answer key), then every question as a numbered row with its answer styled by type, in embedded Poppins |
 | GET /api/advocate-dash/[targetId]/report | Session | Streams a PDF (pdfkit, embedded Poppins) of one target's VictoryVisit After-Action Report (§6.6h). Client-confirmed 2026-10-05. Anyone who can see the target can export it, so the regular session client under RLS is enough — a target in another tenant simply reads as empty and the route answers 404. Sections are read straight off `REPORT_SECTIONS`, so the PDF cannot drift from the on-screen form; empty fields are skipped and wholly unfilled sections dropped with a count, so an omission is visible rather than silent. Photos are listed by caption, not embedded — each would need a signed-URL fetch per image. Layout lives in `lib/pdf/visit-report-doc.ts` |
 | GET /api/vision-board/export | Session | Streams a PDF (pdfkit) of one account's Vision Board (§6.6b). Client-confirmed 2026-09-17: anyone who can view it can export it, so the regular session client under RLS is enough. **Rebuilt 2026-09-22 to match the Vision Page (App Flow §4.11)** — the same narrative in the same order on full-bleed coloured pages, unanswered fields omitted rather than printed as "Not answered", and the Questionnaire-sourced ICP dropped. Each section starts on a fresh page so a dark band never splits across a page break. Layout lives in `lib/pdf/vision-board-doc.ts`, separate from the route, so it can be rendered and inspected without a session |
 
@@ -1651,4 +1651,4 @@ The last three are larger, because each needs a table rather than a column, and 
 
 ### 7.6 cro_account_portfolio()
 
-**Client-confirmed addition (2026-09-17)** — one round trip for the CRO Leader Dashboard's portfolio band and per-account status columns (App Flow §4.10). Returns, per non-archived account: whether the GrowthOS Solution Questionnaire and Vision Board are complete, this quarter's committed/achieved hours from gos_dashboard_quarter_hours, and the most recent non-archived activity timestamp. It is `security invoker`, so each underlying table's RLS still decides what the caller sees — every account for a CRO Leader role, granted accounts only for a partner, their own for an MSP user. Migration: supabase/migrations/20260917000004_cro_account_portfolio.sql.
+**Client-confirmed addition (2026-09-17)** — one round trip for the CRO Leader Dashboard's portfolio band and per-account status columns (App Flow §4.10). Returns, per non-archived account: whether the GrowthMission Solution Questionnaire and Vision Board are complete, this quarter's committed/achieved hours from growth_mission_quarter_hours, and the most recent non-archived activity timestamp. It is `security invoker`, so each underlying table's RLS still decides what the caller sees — every account for a CRO Leader role, granted accounts only for a partner, their own for an MSP user. Migration: supabase/migrations/20260917000004_cro_account_portfolio.sql.

@@ -1,12 +1,12 @@
 /**
- * GrowthOS Dashboard (GOS Dashboard) — client-confirmed addition
- * (2026-09-16). Sourced from "GrowthOS Playbook - Dev Plan.docx", then
+ * GrowthMission Dashboard (Command Center) — client-confirmed addition
+ * (2026-09-16). Sourced from "GrowthMission Playbook - Dev Plan.docx", then
  * extended by the client on 2026-10-05 to sixteen workstreams with the
  * four phases dropped: the new order interleaved them, so a step header
  * would have read "Step 12 · Phase 4" above "Step 14 · Phase 3". The 1–16
  * order is the structure now. Originally
  * 14 numbered steps, each with its own Duties and KPIs. The doc only
- * spells out a "GrowthOS Dashboard" sub-shape (status report,
+ * spells out a "GrowthMission Dashboard" sub-shape (status report,
  * suggestions/fixes list, progress tracker) for step 1 (SEO) and step 2
  * (GEO) — client-confirmed (2026-09-16) the other 12 steps stay simpler
  * (Duties + KPIs only, no report/suggestions/tracker tabs).
@@ -14,8 +14,8 @@
  * This file holds only the static shape of the 14 steps — identity, title,
  * icon, duties, and which steps get the SEO/GEO 3-tab treatment.
  * The per-account values (status, headline stat, KPIs, status report
- * summary, suggestions, tracker progress) live in the `gos_dashboard_*`
- * tables (Backend Schema §6.6c) and are read via lib/gos-dashboard/queries.ts
+ * summary, suggestions, tracker progress) live in the `growth_mission_*`
+ * tables (Backend Schema §6.6c) and are read via lib/growth-mission/queries.ts
  * — the same "structure in code, data in DB" split used by
  * lib/questionnaire/questions.ts and lib/vision-board/sections.ts.
  */

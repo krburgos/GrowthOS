@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { ListForm } from "@/components/lists/list-form";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 
-export const metadata: Metadata = { title: "Create List — GrowthOS" };
+export const metadata: Metadata = { title: "Create List — GrowthMission" };
 
 export default async function NewListPage() {
   const user = await getCurrentUser();

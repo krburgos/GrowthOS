@@ -57,13 +57,13 @@ function initials(name: string) {
  * content's left edge on every page, not just approximately.
  *
  * Client-confirmed (2026-09-15) — the bell is now real, not decorative:
- * its one possible item is the GrowthOS Solution Questionnaire reminder,
+ * its one possible item is the GrowthMission Solution Questionnaire reminder,
  * and the dot only renders while `questionnaireComplete` is false. Still
  * honest by the same rule that removed the old hardcoded dot — no item,
  * no dot, ever.
  *
  * Client-confirmed (2026-09-16) — a second, independent item for the
- * GrowthOS Vision Board, same on/off rule as the Questionnaire's. Both
+ * GrowthMission Vision Board, same on/off rule as the Questionnaire's. Both
  * can be true at once (the dropdown lists whichever are incomplete;
  * the dot shows if either is).
  */
@@ -115,7 +115,7 @@ export function TopBar({
           only, so on a phone the logo takes its natural width. */}
       <Link href="/dashboard" className="flex shrink-0 items-center lg:w-44">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/growthos-logo.png" alt="GrowthOS" className="h-8 w-auto lg:h-12" />
+        <img src="/growthmission-logo.png" alt="GrowthMission" className="h-8 w-auto lg:h-12" />
       </Link>
 
       {access && accountId && (
@@ -149,7 +149,7 @@ export function TopBar({
                       </span>
                       <span className="min-w-0">
                         <span className="block text-body-sm font-semibold text-neutral-800">
-                          Complete your GrowthOS Solution Questionnaire
+                          Complete your GrowthMission Solution Questionnaire
                         </span>
                         <span className="block text-caption text-neutral-500">
                           {questionnaireAnsweredCount} of {TOTAL_QUESTION_COUNT} answered — tap to continue
@@ -166,7 +166,7 @@ export function TopBar({
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate text-body-sm font-semibold text-neutral-800">
-                          Complete your GrowthOS Vision Board
+                          Complete your GrowthMission Vision Board
                         </span>
                         <span className="block text-caption text-neutral-500">
                           {visionBoardAnsweredCount} of {TOTAL_FIELD_COUNT} answered — tap to continue

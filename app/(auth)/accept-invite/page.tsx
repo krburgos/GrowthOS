@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { AcceptInviteForm } from "@/components/auth/accept-invite-form";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Set Password — GrowthOS" };
+export const metadata: Metadata = { title: "Set Password — GrowthMission" };
 
 export default async function AcceptInvitePage() {
   const supabase = await createClient();
@@ -33,7 +33,7 @@ export default async function AcceptInvitePage() {
   return (
     <>
       <h1 className="mb-1 text-h3 text-primary-900">
-        {companyName ? `Join ${companyName} on GrowthOS` : "Set up your GrowthOS account"}
+        {companyName ? `Join ${companyName} on GrowthMission` : "Set up your GrowthMission account"}
       </h1>
       <p className="mb-6 text-body-sm text-neutral-500">{user.email}</p>
       <AcceptInviteForm />

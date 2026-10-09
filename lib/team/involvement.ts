@@ -1,4 +1,4 @@
-import type { StepTaskTally } from "@/lib/gos-dashboard/queries";
+import type { StepTaskTally } from "@/lib/growth-mission/queries";
 import type { TeamMember } from "@/lib/team/members";
 
 /**

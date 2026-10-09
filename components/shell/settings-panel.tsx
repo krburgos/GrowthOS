@@ -141,7 +141,7 @@ function NavColumn({
  * replacing the flatter single-list version first tried:
  * Level A (My Profile / Account Settings) → Level B (either branch's
  * own item list) → Level C (Account Settings only, driven by whichever
- * Level B row is active). Items with no corresponding GrowthOS page
+ * Level B row is active). Items with no corresponding GrowthMission page
  * render disabled rather than being omitted, matching the App Flow
  * §2.4 disabled-nav philosophy used everywhere else.
  */

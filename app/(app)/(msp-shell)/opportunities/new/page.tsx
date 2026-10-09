@@ -5,7 +5,7 @@ import { OpportunityCreateForm } from "@/components/opportunities/opportunity-cr
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Create Opportunity — GrowthOS" };
+export const metadata: Metadata = { title: "Create Opportunity — GrowthMission" };
 
 export default async function NewOpportunityPage({
   searchParams,

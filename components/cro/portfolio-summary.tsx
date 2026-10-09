@@ -1,5 +1,5 @@
 import { HeroBand, HeroLabel } from "@/components/shell/hero-band";
-import { formatHours, quarterPct, type QuarterInfo } from "@/lib/gos-dashboard/hours";
+import { formatHours, quarterPct, type QuarterInfo } from "@/lib/growth-mission/hours";
 import type { CroAccountRow } from "@/components/cro/accounts-list";
 
 function Tile({ value, unit, label, barPct }: { value: string; unit?: string; label: string; barPct?: number }) {
@@ -22,7 +22,7 @@ function Tile({ value, unit, label, barPct }: { value: string; unit?: string; la
 /**
  * Client-confirmed (2026-09-17) — the CRO Leader Dashboard opens as a
  * portfolio view rather than a bare account list: the same navy band used on
- * the Dashboard and GOS Dashboard (Design System §12), carrying counts across
+ * the Dashboard and Command Center (Design System §12), carrying counts across
  * every account the viewer can see. Numbers come from cro_account_portfolio()
  * (Backend Schema §7), so they respect the viewer's own RLS scope — a partner
  * sees totals for their granted accounts only.
@@ -64,13 +64,13 @@ export function CroPortfolioSummary({
           <Tile
             value={String(questionnaires)}
             unit={`of ${total}`}
-            label="GrowthOS Solution Questionnaires complete"
+            label="GrowthMission Solution Questionnaires complete"
             barPct={share(questionnaires)}
           />
           <Tile
             value={String(visionBoards)}
             unit={`of ${total}`}
-            label="GrowthOS Vision Boards complete"
+            label="GrowthMission Vision Boards complete"
             barPct={share(visionBoards)}
           />
           <Tile

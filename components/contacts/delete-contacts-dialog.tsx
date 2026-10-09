@@ -71,7 +71,7 @@ export function DeleteContactsDialog({
           <DialogTitle>Delete {selectedCount} contact{selectedCount === 1 ? "" : "s"}</DialogTitle>
         </DialogHeader>
         <p className="text-body text-neutral-600">
-          These contacts will no longer appear anywhere in GrowthOS. This can be undone by GrowthOS
+          These contacts will no longer appear anywhere in GrowthMission. This can be undone by GrowthMission
           support if needed, but there's no undo in the app itself.
         </p>
         <DialogFooter>

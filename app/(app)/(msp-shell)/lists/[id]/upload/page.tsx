@@ -5,7 +5,7 @@ import { ImportWizard } from "@/components/contacts/import-wizard";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Upload Contacts — GrowthOS" };
+export const metadata: Metadata = { title: "Upload Contacts — GrowthMission" };
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 

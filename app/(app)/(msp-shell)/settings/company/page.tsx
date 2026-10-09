@@ -12,10 +12,10 @@ import {
 } from "@/lib/accounts/company-profile";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
-import { getMemberStepTasks, getMemberTaskLoad } from "@/lib/gos-dashboard/queries";
+import { getMemberStepTasks, getMemberTaskLoad } from "@/lib/growth-mission/queries";
 import { getTeamMembers } from "@/lib/team/queries";
 
-export const metadata: Metadata = { title: "Company Profile — GrowthOS" };
+export const metadata: Metadata = { title: "Company Profile — GrowthMission" };
 
 /**
  * Client-confirmed gap-fill — Backend Schema §2 already grants Owner/
@@ -92,8 +92,8 @@ export default async function CompanyProfilePage() {
           </div>
           <p className="max-w-[24ch] text-caption leading-relaxed text-neutral-500">
             {completeness.complete
-              ? "Every field filled in. This record appears across GrowthOS."
-              : `${completeness.missing.length} still to fill in. This record appears across GrowthOS.`}
+              ? "Every field filled in. This record appears across GrowthMission."
+              : `${completeness.missing.length} still to fill in. This record appears across GrowthMission.`}
           </p>
         </div>
       </div>

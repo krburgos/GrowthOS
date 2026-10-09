@@ -4,7 +4,7 @@ import { ContactForm } from "@/components/contacts/contact-form";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Add Contact — GrowthOS" };
+export const metadata: Metadata = { title: "Add Contact — GrowthMission" };
 
 export default async function NewContactPage() {
   const user = await getCurrentUser();

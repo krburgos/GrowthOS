@@ -5,7 +5,7 @@ import { CampaignComposerForm } from "@/components/campaigns/campaign-composer-f
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "New Campaign — GrowthOS" };
+export const metadata: Metadata = { title: "New Campaign — GrowthMission" };
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 

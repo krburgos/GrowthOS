@@ -10,7 +10,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Lists — GrowthOS" };
+export const metadata: Metadata = { title: "Lists — GrowthMission" };
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 
