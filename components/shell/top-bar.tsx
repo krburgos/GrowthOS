@@ -112,10 +112,16 @@ export function TopBar({
 
       {/* The fixed 176px cell exists to line the palette's left edge up
           with the Settings nav column one row down — a desktop concern
-          only, so on a phone the logo takes its natural width. */}
+          only, so on a phone the logo takes its natural width.
+
+          Three heights, because the wordmark is 5.69:1 and sized by height:
+          lg:h-7 is 159px, the widest that clears the 176px cell; h-6 is
+          137px, which leaves the 390px top bar comfortable; h-5 is 114px,
+          the most a 320px phone can take beside the hamburger, palette
+          trigger, bell and avatar. */}
       <Link href="/dashboard" className="flex shrink-0 items-center lg:w-44">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/growthmission-logo.png" alt="GrowthMission" className="h-8 w-auto lg:h-12" />
+        <img src="/growthmission-logo.png" alt="GrowthMission" className="h-5 w-auto sm:h-6 lg:h-7" />
       </Link>
 
       {access && accountId && (
