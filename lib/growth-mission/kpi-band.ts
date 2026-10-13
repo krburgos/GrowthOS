@@ -43,10 +43,10 @@ export const KPI_BOXES: KpiBox[] = [
     key: "in_progress",
     label: "In progress",
     group: "pipeline",
-    tip: "FME Scheduled through Quote/Solution Prepared, plus Ghosted.",
+    tip: "From the first meeting scheduled through the solution quote prepared, plus Ghosted.",
   },
-  { key: "quoted", label: "Quoted", group: "pipeline", tip: "Proposal Emailed, Proposal Presented and Pondering Decision." },
-  { key: "won", label: "Won", group: "pipeline", tone: "won", tip: "Verbal and Won." },
+  { key: "quoted", label: "Quoted", group: "pipeline", tip: "Proposal emailed or presented, through Pondering Decision." },
+  { key: "won", label: "Won", group: "pipeline", tone: "won", tip: "Verbal acceptance and Won." },
 ];
 
 export interface KpiSource {
@@ -59,18 +59,34 @@ export interface KpiSource {
   box: KpiBoxKey | null;
 }
 
+/**
+ * Both the seeded stage names and the renamed set at least one account
+ * uses (found live, 2026-10-13: "1st Meeting Scheduled" for "FME
+ * Scheduled", "Verbal Acceptance" for "Verbal", and three stages the seed
+ * doesn't have). The client's rule is positional - "1st Meeting through
+ * Solution Quote Prepared" - so each name is placed by where it sits in
+ * that sequence. "Proposal Meeting Scheduled" falls between Proposal
+ * Emailed and Pondering Decision, so it counts as Quoted.
+ */
 const STAGE_BOX: Record<string, KpiBoxKey> = {
   "showing interest": "interested",
   "fme scheduled": "in_progress",
+  "1st meeting scheduled": "in_progress",
   "fme attended opportunity identified": "in_progress",
+  "1st meeting attended": "in_progress",
   "2nd meeting scheduled": "in_progress",
   "2nd meeting conducted": "in_progress",
+  "opportunity identified": "in_progress",
+  "opportunity sow completed": "in_progress",
   "quote/solution prepared": "in_progress",
+  "solution quote prepared": "in_progress",
   ghosted: "in_progress",
   "proposal emailed": "quoted",
   "proposal presented": "quoted",
+  "proposal meeting scheduled": "quoted",
   "pondering decision": "quoted",
   verbal: "won",
+  "verbal acceptance": "won",
   won: "won",
 };
 

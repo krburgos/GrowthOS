@@ -34,6 +34,8 @@ export function PipelineByStage({ stages }: { stages: StageCount[] }) {
   for (const s of stages) totals[s.stage_group] += s.count;
   const grandTotal = totals.open + totals.won + totals.lost;
   const maxCount = Math.max(1, ...stages.map((s) => s.count));
+  // The left column takes the extra row when the count is odd.
+  const half = Math.ceil(stages.length / 2);
 
   return (
     <div className="rounded-xl border border-card-edge bg-white shadow-lift">
@@ -64,18 +66,31 @@ export function PipelineByStage({ stages }: { stages: StageCount[] }) {
             ))}
           </div>
 
-          <div className="flex flex-col pb-2">
-            {stages.map((s) => (
-              <div key={s.id} className="flex items-center gap-2.5 px-4 py-1.5">
-                <span className={cn("size-1.5 shrink-0 rounded-full", GROUP_DOT[s.stage_group])} />
-                <span className="w-40 shrink-0 truncate text-caption text-neutral-600">{s.name}</span>
-                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-100">
-                  <span
-                    className={cn("block h-full rounded-full", GROUP_BAR[s.stage_group])}
-                    style={{ width: `${(s.count / maxCount) * 100}%` }}
-                  />
-                </span>
-                <span className="w-5 shrink-0 text-right text-caption tabular-nums text-neutral-500">{s.count}</span>
+          {/* Client-confirmed (2026-10-13): two columns at full width, so
+              no bar runs the length of the page. Always two, however many
+              stages an account has — the list is halved in pipeline order
+              (left column first), so a new stage makes each column one row
+              longer. Below lg the halves stack back into one list. */}
+          <div className="grid grid-cols-1 pb-2 lg:grid-cols-2 lg:gap-x-10">
+            {[stages.slice(0, half), stages.slice(half)].map((column, c) => (
+              <div key={c} className="flex flex-col">
+                {column.map((s) => (
+                  <div
+                    key={s.id}
+                    title={`${s.name}: ${s.count} ${s.count === 1 ? "opportunity" : "opportunities"}`}
+                    className="flex items-center gap-2.5 px-4 py-1.5"
+                  >
+                    <span className={cn("size-1.5 shrink-0 rounded-full", GROUP_DOT[s.stage_group])} />
+                    <span className="w-52 shrink-0 truncate text-caption text-neutral-600">{s.name}</span>
+                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-100">
+                      <span
+                        className={cn("block h-full rounded-full", GROUP_BAR[s.stage_group])}
+                        style={{ width: `${(s.count / maxCount) * 100}%` }}
+                      />
+                    </span>
+                    <span className="w-5 shrink-0 text-right text-caption tabular-nums text-neutral-500">{s.count}</span>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
