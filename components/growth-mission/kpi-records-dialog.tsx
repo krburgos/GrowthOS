@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
-import { boxTotal, type KpiBox, type KpiSource } from "@/lib/growth-mission/kpi-band";
+import { boxTotal, sourcesInBox, type KpiBox, type KpiSource } from "@/lib/growth-mission/kpi-band";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -45,7 +45,7 @@ export function RecordsDialog({
   const [rows, setRows] = useState<RecordRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const mapped = box ? sources.filter((s) => s.box === box.key) : [];
+  const mapped = box ? sourcesInBox(sources, box.key) : [];
   const total = box ? boxTotal(sources, box.key) : 0;
   const isContacts = mapped.length > 0 && mapped[0].kind === "contact_status";
   const idsKey = mapped.map((s) => s.id).join(",");
@@ -114,7 +114,7 @@ export function RecordsDialog({
             {box.label} <span className="tabular-nums text-neutral-400">· {total.toLocaleString()}</span>
           </DialogTitle>
           <DialogDescription className="text-body-sm text-neutral-500">
-            {mapped.length === 0 ? "Nothing is mapped to this box yet." : `Counting ${mapped.map((s) => s.name).join(", ")}`}
+            {box.tip}
           </DialogDescription>
         </DialogHeader>
 

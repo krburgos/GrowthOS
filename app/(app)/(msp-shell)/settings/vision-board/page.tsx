@@ -55,7 +55,7 @@ export default async function VisionBoardPage({
         initialAnswers={(response?.answers as Record<string, string | string[] | null>) ?? {}}
         initialComplete={!!response?.completed_at}
         canEdit={canEdit}
-        exitHref={response?.completed_at ? "/vision-board" : "/dashboard"}
+        exitHref={response?.completed_at ? "/vision-board" : "/headquarters"}
         icpAnswers={{
           targetMarket: (qAnswers.overview_target_market as string) ?? null,
           focusesOnVerticals: qAnswers.overview_verticals === "yes" ? true : qAnswers.overview_verticals === "no" ? false : null,

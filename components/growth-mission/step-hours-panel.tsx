@@ -1,44 +1,80 @@
 "use client";
 
-import { Clock } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { toast } from "sonner";
 
 import { HoursBar, OutsourcedChip } from "@/components/growth-mission/hours-ui";
-import { LogHoursDialog } from "@/components/growth-mission/log-hours-dialog";
-import { Button } from "@/components/ui/button";
-import { SHORT_TITLE, formatHours, quarterPct, type QuarterInfo, type StepHours } from "@/lib/growth-mission/hours";
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
+import { formatWhole, type QuarterInfo, type StepHours } from "@/lib/growth-mission/hours";
+import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
+/**
+ * The discipline page's hours (client-confirmed, 2026-10-13): Required,
+ * Committed and Completed for this discipline this quarter, the same three
+ * figures as its Mission Card, all derived. The Log hours dialog is gone
+ * because nothing here is typed any more.
+ *
+ * That dialog was also the only place the Outsourced flag could be set, so
+ * the chip in the header becomes a Yes/No toggle for the people who could
+ * set it before (MSP Owner/Admin and CRO Leader). Everyone else still sees
+ * the read-only chip.
+ */
 export function StepHoursPanel({
   accountId,
   slug,
   hours,
   quarter,
-  canLogHours,
+  canEditOutsourced,
   reportSlot,
 }: {
   accountId: string;
   slug: string;
   hours: StepHours;
   quarter: QuarterInfo;
-  canLogHours: boolean;
+  canEditOutsourced: boolean;
   /**
-   * The workstream's report, rendered on this panel's header line
-   * (client-confirmed, 2026-10-02). It had its own full-width card, which
-   * spent a whole row of the page on one filename. Passed in as a slot
-   * rather than imported here so this panel stays a presentation component,
-   * the same way StepHeader takes its overview slot.
+   * The discipline's report, rendered on this panel's header line
+   * (client-confirmed, 2026-10-02). Passed in as a slot rather than
+   * imported here so this panel stays a presentation component, the same
+   * way StepHeader takes its overview slot.
    */
   reportSlot?: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-  const pct = quarterPct(hours);
-  const title = SHORT_TITLE[slug] ?? slug;
+  const router = useRouter();
+  const [outsourced, setOutsourced] = useState(hours.outsourced);
+  const [saving, setSaving] = useState(false);
+  const pct = hours.required > 0 ? Math.round((hours.completed / hours.required) * 100) : 0;
+
+  const saveOutsourced = async (value: boolean) => {
+    if (value === outsourced) return;
+    setOutsourced(value);
+    setSaving(true);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from("growth_mission_step_hours")
+      .upsert(
+        { account_id: accountId, step_slug: slug, outsourced: value, updated_by: user?.id ?? null },
+        { onConflict: "account_id,step_slug" }
+      );
+    setSaving(false);
+    if (error) {
+      setOutsourced(!value);
+      toast.error(getFriendlyErrorMessage(error));
+      return;
+    }
+    router.refresh();
+  };
 
   const stats = [
-    { label: "Hours needed to complete", value: hours.needed },
+    { label: "Required this quarter", value: hours.required },
     { label: "Committed this quarter", value: hours.committed },
-    { label: "Achieved this quarter", value: hours.achieved },
-    { label: "Still to go overall", value: Math.max(0, hours.needed - hours.achieved) },
+    { label: "Completed this quarter", value: hours.completed },
+    { label: "Still to go", value: Math.max(0, hours.required - hours.completed) },
   ];
 
   return (
@@ -48,15 +84,37 @@ export function StepHoursPanel({
           Hours <span className="font-normal text-neutral-400">· {quarter.label}</span>
         </h2>
         {/* The report sits between the title and the actions, so one line
-            carries everything about this workstream that is not a number. */}
+            carries everything about this discipline that is not a number. */}
         {reportSlot}
         <div className="ml-auto flex items-center gap-3">
-          <OutsourcedChip outsourced={hours.outsourced} />
-          {canLogHours && (
-            <Button size="sm" onClick={() => setOpen(true)}>
-              <Clock className="mr-1.5 size-3.5" />
-              Log hours
-            </Button>
+          {canEditOutsourced ? (
+            <div className="flex items-center gap-2">
+              <span className="text-body-sm font-medium text-neutral-600">Outsourced</span>
+              <div className="inline-flex overflow-hidden rounded-md border border-neutral-300" role="group" aria-label="Outsourced">
+                {[true, false].map((v) => (
+                  <button
+                    key={String(v)}
+                    type="button"
+                    aria-pressed={outsourced === v}
+                    disabled={saving}
+                    onClick={() => saveOutsourced(v)}
+                    className={cn(
+                      "px-3.5 py-1 text-body-sm font-semibold disabled:opacity-60",
+                      !v && "border-l border-neutral-300",
+                      outsourced === v
+                        ? v
+                          ? "bg-success-100 text-success-700"
+                          : "bg-error-100 text-error-700"
+                        : "bg-white text-neutral-600 hover:bg-neutral-50"
+                    )}
+                  >
+                    {v ? "Yes" : "No"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <OutsourcedChip outsourced={hours.outsourced} />
           )}
         </div>
       </div>
@@ -66,7 +124,7 @@ export function StepHoursPanel({
           <div key={s.label} className="flex flex-col gap-0.5 px-5 py-3.5">
             <span className="text-caption text-neutral-500">{s.label}</span>
             <span className="text-h3 font-bold tabular-nums text-primary-900">
-              {formatHours(s.value)} <span className="text-body-sm font-medium text-neutral-400">hrs</span>
+              {formatWhole(s.value)} <span className="text-body-sm font-medium text-neutral-400">hrs</span>
             </span>
           </div>
         ))}
@@ -75,24 +133,13 @@ export function StepHoursPanel({
       <div className="flex flex-col gap-2 border-t border-neutral-100 px-5 py-3.5">
         <div className="flex flex-wrap justify-between gap-1 text-caption text-neutral-500">
           <span>
-            <b className="font-semibold tabular-nums text-neutral-800">{pct}%</b> of this quarter&apos;s commitment
+            <b className="font-semibold tabular-nums text-neutral-800">{pct}%</b> of this quarter&apos;s required hours
+            completed
           </span>
           <span className="tabular-nums">{quarter.elapsedPct}% of the quarter elapsed</span>
         </div>
         <HoursBar pct={pct} elapsedPct={quarter.elapsedPct} />
       </div>
-
-      {canLogHours && (
-        <LogHoursDialog
-          accountId={accountId}
-          slug={slug}
-          title={title}
-          hours={hours}
-          quarter={quarter}
-          open={open}
-          onOpenChange={setOpen}
-        />
-      )}
     </section>
   );
 }

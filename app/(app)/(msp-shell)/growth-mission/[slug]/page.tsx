@@ -16,7 +16,7 @@ import {
   getMemberTaskLoad,
   getReports,
   getStepDetail,
-  getStepHours,
+  getMissionData,
   getTasksForStep,
 } from "@/lib/growth-mission/queries";
 import { getTeamMembers } from "@/lib/team/queries";
@@ -67,9 +67,9 @@ export default async function GrowthMissionStepPage({ params }: { params: Promis
   const isAdvocateDash = slug === ADVOCATE_DASH_SLUG;
 
   const quarter = currentQuarter();
-  const [step, hours, tasks, team, memberLoad, reports, targets] = await Promise.all([
+  const [step, mission, tasks, team, memberLoad, reports, targets] = await Promise.all([
     getStepDetail(user.account_id, slug),
-    getStepHours(user.account_id, quarter.start),
+    getMissionData(user.account_id, quarter),
     isAdvocateDash ? [] : getTasksForStep(user.account_id, slug),
     getTeamMembers(user.account_id),
     // Account-wide: the cap is a person's whole commitment, so this board
@@ -81,7 +81,7 @@ export default async function GrowthMissionStepPage({ params }: { params: Promis
   if (!step) notFound();
 
   const canEdit = user.role === "cro_admin" || user.role === "cro_advisor";
-  const canLogHours = HOURS_EDIT_ROLES.includes(user.role);
+  const canEditOutsourced = HOURS_EDIT_ROLES.includes(user.role);
   // Client-confirmed (2026-09-25): MSP Owner and Admin author tasks too -
   // adding, editing and retiring them, not only tracking them. The Status
   // Report above stays CRO-authored (canEdit), so the two remain separate
@@ -127,9 +127,9 @@ export default async function GrowthMissionStepPage({ params }: { params: Promis
           <StepHoursPanel
             accountId={user.account_id}
             slug={step.slug}
-            hours={hours[step.slug]}
+            hours={mission.stepHours[step.slug]}
             quarter={quarter}
-            canLogHours={canLogHours}
+            canEditOutsourced={canEditOutsourced}
             reportSlot={
               <ReportPanel
                 accountId={user.account_id}

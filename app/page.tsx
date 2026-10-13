@@ -15,11 +15,11 @@ import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-us
  *
  * The routing mirrors the Dashboard's own: a CRO Leader or partner role that
  * has not entered an account yet belongs on /cro, everyone else signed in on
- * /dashboard, and anyone signed out on /login.
+ * /headquarters, and anyone signed out on /login.
  */
 export default async function Home() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (needsAccountSelection(user.role) && !user.account_id) redirect("/cro");
-  redirect("/dashboard");
+  redirect("/headquarters");
 }

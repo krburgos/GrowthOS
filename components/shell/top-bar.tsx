@@ -121,7 +121,7 @@ export function TopBar({
           137px, which leaves the 390px top bar comfortable; h-5 is 114px,
           the most a 320px phone can take beside the hamburger, palette
           trigger, bell and avatar. */}
-      <Link href="/dashboard" className="flex shrink-0 items-center lg:w-44">
+      <Link href="/headquarters" className="flex shrink-0 items-center lg:w-44">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={logo.src} alt="GrowthMission" className="h-5 w-auto sm:h-6 lg:h-7" />
       </Link>

@@ -4,7 +4,7 @@ import {
   BarChart3,
   Building2,
   ChevronLeft,
-  LayoutDashboard,
+  Landmark,
   LayoutGrid,
   ListChecks,
   Mail,
@@ -45,7 +45,7 @@ export interface NavItem {
 /** Exported so the command palette (§8.10) can reuse the exact same
  * destination list rather than maintaining a second, drift-prone copy. */
 export const NAV_ITEMS: NavItem[] = [
-  { section: "dashboard", label: "Homepage", href: "/dashboard", icon: LayoutDashboard },
+  { section: "dashboard", label: "Headquarters", href: "/headquarters", icon: Landmark },
   { section: "growthMission", label: "Command Center", href: "/growth-mission", icon: LayoutGrid },
   {
     section: "myVisits",

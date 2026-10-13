@@ -1,41 +1,52 @@
 /**
- * The Playbook doc's "GrowthMission KPI dashboard" band (client-confirmed,
- * 2026-09-17): Prospects and Opportunities, counted live from the account's
- * contacts and opportunities.
+ * Mission Progress (client-confirmed, 2026-10-13), formerly the Playbook
+ * doc's "GrowthMission KPI dashboard" band: Prospects and Opportunities,
+ * counted live from the account's contacts and opportunities.
  *
- * Client-confirmed (2026-09-22): the two halves split by what they count
- * rather than by how the source doc drew them - Prospects holds the boxes
- * fed by contact statuses, Opportunities the ones fed by opportunity
- * stages. That makes the grouping agree with boxAcceptsKind() below, which
- * already drew the line in the same place.
+ * Prospects is unchanged - MQCs and MQLs by contact status. Opportunities
+ * is regrouped, and Active moves to the front:
  *
- * Client-confirmed (2026-09-24): the Engaged box is gone, and with it the
- * Engaged contact status, which was retired from every account in the same
- * change (contacts on it moved to MQC - see the
- * retire_engaged_contact_status migration). Prospects is therefore MQCs and
- * MQLs. The 'engaged' value stays in the growth_mission_kpi_box enum because
- * removing an enum value in Postgres is a rewrite, and nothing references
- * it: no account had ever mapped a status to that box.
+ *   Active       every opportunity, won and lost included
+ *   Interested   Showing Interest
+ *   In progress  FME Scheduled through Quote/Solution Prepared, + Ghosted
+ *   Quoted       Proposal Emailed, Proposal Presented, Pondering Decision
+ *   Won          Verbal, Won
+ *
+ * Lost and Lost Resurrected count toward Active only. These are fixed
+ * rules now: the per-account "Edit mapping" dialog is retired in the same
+ * change, and a stage an account adds under its own name counts toward
+ * Active without landing in any other box.
+ *
+ * (History: the Engaged box and contact status were retired on
+ * 2026-09-24; the 'engaged' value stays in the growth_mission_kpi_box
+ * enum only because removing an enum value in Postgres is a rewrite.)
  */
 
-export type KpiBoxKey = "mqc" | "mql" | "interested" | "ghosted" | "quoted" | "won" | "lost";
+export type KpiBoxKey = "mqc" | "mql" | "active" | "interested" | "in_progress" | "quoted" | "won";
 export type SourceKind = "contact_status" | "opportunity_stage";
 
 export interface KpiBox {
   key: KpiBoxKey;
   label: string;
   group: "prospects" | "pipeline";
-  tone?: "won" | "lost" | "ghosted";
+  /** What the figure counts, shown in its info tooltip. */
+  tip: string;
+  tone?: "won" | "active";
 }
 
 export const KPI_BOXES: KpiBox[] = [
-  { key: "mqc", label: "MQCs", group: "prospects" },
-  { key: "mql", label: "MQLs", group: "prospects" },
-  { key: "interested", label: "Interested", group: "pipeline" },
-  { key: "ghosted", label: "Ghosted", group: "pipeline", tone: "ghosted" },
-  { key: "quoted", label: "Quoted", group: "pipeline" },
-  { key: "won", label: "Won", group: "pipeline", tone: "won" },
-  { key: "lost", label: "Lost", group: "pipeline", tone: "lost" },
+  { key: "mqc", label: "MQCs", group: "prospects", tip: "Contacts with the MQC status." },
+  { key: "mql", label: "MQLs", group: "prospects", tip: "Contacts with the MQL status." },
+  { key: "active", label: "Active", group: "pipeline", tone: "active", tip: "Every opportunity, including won and lost." },
+  { key: "interested", label: "Interested", group: "pipeline", tip: "Opportunities at Showing Interest." },
+  {
+    key: "in_progress",
+    label: "In progress",
+    group: "pipeline",
+    tip: "FME Scheduled through Quote/Solution Prepared, plus Ghosted.",
+  },
+  { key: "quoted", label: "Quoted", group: "pipeline", tip: "Proposal Emailed, Proposal Presented and Pondering Decision." },
+  { key: "won", label: "Won", group: "pipeline", tone: "won", tip: "Verbal and Won." },
 ];
 
 export interface KpiSource {
@@ -44,45 +55,43 @@ export interface KpiSource {
   name: string;
   stageGroup?: string;
   count: number;
+  /** The one box this source feeds besides Active, if any. */
   box: KpiBoxKey | null;
 }
 
-/** Name-matching default used until a CRO Leader saves a mapping for the account. */
-export function defaultBoxFor(kind: SourceKind, name: string, stageGroup?: string): KpiBoxKey | null {
+const STAGE_BOX: Record<string, KpiBoxKey> = {
+  "showing interest": "interested",
+  "fme scheduled": "in_progress",
+  "fme attended opportunity identified": "in_progress",
+  "2nd meeting scheduled": "in_progress",
+  "2nd meeting conducted": "in_progress",
+  "quote/solution prepared": "in_progress",
+  ghosted: "in_progress",
+  "proposal emailed": "quoted",
+  "proposal presented": "quoted",
+  "pondering decision": "quoted",
+  verbal: "won",
+  won: "won",
+};
+
+/** Which box a status or stage feeds, by its name. */
+export function boxFor(kind: SourceKind, name: string, stageGroup?: string): KpiBoxKey | null {
   const n = name.trim().toLowerCase();
   if (kind === "contact_status") {
     if (n === "mqc") return "mqc";
     if (n === "mql") return "mql";
     return null;
   }
-  if (stageGroup === "won") return "won";
-  if (stageGroup === "lost") return "lost";
-  if (n.includes("ghost")) return "ghosted";
-  if (n.includes("quote") || n.includes("proposal")) return "quoted";
-  if (n.includes("interest")) return "interested";
-  return null;
+  return STAGE_BOX[n] ?? (stageGroup === "won" ? "won" : null);
 }
 
-/**
- * The "Current Active Opportunities" figure (client-confirmed, 2026-09-22):
- * every opportunity whose stage is still open, which is all of them except
- * Won, Lost and Lost Resurrected - the three stages in the won/lost groups.
- * It counts stages directly rather than boxes, so opportunities parked in a
- * stage no box displays are still in the total; that is deliberate, and it
- * means the figure can exceed what the visible boxes add up to.
- */
-export function activeOpportunities(sources: KpiSource[]): number {
-  return sources
-    .filter((s) => s.kind === 'opportunity_stage' && s.stageGroup === 'open')
-    .reduce((sum, s) => sum + s.count, 0);
+/** The sources a box counts. Active counts every opportunity stage. */
+export function sourcesInBox(sources: KpiSource[], key: KpiBoxKey): KpiSource[] {
+  return key === "active"
+    ? sources.filter((s) => s.kind === "opportunity_stage")
+    : sources.filter((s) => s.box === key);
 }
 
 export function boxTotal(sources: KpiSource[], key: KpiBoxKey): number {
-  return sources.filter((s) => s.box === key).reduce((sum, s) => sum + s.count, 0);
-}
-
-/** Which box each kind of source is allowed to feed. */
-export function boxAcceptsKind(key: KpiBoxKey, kind: SourceKind): boolean {
-  const contactBoxes: KpiBoxKey[] = ["mqc", "mql"];
-  return kind === "contact_status" ? contactBoxes.includes(key) : !contactBoxes.includes(key);
+  return sourcesInBox(sources, key).reduce((sum, s) => sum + s.count, 0);
 }

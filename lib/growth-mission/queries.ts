@@ -1,5 +1,13 @@
-import { EMPTY_HOURS, type StepHours } from "@/lib/growth-mission/hours";
-import { defaultBoxFor, type KpiBoxKey, type KpiSource, type SourceKind } from "@/lib/growth-mission/kpi-band";
+import {
+  missionCapacity,
+  stepHoursFor,
+  type CapacityTask,
+  type CreditAllotment,
+  type MissionCapacity,
+} from "@/lib/growth-mission/capacity";
+import type { QuarterInfo, StepHours } from "@/lib/growth-mission/hours";
+import { boxFor, type KpiSource } from "@/lib/growth-mission/kpi-band";
+import { getTeamMembers } from "@/lib/team/queries";
 import {
   COMPANY_PROFILE_COLUMNS,
   COMPLETENESS_FIELDS,
@@ -122,43 +130,55 @@ export async function getStepDetail(accountId: string, slug: string): Promise<St
   };
 }
 
-export async function getStepHours(accountId: string, quarterStart: string): Promise<Record<string, StepHours>> {
+export interface MissionData {
+  capacity: MissionCapacity;
+  /** Required / Committed / Completed for each discipline. */
+  stepHours: Record<string, StepHours>;
+}
+
+/**
+ * Mission Capacity and the per-discipline hours, from one read of the
+ * account's mission orders, roster and credits (client-confirmed,
+ * 2026-10-13). Archived orders and people are excluded throughout.
+ */
+export async function getMissionData(accountId: string, quarter: QuarterInfo): Promise<MissionData> {
   const supabase = await createClient();
-  const [{ data: stepRows }, { data: quarterRows }] = await Promise.all([
-    supabase.from("growth_mission_step_hours").select("step_slug, needed_hours, outsourced").eq("account_id", accountId),
+  const [{ data: taskRows }, team, { data: allotmentRows }, { data: stepRows }] = await Promise.all([
     supabase
-      .from("growth_mission_quarter_hours")
-      .select("step_slug, committed_hours, achieved_hours")
+      .from("growth_mission_tasks")
+      .select("step_slug, hours, state, due_date, completed_at")
       .eq("account_id", accountId)
-      .eq("quarter_start", quarterStart),
+      .is("archived_at", null),
+    getTeamMembers(accountId),
+    supabase.from("account_credit_allotments").select("effective_month, monthly_credits").eq("account_id", accountId),
+    supabase.from("growth_mission_step_hours").select("step_slug, outsourced").eq("account_id", accountId),
   ]);
 
-  const result: Record<string, StepHours> = {};
-  for (const shape of PLAYBOOK_STEPS) result[shape.slug] = { ...EMPTY_HOURS };
-  for (const r of stepRows ?? []) {
-    const h = result[r.step_slug];
-    if (!h) continue;
-    h.needed = Number(r.needed_hours);
-    h.outsourced = r.outsourced;
-  }
-  for (const r of quarterRows ?? []) {
-    const h = result[r.step_slug];
-    if (!h) continue;
-    h.committed = Number(r.committed_hours);
-    h.achieved = Number(r.achieved_hours);
-  }
-  return result;
+  const tasks: CapacityTask[] = (
+    (taskRows ?? []) as { step_slug: string; hours: number | string; state: string; due_date: string | null; completed_at: string | null }[]
+  ).map((t) => ({ ...t, hours: Number(t.hours) }));
+  const allotments: CreditAllotment[] = (
+    (allotmentRows ?? []) as { effective_month: string; monthly_credits: number | string }[]
+  ).map((a) => ({ effective_month: a.effective_month, monthly_credits: Number(a.monthly_credits) }));
+  const outsourced = Object.fromEntries(
+    ((stepRows ?? []) as { step_slug: string; outsourced: boolean }[]).map((r) => [r.step_slug, r.outsourced])
+  );
+
+  return {
+    capacity: missionCapacity(tasks, team, allotments, quarter),
+    stepHours: stepHoursFor(tasks, team, outsourced, quarter),
+  };
 }
 
-export interface KpiBandData {
-  sources: KpiSource[];
-  /** True once a CRO Leader has saved a mapping; false means the name-matching defaults are in effect. */
-  customized: boolean;
-}
-
-export async function getKpiBand(accountId: string): Promise<KpiBandData> {
+/**
+ * Mission Progress (client-confirmed, 2026-10-13): live counts per contact
+ * status and opportunity stage, each placed in its box by the fixed rules
+ * in kpi-band.ts. The per-account mapping editor is retired, so
+ * growth_mission_kpi_mapping is no longer read; its rows are left in place.
+ */
+export async function getKpiBand(accountId: string): Promise<KpiSource[]> {
   const supabase = await createClient();
-  const [{ data: statuses }, { data: stages }, { data: mappingRows }, { data: counts }] = await Promise.all([
+  const [{ data: statuses }, { data: stages }, { data: counts }] = await Promise.all([
     supabase.from("contact_statuses").select("id, name, sort_order").eq("account_id", accountId).is("archived_at", null).order("sort_order"),
     supabase
       .from("opportunity_stages")
@@ -166,29 +186,20 @@ export async function getKpiBand(accountId: string): Promise<KpiBandData> {
       .eq("account_id", accountId)
       .is("archived_at", null)
       .order("sort_order"),
-    supabase.from("growth_mission_kpi_mapping").select("box, contact_status_id, opportunity_stage_id").eq("account_id", accountId),
     supabase.rpc("growth_mission_source_counts", { p_account_id: accountId }),
   ]);
 
   const countById = new Map<string, number>(
     ((counts ?? []) as { source_id: string; record_count: number }[]).map((c) => [c.source_id, Number(c.record_count)])
   );
-  const customized = (mappingRows ?? []).length > 0;
-  const savedBox = new Map<string, KpiBoxKey | null>();
-  for (const m of mappingRows ?? []) {
-    const id = m.contact_status_id ?? m.opportunity_stage_id;
-    if (id) savedBox.set(id, (m.box as KpiBoxKey | null) ?? null);
-  }
-  const boxFor = (id: string, kind: SourceKind, name: string, group?: string) =>
-    customized ? (savedBox.get(id) ?? null) : defaultBoxFor(kind, name, group);
 
-  const sources: KpiSource[] = [
+  return [
     ...(statuses ?? []).map((s) => ({
       id: s.id,
       kind: "contact_status" as const,
       name: s.name,
       count: countById.get(s.id) ?? 0,
-      box: boxFor(s.id, "contact_status", s.name),
+      box: boxFor("contact_status", s.name),
     })),
     ...(stages ?? []).map((s) => ({
       id: s.id,
@@ -196,10 +207,9 @@ export async function getKpiBand(accountId: string): Promise<KpiBandData> {
       name: s.name,
       stageGroup: s.stage_group,
       count: countById.get(s.id) ?? 0,
-      box: boxFor(s.id, "opportunity_stage", s.name, s.stage_group),
+      box: boxFor("opportunity_stage", s.name, s.stage_group),
     })),
   ];
-  return { sources, customized };
 }
 
 /**

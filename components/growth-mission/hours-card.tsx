@@ -1,24 +1,25 @@
 "use client";
 
-import { CircleAlert, Wallet } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import Link from "next/link";
 
-import { OutsourcedChip } from "@/components/growth-mission/hours-ui";
 import { PLAYBOOK_ICON } from "@/components/growth-mission/icon-map";
 import { StatusBadge } from "@/components/growth-mission/status-badge";
-import { SHORT_TITLE, formatHours, type StepHours } from "@/lib/growth-mission/hours";
+import { SHORT_TITLE, formatWhole, type StepHours } from "@/lib/growth-mission/hours";
 import type { StepOverview } from "@/lib/growth-mission/queries";
 import { taskSummary, type Task } from "@/lib/growth-mission/tasks";
 import { initialsOf, type TeamMember } from "@/lib/team/members";
 
 /**
  * Client-confirmed (2026-09-17), "B — Ledger": short title + status pill,
- * then Needed · Committed · Achieved side by side, and the Outsourced
- * label. The quarter bar and Log hours left on 2026-10-05 (client-
- * confirmed): the bar measured achieved against committed, so with no
- * commitment recorded it read empty under a caption saying exactly that,
- * on every card. Logging hours stays on the workstream page. The whole card links to the step detail page through a
- * stretched link; "Log hours" sits above that layer so it opens the dialog.
+ * then three hours figures side by side. The quarter bar and Log hours
+ * left on 2026-10-05 (client-confirmed). The whole card links to the
+ * discipline page through a stretched link.
+ *
+ * Client-confirmed (2026-10-13): the figures are Required · Committed ·
+ * Completed, all derived (lib/growth-mission/capacity.ts) now that hours
+ * are no longer logged by hand, and the tasks section is headed "Mission
+ * Orders".
  */
 export function HoursCard({
   step,
@@ -62,9 +63,9 @@ export function HoursCard({
         { key: "Completed", value: dropbys.completed, highlight: true },
       ]
     : [
-        { key: "Needed", value: hours.needed, highlight: false },
+        { key: "Required", value: hours.required, highlight: false },
         { key: "Committed", value: hours.committed, highlight: false },
-        { key: "Achieved", value: hours.achieved, highlight: true },
+        { key: "Completed", value: hours.completed, highlight: true },
       ];
 
   return (
@@ -96,7 +97,7 @@ export function HoursCard({
           >
             <span className="text-[10.5px] font-semibold uppercase tracking-wide text-neutral-400">{c.key}</span>
             <span className="text-h4 font-bold tabular-nums text-primary-900">
-              {dropbys ? c.value : formatHours(c.value)}
+              {dropbys ? c.value : formatWhole(c.value)}
               {/* No unit on a count of visits — "12h" would be a lie. */}
               {!dropbys && <span className="ml-px text-caption font-medium text-neutral-400">h</span>}
             </span>
@@ -110,7 +111,7 @@ export function HoursCard({
       <div className="border-t border-neutral-100 pt-3">
         <div className="mb-2 flex items-baseline justify-between gap-2">
           <p className="text-caption font-bold uppercase tracking-wide text-neutral-400">
-            {dropbys ? "Drop-bys" : "Tasks"}
+            {dropbys ? "Drop-bys" : "Mission Orders"}
           </p>
           {total > 0 && (
             <p className="text-caption font-semibold tabular-nums text-primary-900">
@@ -120,7 +121,7 @@ export function HoursCard({
         </div>
 
         {total === 0 ? (
-          <p className="text-caption text-neutral-400">{dropbys ? "No targets yet" : "No tasks yet"}</p>
+          <p className="text-caption text-neutral-400">{dropbys ? "No targets yet" : "No mission orders yet"}</p>
         ) : (
           <div className="flex flex-col gap-2">
             <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100">
@@ -177,7 +178,7 @@ export function HoursCard({
               ) : (
                 t.open > 0 && (
                   <span className="text-caption tabular-nums text-neutral-500">
-                    {formatHours(t.hours)}h of work
+                    {formatWhole(t.hours)}h of work
                   </span>
                 )
               )}
@@ -186,16 +187,9 @@ export function HoursCard({
         )}
       </div>
 
-      {step.budgetNote && (
-        <div className="flex items-center gap-1.5 rounded-md border border-dashed border-neutral-300 bg-neutral-50 px-2.5 py-1.5 text-caption text-neutral-600">
-          <Wallet className="size-3.5 shrink-0 text-neutral-500" />
-          {step.budgetNote}
-        </div>
-      )}
-
-      <div className="mt-auto flex items-center justify-end">
-        <OutsourcedChip outsourced={hours.outsourced} />
-      </div>
+      {/* Client-confirmed (2026-10-13): the cards are kept as small as
+          possible, so the budget note and the Outsourced chip are gone
+          from here. Both stay on the discipline page. */}
     </div>
   );
 }

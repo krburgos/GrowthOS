@@ -52,7 +52,7 @@ function pinnedFirst(accounts: CroAccountRow[]): CroAccountRow[] {
 export default async function CroDashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (!needsAccountSelection(user.role)) redirect("/dashboard");
+  if (!needsAccountSelection(user.role)) redirect("/headquarters");
 
   const quarter = currentQuarter();
   const supabase = await createClient();

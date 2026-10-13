@@ -51,7 +51,9 @@ const emptyDraft = (): Draft => ({
   detail: "",
   priority: "medium",
   hours: "",
-  due_date: "",
+  // Client-confirmed (2026-10-13): a new order is due at the end of the
+  // quarter unless someone picks another date.
+  due_date: currentQuarter().end,
   assignee_id: UNASSIGNED,
 });
 
@@ -220,7 +222,7 @@ export function TaskList({
         <p className="px-5 py-10 text-center text-body-sm text-neutral-400">
           {canDefine
             ? "Add the first task once the report says what needs fixing."
-            : "CRO Leader has not set any tasks for this workstream yet."}
+            : "CRO Leader has not set any tasks for this discipline yet."}
         </p>
       ) : (
         <>
@@ -403,11 +405,13 @@ function HoursCell({
 
   const commit = () => {
     setEditing(false);
-    const next = Number(value);
+    // Whole hours only (client-confirmed, 2026-10-13): a part hour rounds up.
+    const next = Math.ceil(Number(value));
     if (!Number.isFinite(next) || next < 0) {
       setValue(String(task.hours));
       return;
     }
+    setValue(String(next));
     if (next !== task.hours) onChange(next);
   };
 
@@ -416,7 +420,8 @@ function HoursCell({
       <input
         type="number"
         min="0"
-        step="0.5"
+        step="1"
+        inputMode="numeric"
         autoFocus
         value={value}
         aria-label={`Hours for ${task.title}`}
@@ -892,8 +897,8 @@ function TaskDialog({
       title: draft.title.trim(),
       detail: draft.detail.trim() || null,
       priority: draft.priority,
-      hours: Number(draft.hours) || 0,
-      due_date: draft.due_date || null,
+      hours: Math.ceil(Number(draft.hours) || 0),
+      due_date: draft.due_date || currentQuarter().end,
       assignee_id: draft.assignee_id === UNASSIGNED ? null : draft.assignee_id,
     };
 
@@ -957,7 +962,8 @@ function TaskDialog({
               <Input
                 type="number"
                 min="0"
-                step="0.5"
+                step="1"
+                inputMode="numeric"
                 value={draft.hours}
                 onChange={(e) => setDraft({ ...draft, hours: e.target.value })}
               />

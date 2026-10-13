@@ -4,16 +4,16 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { currentQuarter } from "@/lib/growth-mission/hours";
 import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
-import { getStepDetail, getStepHours, getTasksForStep } from "@/lib/growth-mission/queries";
+import { getMissionData, getStepDetail, getTasksForStep } from "@/lib/growth-mission/queries";
 import { registerPoppins } from "@/lib/pdf/poppins";
 import { renderStatusReport } from "@/lib/pdf/status-report-doc";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * GET /api/growth-mission/[slug]/export — the workstream Status Report as a
+ * GET /api/growth-mission/[slug]/export — the discipline Status Report as a
  * PDF (client-confirmed, 2026-09-25).
  *
- * Anyone who can view the workstream can export it, so the ordinary session
+ * Anyone who can view the discipline can export it, so the ordinary session
  * client under RLS is enough — no service role. The reads go through the
  * same getStepDetail/getTasksForStep the page uses, so the PDF can never
  * show something the reader is not allowed to see on screen.
@@ -32,23 +32,23 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const shape = PLAYBOOK_STEPS.find((s) => s.slug === slug);
   if (!shape) {
-    return NextResponse.json({ error: "No such workstream." }, { status: 404 });
+    return NextResponse.json({ error: "No such discipline." }, { status: 404 });
   }
 
   const quarter = currentQuarter();
   const supabase = await createClient();
-  const [step, hours, tasks, { data: account }] = await Promise.all([
+  const [step, mission, tasks, { data: account }] = await Promise.all([
     getStepDetail(user.account_id, slug),
-    getStepHours(user.account_id, quarter.start),
+    getMissionData(user.account_id, quarter),
     getTasksForStep(user.account_id, slug),
     supabase.from("accounts").select("name").eq("id", user.account_id).maybeSingle(),
   ]);
 
   if (!step) {
-    return NextResponse.json({ error: "No such workstream." }, { status: 404 });
+    return NextResponse.json({ error: "No such discipline." }, { status: 404 });
   }
 
-  const stepHours = hours[step.slug];
+  const stepHours = mission.stepHours[step.slug];
 
   const doc = new PDFDocument({ size: "LETTER", margin: 54, bufferPages: true });
   registerPoppins(doc);
@@ -65,9 +65,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     stats: step.statusReportStats,
     tasks,
     hours: {
-      needed: stepHours?.needed ?? 0,
+      required: stepHours?.required ?? 0,
       committed: stepHours?.committed ?? 0,
-      achieved: stepHours?.achieved ?? 0,
+      completed: stepHours?.completed ?? 0,
     },
   });
 

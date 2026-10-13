@@ -1063,6 +1063,38 @@ language sql stable security invoker set search_path = public as $$
 $$;
 ```
 
+**Client-confirmed amendment (2026-10-13, App Flow §4.3a "Mission Capacity, Mission Progress").** Three things change in what this section's tables do; none is dropped, and no rows are deleted:
+
+- **Hours are derived, not typed.** The Command Center, Headquarters, the discipline page and the Status Report PDF no longer read `growth_mission_step_hours.needed_hours` or `growth_mission_quarter_hours.committed_hours`/`achieved_hours`. Required and Completed are computed from `growth_mission_tasks` (§6.6f), Available/Committed from `account_team_members`/`account_team_assignments` (§6.6e) at `weekly × 13`, in `lib/growth-mission/capacity.ts`. The Log hours dialog that wrote these columns is removed. `growth_mission_step_hours.outsourced` is still live, written by the discipline page's Outsourced toggle with the same write policy. `sync_task_achieved_hours()` keeps maintaining `achieved_hours`, because `cro_account_portfolio()` (§7.6) still reads it — see §12.
+- **`growth_mission_kpi_mapping` is retired.** Mission Progress uses fixed stage-name rules (`lib/growth-mission/kpi-band.ts`), and the mapping editor is removed. The table and its rows stay in place, unread, the same way `growth_mission_suggestions` and `growth_mission_tracker_items` were left.
+- `growth_mission_source_counts()` is unchanged and still feeds every Mission Progress figure.
+
+### 6.6i account_credit_allotments
+
+**Client-confirmed addition (2026-10-13)** — credits for Mission Capacity (App Flow §4.3a). Migration: `supabase/migrations/20261013000001_mission_capacity_credits.sql`.
+
+- **One row per account per month the allotment changed.** The allotment in force for a month is the latest row on or before it, so a change applies from the month it is saved without rewriting earlier months. Saving twice in a month updates that month's row in place (`unique (account_id, effective_month)`).
+- **Nothing stores the balance or the spend.** Available = the sum of the allotment in force for every month from the first row through the current month, minus 25 credits for every hour on a mission order completed since that first month. Unused credits therefore roll over, and there is no second ledger to drift from the tasks. Used (this quarter) = hours completed this quarter × 25.
+- **Access.** Select: own account, CRO Leader, granted partner — everyone on the account sees credits. Insert/update: `auth_has_any_role('cro_admin','cro_advisor')`. No delete policy and no `archived_at`: a later row supersedes an earlier one, and history is what the rollover is computed from.
+- **Typed by CRO Leader for now.** Subscription tiers are expected to supply `monthly_credits` later; there is still no billing or payment processing in the app (PRD §10).
+
+```sql
+create table account_credit_allotments (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references accounts(id) on delete cascade,
+  effective_month date not null check (effective_month = date_trunc('month', effective_month)::date),
+  monthly_credits integer not null check (monthly_credits >= 0),
+  updated_by uuid references users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (account_id, effective_month)
+);
+```
+
+A second migration the same day (`20261013000002_whole_hour_mission_orders.sql`, client-confirmed) rounds every part-hour `growth_mission_tasks.hours` **up** to a whole number and adds `check (hours = trunc(hours))`, so mission orders carry whole hours only.
+
+The first migration also gives `growth_mission_tasks.due_date` a default of the last day of the current quarter, and sets every null `due_date` to the current quarter's end, because Hours Required places each order in a quarter by its due date.
+
 
 ### 6.6f growth_mission_tasks
 
@@ -1615,6 +1647,8 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 
 
 ## 12. Assumptions & Open Items
+
+- **Open (2026-10-13): the CRO Leader Dashboard's hours still read `growth_mission_quarter_hours`.** `cro_account_portfolio()` (§7.6) reports each account's committed/achieved hours from that table. Achieved is still maintained by the task trigger, but committed was only ever typed into the Log hours dialog, which is now removed, so the portfolio's "of N committed" figure will go stale. Moving the portfolio to Mission Capacity's derived figures wasn't part of the approved change, so it's flagged here rather than done.
 
 Judgment calls made while turning the PRD, App Flow Document, and prior Q&A into a concrete schema — each is either a mechanical necessity or an interpretation worth the client confirming before Claude Code builds against it.
 - **View vs. edit interpretation (§2).** The PRD's role table gives one combined description per role rather than separate view/edit columns. This document reads "view" as broad (any role with account access can see all of that account's CRM data) and "edit" as the PRD's literal per-role list. If the client intended narrower viewing rights per role, only the _select policies in §6 need to change — nothing else in the schema depends on this assumption.

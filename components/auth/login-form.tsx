@@ -49,7 +49,7 @@ export function LoginForm() {
     // MSP staff logins, which never have this cookie set.
     await fetch("/api/cro/exit", { method: "POST" });
 
-    router.push("/dashboard");
+    router.push("/headquarters");
     router.refresh();
   };
 

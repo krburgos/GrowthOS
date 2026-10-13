@@ -35,7 +35,7 @@ export interface StatusReportDoc {
   summary: string | null;
   stats: KpiStat[];
   tasks: Task[];
-  hours: { needed: number; committed: number; achieved: number };
+  hours: { required: number; committed: number; completed: number };
 }
 
 const PRIORITY_BAR: Record<string, string> = { high: RED_500, medium: AMBER_400, low: RULE };
@@ -92,9 +92,9 @@ export function renderStatusReport(doc: InstanceType<typeof PDFDocument>, data: 
   // ---- Hours strip -------------------------------------------------
   let y = 174;
   const cells: [string, string][] = [
-    ["Needed", `${fmt(data.hours.needed)} hrs`],
-    ["Committed this quarter", `${fmt(data.hours.committed)} hrs`],
-    ["Achieved this quarter", `${fmt(data.hours.achieved)} hrs`],
+    ["Required this quarter", `${Math.round(data.hours.required)} hrs`],
+    ["Committed this quarter", `${Math.round(data.hours.committed)} hrs`],
+    ["Completed this quarter", `${Math.round(data.hours.completed)} hrs`],
   ];
   const cw = W / 3;
   doc.roundedRect(M, y, W, 56, 6).fill(TINT);

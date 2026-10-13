@@ -78,7 +78,7 @@ export function TeamRoster({
         <div>
           <h2 className="text-h3 text-primary-900">Who does what</h2>
           <p className="mt-1 max-w-[62ch] text-body-sm leading-relaxed text-neutral-500">
-            Everyone responsible for a workstream, whether they work here or for someone else. A weekly commitment is
+            Everyone responsible for a discipline, whether they work here or for someone else. A weekly commitment is
             read as thirteen weeks of capacity, and measured against the unfinished tasks they carry in the Command
             Center.
           </p>
@@ -90,7 +90,7 @@ export function TeamRoster({
           <p className="text-h3 font-bold leading-none tabular-nums text-primary-900">
             {covered} of {PLAYBOOK_STEPS.length}
           </p>
-          <p className="mt-1 text-caption text-neutral-500">workstreams covered</p>
+          <p className="mt-1 text-caption text-neutral-500">disciplines covered</p>
         </div>
       </div>
 
@@ -108,7 +108,7 @@ export function TeamRoster({
         accountId={accountId}
         kind="outsourced"
         heading="Outsourced"
-        hint="Third parties delivering a workstream"
+        hint="Third parties delivering a discipline"
         members={members.filter((m) => m.kind === "outsourced")}
         memberLoad={memberLoad}
         stepTasks={stepTasks}
@@ -170,7 +170,7 @@ function RosterTable({
 
       {members.length === 0 ? (
         <p className="px-5 py-8 text-center text-body-sm text-neutral-400">
-          Nobody here yet.{canEdit && " Add the people responsible for these workstreams."}
+          Nobody here yet.{canEdit && " Add the people responsible for these disciplines."}
         </p>
       ) : (
         <>
@@ -532,7 +532,7 @@ function MemberDialog({
           <DialogDescription className="text-body-sm text-neutral-500">
             {kind === "outsourced"
               ? "Name can carry the company too — “Rosa Pineda · Northlight Events”."
-              : "Shown on the Company Profile and on the workstreams they are assigned to."}
+              : "Shown on the Company Profile and on the disciplines they are assigned to."}
           </DialogDescription>
         </DialogHeader>
 
@@ -606,7 +606,7 @@ function MemberDialog({
                 >
                   <SelectTrigger className="h-10 justify-start gap-2 border-dashed text-body-sm font-semibold text-neutral-500">
                     <Plus className="size-4" />
-                    <SelectValue placeholder="Add a workstream" />
+                    <SelectValue placeholder="Add a discipline" />
                   </SelectTrigger>
                   <SelectContent>
                     {available.map((s) => (

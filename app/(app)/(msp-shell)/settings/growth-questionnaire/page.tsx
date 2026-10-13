@@ -34,7 +34,7 @@ export default async function GrowthQuestionnairePage() {
         accountId={user.account_id}
         initialAnswers={(response?.answers as Record<string, string | number | null>) ?? {}}
         canEdit={canEdit}
-        exitHref="/dashboard"
+        exitHref="/headquarters"
       />
     </main>
   );

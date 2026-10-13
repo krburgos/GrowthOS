@@ -56,5 +56,5 @@ export async function POST(request: NextRequest) {
     path: "/",
   });
 
-  return NextResponse.redirect(new URL("/dashboard", request.url), { status: 303 });
+  return NextResponse.redirect(new URL("/headquarters", request.url), { status: 303 });
 }

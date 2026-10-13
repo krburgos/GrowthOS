@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   agentRules: false,
   // PDF exports read their embedded Poppins fonts from disk at runtime
   // (lib/pdf/poppins.ts), which file tracing can't see on its own.
+  // Client-confirmed (2026-10-13): the Homepage is now Headquarters and
+  // lives at /headquarters. Old bookmarks and emailed links still land.
+  async redirects() {
+    return [{ source: "/dashboard", destination: "/headquarters", permanent: false }];
+  },
   outputFileTracingIncludes: {
     "/api/questionnaire/export": ["./lib/pdf/fonts/**/*", "./public/growthmission-logo.png"],
     "/api/vision-board/export": ["./lib/pdf/fonts/**/*", "./public/growthmission-logo.png"],

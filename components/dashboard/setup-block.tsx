@@ -2,11 +2,12 @@ import { Building2, ClipboardList, Compass } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { KpiBandHero } from "@/components/dashboard/kpi-band-hero";
-import { HoursTotalsStrip } from "@/components/growth-mission/hours-totals-strip";
+import { MissionCapacity } from "@/components/growth-mission/mission-capacity";
+import { MissionProgressPanels } from "@/components/growth-mission/mission-progress";
 import { HeroLabel } from "@/components/shell/hero-band";
 import { formatAddress, initials, profileCompleteness, type CompanyProfile } from "@/lib/accounts/company-profile";
-import type { QuarterInfo, StepHours } from "@/lib/growth-mission/hours";
+import type { MissionCapacity as Capacity } from "@/lib/growth-mission/capacity";
+import type { QuarterInfo } from "@/lib/growth-mission/hours";
 import type { KpiSource } from "@/lib/growth-mission/kpi-band";
 import { QUESTIONNAIRE_SECTIONS } from "@/lib/questionnaire/questions";
 import { VISION_BOARD_SECTIONS } from "@/lib/vision-board/sections";
@@ -50,9 +51,10 @@ import { VISION_BOARD_SECTIONS } from "@/lib/vision-board/sections";
 export function SetupBlock({
   account,
   canEditProfile,
+  canSetCredits,
   questionnaire,
   visionBoard,
-  hours,
+  capacity,
   quarter,
   kpiSources,
   accountId,
@@ -60,9 +62,11 @@ export function SetupBlock({
 }: {
   account: CompanyProfile | null;
   canEditProfile: boolean;
+  /** CRO Admin/Advisor: shows "Set credits" on Mission Capacity. */
+  canSetCredits: boolean;
   questionnaire: { answered: number; total: number; complete: boolean };
   visionBoard: { answered: number; total: number; complete: boolean; signedBy?: string | null; signedOn?: string | null };
-  hours: StepHours[];
+  capacity: Capacity;
   quarter: QuarterInfo;
   kpiSources: KpiSource[];
   accountId: string;
@@ -110,7 +114,7 @@ export function SetupBlock({
           detailLabel={questionnaire.complete ? "Where it is used" : "Why it matters"}
           detail={
             questionnaire.complete
-              ? "Your ICP is set, and the workstream readiness check reads it."
+              ? "Your ICP is set, and the discipline readiness check reads it."
               : "The rest of GrowthMission reads your ICP from this. Start here."
           }
         />
@@ -140,16 +144,21 @@ export function SetupBlock({
           The strip takes "raised" rather than plain "card": on navy the
           card variant's light border adds nothing, and its shadow — tuned
           for pale grounds — is invisible. */}
-      <div>
-        <HeroLabel>
-          Workstream hours · {quarter.label} · {quarter.range}
-        </HeroLabel>
-        <HoursTotalsStrip hours={hours} quarter={quarter} variant="raised" />
-      </div>
+      {/* Client-confirmed (2026-10-13): Mission Capacity and Mission
+          Progress, the same figures as the Command Center, each as a pair
+          of white panels. The quarter sits on Mission Capacity's own label
+          line. */}
+      <MissionCapacity
+        accountId={accountId}
+        capacity={capacity}
+        quarter={quarter}
+        canSetCredits={canSetCredits}
+        variant="panels"
+      />
 
       <div>
-        <HeroLabel>KPI Dashboard</HeroLabel>
-        <KpiBandHero accountId={accountId} sources={kpiSources} />
+        <HeroLabel>Mission Progress</HeroLabel>
+        <MissionProgressPanels accountId={accountId} sources={kpiSources} />
       </div>
     </section>
   );

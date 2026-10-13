@@ -1,45 +1,51 @@
-import { CalendarRange, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 
 import { HoursCard } from "@/components/growth-mission/hours-card";
-import { HoursTotalsStrip } from "@/components/growth-mission/hours-totals-strip";
-import { KpiBand } from "@/components/growth-mission/kpi-band";
+import { MissionCapacity } from "@/components/growth-mission/mission-capacity";
+import { MissionProgress } from "@/components/growth-mission/mission-progress";
 import { ReadinessCheck } from "@/components/growth-mission/readiness-check";
-import { HeroBand, HeroLabel } from "@/components/shell/hero-band";
+import { HeroBand } from "@/components/shell/hero-band";
 import { SectionHeading } from "@/components/shell/section-heading";
 import { getTargets } from "@/lib/advocate-dash/queries";
 import { ADVOCATE_DASH_SLUG, advocatesForCard, targetSummary } from "@/lib/advocate-dash/targets";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/growth-mission/hours";
+import { currentQuarter } from "@/lib/growth-mission/hours";
 import {
   getKpiBand,
   getMemberStepTasks,
+  getMissionData,
   getReadiness,
-  getStepHours,
   getStepOverviews,
   getTasks,
 } from "@/lib/growth-mission/queries";
 import { membersForStep } from "@/lib/team/members";
 import { getTeamMembers } from "@/lib/team/queries";
 
-export const metadata: Metadata = { title: "GrowthMission Command Center – Strategy & Assignments Dashboard — GrowthMission" };
+export const metadata: Metadata = { title: "Command Center – Strategy & Assignments Dashboard — GrowthMission" };
 
 /**
  * Command Center (App Flow §4.3a). Client-confirmed (2026-09-17), all from
  * "GrowthMission Playbook - Dev Plan.docx": the "Before You Begin" readiness
  * check, the doc's KPI dashboard band (live contact/opportunity counts),
- * a quarter hours totals strip, and the 14 workstreams as a flat grid of
- * "B — Ledger" hours cards. Hours: MSP Owner/Admin + CRO Admin/Advisor
- * edit; KPI mapping and every step's status/KPIs/report: CRO Admin/Advisor.
+ * a quarter hours totals strip, and the disciplines as a flat grid of
+ * "B — Ledger" hours cards.
+ *
+ * Client-confirmed (2026-10-13, approved mockup "Mission Dashboards" v5):
+ * the title drops its "GrowthMission" prefix; the hours strip becomes
+ * Mission Capacity (hours and credits, all derived - nothing is logged by
+ * hand any more); the KPI band becomes Mission Progress with fixed stage
+ * rules; and workstreams are called disciplines. Credits: CRO Admin/Advisor
+ * set them, everyone sees them.
  */
 export default async function GrowthMissionPage() {
   const user = await getCurrentUser();
   if (!user || !user.account_id) return null;
 
   const quarter = currentQuarter();
-  const [steps, hours, kpiBand, readiness, teamMembers, tasks, stepTasks, targets] = await Promise.all([
+  const [steps, mission, kpiSources, readiness, teamMembers, tasks, stepTasks, targets] = await Promise.all([
     getStepOverviews(user.account_id),
-    getStepHours(user.account_id, quarter.start),
+    getMissionData(user.account_id, quarter),
     getKpiBand(user.account_id),
     getReadiness(user.account_id),
     getTeamMembers(user.account_id),
@@ -63,7 +69,6 @@ export default async function GrowthMissionPage() {
 
   const dropbys = targetSummary(targets);
 
-  const canLogHours = HOURS_EDIT_ROLES.includes(user.role);
   const isCroLeaderEditor = user.role === "cro_admin" || user.role === "cro_advisor";
 
   return (
@@ -71,44 +76,30 @@ export default async function GrowthMissionPage() {
       <ReadinessCheck readiness={readiness} />
 
       <HeroBand>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-h1 text-white">GrowthMission Command Center – Strategy & Assignments Dashboard</h1>
-            {/* Client-confirmed (2026-09-24), treatment "C": a badge in the
-                same material as the quarter pill opposite, rather than the
-                descriptive sentence that used to sit here. */}
-            <span className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-body-sm font-semibold text-white/90">
-              <Sparkles className="size-4 text-secondary-300" />
-              Powered by AI and CRO Leader
-            </span>
-          </div>
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-3 py-1.5 text-body-sm font-semibold text-white">
-            <CalendarRange className="size-4" />
-            {quarter.label} · {quarter.range}
-          </span>
-        </div>
         <div>
-          <HeroLabel>Workstream hours · {quarter.label}</HeroLabel>
-          {/* AdvocateDash is left out rather than summed in as a zero
-              (client-confirmed, 2026-10-05): it is measured in drop-bys, so
-              counting it here would quietly understate the average across
-              the workstreams that do carry hours. */}
-          <HoursTotalsStrip
-            hours={Object.entries(hours)
-              .filter(([slug]) => slug !== ADVOCATE_DASH_SLUG)
-              .map(([, value]) => value)}
-            quarter={quarter}
-            variant="hero"
-          />
+          <h1 className="text-h1 text-white">Command Center – Strategy & Assignments Dashboard</h1>
+          {/* Client-confirmed (2026-09-24), treatment "C": a badge rather
+              than the descriptive sentence that used to sit here. The
+              quarter pill that sat opposite it moved down to Mission
+              Capacity's label line (2026-10-13). */}
+          <span className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-body-sm font-semibold text-white/90">
+            <Sparkles className="size-4 text-secondary-300" />
+            Powered by AI and CRO Leader
+          </span>
         </div>
       </HeroBand>
 
-      <KpiBand
+      {/* Client-confirmed (2026-10-13): Mission Capacity is its own section,
+          designed exactly like Mission Progress beneath it. */}
+      <MissionCapacity
         accountId={user.account_id}
-        sources={kpiBand.sources}
-        customized={kpiBand.customized}
-        canEditMapping={isCroLeaderEditor}
+        capacity={mission.capacity}
+        quarter={quarter}
+        canSetCredits={isCroLeaderEditor}
+        variant="band"
       />
+
+      <MissionProgress accountId={user.account_id} sources={kpiSources} />
 
       {/* Client-confirmed (2026-10-01, approved mockup "C — Navy panel"): the
           Mission Cards get a navy ground rather than sitting straight on the
@@ -122,20 +113,16 @@ export default async function GrowthMissionPage() {
           It is the hero band's own gradient, so the page reads navy header →
           white KPI band → navy card field. The white band between the two
           keeps them from merging into one mass, and it matches what the
-          Homepage block now does. */}
+          Headquarters block now does. */}
       <section className="mt-2 flex flex-col gap-3 rounded-xl p-4 shadow-lift md:p-5 bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]">
         <SectionHeading title="Mission Cards" tone="dark">
           {/* The removed hero sentence was the only thing telling anyone the
               cards open. Said here instead, where someone about to click is
               actually looking. */}
           <span className="text-caption text-white/55">
-            {steps.length} workstreams · click any card for its report and tasks
+            {steps.length} disciplines · click any card for its report and mission orders
           </span>
         </SectionHeading>
-
-        {!canLogHours && (
-          <p className="text-caption text-white/55">View only — MSP Owner/Admin and CRO Leader log hours</p>
-        )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {steps.map((step) => {
@@ -144,7 +131,7 @@ export default async function GrowthMissionPage() {
               <HoursCard
                 key={step.slug}
                 step={step}
-                hours={hours[step.slug]}
+                hours={mission.stepHours[step.slug]}
                 assignees={
                   isAdvocateDash
                     ? advocatesForCard(teamMembers, targets)

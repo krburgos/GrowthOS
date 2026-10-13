@@ -200,6 +200,7 @@ These were flagged during the questions review as uncertain or deferred by the c
 - Technology stack (§8.1) is a recommendation pending client confirmation
 - Website Assessment tooling approach (§10) is a recommendation pending client confirmation
 - One-month timeline for the full scope in §6 is achievable but tight — email sending/campaigns with deliverability and tracking (§6.6) is typically the largest line item; if the timeline slips, that is the section most likely to need to flex into a fast-follow rather than launch day one
+- **Client-confirmed (2026-10-13): credits.** Accounts now carry **credits** — 25 credits per hour of work (1 credit = $1 at $25/hour) — shown to everyone on the account in Mission Capacity (App Flow §4.3a). For now CRO Leader types each account's monthly allotment; unused credits roll over monthly. A credits allocation per subscription tier is expected to replace the typed figure once the pricing model is settled. This tracks credits only — billing and payment processing stay out of scope (§10, §12), and invoicing still happens outside GrowthMission.
 
 ## 12. Explicit Out of Scope — Phase 1
 
