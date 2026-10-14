@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { VisionBoardWizard } from "@/components/settings/vision-board-wizard";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { icpFromQuestionnaire } from "@/lib/vision-board/icp";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "GrowthMission Vision Board — GrowthMission" };
@@ -56,11 +57,7 @@ export default async function VisionBoardPage({
         initialComplete={!!response?.completed_at}
         canEdit={canEdit}
         exitHref={response?.completed_at ? "/vision-board" : "/headquarters"}
-        icpAnswers={{
-          targetMarket: (qAnswers.overview_target_market as string) ?? null,
-          focusesOnVerticals: qAnswers.overview_verticals === "yes" ? true : qAnswers.overview_verticals === "no" ? false : null,
-          hvcDefined: qAnswers.overview_hvc_defined === "yes" ? true : qAnswers.overview_hvc_defined === "no" ? false : null,
-        }}
+        icpAnswers={icpFromQuestionnaire(qAnswers)}
       />
     </main>
   );

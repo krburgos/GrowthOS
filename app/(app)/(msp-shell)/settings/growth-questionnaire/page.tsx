@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { GrowthQuestionnaireWizard } from "@/components/settings/growth-questionnaire-wizard";
+import { GrowthQuestionnaireWizard, type QuestionnaireAnswers } from "@/components/settings/growth-questionnaire-wizard";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,7 +32,7 @@ export default async function GrowthQuestionnairePage() {
     <main className="w-full max-w-[900px] flex-1 p-6 md:p-8">
       <GrowthQuestionnaireWizard
         accountId={user.account_id}
-        initialAnswers={(response?.answers as Record<string, string | number | null>) ?? {}}
+        initialAnswers={(response?.answers as QuestionnaireAnswers) ?? {}}
         canEdit={canEdit}
         exitHref="/headquarters"
       />

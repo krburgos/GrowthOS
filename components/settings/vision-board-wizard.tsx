@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import type { IcpAnswers } from "@/lib/vision-board/icp";
+import { icpFacts, type IcpAnswers } from "@/lib/vision-board/icp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
@@ -340,6 +340,24 @@ export function VisionBoardWizard({
                     {icpAnswers.hvcDefined === null ? "Not answered yet" : icpAnswers.hvcDefined ? "Yes" : "No"}
                   </p>
                 </div>
+                {/* From the ICP steps (client-confirmed, 2026-10-14). */}
+                <div>
+                  <p className="text-caption text-neutral-500">Top Industries</p>
+                  <p className="font-medium text-neutral-800">
+                    {icpAnswers.industries.length > 0
+                      ? icpAnswers.industries.map((v, i) => `${i + 1} ${v}`).join(" · ")
+                      : "Not answered yet"}
+                  </p>
+                </div>
+                {(["Company size", "Coverage area", "Decision makers", "Leads we want", "Who we compete with"] as const).map((label) => {
+                  const fact = icpFacts(icpAnswers).find((f) => f.label === label);
+                  return (
+                    <div key={label}>
+                      <p className="text-caption text-neutral-500">{label}</p>
+                      <p className="font-medium text-neutral-800">{fact?.value || "Not answered yet"}</p>
+                    </div>
+                  );
+                })}
               </div>
               <a href="/settings/growth-questionnaire" className="mt-2 inline-block text-caption font-semibold text-secondary-700 hover:underline">
                 Edit these in the GrowthMission Solution Questionnaire →

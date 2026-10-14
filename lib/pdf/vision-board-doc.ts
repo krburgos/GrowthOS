@@ -2,6 +2,7 @@ import type PDFDocument from "pdfkit";
 
 import { drawLogoChip } from "@/lib/pdf/brand";
 import { POPPINS } from "@/lib/pdf/poppins";
+import { hasIcpProfile, icpFacts, type IcpAnswers } from "@/lib/vision-board/icp";
 
 export type VisionAnswers = Record<string, string | string[] | null>;
 
@@ -62,7 +63,9 @@ export function renderVisionBoard(
   name: string,
   answers: VisionAnswers,
   /** The account logo, already fetched. Omitted if it could not be read. */
-  logo?: Buffer
+  logo?: Buffer,
+  /** The questionnaire's ICP, for the "Who we serve" page. */
+  icp?: IcpAnswers
 ) {
   const t = (key: string) => {
     const v = answers[key];
@@ -248,6 +251,48 @@ export function renderVisionBoard(
         .fillColor(INK)
         .text(niche, STATEMENT_X, top - 2, { width: STATEMENT_W, lineGap: 3.5 });
       doc.y = Math.max(doc.y, top + 46);
+    }
+  }
+
+  // ========================= WHO WE SERVE ========================
+  // Client-confirmed (2026-10-14, "PDF Exports Refresh"): the ICP from the
+  // Solution Questionnaire, after Purpose & Niche, mirroring the Vision
+  // Page's band. Skipped when the ICP has nothing in it yet.
+  if (icp && hasIcpProfile(icp)) {
+    section("white");
+    eyebrow(`Who ${name} serves`);
+    heading("The clients we are built for.");
+    if (icp.targetMarket) paragraph(icp.targetMarket);
+
+    if (icp.industries.length > 0) {
+      ensure(icp.industries.length * 40 + 20);
+      let top = doc.y + 2;
+      icp.industries.forEach((industry, i) => {
+        doc.moveTo(M, top).lineTo(M + CW, top).lineWidth(0.6).strokeColor(RULE).stroke();
+        doc.font(POPPINS.bold).fontSize(18).fillColor(TEAL_500).text(String(i + 1).padStart(2, "0"), M, top + 10, { width: 34, lineBreak: false });
+        doc.font(POPPINS.semibold).fontSize(14).fillColor(NAVY_900).text(industry, M + 40, top + 12, { width: CW - 40, lineBreak: false, ellipsis: true });
+        top += 40;
+      });
+      doc.moveTo(M, top).lineTo(M + CW, top).lineWidth(0.6).strokeColor(RULE).stroke();
+      doc.y = top + 22;
+    }
+
+    const facts = icpFacts(icp);
+    const gap = 22;
+    const colW = (CW - gap) / 2;
+    for (let i = 0; i < facts.length; i += 2) {
+      const row = facts.slice(i, i + 2);
+      doc.font(POPPINS.medium).fontSize(10.5);
+      const rowH = 24 + Math.max(...row.map((f) => doc.heightOfString(f.value, { width: colW, lineGap: 2 })));
+      ensure(rowH + 16);
+      const top = doc.y;
+      row.forEach((f, col) => {
+        const x = M + col * (colW + gap);
+        doc.moveTo(x, top).lineTo(x + colW, top).lineWidth(2.5).strokeColor(TEAL_500).stroke();
+        doc.font(POPPINS.bold).fontSize(7).fillColor(TEAL_700).text(f.label.toUpperCase(), x, top + 10, { width: colW, characterSpacing: 1.2 });
+        doc.font(POPPINS.medium).fontSize(10.5).fillColor(INK).text(f.value, x, top + 22, { width: colW, lineGap: 2 });
+      });
+      doc.y = top + rowH + 16;
     }
   }
 

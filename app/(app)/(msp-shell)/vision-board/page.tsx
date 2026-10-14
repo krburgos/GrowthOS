@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { VisionPage } from "@/components/vision-board/vision-page";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { icpFromQuestionnaire } from "@/lib/vision-board/icp";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Vision Board — GrowthMission" };
@@ -29,13 +30,15 @@ export default async function VisionBoardPage() {
   if (!user || !user.account_id) return null;
 
   const supabase = await createClient();
-  const [{ data: response }, { data: account }] = await Promise.all([
+  const [{ data: response }, { data: account }, { data: questionnaire }] = await Promise.all([
     supabase
       .from("vision_board_responses")
       .select("answers, completed_at")
       .eq("account_id", user.account_id)
       .maybeSingle(),
     supabase.from("accounts").select("id, name, logo_url").eq("id", user.account_id).maybeSingle(),
+    // "Who we serve" reads the questionnaire's ICP (client-confirmed, 2026-10-14).
+    supabase.from("growth_questionnaire_responses").select("answers").eq("account_id", user.account_id).maybeSingle(),
   ]);
 
   if (!account) return null;
@@ -44,6 +47,7 @@ export default async function VisionBoardPage() {
   return (
     <main className="mx-auto w-full max-w-[1200px] flex-1 p-4 md:p-8">
       <VisionPage
+        icp={icpFromQuestionnaire((questionnaire?.answers as Record<string, unknown>) ?? {})}
         account={account}
         answers={(response.answers as Record<string, string | string[] | null>) ?? {}}
         canEdit={EDIT_ROLES.includes(user.role)}

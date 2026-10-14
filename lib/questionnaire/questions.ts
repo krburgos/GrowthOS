@@ -1,16 +1,40 @@
-export type QuestionType = "number" | "text" | "yesno" | "select" | "scale";
+/**
+ * "multi", "rank" and "list" arrived with the Ideal Customer Profile
+ * (client-confirmed, 2026-10-14, approved mockup "ICP Questionnaire
+ * Steps"): tick-any chips, a pick-up-to-N ranking, and N short boxes. All
+ * three save a string array under the question's key.
+ */
+export type QuestionType = "number" | "text" | "yesno" | "select" | "scale" | "multi" | "rank" | "list";
 
 export interface QuestionDef {
   key: string;
   label: string;
   type: QuestionType;
   options?: string[];
+  /** Smaller line under the label, as the source worksheet prints it. */
+  hint?: string;
+  /** Plain-words explanation behind an info tooltip beside the label. */
+  tip?: string;
+  /** multi/rank: an "Others:" box, saved as `${key}_other`. Counts toward answered. */
+  other?: boolean;
+  /** multi: ticking this option opens a box to type it, saved as `${key}_other` (e.g. "Other" decision-maker). */
+  otherOption?: string;
+  /** multi: a value box tied to one option, e.g. "Total number of Users you can support". */
+  detail?: { option: string; key: string; type: "number" | "text"; label: string };
+  /** rank: how many may be ranked. list: how many boxes. */
+  max?: number;
+  /** text: a taller box for a paragraph. */
+  long?: boolean;
 }
 
 export interface SectionDef {
   key: string;
   name: string;
-  icon: "building" | "users" | "target" | "megaphone" | "magnet" | "globe" | "grad" | "gear";
+  icon: "building" | "users" | "target" | "megaphone" | "magnet" | "globe" | "grad" | "gear" | "crosshair" | "user" | "briefcase" | "message" | "signal";
+  /** Which half of the questionnaire a section belongs to. */
+  part: "growth" | "icp";
+  /** A line shown above the questions. */
+  intro?: string;
   questions: QuestionDef[];
 }
 
@@ -30,6 +54,7 @@ export const QUESTIONNAIRE_SECTIONS: SectionDef[] = [
     key: "overview",
     name: "Company Overview",
     icon: "building",
+    part: "growth",
     questions: [
       { key: "overview_locations", label: "How many locations do you manage?", type: "number" },
       { key: "overview_employees", label: "How many employees in your organization?", type: "number" },
@@ -45,6 +70,7 @@ export const QUESTIONNAIRE_SECTIONS: SectionDef[] = [
     key: "sales_team",
     name: "Sales Team & Structure",
     icon: "users",
+    part: "growth",
     questions: [
       { key: "sales_team_count", label: "How many sales professionals are being managed?", type: "number" },
       { key: "sales_team_planned_hires", label: "How many sales professionals are you planning to hire?", type: "number" },
@@ -60,6 +86,7 @@ export const QUESTIONNAIRE_SECTIONS: SectionDef[] = [
     key: "sales_strategy",
     name: "Sales Strategy & Execution",
     icon: "target",
+    part: "growth",
     questions: [
       { key: "strategy_documented_plan", label: "Do you have a documented sales plan?", type: "yesno" },
       { key: "strategy_swot", label: "Have you ever conducted a SWOT of your Sales Organization or Sales Process?", type: "yesno" },
@@ -81,6 +108,7 @@ export const QUESTIONNAIRE_SECTIONS: SectionDef[] = [
     key: "marketing",
     name: "Marketing Systems & Campaigns",
     icon: "megaphone",
+    part: "growth",
     questions: [
       { key: "marketing_tried_outside_help", label: "Have you tried an outside sales, marketing, coach and/or consultant?", type: "yesno" },
       { key: "marketing_outside_help_score", label: "Outside coach or marketing score 1 to 4.", type: "scale" },
@@ -98,6 +126,7 @@ export const QUESTIONNAIRE_SECTIONS: SectionDef[] = [
     key: "leadgen",
     name: "Lead Generation & CRM",
     icon: "magnet",
+    part: "growth",
     questions: [
       { key: "leadgen_mqc_list_size", label: "How large is your MQC (Marketing Qualified Contacts) list?", type: "number" },
       { key: "leadgen_mql_count", label: "How many MQLs (Marketing Qualified Leads) do you have?", type: "number" },
@@ -113,6 +142,7 @@ export const QUESTIONNAIRE_SECTIONS: SectionDef[] = [
     key: "digital",
     name: "Digital Presence & Content",
     icon: "globe",
+    part: "growth",
     questions: [
       { key: "digital_webinars", label: "Are you conducting webinars?", type: "yesno" },
       { key: "digital_uses_linkedin", label: "Are you using LinkedIn?", type: "yesno" },
@@ -133,6 +163,7 @@ export const QUESTIONNAIRE_SECTIONS: SectionDef[] = [
     key: "training",
     name: "Training & Development",
     icon: "grad",
+    part: "growth",
     questions: [
       { key: "training_sales_training_frequency", label: "How often are you conducting sales training (not vendor training) for sales professionals?", type: "text" },
       { key: "training_leadership_training_frequency", label: "How often is leadership training conducted for the sales organization?", type: "text" },
@@ -144,6 +175,7 @@ export const QUESTIONNAIRE_SECTIONS: SectionDef[] = [
     key: "operations",
     name: "Operations & Support",
     icon: "gear",
+    part: "growth",
     questions: [
       { key: "ops_csr_roadmap", label: "Do you use a CSR Client Solution roadmap/heatmap?", type: "yesno" },
       { key: "ops_business_reviews", label: "Do you do regularly scheduled business reviews?", type: "yesno" },
@@ -157,16 +189,191 @@ export const QUESTIONNAIRE_SECTIONS: SectionDef[] = [
       { key: "ops_clear_quotas_coaching", label: "Do you have clear activity and sales quotas and actively coach your team?", type: "yesno" },
     ],
   },
+  // ---- Part 2: Ideal Customer Profile -----------------------------------
+  // Client-confirmed (2026-10-14, approved mockup "ICP Questionnaire
+  // Steps"): the SniperLeads Onboarding Form's ICP Worksheet, word for word,
+  // as five steps after the original eight. Required like the rest: Export
+  // PDF unlocks at all 94. The worksheet's brochure pages stay out.
+  {
+    key: "icp_target",
+    name: "Target Companies",
+    icon: "crosshair",
+    part: "icp",
+    intro: "The ICP litmus test: “They are who we want to do business with and when given the opportunity will choose our MSP.”",
+    questions: [
+      {
+        key: "icp_industries",
+        label: "Industries preferred",
+        hint: "Rank your top 3: click in order, 1 = greatest.",
+        type: "rank",
+        max: 3,
+        other: true,
+        options: ["Agriculture", "Airlines/Aviation", "Healthcare", "Finance and Accounting", "Manufacturing", "Legal", "Construction", "Nonprofit", "SLED (State, Local and Education)", "Government Contractors", "Design"],
+      },
+      {
+        key: "icp_company_size",
+        label: "Company size by employee (user) count",
+        type: "multi",
+        options: ["Less than 10", "11-20", "21-35", "36-75", "76-200", "Above 200"],
+      },
+      { key: "icp_locations", label: "Location coverage area(s)", hint: "City, state, region, zip codes or service radius.", type: "text" },
+    ],
+  },
+  {
+    key: "icp_people_tech",
+    name: "Decision Makers & Technology",
+    icon: "user",
+    part: "icp",
+    questions: [
+      {
+        key: "icp_decision_makers",
+        label: "Primary decision-makers",
+        type: "multi",
+        options: ["CEO", "Owner", "COO", "CIO", "CTO", "IT Director", "Other"],
+        otherOption: "Other",
+      },
+      {
+        key: "icp_it_environment",
+        label: "Current IT environment",
+        type: "multi",
+        other: true,
+        options: ["Has Managed Services", "Outsourced IT", "IT Staff"],
+      },
+      { key: "icp_software_stack", label: "Software stack", hint: "Microsoft 365, Azure, VMware, etc.", type: "text" },
+      { key: "icp_pain_points", label: "Pain points", hint: "Outdated systems, compliance gaps, lack of IT staff.", type: "text" },
+    ],
+  },
+  {
+    key: "icp_needs",
+    name: "Business Needs & Lead Type",
+    icon: "briefcase",
+    part: "icp",
+    questions: [
+      { key: "icp_compliance", label: "Compliance requirements", hint: "HIPAA, GDPR, SOC 2, etc.", type: "text" },
+      {
+        key: "icp_growth_stage",
+        label: "Growth stage",
+        hint: "Startup, SMB, mid-market, scaling.",
+        tip: "How far along your ideal client's business is: a new startup, an established small or mid-size business (SMB), a larger mid-market company, or one that is growing fast (scaling).",
+        type: "text",
+      },
+      { key: "icp_budget", label: "Budget range for IT services", type: "text" },
+      {
+        key: "icp_lead_types",
+        label: "What type of leads do you desire?",
+        hint: "Services need.",
+        type: "multi",
+        options: [
+          "Managed Services (MRR)",
+          "Cyber Security (MRR)",
+          "Cyber Security Only (MRR)",
+          "Assessments (free leads)",
+          "Projects (free leads)",
+          "Block of Hours (free leads)",
+          "Products HW, SW, SaaS (free leads)",
+        ],
+      },
+      { key: "icp_competitors", label: "Competition — include your top 5", type: "list", max: 5 },
+    ],
+  },
+  {
+    key: "icp_msp",
+    name: "Your MSP & Messaging",
+    icon: "message",
+    part: "icp",
+    questions: [
+      { key: "icp_value_prop", label: "Pain points & value proposition — how are you better or different?", type: "text", long: true },
+      {
+        key: "icp_challenges",
+        label: "Common challenges your target audience faces",
+        type: "multi",
+        other: true,
+        options: [
+          "Poor communication with current provider",
+          "Poor service from our current provider",
+          "We have outgrown our current provider",
+          "Our MSP has outgrown us",
+        ],
+      },
+      {
+        key: "icp_how_address",
+        label: "How do you address the above challenges?",
+        type: "multi",
+        other: true,
+        options: ["Skills/bench depth - Employee Technicians count", "Years in business", "Total number of Users you can support"],
+        detail: { option: "Total number of Users you can support", key: "icp_how_address_users", type: "number", label: "Total number of Users you can support" },
+      },
+      { key: "icp_key_messages", label: "Key messages or offers to include", type: "text", long: true },
+      { key: "icp_dos_donts", label: "Important DOs and DON'Ts in messaging", type: "text", long: true },
+      {
+        key: "icp_special_messaging",
+        label: "Do you have any special or unique messaging that you would like us to share and incorporate into the marketing strategy?",
+        type: "text",
+        long: true,
+      },
+    ],
+  },
+  {
+    key: "icp_intent",
+    name: "Intent Topics",
+    icon: "signal",
+    part: "icp",
+    questions: [
+      {
+        key: "icp_intent_topics",
+        label: "Which topics indicate buying interest or strong intent?",
+        hint: "e.g., IT Management.",
+        type: "multi",
+        options: [
+          "Cybersecurity & Compliance",
+          "Managed cybersecurity services",
+          "HIPAA compliance",
+          "SOC 2",
+          "Zero Trust frameworks",
+          "Cloud Migration & Multi-Cloud Management",
+          "Co-Managed IT Services",
+          "Remote Monitoring & Automation",
+          "Business Continuity & Disaster Recovery",
+          "Industry-Specific IT Solutions",
+          "Pricing & Cost Transparency",
+          "Emerging Tech",
+          "AI Integration",
+          "Compliance & Regulatory Readiness - GDPR, CCPA, PCI DSS compliance, audit readiness",
+          "Local IT Support",
+        ],
+        detail: { option: "Industry-Specific IT Solutions", key: "icp_intent_industry_specific", type: "text", label: "Industry-Specific IT Solutions" },
+      },
+    ],
+  },
 ];
 
 export const TOTAL_QUESTION_COUNT = QUESTIONNAIRE_SECTIONS.reduce((sum, s) => sum + s.questions.length, 0);
+
+/** A string array (multi, rank, list) as saved, or [] for anything else. */
+export function arrayAnswer(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.trim() !== "") : [];
+}
+
+/**
+ * Whether one question counts as answered. A tick list or ranking counts
+ * once anything is picked or its typed box is filled; a list once any box
+ * has something in it (client-confirmed, 2026-10-14).
+ */
+export function isAnswered(q: QuestionDef, answers: Record<string, unknown>): boolean {
+  const v = answers[q.key];
+  if (q.type === "multi" || q.type === "rank" || q.type === "list") {
+    if (arrayAnswer(v).length > 0) return true;
+    const other = answers[`${q.key}_other`];
+    return typeof other === "string" && other.trim() !== "";
+  }
+  return v !== null && v !== undefined && v !== "";
+}
 
 export function countAnswered(answers: Record<string, unknown>): number {
   let count = 0;
   for (const section of QUESTIONNAIRE_SECTIONS) {
     for (const q of section.questions) {
-      const v = answers[q.key];
-      if (v !== null && v !== undefined && v !== "") count++;
+      if (isAnswered(q, answers)) count++;
     }
   }
   return count;

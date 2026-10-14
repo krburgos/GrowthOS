@@ -1,6 +1,8 @@
 import PDFDocument from "pdfkit";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getTargets } from "@/lib/advocate-dash/queries";
+import { ADVOCATE_DASH_SLUG, targetSummary } from "@/lib/advocate-dash/targets";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { currentQuarter } from "@/lib/growth-mission/hours";
 import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
@@ -21,6 +23,10 @@ import { createClient } from "@/lib/supabase/server";
  * Poppins is the brand font for every GrowthMission PDF and its TTFs are read
  * from disk, so this route stays listed under `outputFileTracingIncludes`
  * in next.config.ts. The layout lives in lib/pdf/status-report-doc.ts.
+ *
+ * Client-confirmed (2026-10-14, "PDF Exports Refresh"): the masthead says
+ * "Discipline N of 17", and AdvocateDash counts drop-bys the way its card
+ * on screen does, read through the same getTargets/targetSummary.
  */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -37,11 +43,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const quarter = currentQuarter();
   const supabase = await createClient();
-  const [step, mission, tasks, { data: account }] = await Promise.all([
+  const [step, mission, tasks, { data: account }, targets] = await Promise.all([
     getStepDetail(user.account_id, slug),
     getMissionData(user.account_id, quarter),
     getTasksForStep(user.account_id, slug),
     supabase.from("accounts").select("name").eq("id", user.account_id).maybeSingle(),
+    slug === ADVOCATE_DASH_SLUG ? getTargets(user.account_id) : Promise.resolve(null),
   ]);
 
   if (!step) {
@@ -59,7 +66,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   renderStatusReport(doc, {
     accountName: account?.name ?? "GrowthMission Account",
     stepTitle: step.title,
-    phaseTitle: `Step ${shape.number} of ${PLAYBOOK_STEPS.length}`,
+    phaseTitle: `Discipline ${shape.number} of ${PLAYBOOK_STEPS.length}`,
     quarterLabel: `${quarter.label} · ${quarter.range}`,
     summary: step.statusReportSummary,
     stats: step.statusReportStats,
@@ -69,6 +76,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       committed: stepHours?.committed ?? 0,
       completed: stepHours?.completed ?? 0,
     },
+    dropbys: targets ? targetSummary(targets) : undefined,
   });
 
   doc.end();

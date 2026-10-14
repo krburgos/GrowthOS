@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { registerPoppins } from "@/lib/pdf/poppins";
 import { renderVisionBoard, type VisionAnswers } from "@/lib/pdf/vision-board-doc";
+import { icpFromQuestionnaire } from "@/lib/vision-board/icp";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -30,9 +31,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing account_id." }, { status: 400 });
   }
 
-  const [{ data: response }, { data: account }] = await Promise.all([
+  const [{ data: response }, { data: account }, { data: questionnaire }] = await Promise.all([
     supabase.from("vision_board_responses").select("answers").eq("account_id", accountId).maybeSingle(),
     supabase.from("accounts").select("name, logo_url").eq("id", accountId).maybeSingle(),
+    // "Who we serve" reads the questionnaire's ICP (client-confirmed, 2026-10-14).
+    supabase.from("growth_questionnaire_responses").select("answers").eq("account_id", accountId).maybeSingle(),
   ]);
 
   if (!response) {
@@ -60,7 +63,13 @@ export async function GET(request: NextRequest) {
   doc.on("data", (c) => chunks.push(c));
   const done = new Promise<Buffer>((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
 
-  renderVisionBoard(doc, name, (response.answers ?? {}) as VisionAnswers, logo);
+  renderVisionBoard(
+    doc,
+    name,
+    (response.answers ?? {}) as VisionAnswers,
+    logo,
+    icpFromQuestionnaire((questionnaire?.answers as Record<string, unknown>) ?? {})
+  );
 
   doc.end();
   const buffer = await done;

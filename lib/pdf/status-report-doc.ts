@@ -8,8 +8,10 @@ import {
   PRIORITIES,
   PRIORITY_LABEL,
   PRIORITY_MEANING,
+  ORDER_TYPE_LABEL,
   TASK_STATE_LABEL,
   byPosition,
+  orderType,
   rankOrders,
   type Task,
 } from "@/lib/growth-mission/tasks";
@@ -45,9 +47,14 @@ export interface StatusReportDoc {
   stats: KpiStat[];
   tasks: Task[];
   hours: { required: number; committed: number; completed: number };
+  /** AdvocateDash only: it is measured in drop-bys, so the strip counts targets instead of hours. */
+  dropbys?: { targets: number; scheduled: number; completed: number };
 }
 
 const PRIORITY_BAR: Record<string, string> = { high: RED_500, medium: AMBER_400, low: RULE };
+/** Order type tags, the same three the Mission Orders table shows. */
+const TYPE_BG: Record<string, string> = { internal: "#e7ecf3", outsourced: "#e5f2f5", growthmission: NAVY_900 };
+const TYPE_INK: Record<string, string> = { internal: "#113c7b", outsourced: "#056a80", growthmission: WHITE };
 const PRIORITY_INK: Record<string, string> = { high: RED_700, medium: AMBER_800, low: MUTED };
 
 /**
@@ -80,7 +87,12 @@ export function renderStatusReport(doc: InstanceType<typeof PDFDocument>, data: 
   const W = doc.page.width - M * 2;
 
   // ---- Masthead ----------------------------------------------------
-  doc.rect(0, 0, doc.page.width, 150).fill(NAVY_950);
+  // Measured, not fixed: a two-line discipline name ("Email Campaigning &
+  // Nurture Sequences") pushed the subtitle off the navy at a fixed 150.
+  doc.font(POPPINS.bold).fontSize(24);
+  const titleH = doc.heightOfString(data.stepTitle, { width: W });
+  const bandH = Math.max(150, 60 + titleH + 40);
+  doc.rect(0, 0, doc.page.width, bandH).fill(NAVY_950);
 
   // Top-right, on its own white chip: half the wordmark is #113c7b,
   // which measures 1.64:1 against this navy and would vanish.
@@ -99,12 +111,19 @@ export function renderStatusReport(doc: InstanceType<typeof PDFDocument>, data: 
   });
 
   // ---- Hours strip -------------------------------------------------
-  let y = 174;
-  const cells: [string, string][] = [
-    ["Required this quarter", `${Math.round(data.hours.required)} hrs`],
-    ["Committed this quarter", `${Math.round(data.hours.committed)} hrs`],
-    ["Completed this quarter", `${Math.round(data.hours.completed)} hrs`],
-  ];
+  let y = bandH + 24;
+  // AdvocateDash shows its drop-bys, as its card on screen does (2026-10-14).
+  const cells: [string, string][] = data.dropbys
+    ? [
+        ["Targets", String(data.dropbys.targets)],
+        ["Scheduled", String(data.dropbys.scheduled)],
+        ["Completed", String(data.dropbys.completed)],
+      ]
+    : [
+        ["Required this quarter", `${Math.round(data.hours.required)} hrs`],
+        ["Committed this quarter", `${Math.round(data.hours.committed)} hrs`],
+        ["Completed this quarter", `${Math.round(data.hours.completed)} hrs`],
+      ];
   const cw = W / 3;
   doc.roundedRect(M, y, W, 56, 6).fill(TINT);
   cells.forEach(([label, value], i) => {
@@ -213,15 +232,27 @@ export function renderStatusReport(doc: InstanceType<typeof PDFDocument>, data: 
           doc.text(task.detail, M + 14, doc.y + 2, { width: textW });
         }
 
-        // Right rail: who has it, then state · hours (· credits) · due.
+        // Right rail: the order's type tag and who has it, then state ·
+        // hours (· credits) · due. The tag matches the Mission Orders table
+        // (client-confirmed, 2026-10-14); a GrowthMission order has no person.
         const rx = M + W - 150;
-        const owner = task.delegated ? "GrowthMission" : (task.assignee?.name ?? null);
-        doc.font(POPPINS.medium).fontSize(8.5).fillColor(owner ? MUTED : FAINT);
-        doc.text(owner ?? "Unassigned", rx, y + 9, {
-          width: 146,
-          align: "right",
-          lineBreak: false,
-        });
+        const type = orderType(task);
+        const owner = type === "growthmission" ? null : (task.assignee?.name ?? null);
+        const right = rx + 146;
+        let nameW = 0;
+        if (owner || !type) {
+          doc.font(POPPINS.medium).fontSize(8.5).fillColor(owner ? MUTED : FAINT);
+          nameW = Math.min(doc.widthOfString(owner ?? "Unassigned"), type ? 96 : 146);
+          doc.text(owner ?? "Unassigned", right - nameW, y + 9, { width: nameW, lineBreak: false, ellipsis: true });
+        }
+        if (type) {
+          const label = ORDER_TYPE_LABEL[type].toUpperCase();
+          doc.font(POPPINS.bold).fontSize(6.5);
+          const tw = doc.widthOfString(label, { characterSpacing: 0.3 }) + 10;
+          const tx = right - nameW - (nameW ? 5 : 0) - tw;
+          doc.roundedRect(tx, y + 8, tw, 12, 3).fill(TYPE_BG[type]);
+          doc.fillColor(TYPE_INK[type]).text(label, tx + 5, y + 10.6, { characterSpacing: 0.3, lineBreak: false });
+        }
 
         const stateInk = task.state === "complete" ? GREEN_600 : task.state === "on_hold" ? FAINT : TEAL_700;
         const due = task.due_date

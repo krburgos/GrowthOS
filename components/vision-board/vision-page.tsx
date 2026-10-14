@@ -2,6 +2,7 @@ import { Download, Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { AuroraArt, FieldArt, RingArt } from "@/components/vision-board/vision-art";
+import { hasIcpProfile, icpFacts, type IcpAnswers } from "@/lib/vision-board/icp";
 
 type Answers = Record<string, string | string[] | null>;
 
@@ -35,7 +36,8 @@ export interface VisionAccount {
  *   what the page leads with.
  * - The Ideal Customer Profile block from the old summary is dropped. It
  *   was read-only from the Solution Questionnaire and added nothing to
- *   the narrative.
+ *   the narrative. (It returned on 2026-10-14 as "Who we serve", once the
+ *   questionnaire carried a full ICP; see that band below.)
  * - Not shareable outside the app — the PDF is the way it leaves. A
  *   public link would be the client portal, out of Phase 1 (PRD §10).
  *
@@ -47,10 +49,13 @@ export function VisionPage({
   account,
   answers,
   canEdit,
+  icp,
 }: {
   account: VisionAccount;
   answers: Answers;
   canEdit: boolean;
+  /** The questionnaire's ICP, for the "Who we serve" band. */
+  icp: IcpAnswers;
 }) {
   const t = (key: string) => {
     const v = answers[key];
@@ -175,6 +180,42 @@ export function VisionPage({
               <Statement label="And does this better than most">
                 <p className="max-w-[54ch] text-h3 font-medium leading-relaxed text-neutral-800">{niche}</p>
               </Statement>
+            </div>
+          )}
+        </Band>
+      )}
+
+      {/* ---------------- Who we serve ----------------
+          Client-confirmed (2026-10-14, "PDF Exports Refresh"): the ICP from
+          the Solution Questionnaire is back on the page now that it is a
+          full profile. The 2026-09-22 note above dropped the old three-answer
+          block because it "added nothing to the narrative"; this one does.
+          The PDF carries the same page, so the two still match. */}
+      {hasIcpProfile(icp) && (
+        <Band tone="tint">
+          <Eyebrow>Who {account.name} serves</Eyebrow>
+          <h2 className="text-h1 font-semibold tracking-tight text-primary-900">The clients we are built for.</h2>
+          {icp.targetMarket && (
+            <p className="mt-4 max-w-[60ch] text-body text-neutral-700 md:text-h4 md:font-normal">{icp.targetMarket}</p>
+          )}
+          {icp.industries.length > 0 && (
+            <ol className="mt-7 max-w-2xl border-t border-neutral-200">
+              {icp.industries.map((industry, i) => (
+                <li key={industry} className="flex items-center gap-4 border-b border-neutral-200 py-3">
+                  <span className="w-9 text-h3 font-bold tabular-nums text-secondary-500">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="text-h3 font-semibold text-primary-900">{industry}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {icpFacts(icp).length > 0 && (
+            <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {icpFacts(icp).map((f) => (
+                <div key={f.label} className="border-t-[3px] border-secondary-500 pt-4">
+                  <span className="text-caption font-bold uppercase tracking-[0.14em] text-secondary-700">{f.label}</span>
+                  <p className="mt-2 text-body font-medium leading-relaxed text-neutral-800">{f.value}</p>
+                </div>
+              ))}
             </div>
           )}
         </Band>
