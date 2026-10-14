@@ -177,6 +177,44 @@ export async function getMissionData(accountId: string, quarter: QuarterInfo): P
   };
 }
 
+export interface NavSummary {
+  credits: MissionCapacity["credits"];
+  /** Open mission orders past their due date, for the Command Center link's badge. */
+  overdueOrders: number;
+}
+
+/**
+ * What the app shell shows on every page (client-confirmed, 2026-10-14,
+ * "Navigation and Credits" B): the top bar's credits pill and the
+ * sidebar's overdue count. Credits come from the same missionCapacity()
+ * as Mission Capacity, so the two never disagree; credits don't depend
+ * on the roster, so it isn't read here. Two small queries per page.
+ */
+export async function getNavSummary(accountId: string, quarter: QuarterInfo): Promise<NavSummary> {
+  const supabase = await createClient();
+  const [{ data: taskRows }, { data: allotmentRows }] = await Promise.all([
+    supabase
+      .from("growth_mission_tasks")
+      .select("step_slug, hours, state, due_date, completed_at, delegated")
+      .eq("account_id", accountId)
+      .is("archived_at", null),
+    supabase.from("account_credit_allotments").select("effective_month, monthly_credits").eq("account_id", accountId),
+  ]);
+
+  const tasks: CapacityTask[] = (
+    (taskRows ?? []) as (Omit<CapacityTask, "hours"> & { hours: number | string })[]
+  ).map((t) => ({ ...t, hours: Number(t.hours) }));
+  const allotments: CreditAllotment[] = (
+    (allotmentRows ?? []) as { effective_month: string; monthly_credits: number | string }[]
+  ).map((a) => ({ effective_month: a.effective_month, monthly_credits: Number(a.monthly_credits) }));
+
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    credits: missionCapacity(tasks, [], allotments, quarter).credits,
+    overdueOrders: tasks.filter((t) => t.state !== "complete" && t.due_date !== null && t.due_date < today).length,
+  };
+}
+
 /**
  * Mission Progress (client-confirmed, 2026-10-13): live counts per contact
  * status and opportunity stage, each placed in its box by the fixed rules

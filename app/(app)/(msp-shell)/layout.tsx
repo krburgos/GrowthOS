@@ -6,6 +6,8 @@ import { Sidebar } from "@/components/shell/sidebar";
 import { TopBar } from "@/components/shell/top-bar";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
 import { SIDEBAR_ACCESS } from "@/lib/auth/nav-permissions";
+import { currentQuarter } from "@/lib/growth-mission/hours";
+import { getNavSummary } from "@/lib/growth-mission/queries";
 import { countAnswered } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
 import { countAnswered as countVisionBoardAnswered } from "@/lib/vision-board/sections";
@@ -52,7 +54,7 @@ export default async function MspShellLayout({ children }: { children: React.Rea
   if (needsAccountSelection(user.role) && !user.account_id) redirect("/cro");
 
   const supabase = await createClient();
-  const [{ data: questionnaireResponse }, { data: visionBoardResponse }] = await Promise.all([
+  const [{ data: questionnaireResponse }, { data: visionBoardResponse }, nav] = await Promise.all([
     supabase
       .from("growth_questionnaire_responses")
       .select("answers, completed_at")
@@ -63,6 +65,7 @@ export default async function MspShellLayout({ children }: { children: React.Rea
       .select("answers, completed_at")
       .eq("account_id", user.account_id)
       .maybeSingle(),
+    getNavSummary(user.account_id!, currentQuarter()),
   ]);
   const questionnaireAnsweredCount = countAnswered((questionnaireResponse?.answers as Record<string, unknown>) ?? {});
   const questionnaireComplete = !!questionnaireResponse?.completed_at;
@@ -77,12 +80,13 @@ export default async function MspShellLayout({ children }: { children: React.Rea
       <div className="flex flex-1 flex-col">
         {user.viewingAccountName && <CroLeaderBanner companyName={user.viewingAccountName} />}
         <div className="flex min-h-0 flex-1">
-          <Sidebar access={SIDEBAR_ACCESS[user.role]} />
+          <Sidebar access={SIDEBAR_ACCESS[user.role]} overdueOrders={nav.overdueOrders} />
           <div className="flex min-w-0 flex-1 flex-col">
             <TopBar
               fullName={user.full_name}
               access={SIDEBAR_ACCESS[user.role]}
               accountId={user.account_id!}
+              credits={nav.credits}
               questionnaireAnsweredCount={questionnaireAnsweredCount}
               questionnaireComplete={questionnaireComplete}
               visionBoardAnsweredCount={visionBoardAnsweredCount}

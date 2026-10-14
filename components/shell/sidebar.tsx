@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ComponentType } from "react";
+import { Fragment, useEffect, useState, type ComponentType } from "react";
 
 import { useMobileNav } from "@/components/shell/mobile-nav";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -32,6 +32,8 @@ export interface NavItem {
    * highlighted across all of them). */
   matchPrefix?: string;
   icon: ComponentType<{ className?: string }>;
+  /** The sidebar section it is listed under (client-confirmed, 2026-10-14). */
+  group: NavGroup;
   /**
    * Shown only below `lg`. My Visits is the Advocate's field screen
    * (client-confirmed, 2026-10-05) — on a desktop the drop-by table on the
@@ -45,29 +47,43 @@ export interface NavItem {
 /** Exported so the command palette (§8.10) can reuse the exact same
  * destination list rather than maintaining a second, drift-prone copy. */
 export const NAV_ITEMS: NavItem[] = [
-  { section: "dashboard", label: "Headquarters", href: "/headquarters", icon: Landmark },
-  { section: "growthMission", label: "Command Center", href: "/growth-mission", icon: LayoutGrid },
+  { section: "dashboard", label: "Headquarters", href: "/headquarters", icon: Landmark, group: "mission" },
+  { section: "growthMission", label: "Command Center", href: "/growth-mission", icon: LayoutGrid, group: "mission" },
   {
     section: "myVisits",
     label: "My Visits",
     href: "/my-visits",
     icon: MapPin,
+    group: "mission",
     mobileOnly: true,
   },
-  { section: "contacts", label: "Contacts", href: "/contacts", icon: Users },
-  { section: "companies", label: "Companies", href: "/companies", icon: Building2 },
-  { section: "opportunities", label: "Opportunities", href: "/opportunities", icon: Target },
-  { section: "lists", label: "Lists", href: "/lists", icon: ListChecks },
-  { section: "campaigns", label: "Campaigns", href: "/campaigns", icon: Mail },
-  { section: "reports", label: "Reports", href: "/reports", icon: BarChart3 },
+  { section: "contacts", label: "Contacts", href: "/contacts", icon: Users, group: "crm" },
+  { section: "companies", label: "Companies", href: "/companies", icon: Building2, group: "crm" },
+  { section: "opportunities", label: "Opportunities", href: "/opportunities", icon: Target, group: "crm" },
+  { section: "lists", label: "Lists", href: "/lists", icon: ListChecks, group: "crm" },
+  { section: "campaigns", label: "Campaigns", href: "/campaigns", icon: Mail, group: "outreach" },
+  { section: "reports", label: "Reports", href: "/reports", icon: BarChart3, group: "outreach" },
   {
     section: "settings",
     label: "Settings",
     href: "/settings",
     matchPrefix: "/settings",
     icon: Settings,
+    group: "settings",
   },
 ];
+
+/**
+ * Sidebar sections (client-confirmed, 2026-10-14, approved mockup
+ * "Navigation and Credits" B). Settings has no heading: it sits on its own
+ * at the foot of the rail, above the collapse toggle.
+ */
+export type NavGroup = "mission" | "crm" | "outreach" | "settings";
+const GROUP_LABEL: Record<Exclude<NavGroup, "settings">, string> = {
+  mission: "Mission",
+  crm: "CRM",
+  outreach: "Outreach",
+};
 
 const SIDEBAR_COLLAPSED_KEY = "growthmission.sidebar.collapsed";
 
@@ -101,7 +117,14 @@ const SIDEBAR_COLLAPSED_KEY = "growthmission.sidebar.collapsed";
  * desktop-only, because a drawer is either open or shut — a 64px rail
  * inside a drawer would be a rail nobody asked for.
  */
-export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
+export function Sidebar({
+  access,
+  overdueOrders = 0,
+}: {
+  access: Record<NavSection, NavAccess>;
+  /** Open mission orders past due, shown on Command Center. Nothing overdue, no badge. */
+  overdueOrders?: number;
+}) {
   const [collapsed, setCollapsed] = useState(false);
   const { open, close } = useMobileNav();
 
@@ -132,10 +155,11 @@ export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
           collapsed ? "w-[var(--sidebar-width-collapsed)]" : "w-[var(--sidebar-width-expanded)]"
         )}
       >
-        <NavList access={access} collapsed={collapsed} withTooltips />
+        <NavList access={access} collapsed={collapsed} overdueOrders={overdueOrders} withTooltips />
 
         <div className="mt-auto px-3 pt-2">
-          <div className="mb-2 h-px bg-white/10" />
+          <NavList access={access} collapsed={collapsed} only="settings" withTooltips bare />
+          <div className="my-2 h-px bg-white/10" />
           <button
             type="button"
             onClick={toggle}
@@ -189,7 +213,15 @@ export function Sidebar({ access }: { access: Record<NavSection, NavAccess> }) {
           </div>
           {/* Never collapsed and never tooltip-only: a drawer has the room
               for labels, and touch cannot hover. */}
-          <NavList access={access} collapsed={false} onNavigate={close} includeMobileOnly />
+          <NavList
+            access={access}
+            collapsed={false}
+            overdueOrders={overdueOrders}
+            onNavigate={close}
+            includeMobileOnly
+          />
+          <div className="mx-3 my-2 h-px bg-white/10" />
+          <NavList access={access} collapsed={false} only="settings" onNavigate={close} bare />
         </aside>
       </div>
     </>
@@ -205,19 +237,49 @@ function NavList({
   collapsed,
   withTooltips = false,
   includeMobileOnly = false,
+  overdueOrders = 0,
+  only,
+  bare = false,
   onNavigate,
 }: {
   access: Record<NavSection, NavAccess>;
   collapsed: boolean;
   withTooltips?: boolean;
   includeMobileOnly?: boolean;
+  overdueOrders?: number;
+  /** Render just this group (Settings, at the foot of the rail). Otherwise every group but Settings. */
+  only?: NavGroup;
+  /** No horizontal padding: the caller already pads (the rail's foot). */
+  bare?: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const items = NAV_ITEMS.filter(
+    (item) => (includeMobileOnly || !item.mobileOnly) && (only ? item.group === only : item.group !== "settings")
+  );
 
   return (
-    <nav className="flex flex-col gap-1 px-3">
-      {NAV_ITEMS.filter((item) => includeMobileOnly || !item.mobileOnly).map((item) => {
+    <nav className={cn("flex flex-col gap-1", !bare && "px-3")}>
+      {items.map((item, i) => {
+        // A section heading wherever the group changes. Collapsed, the
+        // words would not fit in 64px, so a hairline stands in for them.
+        const heading =
+          !only && item.group !== "settings" && item.group !== items[i - 1]?.group ? (
+            collapsed ? (
+              <div key={`${item.group}-rule`} aria-hidden="true" className={cn("mx-1.5 h-px bg-white/10", i === 0 ? "mb-1" : "my-2")} />
+            ) : (
+              <div
+                key={`${item.group}-label`}
+                className={cn(
+                  "whitespace-nowrap px-2.5 pb-1 text-[10.5px] font-bold uppercase tracking-[0.08em] text-white/40",
+                  i === 0 ? "pt-0.5" : "pt-3"
+                )}
+              >
+                {GROUP_LABEL[item.group as Exclude<NavGroup, "settings">]}
+              </div>
+            )
+          ) : null;
+        const badge = item.section === "growthMission" && overdueOrders > 0 ? overdueOrders : 0;
         const itemAccess: NavAccess =
           item.section === "dashboard" || item.section === "growthMission" || item.section === "myVisits"
             ? "full"
@@ -242,7 +304,14 @@ function NavList({
                     : "text-white/70 hover:bg-white/10 hover:text-white"
               )}
             >
-              <Icon className="size-5 shrink-0" />
+              <span className="relative shrink-0">
+                <Icon className="size-5" />
+                {/* Collapsed, the count has no room, so a dot says "something
+                    is overdue" and the tooltip carries the number. */}
+                {badge > 0 && collapsed && (
+                  <span className="absolute -right-1 -top-1 size-2 rounded-full border-[1.5px] border-primary-800 bg-warning-400" />
+                )}
+              </span>
               <span
                 className={cn(
                   "whitespace-nowrap text-body-sm font-medium",
@@ -253,6 +322,14 @@ function NavList({
               >
                 {item.label}
               </span>
+              {badge > 0 && !collapsed && (
+                <span
+                  className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-warning-400 px-1.5 text-caption font-bold tabular-nums text-primary-950"
+                  aria-label={`${badge} overdue mission ${badge === 1 ? "order" : "orders"}`}
+                >
+                  {badge}
+                </span>
+              )}
             </span>
           </span>
         );
@@ -265,13 +342,26 @@ function NavList({
           </Link>
         );
 
-        if (!withTooltips || !collapsed) return <div key={item.section}>{link}</div>;
+        if (!withTooltips || !collapsed) {
+          return (
+            <Fragment key={item.section}>
+              {heading}
+              <div>{link}</div>
+            </Fragment>
+          );
+        }
 
         return (
-          <Tooltip key={item.section}>
-            <TooltipTrigger asChild>{link}</TooltipTrigger>
-            <TooltipContent side="right">{item.label}</TooltipContent>
-          </Tooltip>
+          <Fragment key={item.section}>
+            {heading}
+            <Tooltip>
+              <TooltipTrigger asChild>{link}</TooltipTrigger>
+              <TooltipContent side="right">
+                {item.label}
+                {badge > 0 && ` · ${badge} overdue`}
+              </TooltipContent>
+            </Tooltip>
+          </Fragment>
         );
       })}
     </nav>

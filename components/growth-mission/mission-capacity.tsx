@@ -248,9 +248,14 @@ export function MissionCapacity({
 
 /** The band is a navy section of its own, matching MissionProgress exactly; the panels sit inside a block that already has one. */
 function Wrapper({ variant, children }: { variant: "band" | "panels"; children: ReactNode }) {
-  if (variant === "panels") return <div>{children}</div>;
+  // `mission-capacity` is where the top bar's credits pill links to
+  // (client-confirmed, 2026-10-14, "Navigation and Credits" B).
+  if (variant === "panels") return <div id="mission-capacity" className="scroll-mt-4">{children}</div>;
   return (
-    <section className="flex flex-col gap-3 rounded-xl p-4 shadow-lift md:p-5 bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]">
+    <section
+      id="mission-capacity"
+      className="flex scroll-mt-4 flex-col gap-3 rounded-xl p-4 shadow-lift md:p-5 bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]"
+    >
       {children}
     </section>
   );

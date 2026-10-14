@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ClipboardList, Compass } from "lucide-react";
+import { ArrowRight, Bell, ClipboardList, Coins, Compass } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -16,7 +16,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { NavAccess, NavSection } from "@/lib/auth/nav-permissions";
+import type { MissionCapacity } from "@/lib/growth-mission/capacity";
+import { currentQuarter, formatWhole } from "@/lib/growth-mission/hours";
 import { TOTAL_QUESTION_COUNT } from "@/lib/questionnaire/questions";
 import { TOTAL_FIELD_COUNT } from "@/lib/vision-board/sections";
 import { createClient } from "@/lib/supabase/client";
@@ -77,6 +80,7 @@ export function TopBar({
   questionnaireComplete,
   visionBoardAnsweredCount,
   visionBoardComplete,
+  credits,
 }: {
   fullName: string;
   /** Omitted on the CRO Leader's lightweight header (App Flow §4.10) —
@@ -89,6 +93,8 @@ export function TopBar({
   questionnaireComplete?: boolean;
   visionBoardAnsweredCount?: number;
   visionBoardComplete?: boolean;
+  /** The account's credits, for the pill beside the bell. Omitted on the CRO Leader's own header. */
+  credits?: MissionCapacity["credits"];
 }) {
   const router = useRouter();
   const showQuestionnaireItem = !questionnaireComplete && questionnaireAnsweredCount !== undefined;
@@ -133,6 +139,8 @@ export function TopBar({
       )}
 
       <div className="flex items-center gap-1 lg:ml-auto lg:gap-2">
+        {credits && <CreditsPill credits={credits} />}
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -209,5 +217,77 @@ export function TopBar({
         </DropdownMenu>
       </div>
     </header>
+  );
+}
+
+/**
+ * The account's credit balance, beside the bell on every page
+ * (client-confirmed, 2026-10-14, approved mockup "Navigation and Credits"
+ * B). The figures are Mission Capacity's own (getNavSummary runs the same
+ * missionCapacity()), so the pill and the page can never disagree.
+ *
+ * Amber when this quarter's GrowthMission orders need more credits than
+ * are available, the same rule as Mission Capacity's warning. Below `sm`
+ * the top bar is already full, so the pill shrinks to its icon and the
+ * number moves into the popover.
+ */
+function CreditsPill({ credits }: { credits: MissionCapacity["credits"] }) {
+  const set = credits.available !== null;
+  const available = Math.round(credits.available ?? 0);
+  const required = Math.round(credits.required);
+  const short = set && available < required;
+  const label = set ? formatWhole(available) : "—";
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        aria-label={set ? `${label} credits available` : "Credits not set"}
+        className={`inline-flex h-9 items-center gap-2 rounded-full border px-2.5 text-body-sm font-semibold tabular-nums text-primary-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 sm:pl-2.5 sm:pr-3 ${
+          short
+            ? "border-warning-200 bg-warning-100 hover:bg-warning-200"
+            : "border-secondary-100 bg-secondary-50 hover:bg-secondary-100"
+        }`}
+      >
+        <Coins className={`size-[18px] ${short ? "text-warning-800" : "text-secondary-700"}`} />
+        <span className="hidden sm:inline">
+          {label} <span className="font-medium text-neutral-500">credits</span>
+        </span>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="flex w-72 flex-col gap-3 p-3.5">
+        <p className="flex items-baseline justify-between text-body-sm font-semibold text-primary-900">
+          Credits <span className="text-caption font-normal text-neutral-400">{currentQuarter().label}</span>
+        </p>
+        {set ? (
+          <>
+            <dl className="grid grid-cols-3 gap-2">
+              {[
+                ["Available", label],
+                ["Required", formatWhole(required)],
+                ["Used", formatWhole(credits.used)],
+              ].map(([k, v]) => (
+                <div key={k} className="flex flex-col rounded-md bg-neutral-50 px-2 py-1.5">
+                  <dt className="text-caption text-neutral-500">{k}</dt>
+                  <dd className="text-body font-bold tabular-nums text-primary-900">{v}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className={`text-caption ${short ? "font-semibold text-warning-800" : "text-neutral-600"}`}>
+              {short
+                ? `${formatWhole(required - available)} credits short for this quarter's GrowthMission orders.`
+                : "Enough for this quarter's GrowthMission orders."}
+            </p>
+          </>
+        ) : (
+          <p className="text-caption text-neutral-600">CRO Leader hasn&apos;t set credits for this account yet.</p>
+        )}
+        <Link
+          href="/headquarters#mission-capacity"
+          className="inline-flex items-center gap-1 text-body-sm font-semibold text-secondary-700 hover:underline"
+        >
+          Open Mission Capacity
+          <ArrowRight className="size-3.5" />
+        </Link>
+      </PopoverContent>
+    </Popover>
   );
 }
