@@ -211,6 +211,8 @@ Tokens are encrypted application-side (AES-256-GCM, Node.js crypto, key from the
 
 ### 5.3 companies, contact_statuses, contacts
 
+**Client-confirmed addition (2026-10-14, App Flow §4.4 "Contact Detail").** `contacts.notes_updated_at timestamptz` and `contacts.notes_updated_by uuid references users(id) on delete set null` record who last changed a contact's notes and when, for the Notes panel's "Last edited by" line. `stamp_contact_notes()` (before insert, and before update of `notes`) sets both whenever the notes text changes; the editor is `auth.uid()` when that user has a `users` row, otherwise null with the time still recorded. Notes written before this migration (`20261014000004_stage_entered_and_notes_stamp.sql`) show no line until next edited.
+
 ```
 create table companies (
   id uuid primary key default gen_random_uuid(),
@@ -310,6 +312,8 @@ create index list_members_contact_id_idx on list_members(contact_id);
 **Client-confirmed removal — Smart Lists (2026-09-06, `remove_smart_lists` migration):** this table originally carried a `type` (`list_type` enum: `static`/`smart`) and `criteria jsonb` column, and a hybrid smart-list system briefly existed on top of that — see the git history of this section, or the App Flow Document's own superseded text, for the mechanism that was removed. The client's direction: "My customers want to manually add contacts to a list" — no criteria-based/auto-updating list at all, not even as an option. This is a deliberate deviation from PRD §6.3 ("Lists support manual add/remove **and** criteria-based (saved-filter) population") — flagged to the client as a spec contradiction before removing it; they confirmed the removal anyway. `list_members` is now the *only* thing that determines a list's membership, for every list, unconditionally. The migration dropped `compute_smart_list_members()`, the `list_exclusions` table, the `criteria`/`type` columns, and the `list_type` enum, archiving the one existing smart list (a Milestone 7 QA fixture, not real data) rather than converting it.
 
 ### 5.5 opportunity_stages, opportunities, activities
+
+**Client-confirmed addition (2026-10-14, App Flow §4.5).** `opportunities.stage_entered_at timestamptz not null default now()` records when an opportunity entered its current stage, for "N days in this stage" on the Board, the List view, Contact Detail and Company Detail. `stamp_opportunity_stage_entered()` (before insert, and before update of `stage_id`) resets it whenever the stage changes. Past stage dates were never kept, so every existing opportunity starts counting from 2026-10-14 (client-confirmed). Same migration as the contacts notes stamp.
 
 **Client-confirmed deviation (`customizable_opportunity_stages` migration):** replaces the fixed `opportunity_stage` enum struck through in §5.1 with a per-account table, the same customizable shape as `contact_statuses` (§5.3).
 

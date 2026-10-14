@@ -8,8 +8,22 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * whether the user checked rows individually or hit "Select all."
  */
 export type ContactSelectionScope =
-  | { mode: "all-contacts"; accountId: string }
+  | { mode: "all-contacts"; accountId: string; filter?: ContactFilter }
   | { mode: "list"; listId: string };
+
+/**
+ * The Contacts page's view and search (client-confirmed, 2026-10-14). They
+ * travel with the scope so "Select all N" resolves to exactly the N on
+ * screen: without them, select-all-then-Delete under the Hot view would
+ * have archived every contact in the account.
+ */
+export interface ContactFilter {
+  ownerId?: string;
+  createdSince?: string;
+  hot?: boolean;
+  /** Matched against full name and email. */
+  term?: string;
+}
 
 export async function resolveContactIds(
   supabase: SupabaseClient,
@@ -19,12 +33,13 @@ export async function resolveContactIds(
   if (!selection.selectAllMatching) return selection.selectedIds;
 
   if (scope.mode === "all-contacts") {
-    const { data } = await supabase
-      .from("contacts")
-      .select("id")
-      .eq("account_id", scope.accountId)
-      .is("archived_at", null)
-      .limit(5000);
+    let query = supabase.from("contacts").select("id").eq("account_id", scope.accountId).is("archived_at", null);
+    const f = scope.filter;
+    if (f?.ownerId) query = query.eq("owner_id", f.ownerId);
+    if (f?.createdSince) query = query.gte("created_at", f.createdSince);
+    if (f?.hot) query = query.eq("temperature", "hot");
+    if (f?.term) query = query.or(`full_name.ilike.%${f.term}%,email.ilike.%${f.term}%`);
+    const { data } = await query.limit(5000);
     return (data ?? []).map((r) => r.id);
   }
 

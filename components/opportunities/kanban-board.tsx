@@ -9,6 +9,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { Search } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
@@ -24,14 +25,6 @@ export interface BoardOpportunity extends OpportunityCardData {
   closed_at: string | null;
 }
 
-const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-
-function isThisMonth(dateStr: string | null): boolean {
-  if (!dateStr) return false;
-  const d = new Date(dateStr);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-}
 
 /**
  * App Flow §4.5, E1 — Opportunity Board. dnd-kit (Tech Stack Lockfile
@@ -52,6 +45,11 @@ function isThisMonth(dateStr: string | null): boolean {
  * too, not just stage_id, so the stat strip and the card's own
  * probability pill stay correct immediately, before the server
  * round-trip completes.
+ *
+ * Client-confirmed (2026-10-14, "CRM Pages Refresh"): the Open Pipeline /
+ * Weighted Forecast / Won This Month strip is gone. The page now shows
+ * Prospects Value figures above both views, built from the client's
+ * company-size formula, and refreshes after a drag so they follow it.
  */
 export function KanbanBoard({
   stages,
@@ -60,6 +58,7 @@ export function KanbanBoard({
   stages: OpportunityStageRow[];
   opportunities: BoardOpportunity[];
 }) {
+  const router = useRouter();
   const [opportunities, setOpportunities] = useState(initial);
   const [query, setQuery] = useState("");
   const sortedStages = [...stages].sort((a, b) => a.sort_order - b.sort_order);
@@ -96,7 +95,14 @@ export function KanbanBoard({
     setOpportunities((prev) =>
       prev.map((o) =>
         o.id === opportunityId
-          ? { ...o, stage_id: newStageId, win_probability: newStage?.win_probability ?? o.win_probability, closed_at: closedAt }
+          ? {
+              ...o,
+              stage_id: newStageId,
+              win_probability: newStage?.win_probability ?? o.win_probability,
+              closed_at: closedAt,
+              // The database resets this too (stamp_opportunity_stage_entered).
+              stage_entered_at: new Date().toISOString(),
+            }
           : o
       )
     );
@@ -110,24 +116,21 @@ export function KanbanBoard({
     if (error) {
       setOpportunities((prev) => prev.map((o) => (o.id === opportunityId ? previous : o)));
       toast.error(getFriendlyErrorMessage(error));
+      return;
     }
+    router.refresh();
   };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return opportunities;
     return opportunities.filter(
-      (o) => o.contact_name.toLowerCase().includes(q) || (o.company_name ?? "").toLowerCase().includes(q)
+      (o) =>
+        o.contact_name.toLowerCase().includes(q) ||
+        (o.name ?? "").toLowerCase().includes(q) ||
+        (o.company_name ?? "").toLowerCase().includes(q)
     );
   }, [opportunities, query]);
-
-  const stageGroupOf = (stageId: string) => stages.find((s) => s.id === stageId)?.stage_group;
-  const openDeals = filtered.filter((o) => stageGroupOf(o.stage_id) === "open");
-  const openPipeline = openDeals.reduce((sum, o) => sum + (o.value ?? 0), 0);
-  const weightedForecast = openDeals.reduce((sum, o) => sum + (o.value ?? 0) * (o.win_probability / 100), 0);
-  const wonThisMonth = filtered
-    .filter((o) => stageGroupOf(o.stage_id) === "won" && isThisMonth(o.closed_at))
-    .reduce((sum, o) => sum + (o.value ?? 0), 0);
 
   return (
     <div className="flex flex-col gap-4">
@@ -138,25 +141,10 @@ export function KanbanBoard({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search deals…"
+          placeholder="Search opportunity, contact or company"
           className="pl-9"
           aria-label="Search opportunities"
         />
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border border-neutral-200 bg-white p-3.5">
-          <p className="text-h4 font-bold tabular-nums text-primary-900">{currency.format(openPipeline)}</p>
-          <p className="text-caption text-neutral-500">Open Pipeline · {openDeals.length} deals</p>
-        </div>
-        <div className="rounded-lg border border-secondary-100 bg-gradient-to-br from-secondary-50 to-white p-3.5">
-          <p className="text-h4 font-bold tabular-nums text-secondary-800">{currency.format(weightedForecast)}</p>
-          <p className="text-caption text-neutral-500">Weighted Forecast (probability-adjusted)</p>
-        </div>
-        <div className="rounded-lg border border-neutral-200 bg-white p-3.5">
-          <p className="text-h4 font-bold tabular-nums text-primary-900">{currency.format(wonThisMonth)}</p>
-          <p className="text-caption text-neutral-500">Won This Month</p>
-        </div>
       </div>
 
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>

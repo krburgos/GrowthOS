@@ -33,7 +33,8 @@ export function ContactAvatarUpload({
       currentUrl={avatarUrl}
       canEdit={canEdit}
       ariaLabel="Upload contact photo"
-      fallback={<span className="text-h2 font-semibold text-white">{initials}</span>}
+      variant="hero"
+      fallback={<span className="text-h2 font-semibold text-primary-900">{initials}</span>}
     />
   );
 }

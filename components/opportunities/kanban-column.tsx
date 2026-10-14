@@ -3,10 +3,9 @@
 import { useDroppable } from "@dnd-kit/core";
 
 import { OpportunityCard, type OpportunityCardData } from "@/components/opportunities/opportunity-card";
+import { usdShort } from "@/lib/companies/value";
 import { STAGE_GROUP_HEADER_CLASSES, type OpportunityStageRow } from "@/lib/opportunities/stages";
 import { cn } from "@/lib/utils";
-
-const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
 /**
  * Client-confirmed, this exact stage only (2026-09-08): the literal
@@ -30,6 +29,10 @@ function headerClasses(stage: OpportunityStageRow): string {
  * win probability (a single number, since every opportunity in a
  * column shares the same stage) — not an "average," since there's
  * nothing to average within one stage.
+ *
+ * Client-confirmed (2026-10-14): the total is Prospect Value (the client's
+ * company-size formula), not the typed deal value, and the column sits on
+ * a light blue tray so the white cards separate from the page.
  */
 export function KanbanColumn({
   stage,
@@ -39,10 +42,11 @@ export function KanbanColumn({
   opportunities: OpportunityCardData[];
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
-  const columnTotal = opportunities.reduce((sum, o) => sum + (o.value ?? 0), 0);
+  const columnTotal = opportunities.reduce((sum, o) => sum + o.prospect_value, 0);
+  const open = stage.stage_group === "open";
 
   return (
-    <div className="flex w-[280px] shrink-0 snap-start flex-col gap-2 lg:snap-align-none">
+    <div className="flex w-[272px] shrink-0 snap-start flex-col gap-2 rounded-xl border border-primary-100 bg-primary-50 p-2 lg:snap-align-none">
       <div
         className={cn(
           "flex flex-col gap-0.5 rounded-md px-3 py-2 text-caption font-semibold",
@@ -56,7 +60,7 @@ export function KanbanColumn({
           </span>
         </div>
         <span className="text-[11px] font-medium tabular-nums opacity-75">
-          {currency.format(columnTotal)} · {stage.win_probability}%
+          {usdShort(columnTotal)} Prospect Value{open ? ` · ${stage.win_probability}% win` : ""}
         </span>
       </div>
       <div
@@ -67,7 +71,7 @@ export function KanbanColumn({
         )}
       >
         {opportunities.map((opp) => (
-          <OpportunityCard key={opp.id} opportunity={opp} />
+          <OpportunityCard key={opp.id} opportunity={opp} open={open} />
         ))}
       </div>
     </div>

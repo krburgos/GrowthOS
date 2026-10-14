@@ -130,7 +130,7 @@ export function ExportContactsButton({
       onClick={handleExport}
       disabled={exporting}
       aria-label="Export selected contacts"
-      className="gap-2 text-white hover:bg-white/20 hover:text-white active:bg-white/30"
+      className="h-8 gap-1.5 px-2.5 text-body-sm text-white hover:bg-white/20 hover:text-white active:bg-white/30"
     >
       <Download className="size-4" />
       Export

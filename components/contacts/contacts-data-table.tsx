@@ -44,6 +44,7 @@ import type { ContactSelectionScope } from "@/lib/contacts/bulk-actions";
 import { createClient } from "@/lib/supabase/client";
 import { statusBadgeVariant } from "@/lib/contacts/status-badge";
 import type { ContactListRow } from "@/lib/contacts/types";
+import { employeesOf, opportunitiesValue, prospectValue, usd } from "@/lib/companies/value";
 import { cn } from "@/lib/utils";
 
 /**
@@ -92,7 +93,9 @@ type ColumnKey =
   | "city"
   | "state"
   | "subscribed"
-  | "bounced";
+  | "bounced"
+  | "pv"
+  | "ov";
 
 const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }[] }[] = [
   {
@@ -105,6 +108,16 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
       { key: "lists", label: "Lists" },
       { key: "mobile", label: "Mobile Phone" },
       { key: "linkedin", label: "Person LinkedIn" },
+    ],
+  },
+  // Client-confirmed (2026-10-14, "CRM Pages Refresh"): the client's
+  // company-size formulas, placed right after Temp so they show without
+  // scrolling. Read-only, like every Company-derived column.
+  {
+    label: "Value",
+    columns: [
+      { key: "pv", label: "Prospect Value" },
+      { key: "ov", label: "Opportunities Value" },
     ],
   },
   {
@@ -135,11 +148,15 @@ const ALL_COLUMN_KEYS = COLUMN_GROUPS.flatMap((g) => g.columns.map((c) => c.key)
 
 const PRESETS: Record<"all" | "compact" | "sales", ColumnKey[]> = {
   all: ALL_COLUMN_KEYS,
-  compact: ["title", "status"],
-  sales: ["title", "status", "score", "temp", "company"],
+  compact: ["title", "status", "pv"],
+  sales: ["title", "status", "score", "temp", "pv", "ov", "company"],
 };
 
 const COLUMNS_STORAGE_KEY = "growthmission.contacts.visibleColumns";
+/** Columns added after people had saved a layout, switched on once for them. */
+const ADDED_COLUMNS: { key: string; columns: ColumnKey[] }[] = [
+  { key: "growthmission.contacts.addedValueColumns", columns: ["pv", "ov"] },
+];
 
 function loadVisibleColumns(): Set<ColumnKey> {
   if (typeof window === "undefined") return new Set(ALL_COLUMN_KEYS);
@@ -147,8 +164,13 @@ function loadVisibleColumns(): Set<ColumnKey> {
     const raw = window.localStorage.getItem(COLUMNS_STORAGE_KEY);
     if (!raw) return new Set(ALL_COLUMN_KEYS);
     const parsed = JSON.parse(raw) as string[];
-    const valid = parsed.filter((k): k is ColumnKey => (ALL_COLUMN_KEYS as string[]).includes(k));
-    return new Set(valid);
+    const valid = new Set(parsed.filter((k): k is ColumnKey => (ALL_COLUMN_KEYS as string[]).includes(k)));
+    for (const added of ADDED_COLUMNS) {
+      if (window.localStorage.getItem(added.key)) continue;
+      added.columns.forEach((c) => valid.add(c));
+      window.localStorage.setItem(added.key, "1");
+    }
+    return valid;
   } catch {
     return new Set(ALL_COLUMN_KEYS);
   }
@@ -200,7 +222,10 @@ export function ContactsDataTable({
   owners,
   scope,
   currentListId,
+  toolbar,
 }: {
+  /** Views and search, drawn on the table's own toolbar row (Contacts page). */
+  toolbar?: ReactNode;
   contacts: ContactListRow[];
   totalCount: number;
   accountId: string;
@@ -343,31 +368,37 @@ export function ContactsDataTable({
         onActionComplete={clear}
       />
 
-      <div className="flex items-center gap-2">
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            onClick={() => applyPreset("all")}
-            className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-caption font-medium text-neutral-600 transition-colors hover:border-primary-700 hover:text-primary-800"
-          >
-            All columns
-          </button>
-          <button
-            type="button"
-            onClick={() => applyPreset("compact")}
-            className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-caption font-medium text-neutral-600 transition-colors hover:border-primary-700 hover:text-primary-800"
-          >
-            Compact
-          </button>
-          <button
-            type="button"
-            onClick={() => applyPreset("sales")}
-            className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-caption font-medium text-neutral-600 transition-colors hover:border-primary-700 hover:text-primary-800"
-          >
-            Sales
-          </button>
+      <div className="flex flex-wrap items-center gap-2">
+        {toolbar}
+        <div className="ml-auto hidden items-center gap-2 lg:flex">
+          <span className="text-caption font-semibold text-neutral-500">Columns</span>
+          <div role="group" aria-label="Column preset" className="flex rounded-md border border-neutral-200 bg-neutral-50 p-1 shadow-inner">
+            {(
+              [
+                ["all", "All"],
+                ["sales", "Sales"],
+                ["compact", "Compact"],
+              ] as const
+            ).map(([key, label]) => {
+              const on = PRESETS[key].length === visibleColumns.size && PRESETS[key].every((k) => visibleColumns.has(k));
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => applyPreset(key)}
+                  className={cn(
+                    "rounded px-3 py-1 text-body-sm font-medium transition-colors",
+                    on ? "bg-white text-primary-800 shadow-sm" : "text-neutral-500 hover:text-neutral-800"
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <div className="ml-auto">
+        <div className="hidden lg:block">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button type="button" variant="secondary" size="sm" className="gap-1.5">
@@ -465,8 +496,10 @@ export function ContactsDataTable({
                   <Thermometer className="size-3.5" /> Temp
                 </Th>
               )}
+              {show("pv") && <Th right>Prospect Value</Th>}
+              {show("ov") && <Th right>Opportunities Value</Th>}
               {show("employees") && (
-                <Th>
+                <Th right>
                   <Users className="size-3.5" /> Employees
                 </Th>
               )}
@@ -510,8 +543,8 @@ export function ContactsDataTable({
                   <MapPin className="size-3.5" /> Company State
                 </Th>
               )}
-              {show("subscribed") && <Th>Subscribed</Th>}
-              {show("bounced") && <Th>Bounced</Th>}
+              {show("subscribed") && <Th center>Subscribed</Th>}
+              {show("bounced") && <Th right>Bounced</Th>}
             </tr>
           </thead>
           <tbody>
@@ -679,13 +712,13 @@ export function ContactsDataTable({
                       <Td>
                         {c.score != null ? (
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold tabular-nums text-primary-900">{c.score}</span>
-                            <span className="h-1.5 w-11 overflow-hidden rounded-full bg-neutral-200">
+                            <span className="h-1.5 w-12 overflow-hidden rounded-full bg-neutral-100">
                               <span
-                                className="block h-full rounded-full bg-secondary-500"
+                                className="block h-full rounded-full bg-secondary-600"
                                 style={{ width: `${Math.max(0, Math.min(100, c.score))}%` }}
                               />
                             </span>
+                            <span className="inline-block min-w-[2.2em] text-right font-semibold tabular-nums text-neutral-800">{c.score}</span>
                           </div>
                         ) : (
                           "—"
@@ -712,13 +745,11 @@ export function ContactsDataTable({
                     ) : (
                       <Td>
                         {c.temperature ? (
-                          <span
-                            className={cn(
-                              "inline-flex items-center gap-1.5 text-body-sm font-semibold",
-                              c.temperature === "hot" ? "text-error-600" : "text-primary-500"
-                            )}
-                          >
-                            <Thermometer className="size-3.5" />
+                          <span className="inline-flex items-center gap-1.5 text-body-sm text-neutral-700">
+                            <span
+                              aria-hidden="true"
+                              className={cn("size-2 rounded-full", c.temperature === "hot" ? "bg-error-500" : "bg-primary-400")}
+                            />
                             {c.temperature === "hot" ? "Hot" : "Cold"}
                           </span>
                         ) : (
@@ -726,7 +757,19 @@ export function ContactsDataTable({
                         )}
                       </Td>
                     ))}
-                  {show("employees") && <Td>{c.companies?.company_size ?? "—"}</Td>}
+                  {show("pv") && (
+                    <Td className="text-right font-semibold tabular-nums text-primary-900">
+                      {c.companies ? usd.format(prospectValue(c.companies.company_size)) : "—"}
+                    </Td>
+                  )}
+                  {show("ov") && (
+                    <Td className="text-right tabular-nums text-neutral-600">
+                      {c.companies ? usd.format(opportunitiesValue(c.companies.company_size)) : "—"}
+                    </Td>
+                  )}
+                  {show("employees") && (
+                    <Td className="text-right tabular-nums">{employeesOf(c.companies?.company_size) || "—"}</Td>
+                  )}
                   {show("lists") && (
                     <Td className="whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
                       <ListsCell contactId={c.id} accountId={accountId} lists={c.lists ?? []} onChanged={() => router.refresh()} />
@@ -735,12 +778,7 @@ export function ContactsDataTable({
                   {show("company") && (
                     <Td className="whitespace-nowrap">
                       {c.companies?.name ? (
-                        <div className="flex items-center gap-2">
-                          <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-neutral-100 text-neutral-500">
-                            <Building2 className="size-3.5" />
-                          </span>
-                          {c.companies.name}
-                        </div>
+                        <span className="font-medium text-neutral-800">{c.companies.name}</span>
                       ) : (
                         "—"
                       )}
@@ -803,17 +841,20 @@ export function ContactsDataTable({
                         </button>
                       </Td>
                     ) : (
-                      <Td>
+                      <Td className="text-center">
                         <Badge variant={c.email_opt_out ? "neutral" : "success"}>{c.email_opt_out ? "No" : "Yes"}</Badge>
                       </Td>
                     ))}
-                  {show("bounced") && <Td className="text-neutral-400">0</Td>}
+                  {show("bounced") && <Td className="text-right tabular-nums text-neutral-400">0</Td>}
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
+      {/* Room for the floating bulk bar, so it never covers the last rows or cards. */}
+      {(selection.selectAllMatching || selection.selectedIds.size > 0) && <div aria-hidden="true" className="h-28 lg:h-16" />}
     </div>
   );
 }
@@ -896,8 +937,13 @@ function ContactCard({
         )}
       </div>
 
-      {(contact.score !== null || contact.temperature) && (
-        <div className="mt-2 flex items-center gap-3 border-t border-neutral-100 pt-2 text-caption text-neutral-500">
+      {(contact.score !== null || contact.temperature || contact.companies) && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-neutral-100 pt-2 text-caption text-neutral-500">
+          {contact.companies && (
+            <span className="tabular-nums">
+              <b className="font-semibold text-primary-900">{usd.format(prospectValue(contact.companies.company_size))}</b> Prospect Value
+            </span>
+          )}
           {contact.score !== null && <span className="tabular-nums">Score {contact.score}</span>}
           {contact.temperature && (
             <span
@@ -918,10 +964,15 @@ function Th({
   children,
   sticky,
   className,
+  right,
+  center,
 }: {
   children: ReactNode;
   sticky?: "left-0" | "left-11";
   className?: string;
+  /** A numeric column: the title lines up with its right-aligned figures. */
+  right?: boolean;
+  center?: boolean;
 }) {
   return (
     <th
@@ -931,7 +982,9 @@ function Th({
         className
       )}
     >
-      <span className="flex items-center gap-2 [&>svg]:text-white/70">{children}</span>
+      <span className={cn("flex items-center gap-2 [&>svg]:text-white/70", right && "justify-end", center && "justify-center")}>
+        {children}
+      </span>
     </th>
   );
 }
@@ -1008,14 +1061,8 @@ function ListsCell({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button type="button" className="inline-flex items-center gap-1">
-            <span className="inline-flex items-center rounded-full border border-secondary-100 bg-secondary-50 px-2.5 py-0.5 text-caption font-medium text-secondary-800 hover:bg-secondary-100">
-              {lists[0].name}
-            </span>
-            {lists.length > 1 && (
-              <span className="inline-flex items-center rounded-full bg-neutral-100 px-2 py-0.5 text-caption font-semibold text-neutral-600 hover:bg-neutral-200">
-                +{lists.length - 1}
-              </span>
-            )}
+            <span className="text-body-sm text-primary-600 hover:underline">{lists[0].name}</span>
+            {lists.length > 1 && <span className="text-caption font-semibold text-neutral-400">+{lists.length - 1}</span>}
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-60">
@@ -1067,8 +1114,6 @@ function ListsCell({
   );
 }
 
-const AVATAR_COLORS = ["bg-primary-500", "bg-secondary-700", "bg-success-600", "bg-primary-800"];
-
 function Avatar({ name }: { name: string }) {
   const initials = name
     .trim()
@@ -1077,16 +1122,10 @@ function Avatar({ name }: { name: string }) {
     .slice(0, 2)
     .join("")
     .toUpperCase();
-  const hash = [...name].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-  const color = AVATAR_COLORS[hash % AVATAR_COLORS.length];
-
+  // One calm colour (client-confirmed, 2026-10-14): the hashed palette
+  // added a fourth colour to every row and carried no information.
   return (
-    <span
-      className={cn(
-        "flex size-7 shrink-0 items-center justify-center rounded-full text-caption font-semibold text-white",
-        color
-      )}
-    >
+    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-caption font-bold text-primary-700">
       {initials}
     </span>
   );

@@ -6,6 +6,7 @@ import { CompanyOverviewForm } from "@/components/companies/company-overview-for
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { daysSince } from "@/lib/companies/value";
 import { STAGE_GROUP_BADGE_VARIANT, type StageGroup } from "@/lib/opportunities/stages";
 import { createClient } from "@/lib/supabase/server";
 
@@ -61,7 +62,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
       .order("full_name"),
     supabase
       .from("opportunities")
-      .select("id, name, value, stage_id, contacts(full_name), opportunity_stages(name, stage_group)")
+      // No typed value here: the client keeps it to the opportunity's own page and Reports (2026-10-14).
+      .select("id, name, stage_id, stage_entered_at, contacts(full_name), opportunity_stages(name, stage_group, win_probability)")
       .eq("company_id", id)
       .order("created_at", { ascending: false }),
   ]);
@@ -138,7 +140,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
                 <TableRow className="border-b-0 hover:bg-transparent">
                   <TableHead variant="solid">Contact</TableHead>
                   <TableHead variant="solid">Stage</TableHead>
-                  <TableHead variant="solid">Value</TableHead>
+                  <TableHead variant="solid" className="text-right">Win %</TableHead>
+                  <TableHead variant="solid" className="text-right">In stage</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -155,7 +158,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
                           <Badge variant={STAGE_GROUP_BADGE_VARIANT[stage.stage_group as StageGroup]}>{stage.name}</Badge>
                         )}
                       </TableCell>
-                      <TableCell>{o.value != null ? currency.format(o.value) : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">{stage ? `${stage.win_probability}%` : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums text-neutral-500">{daysSince(o.stage_entered_at)}</TableCell>
                     </TableRow>
                   );
                 })}

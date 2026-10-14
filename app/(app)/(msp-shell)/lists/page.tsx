@@ -1,12 +1,14 @@
-import { ListChecks } from "lucide-react";
+import { ListChecks, Plus, Upload } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { ListsTable } from "@/components/lists/lists-table";
+import { ListsBoard, type ListRow } from "@/components/lists/lists-table";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { InfoTip } from "@/components/ui/info-tip";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { prospectValue, usdShort } from "@/lib/companies/value";
 import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,25 +17,25 @@ export const metadata: Metadata = { title: "Lists — GrowthMission" };
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 
 /**
- * App Flow §4.6, F1 — Lists Index. Name, member count, date added.
+ * App Flow §4.6, F1 — Lists Index.
  *
- * Client-confirmed additions: Bounced/Unsubscribed columns (matching a
- * reference CRM's layout) ahead of Campaigns (Milestone 10) existing.
- * Unsubscribed is real today — contacts.email_opt_out already exists —
- * it's just always 0 in practice until something sets it (the campaign
- * unsubscribe link). Bounced has no data source at all without
- * campaign send history, so it's a hardcoded 0 placeholder until that
- * milestone is built. Type and Active columns were both removed per
- * client feedback.
+ * Client-confirmed redesign (2026-10-14, approved mockup "CRM Pages
+ * Refresh"): lists show as cards by default (Table one click away), each
+ * with its contact count, a health bar of Active / Unsubscribed / Bounced
+ * contacts, and its **Prospect Value**: the client's formula ($200 ×
+ * Employees × 12) over the companies on the list, each company counted
+ * once. A summary strip and search sit above. Rename, Upload contacts and
+ * Delete (archive) are unchanged.
  *
- * Sorting is applied in JS after the per-list counts are computed,
- * rather than a SQL ORDER BY — those counts come from a follow-up
- * Promise.all, not a plain column, and a handful of lists per account
- * doesn't carry the same "tens of thousands of rows" scale concern
- * that drove Contacts' server-side sort (PRD §6.1). Client-confirmed
- * pagination (2026-09-15) still applies here for consistency with
- * every other list page — the page slice happens in JS after the sort
- * above, same reasoning as the Companies list's own JS-computed sort.
+ * Bounced is now real: a member counts as bounced if any campaign send to
+ * them bounced (campaign_recipients.bounced_at), now that Campaigns exist.
+ * Unsubscribed is contacts.email_opt_out, as before. Active is everyone
+ * else on the list.
+ *
+ * The counts used to cost two queries per list; they are now three reads
+ * for the whole page (lists, members with their contacts and companies,
+ * and bounces), joined in JS. Sorting and the page slice still
+ * happen in JS after the counts, as before.
  */
 export default async function ListsIndexPage({
   searchParams,
@@ -52,39 +54,103 @@ export default async function ListsIndexPage({
     .eq("account_id", user.account_id)
     .is("archived_at", null);
 
-  const listsWithCounts = await Promise.all(
-    (lists ?? []).map(async (list) => {
-      const { data: memberRows } = await supabase.from("list_members").select("contact_id").eq("list_id", list.id);
-      const contactIds = (memberRows ?? []).map((r) => r.contact_id);
+  const listIds = (lists ?? []).map((l) => l.id);
 
-      let unsubscribed = 0;
-      if (contactIds.length > 0) {
-        const { count } = await supabase
-          .from("contacts")
-          .select("*", { count: "exact", head: true })
-          .in("id", contactIds)
-          .eq("email_opt_out", true);
-        unsubscribed = count ?? 0;
-      }
-
-      const bounced = 0; // No data source until Campaigns (Milestone 10) exists.
-
-      return { ...list, memberCount: contactIds.length, bounced, unsubscribed };
-    })
+  // Members come with their contact and company through a join, so no
+  // request carries a long list of ids, and both reads page through 1,000
+  // rows at a time (PostgREST's cap) so a big list is never cut short.
+  type MemberRow = {
+    list_id: string;
+    contact_id: string;
+    contacts:
+      | { email_opt_out: boolean; companies: { id: string; company_size: string | null } | { id: string; company_size: string | null }[] | null }
+      | { email_opt_out: boolean; companies: { id: string; company_size: string | null } | { id: string; company_size: string | null }[] | null }[]
+      | null;
+  };
+  const memberRows: MemberRow[] =
+    listIds.length > 0
+      ? await readAll<MemberRow>((lo, hi) =>
+          supabase
+            .from("list_members")
+            .select("list_id, contact_id, contacts(email_opt_out, companies(id, company_size))")
+            .in("list_id", listIds)
+            .order("contact_id")
+            .range(lo, hi)
+        )
+      : [];
+  const bounceRows = await readAll<{ contact_id: string }>((lo, hi) =>
+    supabase
+      .from("campaign_recipients")
+      .select("contact_id, campaigns!inner(account_id)")
+      .eq("campaigns.account_id", user.account_id)
+      .not("bounced_at", "is", null)
+      .order("contact_id")
+      .range(lo, hi)
   );
 
+  const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
+  const contacts = new Map<string, { optOut: boolean; companyId: string | null; value: number }>();
+  for (const m of memberRows) {
+    const c = one(m.contacts);
+    const co = one(c?.companies ?? null);
+    contacts.set(m.contact_id, { optOut: !!c?.email_opt_out, companyId: co?.id ?? null, value: prospectValue(co?.company_size) });
+  }
+  const contactIds = [...contacts.keys()];
+  const bounced = new Set(bounceRows.map((r) => r.contact_id));
+
+  const membersByList = new Map<string, string[]>();
+  for (const m of memberRows) {
+    const arr = membersByList.get(m.list_id);
+    if (arr) arr.push(m.contact_id);
+    else membersByList.set(m.list_id, [m.contact_id]);
+  }
+
+  const rows: ListRow[] = (lists ?? []).map((list) => {
+    const members = membersByList.get(list.id) ?? [];
+    let unsubscribed = 0;
+    let bouncedCount = 0;
+    const companyValue = new Map<string, number>();
+    for (const id of members) {
+      const c = contacts.get(id);
+      if (!c) continue;
+      if (c.optOut) unsubscribed += 1;
+      else if (bounced.has(id)) bouncedCount += 1;
+      if (c.companyId) companyValue.set(c.companyId, c.value);
+    }
+    return {
+      ...list,
+      memberCount: members.length,
+      unsubscribed,
+      bounced: bouncedCount,
+      active: members.length - unsubscribed - bouncedCount,
+      prospectValue: [...companyValue.values()].reduce((s, v) => s + v, 0),
+    };
+  });
+
+  // Strip figures over every list, companies counted once across all of them.
+  const allCompanies = new Map<string, number>();
+  for (const id of contactIds) {
+    const c = contacts.get(id);
+    if (c?.companyId) allCompanies.set(c.companyId, c.value);
+  }
+  const listedValue = [...allCompanies.values()].reduce((s, v) => s + v, 0);
+  const unsubTotal = contactIds.filter((id) => contacts.get(id)?.optOut).length;
+  const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();
+
   const { sort, dir, ...pageParams } = await searchParams;
-  const ascending = dir !== "desc";
+  const ascending = dir ? dir !== "desc" : false;
   const { page, pageSize, from, to } = parsePagination(pageParams);
-  const sortAccessors: Record<string, (l: (typeof listsWithCounts)[number]) => string | number> = {
+  const sortAccessors: Record<string, (l: ListRow) => string | number> = {
     name: (l) => l.name.toLowerCase(),
     contacts: (l) => l.memberCount,
     created_at: (l) => l.created_at,
+    value: (l) => l.prospectValue,
+    active: (l) => l.active,
     bounced: (l) => l.bounced,
     unsubscribed: (l) => l.unsubscribed,
   };
   const accessor = sortAccessors[sort ?? "created_at"] ?? sortAccessors.created_at;
-  listsWithCounts.sort((a, b) => {
+  rows.sort((a, b) => {
     const av = accessor(a);
     const bv = accessor(b);
     if (av < bv) return ascending ? -1 : 1;
@@ -93,29 +159,87 @@ export default async function ListsIndexPage({
   });
 
   return (
-    <main className="mx-auto w-full max-w-[1800px] flex-1 p-6 md:p-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-h1 text-primary-900">Lists</h1>
+    <main className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col gap-5 p-6 md:p-8">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-h1 text-primary-900">Lists</h1>
+          <p className="text-body text-neutral-500">Contacts you group by hand, for campaigns and follow-up.</p>
+        </div>
         {canEdit && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button asChild variant="secondary">
-              <Link href="/lists/upload">Upload List</Link>
+              <Link href="/lists/upload">
+                <Upload className="mr-1.5 size-4" />
+                Upload List
+              </Link>
             </Button>
             <Button asChild>
-              <Link href="/lists/new">Create List</Link>
+              <Link href="/lists/new">
+                <Plus className="mr-1.5 size-4" />
+                Create List
+              </Link>
             </Button>
           </div>
         )}
       </div>
 
-      {listsWithCounts.length === 0 ? (
+      {rows.length === 0 ? (
         <EmptyState icon={ListChecks} />
       ) : (
         <>
-          <ListsTable lists={listsWithCounts.slice(from, to + 1)} canEdit={canEdit} />
-          <PaginationBar page={page} pageSize={pageSize} totalCount={listsWithCounts.length} />
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Tile
+              label="Lists"
+              value={rows.length.toLocaleString()}
+              sub={`${rows.filter((l) => l.created_at >= monthStart).length} added this month`}
+            />
+            <Tile label="Contacts on a list" value={contactIds.length.toLocaleString()} sub="each counted once" />
+            <Tile
+              label="Prospect Value on lists"
+              tip="$200 × Employees × 12 for every company with a contact on a list, each company counted once."
+              value={usdShort(listedValue)}
+              sub={`${usdShort(listedValue * 3)} Opportunities Value`}
+            />
+            <Tile
+              label="Unsubscribed"
+              value={unsubTotal.toLocaleString()}
+              sub={`${contactIds.length ? ((unsubTotal / contactIds.length) * 100).toFixed(1) : "0"}% of listed contacts`}
+            />
+          </div>
+
+          <div>
+            <ListsBoard lists={rows.slice(from, to + 1)} canEdit={canEdit} />
+            <PaginationBar page={page} pageSize={pageSize} totalCount={rows.length} />
+          </div>
         </>
       )}
     </main>
+  );
+}
+
+/** Reads every row of a query, 1,000 at a time. */
+async function readAll<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: unknown }>
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await page(from, from + 999);
+    if (error || !data) break;
+    out.push(...(data as T[]));
+    if (data.length < 1000) break;
+  }
+  return out;
+}
+
+function Tile({ label, tip, value, sub }: { label: string; tip?: string; value: string; sub: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5 rounded-lg border border-primary-100 bg-white px-4 py-3 shadow-lift">
+      <span className="flex items-center gap-1.5 text-caption text-neutral-500">
+        {label}
+        {tip && <InfoTip text={tip} label={`About ${label}`} />}
+      </span>
+      <span className="text-h3 font-bold tabular-nums text-primary-900">{value}</span>
+      <span className="text-caption tabular-nums text-neutral-500">{sub}</span>
+    </div>
   );
 }

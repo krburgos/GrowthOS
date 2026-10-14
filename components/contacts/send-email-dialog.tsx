@@ -2,7 +2,7 @@
 
 import { Send } from "lucide-react";
 
-import { HERO_ACTION_CLASS } from "@/components/shell/hero-band";
+import { HERO_ACTION_CLASS, HERO_PRIMARY_ACTION_CLASS } from "@/components/shell/hero-band";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -56,7 +56,7 @@ export function SendEmailDialog({
   currentUserName: string;
   fromOptions: FromOption[];
   /** "hero" renders the trigger as a button for a HeroBand action row. */
-  variant?: "tile" | "hero";
+  variant?: "tile" | "hero" | "hero-primary";
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -99,8 +99,8 @@ export function SendEmailDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {variant === "hero" ? (
-          <button type="button" className={HERO_ACTION_CLASS}>
+        {variant === "hero" || variant === "hero-primary" ? (
+          <button type="button" className={variant === "hero-primary" ? HERO_PRIMARY_ACTION_CLASS : HERO_ACTION_CLASS}>
             <Send className="size-4" />
             Email
           </button>

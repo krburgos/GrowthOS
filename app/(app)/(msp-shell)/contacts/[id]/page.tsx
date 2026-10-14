@@ -41,7 +41,7 @@ export default async function ContactDetailPage({
   const { data: contact } = await supabase
     .from("contacts")
     .select(
-      "id, first_name, last_name, full_name, title, email, phone, status_id, owner_id, notes, score, temperature, linkedin_url, avatar_url, company_id, contact_statuses(name), companies(name, website, linkedin_url, industry, company_size, phone, address_line1, city, state)"
+      "id, first_name, last_name, full_name, title, email, phone, status_id, owner_id, notes, notes_updated_at, notes_updated_by, score, temperature, linkedin_url, avatar_url, company_id, contact_statuses(name), companies(name, website, linkedin_url, industry, company_size, phone, address_line1, city, state)"
     )
     .eq("id", id)
     .is("archived_at", null)
@@ -79,7 +79,8 @@ export default async function ContactDetailPage({
       .order("occurred_at", { ascending: false }),
     supabase
       .from("opportunities")
-      .select("id, name, value, created_at, opportunity_stages(name, stage_group)")
+      // No typed value: the client keeps it to the opportunity's own page and Reports (2026-10-14).
+      .select("id, name, created_at, stage_entered_at, users(full_name), opportunity_stages(name, stage_group, win_probability)")
       .eq("contact_id", id)
       .order("created_at", { ascending: false }),
     supabase.from("list_members").select("list_id, lists(name)").eq("contact_id", id),
@@ -126,13 +127,30 @@ export default async function ContactDetailPage({
   const emailActivities = activities.filter((a) => a.type === "email");
   const canEdit = CAN_EDIT_ROLES.includes(user.role);
   const ownerName = (owners ?? []).find((o) => o.id === contact.owner_id)?.full_name;
+  // Usually an account user; a CRO Leader editing notes isn't in that list, so look them up.
+  let notesEditor: string | null = contact.notes_updated_by
+    ? ((owners ?? []).find((o) => o.id === contact.notes_updated_by)?.full_name ?? null)
+    : null;
+  if (contact.notes_updated_by && !notesEditor) {
+    const { data: editor } = await supabase.from("users").select("full_name").eq("id", contact.notes_updated_by).maybeSingle();
+    notesEditor = editor?.full_name ?? null;
+  }
 
   const opportunities = (opportunityRows ?? []).map((o) => {
     const stageField = o.opportunity_stages as unknown;
     const stage = (Array.isArray(stageField) ? stageField[0] : stageField) as
-      | { name: string; stage_group: StageGroup }
+      | { name: string; stage_group: StageGroup; win_probability: number }
       | undefined;
-    return { id: o.id, name: o.name, value: o.value, created_at: o.created_at, stage };
+    const ownerField = o.users as unknown;
+    const owner = (Array.isArray(ownerField) ? ownerField[0] : ownerField) as { full_name: string } | null | undefined;
+    return {
+      id: o.id,
+      name: o.name,
+      created_at: o.created_at,
+      stage_entered_at: o.stage_entered_at,
+      owner_name: owner?.full_name ?? null,
+      stage,
+    };
   });
 
   return (
@@ -186,6 +204,9 @@ export default async function ContactDetailPage({
       listMemberships={listMemberships}
       currentUserName={user.full_name}
       fromOptions={fromOptions}
+      notes={contact.notes}
+      notesUpdatedAt={contact.notes_updated_at}
+      notesUpdatedBy={notesEditor}
     />
   );
 }

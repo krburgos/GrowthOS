@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { prospectValue, usd } from "@/lib/companies/value";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { boxTotal, sourcesInBox, type KpiBox, type KpiSource } from "@/lib/growth-mission/kpi-band";
 import { createClient } from "@/lib/supabase/client";
@@ -82,7 +83,7 @@ export function RecordsDialog({
       } else {
         const { data, error: err } = await supabase
           .from("opportunities")
-          .select("id, name, value, companies(name), opportunity_stages(name)")
+          .select("id, name, companies(name, company_size), opportunity_stages(name)")
           .eq("account_id", accountId)
           .in("stage_id", ids)
           .order("created_at", { ascending: false })
@@ -92,9 +93,14 @@ export function RecordsDialog({
           (data ?? []).map((r) => ({
             id: r.id,
             title: r.name,
+            // Prospect Value, not the typed Value (client-confirmed, 2026-10-14).
             subtitle:
-              [unwrap(r.companies)?.name, r.value != null ? `$${Number(r.value).toLocaleString()}` : null].filter(Boolean).join(" · ") ||
-              "—",
+              [
+                unwrap(r.companies)?.name,
+                unwrap(r.companies) ? `${usd.format(prospectValue(unwrap(r.companies)?.company_size))} Prospect Value` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "—",
             source: unwrap(r.opportunity_stages)?.name ?? "",
           }))
         );

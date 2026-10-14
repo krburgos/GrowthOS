@@ -1,100 +1,104 @@
-"use client";
-
-import { Search } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
 
-import { Input } from "@/components/ui/input";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { usd } from "@/lib/companies/value";
 
 export interface CompanyRow {
   id: string;
   name: string;
   website: string | null;
   industry: string | null;
-  company_size: string | null;
   city: string | null;
   state: string | null;
+  employees: number;
+  prospectValue: number;
   contactCount: number;
+  openOpps: number;
 }
 
 /**
- * Design System §8.5, client-confirmed addition (Companies page,
- * 2026-09-08) — same shell as Lists Index: navy-header table, radius-lg
- * card border, server-driven sort via `SortableHeader` (URL search
- * params, same pattern as Lists/Contacts/Opportunities), and a
- * client-side name search above it filtering whatever page of
- * already-sorted rows the server sent down.
+ * Design System §8.5 — navy-header table, server-driven sort via
+ * `SortableHeader`. Client-confirmed (2026-10-14, "CRM Pages Refresh"):
+ * Prospect Value with a bar scaled to the largest company in the current
+ * results, Opportunities Value and an Open opps count join the original
+ * columns. Text is left-aligned; every number is right-aligned under a
+ * right-aligned header, and the bar is a fixed width so figures line up.
+ * Search and filters live in CompaniesToolbar. Below `lg` the table stacks
+ * into labelled cards.
  */
-export function CompaniesTable({ companies }: { companies: CompanyRow[] }) {
-  const [query, setQuery] = useState("");
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return companies;
-    return companies.filter((c) => c.name.toLowerCase().includes(q));
-  }, [companies, query]);
-
+export function CompaniesTable({ companies, maxValue }: { companies: CompanyRow[]; maxValue: number }) {
+  const num = (field: string, label: string) => (
+    <TableHead variant="solid" className="text-right">
+      <SortableHeader variant="solid" field={field} label={label} align="right" />
+    </TableHead>
+  );
   return (
-    <div className="flex flex-col gap-3">
-      <div className="relative w-full max-w-xs self-end">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search companies…"
-          className="pl-9"
-          aria-label="Search companies"
-        />
-      </div>
-
-      <Table stacked>
-        <TableHeader variant="solid">
-          <TableRow className="border-b-0 hover:bg-transparent">
-            <TableHead variant="solid"><SortableHeader variant="solid" field="name" label="Company Name" /></TableHead>
-            <TableHead variant="solid">Website</TableHead>
-            <TableHead variant="solid"><SortableHeader variant="solid" field="industry" label="Industry" /></TableHead>
-            <TableHead variant="solid"><SortableHeader variant="solid" field="employees" label="Employees" /></TableHead>
-            <TableHead variant="solid"><SortableHeader variant="solid" field="city" label="City" /></TableHead>
-            <TableHead variant="solid">State</TableHead>
-            <TableHead variant="solid"><SortableHeader variant="solid" field="contacts" label="Contacts" /></TableHead>
+    <Table stacked>
+      <TableHeader variant="solid">
+        <TableRow className="border-b-0 hover:bg-transparent">
+          <TableHead variant="solid"><SortableHeader variant="solid" field="name" label="Company Name" /></TableHead>
+          <TableHead variant="solid">Website</TableHead>
+          <TableHead variant="solid"><SortableHeader variant="solid" field="industry" label="Industry" /></TableHead>
+          {num("employees", "Employees")}
+          {num("value", "Prospect Value")}
+          <TableHead variant="solid" className="text-right">Opportunities Value</TableHead>
+          {num("contacts", "Contacts")}
+          {num("open", "Open opps")}
+          <TableHead variant="solid"><SortableHeader variant="solid" field="city" label="City" /></TableHead>
+          <TableHead variant="solid">State</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {companies.length === 0 ? (
+          <TableRow className="hover:bg-transparent">
+            <TableCell colSpan={10} className="py-8 text-center text-neutral-500">
+              No companies match these filters.
+            </TableCell>
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filtered.length === 0 ? (
-            <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={7} className="py-8 text-center text-neutral-500">
-                No companies match &ldquo;{query}&rdquo;.
+        ) : (
+          companies.map((c) => (
+            <TableRow key={c.id}>
+              <TableCell label="Company" className="font-medium text-neutral-800">
+                <Link href={`/companies/${c.id}`} className="block hover:underline">
+                  {c.name}
+                </Link>
               </TableCell>
+              <TableCell label="Website" className="max-w-[200px] truncate whitespace-nowrap">
+                {c.website ? (
+                  <a href={c.website} target="_blank" rel="noreferrer" className="text-primary-700 hover:underline">
+                    {c.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </TableCell>
+              <TableCell label="Industry" className="whitespace-nowrap">{c.industry ?? "—"}</TableCell>
+              <TableCell label="Employees" className="text-right tabular-nums">{c.employees || "—"}</TableCell>
+              <TableCell label="Prospect Value" className="text-right">
+                <span className="inline-flex items-center justify-end gap-2">
+                  <span aria-hidden="true" className="hidden h-1.5 w-14 overflow-hidden rounded-full bg-neutral-100 lg:block">
+                    <span
+                      className="block h-full rounded-full bg-secondary-600"
+                      style={{ width: `${Math.round((c.prospectValue / maxValue) * 100)}%` }}
+                    />
+                  </span>
+                  <span className="inline-block min-w-[6.5em] text-right font-semibold tabular-nums text-primary-900">
+                    {usd.format(c.prospectValue)}
+                  </span>
+                </span>
+              </TableCell>
+              <TableCell label="Opportunities Value" className="text-right tabular-nums text-neutral-600">
+                {usd.format(c.prospectValue * 3)}
+              </TableCell>
+              <TableCell label="Contacts" className="text-right tabular-nums">{c.contactCount}</TableCell>
+              <TableCell label="Open opps" className="text-right tabular-nums">{c.openOpps}</TableCell>
+              <TableCell label="City" className="whitespace-nowrap">{c.city ?? "—"}</TableCell>
+              <TableCell label="State" className="whitespace-nowrap">{c.state ?? "—"}</TableCell>
             </TableRow>
-          ) : (
-            filtered.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell label="Company" className="font-medium text-neutral-800">
-                  <Link href={`/companies/${c.id}`} className="block">
-                    {c.name}
-                  </Link>
-                </TableCell>
-                <TableCell label="Website" className="whitespace-nowrap">
-                  {c.website ? (
-                    <a href={c.website} target="_blank" rel="noreferrer" className="text-primary-700 hover:underline">
-                      {c.website}
-                    </a>
-                  ) : (
-                    "—"
-                  )}
-                </TableCell>
-                <TableCell label="Industry" className="whitespace-nowrap">{c.industry ?? "—"}</TableCell>
-                <TableCell label="Employees" className="whitespace-nowrap">{c.company_size ?? "—"}</TableCell>
-                <TableCell label="City" className="whitespace-nowrap">{c.city ?? "—"}</TableCell>
-                <TableCell label="State" className="whitespace-nowrap">{c.state ?? "—"}</TableCell>
-                <TableCell label="Contacts" className="tabular-nums">{c.contactCount}</TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+          ))
+        )}
+      </TableBody>
+    </Table>
   );
 }

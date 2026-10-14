@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ export function ImageUploadCircle({
   ariaLabel,
   compact,
   shape = "circle",
+  variant = "default",
 }: {
   bucket: string;
   folder: string;
@@ -56,6 +58,14 @@ export function ImageUploadCircle({
    * of the middle and nothing else. Avatars keep the circle.
    */
   shape?: "circle" | "tile";
+  /**
+   * "hero" (client-confirmed, 2026-10-14, "Contact Photo" option A) is for
+   * an avatar on the navy hero: a small cyan camera badge on the edge,
+   * which works on touch screens, plus "Add photo" / "Change photo" across
+   * the circle on hover or keyboard focus. The default 36px button covered
+   * half of a 72-80px circle.
+   */
+  variant?: "default" | "hero";
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -83,7 +93,8 @@ export function ImageUploadCircle({
 
     if (uploadError) {
       setUploading(false);
-      toast.error(uploadError.message);
+      // Storage errors are technical; say what to do instead.
+      toast.error("Couldn't upload that image. Check your connection and try again.");
       return;
     }
 
@@ -95,7 +106,7 @@ export function ImageUploadCircle({
     setUploading(false);
 
     if (updateError) {
-      toast.error(updateError.message);
+      toast.error(getFriendlyErrorMessage(updateError));
       return;
     }
 
@@ -130,20 +141,36 @@ export function ImageUploadCircle({
               e.target.value = "";
             }}
           />
+          {variant === "hero" && (
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={uploading}
+              aria-label={preview ? "Change photo" : "Add photo"}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 rounded-full bg-primary-950/60 text-caption font-semibold text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:cursor-wait motion-reduce:transition-none"
+            >
+              <Camera className="size-[18px]" />
+              {uploading ? "Uploading…" : preview ? "Change photo" : "Add photo"}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
             aria-label={ariaLabel}
+            tabIndex={variant === "hero" ? -1 : undefined}
             className={cn(
-              "absolute flex items-center justify-center rounded-full bg-primary-700 text-white shadow-sm ring-2 ring-white hover:bg-primary-800 disabled:opacity-50",
-              compact ? "size-5" : "size-9",
+              "absolute flex items-center justify-center rounded-full shadow-sm disabled:opacity-50",
+              variant === "hero"
+                ? "-bottom-0.5 -right-0.5 size-7 bg-secondary-500 text-primary-950 ring-[3px] ring-primary-800 hover:bg-secondary-400"
+                : "bg-primary-700 text-white ring-2 ring-white hover:bg-primary-800",
+              variant !== "hero" && (compact ? "size-5" : "size-9"),
               // A tile has corners, so the button hangs off one instead of
               // sitting inside the image and covering part of it.
-              shape === "tile" ? "-bottom-1.5 -right-1.5" : "bottom-0 right-0"
+              variant !== "hero" && (shape === "tile" ? "-bottom-1.5 -right-1.5" : "bottom-0 right-0")
             )}
           >
-            <Camera className={compact ? "size-3" : "size-5"} />
+            <Camera className={variant === "hero" ? "size-3.5" : compact ? "size-3" : "size-5"} />
           </button>
         </>
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Mail, Trash2 } from "lucide-react";
+import { ChevronDown, Mail, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -96,68 +96,83 @@ export function ContactsBulkToolbar({
 
   if (selectedCount === 0) return null;
 
+  // Client-confirmed (2026-10-14, "CRM Pages Refresh"): the bar floats at
+  // the foot of the screen, so it stays in reach while the table scrolls,
+  // and Assign / Mark as / Add to list sit on it directly instead of under
+  // "More Actions". On a phone it wraps to two rows above the home bar.
+  const action =
+    "h-8 gap-1.5 px-2.5 text-body-sm text-white hover:bg-white/20 hover:text-white active:bg-white/30";
   return (
-    <div className="flex flex-col gap-3 rounded-lg bg-gradient-to-b from-primary-800 to-primary-900 p-3 shadow-sm">
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => toast("Email requires Campaigns (Milestone 10), not set up yet.")}
-          aria-label="Email selected contacts"
-          className="gap-2 text-white hover:bg-white/20 hover:text-white active:bg-white/30"
-        >
-          <Mail className="size-4" />
-          Email
-        </Button>
-        <ExportContactsButton selection={selectionArg} scope={scope} />
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={() => setDeleteOpen(true)}
-          aria-label="Delete selected contacts"
-          className="gap-2"
-        >
-          <Trash2 className="size-4" />
-          Delete
-        </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="secondary" className="gap-1">
-              More Actions
-              <ChevronDown className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onSelect={() => setAssignOpen(true)}>Assign</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setMarkStatusOpen(true)}>Mark as</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setAddToListOpen(true)}>Add to</DropdownMenuItem>
-            {currentListId && (
-              <>
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))]">
+      <div
+        role="region"
+        aria-label="Bulk actions"
+        className="pointer-events-auto flex w-full max-w-[920px] flex-wrap items-center gap-x-1 gap-y-2 rounded-xl bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))] px-3 py-2 shadow-[0_20px_40px_-16px_rgba(2,20,50,0.6)]"
+      >
+        <span className="mr-1 text-body-sm font-semibold tabular-nums text-white">
+          {selectedCount} selected
+        </span>
+        {!selection.selectAllMatching && totalCount > selection.selectedIds.size && (
+          <button type="button" onClick={onSelectAllMatching} className="mr-2 text-body-sm font-semibold text-secondary-300 hover:underline">
+            Select all {totalCount.toLocaleString()}
+          </button>
+        )}
+        <div className="flex flex-wrap items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => toast("Email requires Campaigns (Milestone 10), not set up yet.")}
+            aria-label="Email selected contacts"
+            className={action}
+          >
+            <Mail className="size-4" />
+            Email
+          </Button>
+          <ExportContactsButton selection={selectionArg} scope={scope} />
+          <Button type="button" variant="ghost" onClick={() => setAssignOpen(true)} className={action}>
+            Assign
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => setMarkStatusOpen(true)} className={action}>
+            Mark as
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => setAddToListOpen(true)} className={action}>
+            Add to list
+          </Button>
+          {currentListId && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="ghost" className={action}>
+                  This list
+                  <ChevronDown className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
                 <DropdownMenuItem onSelect={() => setMoveOpen(true)}>Move to</DropdownMenuItem>
                 <DropdownMenuItem onSelect={handleRemoveFromList} disabled={removing}>
                   Remove from this list
                 </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className="flex items-center justify-between px-1">
-        <span className="text-body-sm font-medium text-white/90">
-          {selectedCount} item{selectedCount === 1 ? "" : "s"} selected.
-        </span>
-        <div className="flex items-center gap-4">
-          {!selection.selectAllMatching && totalCount > selection.selectedIds.size && (
-            <button type="button" onClick={onSelectAllMatching} className="text-body-sm font-medium text-secondary-400 hover:underline">
-              Select all {totalCount} items
-            </button>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
-          <button type="button" onClick={onClear} className="text-body-sm font-medium text-white/60 hover:text-white hover:underline">
-            Clear selection
-          </button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setDeleteOpen(true)}
+            aria-label="Delete selected contacts"
+            className="h-8 gap-1.5 px-2.5 text-body-sm text-error-300 hover:bg-error-400/20 hover:text-error-200"
+          >
+            <Trash2 className="size-4" />
+            Delete
+          </Button>
         </div>
+        <button
+          type="button"
+          onClick={onClear}
+          aria-label="Clear selection"
+          className="ml-auto flex size-8 items-center justify-center rounded-md text-white/70 hover:bg-white/15 hover:text-white"
+        >
+          <X className="size-4" />
+        </button>
       </div>
 
       <AssignOwnerDialog

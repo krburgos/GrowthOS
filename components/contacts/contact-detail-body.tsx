@@ -9,6 +9,7 @@ import { EmailList } from "@/components/activities/email-list";
 import { LogActivityDialog } from "@/components/activities/log-activity-dialog";
 import { ContactAvatarUpload } from "@/components/contacts/contact-avatar-upload";
 import { ContactListsCard, type ContactListMembership } from "@/components/contacts/contact-lists-card";
+import { ContactNotesPanel } from "@/components/contacts/contact-notes-panel";
 import {
   ContactOverviewForm,
   type ContactOverviewDefaults,
@@ -17,17 +18,30 @@ import { SendEmailDialog, type FromOption } from "@/components/contacts/send-ema
 import { HERO_ACTION_CLASS, HeroBand } from "@/components/shell/hero-band";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { ActivityType } from "@/lib/activities/type-icon";
+import { daysSince, opportunitiesValue as oppValueOf, prospectValue as prospectValueOf } from "@/lib/companies/value";
 import { STAGE_GROUP_BADGE_VARIANT, type StageGroup } from "@/lib/opportunities/stages";
 import { cn } from "@/lib/utils";
 
 interface OpportunityRow {
   id: string;
   name: string | null;
-  value: number | null;
   created_at: string;
-  stage: { name: string; stage_group: StageGroup } | undefined;
+  stage_entered_at: string;
+  owner_name: string | null;
+  stage: { name: string; stage_group: StageGroup; win_probability: number } | undefined;
 }
+
+const ACTIVITY_FILTERS: { value: ActivityType | "all"; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "call", label: "Calls" },
+  { value: "email", label: "Emails" },
+  { value: "meeting", label: "Meetings" },
+  { value: "note", label: "Notes" },
+  { value: "task", label: "Tasks" },
+];
 
 const STAGE_STRIPE: Record<StageGroup, string> = {
   open: "bg-secondary-500",
@@ -82,6 +96,16 @@ function linkedinHandleOf(url: string): string {
  *
  * What did NOT change: the tabs and everything inside them, the Overview
  * form, which fields exist, and who may edit them.
+ *
+ * Client-confirmed refresh (2026-10-14, approved mockups "Contact Photo"
+ * A and "Contact Detail Refresh"): the photo is a white circle with navy
+ * initials and a small camera badge; Notes sit first, under the header,
+ * on every tab (ContactNotesPanel); the company in the subtitle links to
+ * Company Detail; Email is the one solid action; the figures explain
+ * their formulas in tooltips; tabs carry counts; Activity filters by type;
+ * Opportunities shows stage, salesperson, days in stage and win
+ * probability, and never the typed Value (the client keeps that to the
+ * opportunity's own page and Reports); the rail cards get navy headers.
  *
  * Previously — Concept B, "Two-Column CRM Record" (approved mockup,
  * client-confirmed round two of the Contact Detail redesign). A
@@ -143,7 +167,13 @@ export function ContactDetailBody({
   listMemberships,
   currentUserName,
   fromOptions,
+  notes,
+  notesUpdatedAt,
+  notesUpdatedBy,
 }: {
+  notes: string | null;
+  notesUpdatedAt: string | null;
+  notesUpdatedBy: string | null;
   contactId: string;
   accountId: string;
   companyId: string | null;
@@ -170,14 +200,14 @@ export function ContactDetailBody({
   fromOptions: FromOption[];
 }) {
   const [activeTab, setActiveTab] = useState("overview");
+  const [activityFilter, setActivityFilter] = useState<ActivityType | "all">("all");
 
   // Client-confirmed formula (2026-09-15), replacing the real opportunity
   // sums these tiles showed before: Prospect Value is a company-size-driven
   // estimate ($200 x Employees x 12), not derived from this contact's own
   // opportunities at all. Opportunities Value is a fixed 3x multiple of it.
-  const companyEmployees = Number(company?.company_size) || 0;
-  const prospectValue = 200 * companyEmployees * 12;
-  const opportunitiesValue = prospectValue * 3;
+  const prospectValue = prospectValueOf(company?.company_size);
+  const opportunitiesValue = oppValueOf(company?.company_size);
   const lastActivityLabel = activities.length > 0 ? dayLabel(activities[0].occurred_at) : "No activity yet";
 
   const contactLine = [title, company?.name].filter(Boolean).join(" · ");
@@ -186,7 +216,7 @@ export function ContactDetailBody({
     <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-6 md:p-8">
       <HeroBand>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
-          <div className="flex size-[72px] shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/25">
+          <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-white ring-[3px] ring-white/20">
             <ContactAvatarUpload
               contactId={contactId}
               accountId={accountId}
@@ -198,7 +228,20 @@ export function ContactDetailBody({
 
           <div className="min-w-[220px] flex-1">
             <h1 className="text-h2 text-white">{fullName}</h1>
-            {contactLine && <p className="text-body-sm text-white/75">{contactLine}</p>}
+            {contactLine && (
+              <p className="text-body-sm text-white/75">
+                {title}
+                {title && company?.name ? " · " : ""}
+                {company?.name &&
+                  (companyId ? (
+                    <Link href={`/companies/${companyId}`} className="font-semibold text-secondary-300 hover:underline">
+                      {company.name}
+                    </Link>
+                  ) : (
+                    company.name
+                  ))}
+              </p>
+            )}
             <div className="mt-2 flex flex-wrap gap-1.5">
               {statusName && <HeroChip>{statusName}</HeroChip>}
               {temperature && <HeroChip tone={temperature}>{temperature === "hot" ? "Hot" : "Cold"}</HeroChip>}
@@ -220,7 +263,7 @@ export function ContactDetailBody({
               contactEmail={email}
               currentUserName={currentUserName}
               fromOptions={fromOptions}
-              variant="hero"
+              variant="hero-primary"
             />
             <LogActivityDialog accountId={accountId} contactId={contactId} variant="hero" />
             {canEdit && (
@@ -233,20 +276,38 @@ export function ContactDetailBody({
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <HeroStat label="Prospect value" value={currency.format(prospectValue)} />
-          <HeroStat label="Opportunities value" value={currency.format(opportunitiesValue)} />
+          <HeroStat
+            label="Prospect value"
+            tip={`$200 × the company's Employees (${Number(company?.company_size) || 0}) × 12.`}
+            value={currency.format(prospectValue)}
+          />
+          <HeroStat label="Opportunities value" tip="3 × Prospect value." value={currency.format(opportunitiesValue)} />
           <HeroStat label="Last activity" value={lastActivityLabel} />
         </div>
       </HeroBand>
+
+      <ContactNotesPanel
+        contactId={contactId}
+        notes={notes}
+        updatedAt={notesUpdatedAt}
+        updatedBy={notesUpdatedBy}
+        canEdit={canEdit}
+      />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-            <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
-            <TabsTrigger value="emails">Emails</TabsTrigger>
+            <TabsTrigger value="activity">
+              Activity <TabCount n={activities.length} />
+            </TabsTrigger>
+            <TabsTrigger value="opportunities">
+              Opportunities <TabCount n={opportunities.length} />
+            </TabsTrigger>
+            <TabsTrigger value="emails">
+              Emails <TabCount n={emailActivities.length} />
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -262,10 +323,32 @@ export function ContactDetailBody({
           </TabsContent>
 
           <TabsContent value="activity">
-            <div className="mb-4 flex justify-end">
-              <LogActivityDialog accountId={accountId} contactId={contactId} />
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <div role="group" aria-label="Show" className="flex flex-wrap gap-1.5">
+                {ACTIVITY_FILTERS.map((f) => (
+                  <button
+                    key={f.value}
+                    type="button"
+                    aria-pressed={activityFilter === f.value}
+                    onClick={() => setActivityFilter(f.value)}
+                    className={cn(
+                      "h-8 rounded-full border px-3 text-caption font-semibold transition-colors",
+                      activityFilter === f.value
+                        ? "border-primary-900 bg-primary-900 text-white"
+                        : "border-neutral-300 bg-white text-neutral-600 hover:border-primary-700"
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <div className="ml-auto">
+                <LogActivityDialog accountId={accountId} contactId={contactId} />
+              </div>
             </div>
-            <ActivityTimeline activities={activities} />
+            <ActivityTimeline
+              activities={activityFilter === "all" ? activities : activities.filter((a) => a.type === activityFilter)}
+            />
           </TabsContent>
 
           <TabsContent value="opportunities">
@@ -289,15 +372,17 @@ export function ContactDetailBody({
                         <p className="truncate text-body font-semibold text-neutral-800">
                           {o.name || "Untitled opportunity"}
                         </p>
-                        <div className="mt-1 flex items-center gap-2">
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
                           {o.stage && <Badge variant={STAGE_GROUP_BADGE_VARIANT[o.stage.stage_group]}>{o.stage.name}</Badge>}
-                          <span className="text-caption text-neutral-400">
-                            Created {new Date(o.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                          {o.owner_name && <span className="text-caption text-neutral-500">{o.owner_name}</span>}
+                          <span className="text-caption tabular-nums text-neutral-400">
+                            {daysSince(o.stage_entered_at) === "Today" ? "Entered this stage today" : `${daysSince(o.stage_entered_at)} in this stage`}
                           </span>
                         </div>
                       </div>
-                      <span className="shrink-0 text-h4 font-bold tabular-nums text-primary-900">
-                        {o.value != null ? currency.format(o.value) : "—"}
+                      <span className="shrink-0 text-right">
+                        <span className="block text-h4 font-bold tabular-nums text-primary-900">{o.stage?.win_probability ?? 0}%</span>
+                        <span className="block text-caption text-neutral-500">win probability</span>
                       </span>
                     </Link>
                   </li>
@@ -315,8 +400,8 @@ export function ContactDetailBody({
         {/* ---- Reference rail ---- */}
         <div className="flex flex-col gap-4">
           <div className="rounded-lg border border-neutral-200 bg-white">
-            <div className="border-b border-neutral-200 bg-neutral-50 px-4 py-3">
-              <h2 className="text-caption font-semibold uppercase tracking-wide text-neutral-500">Quick facts</h2>
+            <div className="rounded-t-lg bg-primary-900 px-4 py-3">
+              <h2 className="text-caption font-semibold uppercase tracking-wide text-white">Quick facts</h2>
             </div>
             <div className="flex flex-col gap-2.5 px-4 py-3.5">
               <Fact icon={Mail}>{email}</Fact>
@@ -365,12 +450,23 @@ function HeroChip({ children, tone }: { children: React.ReactNode; tone?: "hot" 
   );
 }
 
-function HeroStat({ label, value }: { label: string; value: string }) {
+function HeroStat({ label, value, tip }: { label: string; value: string; tip?: string }) {
   return (
     <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-      <p className="text-caption font-semibold uppercase tracking-wide text-white/55">{label}</p>
+      <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-white/55">
+        {label}
+        {tip && <InfoTip text={tip} label={`About ${label}`} className="text-white/45 hover:text-secondary-300" />}
+      </p>
       <p className="mt-0.5 truncate text-h2 font-bold leading-tight tracking-tight tabular-nums text-white">{value}</p>
     </div>
+  );
+}
+
+function TabCount({ n }: { n: number }) {
+  return (
+    <span className="ml-1.5 rounded-full bg-neutral-100 px-1.5 py-px text-caption font-semibold tabular-nums text-neutral-500">
+      {n}
+    </span>
   );
 }
 

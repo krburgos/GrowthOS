@@ -34,6 +34,14 @@ export const HERO_ACTION_CLASS =
   "inline-flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-1.5 text-body-sm font-semibold text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-300";
 
 /**
+ * The one solid action in a HeroBand row (client-confirmed, 2026-10-14,
+ * "Contact Detail Refresh"): white with navy text, for the action people
+ * reach for most (Email on Contact Detail). The rest keep HERO_ACTION_CLASS.
+ */
+export const HERO_PRIMARY_ACTION_CLASS =
+  "inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-body-sm font-semibold text-primary-700 transition-colors hover:bg-secondary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-300";
+
+/**
  * Small uppercase label used above a group inside the band.
  *
  * `tone` exists because this label is shared (client-confirmed, 2026-09-28):

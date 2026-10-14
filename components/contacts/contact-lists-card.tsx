@@ -52,9 +52,9 @@ export function ContactListsCard({
 
   return (
     <div className="rounded-lg border border-neutral-200 bg-white">
-      <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-3">
-        <h2 className="text-caption font-semibold uppercase tracking-wide text-neutral-500">Lists</h2>
-        <Button type="button" variant="ghost" size="sm" onClick={() => setAddOpen(true)}>
+      <div className="flex items-center justify-between rounded-t-lg bg-primary-900 px-4 py-2">
+        <h2 className="text-caption font-semibold uppercase tracking-wide text-white">Lists</h2>
+        <Button type="button" variant="ghost" size="sm" onClick={() => setAddOpen(true)} className="text-secondary-300 hover:bg-white/15 hover:text-white">
           <Plus className="mr-1 size-4" />
           Add to list
         </Button>

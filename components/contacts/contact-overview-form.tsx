@@ -190,7 +190,6 @@ export function ContactOverviewForm({
         score: formValues.score ? Number(formValues.score) : null,
         temperature: formValues.temperature || null,
         linkedin_url: formValues.linkedin_url || null,
-        notes: formValues.notes || null,
         company_id: nextCompanyId,
       })
       .eq("id", contactId);
@@ -212,7 +211,7 @@ export function ContactOverviewForm({
   const tempLabel = values.temperature === "hot" ? "Hot" : values.temperature === "cold" ? "Cold" : undefined;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex max-w-3xl flex-col gap-5">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
       {canEdit && (
         <div className="flex justify-end">
           {!editing ? (
@@ -224,20 +223,13 @@ export function ContactOverviewForm({
         </div>
       )}
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-4">
-        <label htmlFor="notes" className="mb-2 block text-caption font-semibold uppercase tracking-wide text-neutral-500">
-          Notes
-        </label>
-        {editing ? (
-          <Textarea id="notes" {...register("notes")} />
-        ) : (
-          <p className="whitespace-pre-wrap text-body text-neutral-700">{values.notes || "—"}</p>
-        )}
-      </div>
-
+      {/* Notes moved to their own panel at the top of Contact Detail
+          (client-confirmed, 2026-10-14), so an SDR reads them first on
+          every tab. They are no longer part of this form or its save, so
+          editing Overview can never overwrite notes changed up there. */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <div className="rounded-lg border border-neutral-200 bg-white">
-          <h2 className="border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-caption font-semibold uppercase tracking-wide text-neutral-500">
+          <h2 className="rounded-t-lg bg-primary-900 px-4 py-3 text-caption font-semibold uppercase tracking-wide text-white">
             Contact
           </h2>
           <div className="flex flex-col divide-y divide-neutral-100">
@@ -330,10 +322,10 @@ export function ContactOverviewForm({
         </div>
 
         <div className="rounded-lg border border-neutral-200 bg-white">
-          <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-3">
-            <h2 className="text-caption font-semibold uppercase tracking-wide text-neutral-500">Company</h2>
+          <div className="flex items-center justify-between rounded-t-lg bg-primary-900 px-4 py-3">
+            <h2 className="text-caption font-semibold uppercase tracking-wide text-white">Company</h2>
             {companyId && (
-              <Link href={`/companies/${companyId}`} className="text-body-sm font-medium text-primary-700 hover:underline">
+              <Link href={`/companies/${companyId}`} className="text-body-sm font-medium text-secondary-300 hover:underline">
                 View Company →
               </Link>
             )}

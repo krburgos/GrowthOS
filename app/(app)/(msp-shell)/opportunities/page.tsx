@@ -1,4 +1,4 @@
-import { Target } from "lucide-react";
+import { Plus, Target } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -6,8 +6,11 @@ import { KanbanBoard, type BoardOpportunity } from "@/components/opportunities/k
 import { OpportunityListTable, type OpportunityListRow } from "@/components/opportunities/opportunity-list-table";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { InfoTip } from "@/components/ui/info-tip";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { employeesOf, prospectValue, usdShort } from "@/lib/companies/value";
+import { currentQuarter } from "@/lib/growth-mission/hours";
 import type { OpportunityStageRow, StageGroup } from "@/lib/opportunities/stages";
 import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
@@ -17,11 +20,12 @@ export const metadata: Metadata = { title: "Opportunities — GrowthMission" };
 
 interface OpportunityQueryRow {
   id: string;
+  name: string | null;
   stage_id: string;
-  value: number | null;
   closed_at: string | null;
+  stage_entered_at: string;
   contacts: { full_name: string } | { full_name: string }[] | null;
-  companies: { name: string } | { name: string }[] | null;
+  companies: { name: string; company_size: string | null } | { name: string; company_size: string | null }[] | null;
   users: { full_name: string } | { full_name: string }[] | null;
   opportunity_stages:
     | { name: string; stage_group: StageGroup; win_probability: number }
@@ -29,27 +33,34 @@ interface OpportunityQueryRow {
     | null;
 }
 
+const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
+
 /**
  * App Flow §4.5, E1/E2 — Opportunity Board (default) with a List view
- * toggle, server-driven via ?view=. Columns/stage options come from the
- * account's own opportunity_stages rows (client-confirmed customizable,
- * Settings → Opportunity Stages), not a fixed list.
+ * toggle, server-driven via ?view=. Columns are the account's own
+ * opportunity_stages rows.
  *
- * Pagination (2026-09-15) applies only to List view — the Board's
- * columns each need every one of their own cards present (already
- * height-capped with internal scroll per column, not row-bottomless),
- * so the same full `opportunities` fetch that feeds the board gets
- * sliced in JS only when rendering the flat List table.
+ * Client-confirmed redesign (2026-10-14, approved mockup "CRM Pages
+ * Refresh"): no "pipeline" anywhere. Every value here is the client's
+ * company-size formula (lib/companies/value.ts): Prospect Value = $200 ×
+ * the company's Employees × 12, Opportunities Value = 3 × that. The
+ * opportunity's own typed Value field appears only on the opportunity's
+ * page and in Reports' Revenue from Closed-Won. Cards and rows show how
+ * long each opportunity has been in its stage (opportunities.
+ * stage_entered_at, recorded from 2026-10-14).
+ *
+ * The summary strip sits on the page rather than inside the board so
+ * Board and List share it. Pagination (2026-09-15) applies only to List.
  */
 export default async function OpportunitiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; page?: string; pageSize?: string }>;
+  searchParams: Promise<{ view?: string; page?: string; pageSize?: string; sort?: string; dir?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const { view, ...pageParams } = await searchParams;
+  const { view, sort, dir, ...pageParams } = await searchParams;
   const isListView = view === "list";
   const { page, pageSize, from, to } = parsePagination(pageParams);
 
@@ -58,7 +69,7 @@ export default async function OpportunitiesPage({
     supabase
       .from("opportunities")
       .select(
-        "id, stage_id, value, closed_at, contacts(full_name), companies(name), users(full_name), opportunity_stages(name, stage_group, win_probability)"
+        "id, name, stage_id, closed_at, stage_entered_at, contacts(full_name), companies(name, company_size), users(full_name), opportunity_stages(name, stage_group, win_probability)"
       )
       .eq("account_id", user.account_id)
       .order("created_at", { ascending: false }),
@@ -71,65 +82,143 @@ export default async function OpportunitiesPage({
   ]);
 
   const stages = (stageRows ?? []) as OpportunityStageRow[];
+  const stageOrder = new Map(stages.map((s) => [s.id, s.sort_order]));
 
   const opportunities = (rows ?? []).map((r) => {
     const row = r as unknown as OpportunityQueryRow;
-    const contact = Array.isArray(row.contacts) ? row.contacts[0] : row.contacts;
-    const company = Array.isArray(row.companies) ? row.companies[0] : row.companies;
-    const owner = Array.isArray(row.users) ? row.users[0] : row.users;
-    const stage = Array.isArray(row.opportunity_stages) ? row.opportunity_stages[0] : row.opportunity_stages;
+    const contact = one(row.contacts);
+    const company = one(row.companies);
+    const owner = one(row.users);
+    const stage = one(row.opportunity_stages);
     return {
       id: row.id,
+      name: row.name,
       stage_id: row.stage_id,
       stage_name: stage?.name ?? "Unknown",
       stage_group: stage?.stage_group ?? "open",
       win_probability: stage?.win_probability ?? 0,
-      value: row.value,
       closed_at: row.closed_at,
+      stage_entered_at: row.stage_entered_at,
       contact_name: contact?.full_name ?? "Unknown",
       company_name: company?.name ?? null,
+      employees: employeesOf(company?.company_size),
+      prospect_value: prospectValue(company?.company_size),
       owner_name: owner?.full_name ?? null,
     };
   });
 
+  // ---- Summary strip ----
+  const q = currentQuarter();
+  const open = opportunities.filter((o) => o.stage_group === "open");
+  const openValue = open.reduce((s, o) => s + o.prospect_value, 0);
+  const wonThisQuarter = opportunities.filter(
+    (o) => o.stage_group === "won" && o.closed_at && o.closed_at.slice(0, 10) >= q.start && o.closed_at.slice(0, 10) < q.nextStart
+  );
+  const average = opportunities.length > 0 ? opportunities.reduce((s, o) => s + o.prospect_value, 0) / opportunities.length : 0;
+
+  // ---- List view sort (server-driven via SortableHeader) ----
+  const direction = dir === "desc" ? -1 : 1;
+  const listRows = [...opportunities].sort((a, b) => {
+    switch (sort) {
+      case "contact":
+        return direction * (a.name ?? a.contact_name).localeCompare(b.name ?? b.contact_name);
+      case "stage":
+        return direction * ((stageOrder.get(a.stage_id) ?? 0) - (stageOrder.get(b.stage_id) ?? 0));
+      case "value":
+        return direction * (a.prospect_value - b.prospect_value);
+      case "days":
+        return direction * (new Date(a.stage_entered_at).getTime() - new Date(b.stage_entered_at).getTime());
+      default:
+        return 0;
+    }
+  });
+
   return (
-    <main className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col p-6 md:p-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-h1 text-primary-900">Opportunities</h1>
-        <div className="flex items-center gap-3">
+    <main className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col gap-5 p-6 md:p-8">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-h1 text-primary-900">Opportunities</h1>
+          <p className="text-body text-neutral-500">
+            {isListView ? "Every opportunity as a row." : "Drag a card to move it to another stage."}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex rounded-md border border-neutral-200 bg-neutral-50 p-1 shadow-inner">
-            <Link
-              href="/opportunities"
-              className={cn(
-                "rounded px-3 py-1 text-body-sm font-medium transition-colors",
-                !isListView ? "bg-white text-primary-800 shadow-sm" : "text-neutral-500 hover:text-neutral-800"
-              )}
-            >
-              Board
-            </Link>
-            <Link
-              href="/opportunities?view=list"
-              className={cn(
-                "rounded px-3 py-1 text-body-sm font-medium transition-colors",
-                isListView ? "bg-white text-primary-800 shadow-sm" : "text-neutral-500 hover:text-neutral-800"
-              )}
-            >
-              List
-            </Link>
+            {[
+              { href: "/opportunities", label: "Board", on: !isListView },
+              { href: "/opportunities?view=list", label: "List", on: isListView },
+            ].map((t) => (
+              <Link
+                key={t.label}
+                href={t.href}
+                className={cn(
+                  "rounded px-3 py-1 text-body-sm font-medium transition-colors",
+                  t.on ? "bg-white text-primary-800 shadow-sm" : "text-neutral-500 hover:text-neutral-800"
+                )}
+              >
+                {t.label}
+              </Link>
+            ))}
           </div>
+          <Button asChild>
+            <Link href="/opportunities/new">
+              <Plus className="mr-1.5 size-4" />
+              New Opportunity
+            </Link>
+          </Button>
         </div>
       </div>
+
+      {opportunities.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Tile
+            label="Prospects Value"
+            tip="Every open opportunity's Prospect Value added together ($200 × the company's Employees × 12 each)."
+            value={usdShort(openValue)}
+            sub={`${open.length} open ${open.length === 1 ? "opportunity" : "opportunities"}`}
+          />
+          <Tile
+            label="Opportunities Value"
+            tip="3 × Prospects Value."
+            value={usdShort(openValue * 3)}
+            sub={`${open.length} open ${open.length === 1 ? "opportunity" : "opportunities"}`}
+          />
+          <Tile
+            label="Won this quarter"
+            value={String(wonThisQuarter.length)}
+            sub={`${usdShort(wonThisQuarter.reduce((s, o) => s + o.prospect_value, 0))} Prospect Value`}
+          />
+          <Tile
+            label="Average Prospect Value"
+            value={usdShort(Math.round(average))}
+            sub={`${opportunities.length} ${opportunities.length === 1 ? "opportunity" : "opportunities"}`}
+          />
+        </div>
+      )}
 
       {opportunities.length === 0 ? (
         <EmptyState icon={Target} />
       ) : isListView ? (
-        <>
-          <OpportunityListTable opportunities={opportunities.slice(from, to + 1) as OpportunityListRow[]} />
+        <div>
+          <OpportunityListTable opportunities={listRows.slice(from, to + 1) as OpportunityListRow[]} />
           <PaginationBar page={page} pageSize={pageSize} totalCount={opportunities.length} />
-        </>
+        </div>
       ) : (
         <KanbanBoard stages={stages} opportunities={opportunities as BoardOpportunity[]} />
       )}
     </main>
+  );
+}
+
+function Tile({ label, tip, value, sub }: { label: string; tip?: string; value: string; sub: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5 rounded-lg border border-primary-100 bg-white px-4 py-3 shadow-lift">
+      <span className="flex items-center gap-1.5 text-caption text-neutral-500">
+        {label}
+        {tip && <InfoTip text={tip} label={`About ${label}`} />}
+      </span>
+      <span className="text-h3 font-bold tabular-nums text-primary-900">{value}</span>
+      <span className="text-caption tabular-nums text-neutral-500">{sub}</span>
+    </div>
   );
 }
