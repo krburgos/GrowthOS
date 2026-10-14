@@ -200,7 +200,7 @@ export default async function ContactsListPage({
           <h1 className="text-h1 text-primary-900">Contacts</h1>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-body text-neutral-500">
             <span>
-              <b className="font-bold tabular-nums text-primary-900">{(allCount ?? 0).toLocaleString()}</b> contacts
+              <b className="font-bold tabular-nums text-primary-900">{(allCount ?? 0).toLocaleString()}</b> {allCount === 1 ? "Contact" : "Contacts"}
             </span>
             <span aria-hidden="true" className="text-neutral-300">·</span>
             <span className="inline-flex items-center gap-1.5">
