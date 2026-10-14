@@ -248,6 +248,16 @@ create index contact_statuses_account_id_idx on contact_statuses(account_id);
 create unique index contact_statuses_account_name_unique
   on contact_statuses(account_id, lower(name)) where archived_at is null;
 
+-- Client-confirmed addition (2026-10-14, "Status Colors"), migration
+-- 20261014000005_contact_status_colors.sql: a swatch key per status,
+-- chosen in Settings > Contact Statuses (Design System §8.3). Existing
+-- rows were set MQL orange, MQC yellow, SNIPER green, all others gray;
+-- seed_default_contact_statuses() (§7.5) seeds the same colors. No policy
+-- change: the existing update policy already covers the column.
+alter table contact_statuses
+  add column color text not null default 'gray'
+    check (color in ('gray', 'navy', 'blue', 'cyan', 'teal', 'green', 'lime', 'yellow', 'gold', 'orange', 'red', 'rose'));
+
 create table contacts (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id),
@@ -1479,21 +1489,19 @@ create trigger trg_sync_opportunity_company
 ### 7.5 Account setup: seed_default_contact_statuses, seed_default_opportunity_stages
 
 ```
+-- Colors added 2026-10-14 ("Status Colors", Design System §8.3).
 create or replace function seed_default_contact_statuses()
 returns trigger
 language plpgsql security definer set search_path = public
 as $$
 declare
-  defaults text[] := array[
-    'MQC', 'MQL', 'Scrub', 'Existing Client', 'Not a Fit', 'Internal', 'UnSub - Call Only'
-  ];
-  status_name text;
-  i integer := 0;
+  defaults text[] := array['MQC', 'MQL', 'Scrub', 'Existing Client', 'Not a Fit', 'Internal', 'UnSub - Call Only'];
+  colors text[] := array['yellow', 'orange', 'gray', 'gray', 'gray', 'gray', 'gray'];
+  i integer;
 begin
-  foreach status_name in array defaults loop
-    insert into public.contact_statuses (account_id, name, sort_order, is_default)
-    values (new.id, status_name, i, true);
-    i := i + 1;
+  for i in 1 .. array_length(defaults, 1) loop
+    insert into public.contact_statuses (account_id, name, sort_order, is_default, color)
+    values (new.id, defaults[i], i - 1, true, colors[i]);
   end loop;
   return new;
 end;

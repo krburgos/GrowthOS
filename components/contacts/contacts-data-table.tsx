@@ -27,6 +27,7 @@ import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { AddToListDialog } from "@/components/lists/add-to-list-dialog";
 import { ContactsBulkToolbar, type ContactSelectionState } from "@/components/contacts/contacts-bulk-toolbar";
+import { StatusPill } from "@/components/contacts/status-pill";
 import { LinkedInLogo } from "@/components/icons/linkedin-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ContactSelectionScope } from "@/lib/contacts/bulk-actions";
 import { createClient } from "@/lib/supabase/client";
-import { statusBadgeVariant } from "@/lib/contacts/status-badge";
 import type { ContactListRow } from "@/lib/contacts/types";
 import { employeesOf, opportunitiesValue, prospectValue, usd } from "@/lib/companies/value";
 import { cn } from "@/lib/utils";
@@ -690,7 +690,7 @@ export function ContactsDataTable({
                     ) : (
                       <Td>
                         {c.contact_statuses && (
-                          <Badge variant={statusBadgeVariant(c.contact_statuses.name)}>{c.contact_statuses.name}</Badge>
+                          <StatusPill name={c.contact_statuses.name} color={c.contact_statuses.color} />
                         )}
                       </Td>
                     ))}
@@ -912,9 +912,7 @@ function ContactCard({
         </div>
 
         {contact.contact_statuses?.name && (
-          <span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-1 text-caption font-semibold text-neutral-600">
-            {contact.contact_statuses.name}
-          </span>
+          <StatusPill name={contact.contact_statuses.name} color={contact.contact_statuses.color} className="shrink-0" />
         )}
       </div>
 

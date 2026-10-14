@@ -41,7 +41,7 @@ export default async function ContactDetailPage({
   const { data: contact } = await supabase
     .from("contacts")
     .select(
-      "id, first_name, last_name, full_name, title, email, phone, status_id, owner_id, notes, notes_updated_at, notes_updated_by, score, temperature, linkedin_url, avatar_url, company_id, contact_statuses(name), companies(name, website, linkedin_url, industry, company_size, phone, address_line1, city, state)"
+      "id, first_name, last_name, full_name, title, email, phone, status_id, owner_id, notes, notes_updated_at, notes_updated_by, score, temperature, linkedin_url, avatar_url, company_id, contact_statuses(name, color), companies(name, website, linkedin_url, industry, company_size, phone, address_line1, city, state)"
     )
     .eq("id", id)
     .is("archived_at", null)
@@ -121,7 +121,7 @@ export default async function ContactDetailPage({
     | CompanyFields
     | undefined;
   const statusField = contact.contact_statuses as unknown;
-  const status = (Array.isArray(statusField) ? statusField[0] : statusField) as { name: string } | undefined;
+  const status = (Array.isArray(statusField) ? statusField[0] : statusField) as { name: string; color: string } | undefined;
 
   const activities = (activityRows ?? []) as ActivityRow[];
   const emailActivities = activities.filter((a) => a.type === "email");
@@ -166,6 +166,7 @@ export default async function ContactDetailPage({
       phone={contact.phone}
       ownerName={ownerName}
       statusName={status?.name}
+      statusColor={status?.color}
       temperature={contact.temperature}
       score={contact.score}
       linkedinUrl={contact.linkedin_url}

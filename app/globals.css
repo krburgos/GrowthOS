@@ -53,6 +53,11 @@
   --color-warning-900: #574d05;
   --color-warning-950: #342e04;
 
+  /* Client-confirmed (2026-10-14, "Status Colors"): one orange pair for the
+     contact-status Orange swatch. Fill + text only, contrast 6.38:1. */
+  --color-orange-100: #ffedd5;
+  --color-orange-800: #9a3412;
+
   /* Error / Danger (Coral Red) */
   --color-error-50: #faf5f5;
   --color-error-100: #f5e5e5;

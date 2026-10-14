@@ -293,6 +293,19 @@ Custom statuses an MSP creates default to the **Neutral** treatment above — Ph
 
 **Client-confirmed content update (2026-09-06):** the default Contact Statuses list changed (§7.5 of the Backend Schema); the table above reflects the new names. "Scrub" is grouped with the negative/red treatment as a judgment call (not specified by the client) — it reads like a dead-end status (an invalid or disqualified contact) the same way "Not a Fit" and "UnSub - Call Only" do; revisit if that reads wrong in practice.
 
+**Client-confirmed change (2026-10-14, approved mockup "Status Colors") — status colors are now chosen per status, superseding the category table and the "no custom badge color" line above.** Every contact status stores one of twelve swatch keys (`contact_statuses.color`, Backend Schema §5.3), picked in Settings › Contact Statuses from a palette button on each row. The swatches are fixed tint pairs, never a free hex, so every pill stays quiet next to the navy table headers and passes 4.5:1:
+
+| **Swatch** | **Fill** | **Text** | | **Swatch** | **Fill** | **Text** |
+| --- | --- | --- | --- | --- | --- | --- |
+| Gray (default) | neutral-200 | neutral-700 | | Lime | success-200 | success-900 |
+| Navy | primary-100 | primary-700 | | Yellow | warning-100 | warning-900 |
+| Blue | primary-200 | primary-900 | | Gold | warning-200 | warning-950 |
+| Cyan | secondary-100 | secondary-800 | | Orange | orange-100 | orange-800 |
+| Teal | secondary-200 | secondary-900 | | Red | error-100 | error-700 |
+| Green | success-100 | success-800 | | Rose | error-200 | error-800 |
+
+Orange needed one new token pair (`orange-100` / `orange-800`, §9), the only addition. The pill keeps this section's shape (radius-full, Caption, semibold) and gains a 6px dot in the text color, so the status still reads in grayscale and print. One component (`components/contacts/status-pill.tsx`) draws it everywhere: the Contacts and List tables and mobile cards, Company Detail's contacts table, the Contact Detail hero, and the Settings list itself. Client defaults: **MQL orange, MQC yellow, SNIPER green, every other status gray**, including new statuses.
+
 ### 8.4 Opportunity Kanban Board
 
 Per the confirmed direction: **cards stay neutral, only column headers carry color**, grouped into four semantic buckets rather than thirteen unique hues:
@@ -514,6 +527,11 @@ Tailwind v4 @theme block — drop directly into the project's global CSS file.
   --color-warning-800: #817103;
   --color-warning-900: #574d05;
   --color-warning-950: #342e04;
+
+  /* Client-confirmed (2026-10-14, "Status Colors"): one orange pair for the
+     contact-status Orange swatch. Fill + text only, contrast 6.38:1. */
+  --color-orange-100: #ffedd5;
+  --color-orange-800: #9a3412;
 
   /* Error / Danger (Coral Red) */
   --color-error-50: #faf5f5;

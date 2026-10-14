@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CompanyOverviewForm } from "@/components/companies/company-overview-form";
+import { StatusPill } from "@/components/contacts/status-pill";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
@@ -56,7 +57,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
   const [{ data: contacts }, { data: opportunities }] = await Promise.all([
     supabase
       .from("contacts")
-      .select("id, full_name, title, email, contact_statuses(name)")
+      .select("id, full_name, title, email, contact_statuses(name, color)")
       .eq("company_id", id)
       .is("archived_at", null)
       .order("full_name"),
@@ -117,7 +118,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
                       </TableCell>
                       <TableCell>{c.title ?? "—"}</TableCell>
                       <TableCell>{c.email}</TableCell>
-                      <TableCell>{status && <Badge variant="neutral">{status.name}</Badge>}</TableCell>
+                      <TableCell>{status && <StatusPill name={status.name} color={status.color} />}</TableCell>
                     </TableRow>
                   );
                 })}

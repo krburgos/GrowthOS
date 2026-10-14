@@ -22,7 +22,7 @@ export default async function StatusesPage() {
   const supabase = await createClient();
   const { data: statuses } = await supabase
     .from("contact_statuses")
-    .select("id, name, sort_order, is_default")
+    .select("id, name, sort_order, is_default, color")
     .eq("account_id", user.account_id)
     .is("archived_at", null)
     .order("sort_order");

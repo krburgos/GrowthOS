@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Archive, GripVertical, MoreVertical, Pencil, Plus } from "lucide-react";
+import { Archive, Check, GripVertical, MoreVertical, Palette, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -31,8 +31,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { StatusPill } from "@/components/contacts/status-pill";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { STATUS_COLORS, STATUS_COLOR_KEYS, type StatusColor } from "@/lib/contacts/status-colors";
 import { createClient } from "@/lib/supabase/client";
 
 export interface StatusRow {
@@ -40,6 +43,7 @@ export interface StatusRow {
   name: string;
   sort_order: number;
   is_default: boolean;
+  color: string;
 }
 
 /**
@@ -48,6 +52,8 @@ export interface StatusRow {
  * Reorder is drag-and-drop (client-confirmed 2026-09-15, @dnd-kit/sortable
  * — already pinned in the Tech Stack Lockfile for exactly this, just not
  * used yet — superseding the original up/down-arrow-only spec).
+ * Each status also carries a color from twelve swatches, picked from the
+ * row's palette button (client-confirmed 2026-10-14, "Status Colors").
  */
 export function StatusesManager({
   statuses,
@@ -141,6 +147,20 @@ export function StatusesManager({
     router.refresh();
   };
 
+  const handleColor = async (status: StatusRow, color: StatusColor) => {
+    if (status.color === color) return;
+    setPendingId(status.id);
+    const supabase = createClient();
+    const { error } = await supabase.from("contact_statuses").update({ color }).eq("id", status.id);
+    setPendingId(null);
+
+    if (error) {
+      toast.error(getFriendlyErrorMessage(error));
+      return;
+    }
+    router.refresh();
+  };
+
   const handleRetire = async () => {
     if (!retireTarget) return;
     setPendingId(retireTarget.id);
@@ -183,6 +203,7 @@ export function StatusesManager({
                   setRenameValue(status.name);
                 }}
                 onRetire={() => setRetireTarget(status)}
+                onColor={(color) => handleColor(status, color)}
               />
             ))}
           </ul>
@@ -270,13 +291,16 @@ function SortableStatusRow({
   pending,
   onRename,
   onRetire,
+  onColor,
 }: {
   status: StatusRow;
   canEdit: boolean;
   pending: boolean;
   onRename: () => void;
   onRetire: () => void;
+  onColor: (color: StatusColor) => void;
 }) {
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: status.id });
 
   return (
@@ -298,12 +322,54 @@ function SortableStatusRow({
             <GripVertical className="size-4" />
           </button>
         )}
-        <span className="text-body text-neutral-800">
-          {status.name}
+        <span className="flex items-center">
+          <StatusPill name={status.name} color={status.color} />
           {status.is_default && <span className="ml-2 text-caption text-neutral-400">Default</span>}
         </span>
       </div>
       {canEdit && (
+        <div className="flex items-center gap-1">
+        <Popover open={paletteOpen} onOpenChange={setPaletteOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={pending}
+              className="flex size-7 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 disabled:opacity-30"
+              aria-label={`Change color for ${status.name}`}
+            >
+              <Palette className="size-4" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-auto p-3">
+            <p className="mb-2 text-caption font-semibold text-neutral-600">Color</p>
+            <div className="grid grid-cols-6 gap-2" role="radiogroup" aria-label={`Color for ${status.name}`}>
+              {STATUS_COLOR_KEYS.map((key) => {
+                const selected = (status.color ?? "gray") === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    aria-label={STATUS_COLORS[key].label}
+                    title={STATUS_COLORS[key].label}
+                    onClick={() => {
+                      setPaletteOpen(false);
+                      onColor(key);
+                    }}
+                    className={
+                      "flex size-7 items-center justify-center rounded-full ring-offset-2 ring-offset-white hover:ring-2 hover:ring-neutral-300 " +
+                      STATUS_COLORS[key].pill +
+                      (selected ? " ring-2 ring-primary-700 hover:ring-primary-700" : "")
+                    }
+                  >
+                    {selected ? <Check className="size-3.5" /> : <span className="size-2 rounded-full bg-current" />}
+                  </button>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -325,6 +391,7 @@ function SortableStatusRow({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       )}
     </li>
   );

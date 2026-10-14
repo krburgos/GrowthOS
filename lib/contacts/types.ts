@@ -11,7 +11,7 @@ export interface ContactListRow {
   linkedin_url: string | null;
   email_opt_out: boolean;
   status_id: string;
-  contact_statuses: { name: string } | null;
+  contact_statuses: { name: string; color: string } | null;
   company_id: string | null;
   companies: {
     name: string;

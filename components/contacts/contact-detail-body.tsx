@@ -15,6 +15,7 @@ import {
   type ContactOverviewDefaults,
 } from "@/components/contacts/contact-overview-form";
 import { SendEmailDialog, type FromOption } from "@/components/contacts/send-email-dialog";
+import { StatusPill } from "@/components/contacts/status-pill";
 import { HERO_ACTION_CLASS, HeroBand } from "@/components/shell/hero-band";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -154,6 +155,7 @@ export function ContactDetailBody({
   phone,
   ownerName,
   statusName,
+  statusColor,
   temperature,
   score,
   linkedinUrl,
@@ -185,6 +187,7 @@ export function ContactDetailBody({
   phone: string | null;
   ownerName: string | undefined;
   statusName: string | undefined;
+  statusColor: string | undefined;
   temperature: "hot" | "cold" | null;
   score: number | null;
   linkedinUrl: string | null;
@@ -243,7 +246,7 @@ export function ContactDetailBody({
               </p>
             )}
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {statusName && <HeroChip>{statusName}</HeroChip>}
+              {statusName && <StatusPill name={statusName} color={statusColor} />}
               {temperature && <HeroChip tone={temperature}>{temperature === "hot" ? "Hot" : "Cold"}</HeroChip>}
               {score != null && <HeroChip>Score {score}</HeroChip>}
               {ownerName && <HeroChip>Salesperson: {ownerName}</HeroChip>}
