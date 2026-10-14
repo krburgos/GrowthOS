@@ -44,7 +44,7 @@ const ACTIVITY_FILTERS: { value: ActivityType | "all"; label: string }[] = [
   { value: "task", label: "Tasks" },
 ];
 
-const STAGE_STRIPE: Record<StageGroup, string> = {
+export const STAGE_STRIPE: Record<StageGroup, string> = {
   open: "bg-secondary-500",
   won: "bg-success-600",
   lost: "bg-neutral-300",
@@ -52,7 +52,7 @@ const STAGE_STRIPE: Record<StageGroup, string> = {
 
 const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
-function initials(name: string) {
+export function initials(name: string) {
   return name
     .trim()
     .split(/\s+/)
@@ -62,7 +62,7 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-function hostnameOf(url: string): string {
+export function hostnameOf(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
   } catch {
@@ -437,7 +437,7 @@ export function ContactDetailBody({
   );
 }
 
-function HeroChip({ children, tone }: { children: React.ReactNode; tone?: "hot" | "cold" }) {
+export function HeroChip({ children, tone }: { children: React.ReactNode; tone?: "hot" | "cold" }) {
   return (
     <span
       className={cn(
@@ -452,7 +452,7 @@ function HeroChip({ children, tone }: { children: React.ReactNode; tone?: "hot" 
   );
 }
 
-function HeroStat({ label, value, tip }: { label: string; value: string; tip?: string }) {
+export function HeroStat({ label, value, tip }: { label: string; value: string; tip?: string }) {
   return (
     <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
       <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-white/55">
@@ -464,7 +464,7 @@ function HeroStat({ label, value, tip }: { label: string; value: string; tip?: s
   );
 }
 
-function TabCount({ n }: { n: number }) {
+export function TabCount({ n }: { n: number }) {
   return (
     <span className="ml-1.5 rounded-full bg-neutral-100 px-1.5 py-px text-caption font-semibold tabular-nums text-neutral-500">
       {n}
@@ -472,7 +472,7 @@ function TabCount({ n }: { n: number }) {
   );
 }
 
-function Fact({ icon: Icon, children }: { icon: typeof Mail; children: React.ReactNode }) {
+export function Fact({ icon: Icon, children }: { icon: typeof Mail; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2 text-body-sm text-neutral-700">
       <Icon className="mt-0.5 size-3.5 shrink-0 text-neutral-400" />
@@ -481,7 +481,7 @@ function Fact({ icon: Icon, children }: { icon: typeof Mail; children: React.Rea
   );
 }
 
-function LinkRow({
+export function LinkRow({
   icon: Icon,
   href,
   label,

@@ -1,14 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Building2, Globe, Link2, MapPin, Pencil, Phone, Tag, Users } from "lucide-react";
+import { Building2, GitMerge, Globe, Link2, MapPin, Phone, Tag, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { CompanyLogoUpload } from "@/components/companies/company-logo-upload";
 import { MergeCompanyDialog } from "@/components/contacts/merge-company-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,40 +26,35 @@ const schema = z.object({
   state: z.string().optional(),
 });
 
-type Values = z.infer<typeof schema>;
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
-}
+export type CompanyOverviewValues = z.infer<typeof schema>;
 
 /**
- * Client-confirmed redesign ("Concept B — Gradient hero, single
- * scroll", mockup review, 2026-09-08): a navy→teal glow hero (same
- * technique as Login and Settings' profile pages) replaces the plain
- * `<h1>` + card header — company logo (now uploadable, see
- * `CompanyLogoUpload`), name, and an industry/city subtitle up top,
- * with Update Info and Merge as the hero's own action buttons. Fields
- * moved from a single-column list to a 2-column grid below the hero,
- * for a denser "modernized" read without losing any field. The logo
- * circle is sized to match `ProfileHeader`'s 96px hero avatar
- * precedent (client-confirmed, "make the logo visible" — the same
- * lesson from the Login screen and My Profile passes) rather than a
- * small icon that would get lost against the gradient.
+ * Company Detail's Overview card — client-confirmed refresh (2026-10-14,
+ * approved mockup "Company Detail Refresh"): the same navy-headed card and
+ * field rows as Contact Detail's Overview, two per row from `md` up. The
+ * hero (logo, name, actions) moved to CompanyDetailBody's HeroBand, so
+ * `editing` is lifted there: the hero's Edit button and this card's own
+ * both open the form. Merge sits in the card header while editing.
+ *
+ * Previously "Concept B — Gradient hero, single scroll" (2026-09-08),
+ * which carried the logo and name in this form's own gradient header.
  */
 export function CompanyOverviewForm({
   companyId,
   accountId,
   canEdit,
   defaults,
+  editing,
+  onEditingChange,
 }: {
   companyId: string;
   accountId: string;
   canEdit: boolean;
-  defaults: Values & { logo_url: string | null };
+  defaults: CompanyOverviewValues;
+  editing: boolean;
+  onEditingChange: (editing: boolean) => void;
 }) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   const {
     register,
@@ -68,19 +62,16 @@ export function CompanyOverviewForm({
     reset,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: defaults });
+  } = useForm<CompanyOverviewValues>({ resolver: zodResolver(schema), defaultValues: defaults });
 
   const values = watch();
-  const subtitle = [values.industry, [values.city, values.state].filter(Boolean).join(", ")]
-    .filter(Boolean)
-    .join(" · ");
 
   const handleCancel = () => {
     reset(defaults);
-    setEditing(false);
+    onEditingChange(false);
   };
 
-  const onSubmit = async (formValues: Values) => {
+  const onSubmit = async (formValues: CompanyOverviewValues) => {
     const supabase = createClient();
     const { error } = await supabase
       .from("companies")
@@ -102,100 +93,98 @@ export function CompanyOverviewForm({
       return;
     }
     toast.success("Company updated.");
-    setEditing(false);
+    onEditingChange(false);
     router.refresh();
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-      <div
-        className="relative overflow-hidden px-7 py-7"
-        style={{
-          background:
-            "radial-gradient(500px circle at 88% -40%, var(--color-secondary-400) 0%, transparent 55%), linear-gradient(120deg, var(--color-primary-600), var(--color-secondary-600))",
-        }}
-      >
-        <div className="relative z-10 flex items-center gap-5">
-          <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white/70 bg-gradient-to-br from-primary-500 to-secondary-500 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.35)]">
-            <CompanyLogoUpload
-              companyId={companyId}
-              accountId={accountId}
-              logoUrl={defaults.logo_url}
-              canEdit={canEdit}
-              initials={initials(values.name || "?")}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-h3 text-white">{values.name}</h1>
-            {subtitle && <p className="mt-0.5 truncate text-body-sm text-white/70">{subtitle}</p>}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {editing && canEdit && (
-              <Button type="button" variant="ghost" size="sm" className="text-white hover:bg-white/15 hover:text-white" onClick={() => setMergeOpen(true)}>
-                Merge
-              </Button>
-            )}
-            {canEdit && !editing && (
-              <Button type="button" size="sm" onClick={() => setEditing(true)} className="bg-white text-primary-800 hover:bg-white/90">
-                <Pencil className="mr-1.5 size-4" />
-                Update Info
-              </Button>
-            )}
-          </div>
-        </div>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="rounded-lg border border-neutral-200 bg-white">
+      <div className="flex items-center justify-between gap-3 rounded-t-lg bg-primary-900 px-4 py-2.5">
+        <h2 className="flex items-center gap-2 text-caption font-semibold uppercase tracking-wide text-white">
+          <Building2 className="size-4 text-secondary-300" />
+          Company
+        </h2>
+        {canEdit &&
+          (editing ? (
+            <button
+              type="button"
+              onClick={() => setMergeOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-1 text-caption font-semibold text-white hover:bg-white/20"
+            >
+              <GitMerge className="size-3.5" />
+              Merge
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onEditingChange(true)}
+              className="text-caption font-semibold text-secondary-300 hover:underline"
+            >
+              Edit
+            </button>
+          ))}
       </div>
 
-      <div className="grid grid-cols-1 divide-y divide-neutral-100 border-t border-neutral-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-        <div className="flex flex-col divide-y divide-neutral-100">
-          <Row icon={Building2} tone="navy" label="Company Name" fieldId="name">
+      <div className="grid grid-cols-1 md:grid-cols-2">
+        <div className="flex flex-col divide-y divide-neutral-100 md:border-r md:border-neutral-100">
+          <Row icon={Building2} label="Company Name" fieldId="name">
             {editing ? (
-              <>
+              <div className="flex-1">
                 <Input id="name" error={!!errors.name} {...register("name")} />
                 {errors.name && <p className="mt-1 text-body-sm text-error-600">{errors.name.message}</p>}
-              </>
+              </div>
             ) : (
               <Value>{values.name}</Value>
             )}
           </Row>
-          <Row icon={Globe} tone="teal" label="Website" fieldId="website">
+          <Row icon={Globe} label="Website" fieldId="website">
             {editing ? (
-              <Input id="website" {...register("website")} />
+              <Input id="website" {...register("website")} className="flex-1" />
             ) : values.website ? (
-              <a href={values.website} target="_blank" rel="noreferrer" className="block truncate text-body font-medium text-primary-700 hover:underline">
-                {values.website}
-              </a>
+              <ExternalValue href={values.website} />
             ) : (
               <Value />
             )}
           </Row>
-          <Row icon={Link2} tone="navy" label="Company LinkedIn" fieldId="linkedin_url">
+          <Row icon={Link2} label="Company LinkedIn" fieldId="linkedin_url">
             {editing ? (
-              <Input id="linkedin_url" placeholder="https://linkedin.com/company/…" {...register("linkedin_url")} />
+              <Input
+                id="linkedin_url"
+                placeholder="https://linkedin.com/company/…"
+                {...register("linkedin_url")}
+                className="flex-1"
+              />
             ) : values.linkedin_url ? (
-              <a href={values.linkedin_url} target="_blank" rel="noreferrer" className="block truncate text-body font-medium text-primary-700 hover:underline">
-                {values.linkedin_url}
-              </a>
+              <ExternalValue href={values.linkedin_url} />
             ) : (
               <Value />
             )}
           </Row>
-          <Row icon={Tag} tone="teal" label="Industry" fieldId="industry">
-            {editing ? <Input id="industry" {...register("industry")} /> : <Value>{values.industry}</Value>}
+          <Row icon={Tag} label="Industry" fieldId="industry">
+            {editing ? <Input id="industry" {...register("industry")} className="flex-1" /> : <Value>{values.industry}</Value>}
           </Row>
         </div>
-        <div className="flex flex-col divide-y divide-neutral-100">
-          <Row icon={Users} tone="navy" label="Employees" fieldId="company_size">
-            {editing ? <Input id="company_size" {...register("company_size")} /> : <Value>{values.company_size}</Value>}
-          </Row>
-          <Row icon={Phone} tone="teal" label="Phone" fieldId="phone">
-            {editing ? <Input id="phone" {...register("phone")} /> : <Value>{values.phone}</Value>}
-          </Row>
-          <Row icon={MapPin} tone="navy" label="Address" fieldId="address_line1">
-            {editing ? <Input id="address_line1" {...register("address_line1")} /> : <Value>{values.address_line1}</Value>}
-          </Row>
-          <Row icon={MapPin} tone="teal" label="City / State" fieldId="city">
+        <div className="flex flex-col divide-y divide-neutral-100 border-t border-neutral-100 md:border-t-0">
+          <Row icon={Users} label="Employees" fieldId="company_size">
             {editing ? (
-              <div className="flex gap-2">
+              <Input id="company_size" {...register("company_size")} className="flex-1" />
+            ) : (
+              <Value>{values.company_size}</Value>
+            )}
+          </Row>
+          <Row icon={Phone} label="Phone" fieldId="phone">
+            {editing ? <Input id="phone" {...register("phone")} className="flex-1" /> : <Value>{values.phone}</Value>}
+          </Row>
+          <Row icon={MapPin} label="Address" fieldId="address_line1">
+            {editing ? (
+              <Input id="address_line1" {...register("address_line1")} className="flex-1" />
+            ) : (
+              <Value>{values.address_line1}</Value>
+            )}
+          </Row>
+          <Row icon={MapPin} label="City / State" fieldId="city">
+            {editing ? (
+              <div className="flex flex-1 gap-2">
                 <Input id="city" {...register("city")} placeholder="City" />
                 <Input {...register("state")} placeholder="State" aria-label="State" />
               </div>
@@ -207,12 +196,12 @@ export function CompanyOverviewForm({
       </div>
 
       {editing && (
-        <div className="flex justify-end gap-3 border-t border-neutral-100 px-6 py-4">
+        <div className="flex justify-end gap-3 rounded-b-lg border-t border-neutral-100 bg-neutral-50 px-4 py-3">
           <Button type="button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving…" : "Save"}
+            {isSubmitting ? "Saving…" : "Save Changes"}
           </Button>
         </div>
       )}
@@ -230,34 +219,42 @@ export function CompanyOverviewForm({
 
 function Row({
   icon: Icon,
-  tone,
   label,
   fieldId,
   children,
 }: {
   icon: ComponentType<{ className?: string }>;
-  tone: "navy" | "teal";
   label: string;
   fieldId: string;
   children: ReactNode;
 }) {
+  // Same row as Contact Detail's Overview: the label sits above the value on a phone.
   return (
-    <div className="flex items-center gap-4 px-6 py-3.5">
-      <span
-        className={`flex size-9 shrink-0 items-center justify-center rounded-lg text-white ${
-          tone === "navy" ? "bg-primary-700" : "bg-secondary-600"
-        }`}
-      >
-        <Icon className="size-4" />
-      </span>
-      <label htmlFor={fieldId} className="block w-28 shrink-0 text-body text-neutral-800">
-        {label}
-      </label>
-      <div className="min-w-0 flex-1">{children}</div>
+    <div className="flex min-h-12 items-start gap-3 px-4 py-3 sm:items-center">
+      <Icon className="mt-0.5 size-4 shrink-0 text-neutral-400 sm:mt-0" />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
+        <label htmlFor={fieldId} className="shrink-0 text-body-sm text-neutral-500 sm:w-32">
+          {label}
+        </label>
+        {children}
+      </div>
     </div>
   );
 }
 
 function Value({ children }: { children?: ReactNode }) {
-  return <p className="truncate text-body text-neutral-600">{children || "—"}</p>;
+  return <span className="min-w-0 flex-1 break-words text-body text-neutral-800 sm:truncate">{children || "—"}</span>;
+}
+
+function ExternalValue({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="min-w-0 flex-1 break-all text-body font-medium text-primary-600 hover:underline sm:truncate"
+    >
+      {href.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+    </a>
+  );
 }

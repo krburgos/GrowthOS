@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -27,6 +28,8 @@ export interface ActivityRow {
     | { email_address: string; users: { full_name: string } | { full_name: string }[] | null }
     | { email_address: string; users: { full_name: string } | { full_name: string }[] | null }[]
     | null;
+  /** Set only where a timeline spans several contacts (Company Detail), to say whom each entry was with. */
+  contacts?: { id: string; full_name: string } | { id: string; full_name: string }[] | null;
 }
 
 const TYPE_FILTERS: { value: "all" | ActivityRow["type"]; label: string }[] = [
@@ -130,6 +133,7 @@ export function ActivityTimeline({ activities }: { activities: ActivityRow[] }) 
                 {dayActivities.map((activity, i) => {
                   const Icon = TYPE_ICON[activity.type];
                   const author = Array.isArray(activity.users) ? activity.users[0] : activity.users;
+                  const withContact = Array.isArray(activity.contacts) ? activity.contacts[0] : activity.contacts;
                   const isLast = i === dayActivities.length - 1;
 
                   return (
@@ -147,7 +151,7 @@ export function ActivityTimeline({ activities }: { activities: ActivityRow[] }) 
                       </div>
                       <div className="flex flex-1 flex-col gap-0.5 rounded-lg border border-neutral-200 bg-white px-3.5 py-3">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="flex items-center gap-2 text-body font-medium text-neutral-800">
+                          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-body font-medium text-neutral-800">
                             {activity.type === "task" && (
                               <Checkbox
                                 checked={!!activity.completed_at}
@@ -156,6 +160,14 @@ export function ActivityTimeline({ activities }: { activities: ActivityRow[] }) 
                               />
                             )}
                             {activity.subject || activity.type[0].toUpperCase() + activity.type.slice(1)}
+                            {withContact && (
+                              <span className="text-caption font-normal text-neutral-500">
+                                with{" "}
+                                <Link href={`/contacts/${withContact.id}`} className="font-semibold text-primary-600 hover:underline">
+                                  {withContact.full_name}
+                                </Link>
+                              </span>
+                            )}
                           </span>
                           <span className="shrink-0 text-caption text-neutral-400">
                             {activity.due_at

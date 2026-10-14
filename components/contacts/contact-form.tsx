@@ -69,11 +69,16 @@ export function ContactForm({
   owners,
   defaultOwnerId,
   defaultStatusId,
+  defaultCompany,
+  defaultCompanyId,
 }: {
   statuses: ContactFormOption[];
   owners: ContactFormOption[];
   defaultOwnerId?: string;
   defaultStatusId?: string;
+  /** Prefilled company fields when opened from Company Detail's Add Contact (client-confirmed, 2026-10-14). */
+  defaultCompanyId?: string;
+  defaultCompany?: Partial<Pick<Values, "company_name" | "company_website" | "company_linkedin_url" | "company_industry" | "company_size" | "company_phone" | "company_address_line1" | "company_city" | "company_state">>;
 }) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -85,7 +90,7 @@ export function ContactForm({
     formState: { errors, isSubmitting },
   } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { status_id: defaultStatusId, owner_id: defaultOwnerId },
+    defaultValues: { status_id: defaultStatusId, owner_id: defaultOwnerId, ...defaultCompany },
   });
 
   const onSubmit = async (values: Values) => {
@@ -101,7 +106,12 @@ export function ContactForm({
     const accountId = profile!.account_id as string;
 
     let companyId: string | null = null;
-    if (values.company_name) {
+    // From Company Detail with the name left as is: link that exact company.
+    // match_or_create_company() matches on domain only, so a company with no
+    // website would otherwise be created a second time.
+    if (defaultCompanyId && values.company_name === defaultCompany?.company_name) {
+      companyId = defaultCompanyId;
+    } else if (values.company_name) {
       const { data: matchedCompanyId, error: matchError } = await supabase.rpc(
         "match_or_create_company",
         {

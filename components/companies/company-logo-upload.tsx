@@ -8,6 +8,10 @@ import { ImageUploadCircle } from "@/components/settings/image-upload-circle";
  * from the `company-logos` bucket that backs the MSP's own
  * accounts.logo_url, so a prospect company's logo is never confused
  * with the MSP's own branding.
+ *
+ * Hero variant (client-confirmed, 2026-10-14, "Company Detail Refresh"):
+ * a white circle with navy initials and a camera badge, the same as the
+ * contact photo on Contact Detail.
  */
 export function CompanyLogoUpload({
   companyId,
@@ -33,7 +37,8 @@ export function CompanyLogoUpload({
       currentUrl={logoUrl}
       canEdit={canEdit}
       ariaLabel="Upload company logo"
-      fallback={<span className="text-h2 font-semibold text-white">{initials}</span>}
+      variant="hero"
+      fallback={<span className="text-h2 font-semibold text-primary-900">{initials}</span>}
     />
   );
 }
