@@ -174,22 +174,22 @@ export default async function OpportunitiesPage({
           <Tile
             label="Prospects Value"
             value={usdShort(openValue)}
-            sub={`${open.length} open ${open.length === 1 ? "opportunity" : "opportunities"}`}
+            sub={`${open.length} Open ${open.length === 1 ? "Opportunity" : "Opportunities"}`}
           />
           <Tile
             label="Opportunities Value"
             value={usdShort(openValue * 3)}
-            sub={`${open.length} open ${open.length === 1 ? "opportunity" : "opportunities"}`}
+            sub={`${open.length} Open ${open.length === 1 ? "Opportunity" : "Opportunities"}`}
           />
           <Tile
-            label="Won this quarter"
+            label="Won This Quarter"
             value={String(wonThisQuarter.length)}
             sub={`${usdShort(wonThisQuarter.reduce((s, o) => s + o.prospect_value, 0))} Prospect Value`}
           />
           <Tile
             label="Average Prospect Value"
             value={usdShort(Math.round(average))}
-            sub={`${opportunities.length} ${opportunities.length === 1 ? "opportunity" : "opportunities"}`}
+            sub={`${opportunities.length} ${opportunities.length === 1 ? "Opportunity" : "Opportunities"}`}
           />
         </div>
       )}

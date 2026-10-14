@@ -191,18 +191,18 @@ export default async function ListsIndexPage({
             <Tile
               label="Lists"
               value={rows.length.toLocaleString()}
-              sub={`${rows.filter((l) => l.created_at >= monthStart).length} added this month`}
+              sub={`${rows.filter((l) => l.created_at >= monthStart).length} Added This Month`}
             />
-            <Tile label="Contacts on a list" value={contactIds.length.toLocaleString()} sub="each counted once" />
+            <Tile label="Contacts on a List" value={contactIds.length.toLocaleString()} sub="Each Counted Once" />
             <Tile
-              label="Prospect Value on lists"
+              label="Prospect Value on Lists"
               value={usdShort(listedValue)}
               sub={`${usdShort(listedValue * 3)} Opportunities Value`}
             />
             <Tile
               label="Unsubscribed"
               value={unsubTotal.toLocaleString()}
-              sub={`${contactIds.length ? ((unsubTotal / contactIds.length) * 100).toFixed(1) : "0"}% of listed contacts`}
+              sub={`${contactIds.length ? ((unsubTotal / contactIds.length) * 100).toFixed(1) : "0"}% of Listed Contacts`}
             />
           </div>
 

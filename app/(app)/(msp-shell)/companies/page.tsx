@@ -152,17 +152,17 @@ export default async function CompaniesListPage({
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Tile label="Companies" value={all.length.toLocaleString()} sub={`${addedThisMonth} added this month`} />
+            <Tile label="Companies" value={all.length.toLocaleString()} sub={`${addedThisMonth} Added This Month`} />
             <Tile
               label="Prospects Value"
               value={usdShort(totalValue)}
-              sub={`${all.length.toLocaleString()} companies`}
+              sub={`${all.length.toLocaleString()} Companies`}
             />
-            <Tile label="Opportunities Value" value={usdShort(totalValue * 3)} sub={`${all.length.toLocaleString()} companies`} />
+            <Tile label="Opportunities Value" value={usdShort(totalValue * 3)} sub={`${all.length.toLocaleString()} Companies`} />
             <Tile
-              label="With an open opportunity"
+              label="With an Open Opportunity"
               value={withOpen.toLocaleString()}
-              sub={`${all.length ? Math.round((withOpen / all.length) * 100) : 0}% of companies`}
+              sub={`${all.length ? Math.round((withOpen / all.length) * 100) : 0}% of Companies`}
             />
           </div>
 

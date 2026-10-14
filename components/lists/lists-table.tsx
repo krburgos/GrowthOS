@@ -214,7 +214,7 @@ function ListCard({ list: l, canEdit }: { list: ListRow; canEdit: boolean }) {
       <div className="flex items-end justify-between gap-3">
         <p className="text-h2 font-bold leading-none tabular-nums text-primary-900">
           {l.memberCount.toLocaleString()}
-          <span className="ml-1 text-body-sm font-medium text-neutral-500">contacts</span>
+          <span className="ml-1 text-body-sm font-medium text-neutral-500">{l.memberCount === 1 ? "Contact" : "Contacts"}</span>
         </p>
         <p className="text-right">
           <span className="block text-body font-bold tabular-nums text-primary-900">{usdShort(l.prospectValue)}</span>
@@ -224,9 +224,9 @@ function ListCard({ list: l, canEdit }: { list: ListRow; canEdit: boolean }) {
 
       <Health list={l} />
       <p className="flex flex-wrap gap-x-3.5 gap-y-1 text-caption tabular-nums text-neutral-600">
-        <Legend tone="bg-secondary-600" n={l.active} label="active" />
-        <Legend tone="bg-warning-600" n={l.unsubscribed} label="unsubscribed" />
-        <Legend tone="bg-neutral-400" n={l.bounced} label="bounced" />
+        <Legend tone="bg-secondary-600" n={l.active} label="Active" />
+        <Legend tone="bg-warning-600" n={l.unsubscribed} label="Unsubscribed" />
+        <Legend tone="bg-neutral-400" n={l.bounced} label="Bounced" />
       </p>
     </div>
   );
