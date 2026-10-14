@@ -1097,6 +1097,34 @@ A second migration the same day (`20261013000002_whole_hour_mission_orders.sql`,
 The first migration also gives `growth_mission_tasks.due_date` a default of the last day of the current quarter, and sets every null `due_date` to the current quarter's end, because Hours Required places each order in a quarter by its due date.
 
 
+### 6.6j growth_mission_quarter_snapshots
+
+**Client-confirmed addition (2026-10-14, App Flow §4.8 "Reports redesign")**: a closed quarter's Mission figures are **locked**, so Reports shows what a quarter looked like when it ended rather than a recalculation that later edits would change. Migration `supabase/migrations/20261014000003_quarter_snapshots.sql`.
+
+- **One row per account per closed quarter** (`unique (account_id, quarter_start)`): hours required / available / completed, credits required / used / left at close (null when no allotment had been set), orders completed and orders carried forward. The rules mirror `lib/growth-mission/capacity.ts`, evaluated as of the close. AdvocateDash is excluded, and only orders created before the quarter ended count.
+- **Written only by `snapshot_closed_quarters(p_account_id uuid default null)`**, which is `security definer` and only ever inserts quarters that have no row. **pg_cron runs it at 00:05 UTC on 1 January, April, July and October** (job `growth-mission-quarter-snapshots`, beside the existing `send-due-campaigns`). Reports also calls it for its own account before reading, so a missed run repairs itself. A signed-in caller may only name an account they can see (`auth_account_id()`, CRO Leader, or a granted partner); the scheduled run covers every account.
+- **Access.** Select: own account, CRO Leader, granted partner. **No insert, update or delete policies**, so no user can write or alter a figure. Rows are history and have no `archived_at`.
+- **Hours available** uses the roster as it stands when the snapshot is taken, because the roster keeps no history. Taken at the quarter's close, that is the roster at the close.
+- **Backfill.** The migration snapshotted every quarter that had already closed: Q3 2026 for the 17 accounts created by then. Those rows were taken on 2026-10-14, so Q3's hours available reflects that day's roster.
+
+```
+create table growth_mission_quarter_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  account_id uuid not null references accounts(id) on delete cascade,
+  quarter_start date not null,      -- 1 Jan / Apr / Jul / Oct
+  hours_required numeric(8,1) not null default 0,
+  hours_available numeric(8,1) not null default 0,
+  hours_completed numeric(8,1) not null default 0,
+  credits_required integer not null default 0,
+  credits_used integer not null default 0,
+  credits_left integer,
+  orders_completed integer not null default 0,
+  orders_carried integer not null default 0,
+  created_at timestamptz not null default now(),
+  unique (account_id, quarter_start)
+);
+```
+
 ### 6.6f growth_mission_tasks
 
 **Client-confirmed addition (2026-09-25)** — the Command Center's Suggestions & Fixes list becomes a task list. Migrations: `supabase/migrations/20260925000001_growth_mission_tasks.sql` and `20260925000002_growth_mission_tasks_step_slug_enum.sql`.

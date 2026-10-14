@@ -500,6 +500,16 @@ One shared page for all roles (no role-specific dashboards, per the PRD). Sectio
 
 **Client-confirmed layout, "Grid Dashboard" (approved mockup, 2026-09-08, chosen from five compared concepts):** all four sections sit in a compact 2×2 grid, visible at once with no scrolling on a normal desktop — leads as a weekly line chart, opportunities by stage as compact bars (the same visual language as the Dashboard's Pipeline by Stage), campaign performance as a table, and revenue from closed-won as monthly bars behind a total. No date-range picker (that was a different compared concept's own idea, not this one) — leads uses a trailing 8-week window and revenue a trailing 3-month window, fixed rather than user-adjustable in this pass.
 
+**Client-confirmed redesign (2026-10-14, approved mockup "Reports Redesign") — supersedes the "Grid Dashboard" layout and its fixed windows above.**
+
+- **One quarter drives the page.** A quarter picker (`/reports?q=2026-Q3`) lists every quarter from the account's first to now, at most eight, newest first. Every figure, chart, table and export follows it. **Compare with {previous quarter}** (on by default) draws the quarter before in grey: a dashed line on Leads, grey bars beside Revenue.
+- **Section links** under the title jump to Mission, Leads, Pipeline, Campaigns and Revenue.
+- **Headline band** (navy): Leads added, Opportunities created, Revenue won, Mission hours completed and Credits used for the quarter ("so far" while it is current), each with its change against the previous quarter (▲/▼ %, or "First quarter on record").
+- **Mission** (new): hours required against completed for the four most recent quarters, and the **quarter history table** (hours required and completed, credits used, orders completed and carried forward), with the chosen quarter highlighted and marked "so far" or "locked". **Closed quarters show locked figures** (Backend Schema §6.6j); the current quarter is live and matches Mission Capacity. Mission Capacity on Headquarters and the Command Center stays current-quarter only.
+- **Leads & Contacts Added:** a weekly line across the quarter's 13 weeks. **Opportunities by Stage:** a column chart in stage order (open cyan, won green, lost grey), as the pipeline stands today, with the quarter's new opportunities in its headline. **Campaign Performance:** campaigns sent in the quarter, with an inline open-rate bar. **Revenue from Closed-Won:** the quarter's three months, beside the previous quarter's when comparing.
+- **Unchanged:** one page for every role, real data only, and each section's own Export to Spreadsheet button. There is a fifth export, Mission (quarter history), and leads, campaigns and revenue exports now cover the chosen quarter.
+- **Every Reports query is scoped to the account.** The old page relied on RLS alone, so a CRO Leader viewing one MSP saw counts summed across every account they could read.
+
 ### 4.9 Settings (I1–I5)
 
 - **Users & Roles (I1)** — table of the MSP's users, their role, last login (§4.11 audit note), invite/remove actions, role-change dropdown

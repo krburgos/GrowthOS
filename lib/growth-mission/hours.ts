@@ -74,6 +74,37 @@ export function currentQuarter(now = new Date()): QuarterInfo {
   };
 }
 
+/**
+ * Any quarter, by year and number (1-4), for Reports (client-confirmed,
+ * 2026-10-14). `elapsedPct` is measured against the real today, so a
+ * closed quarter reads 100 and a future one 0.
+ */
+export function quarterOf(year: number, q: number, now = new Date()): QuarterInfo {
+  const info = currentQuarter(new Date(Date.UTC(year, (q - 1) * 3, 15)));
+  const start = Date.UTC(year, (q - 1) * 3, 1);
+  const next = Date.UTC(year, q * 3, 1);
+  const elapsed = Math.round(((now.getTime() - start) / (next - start)) * 100);
+  return { ...info, elapsedPct: Math.max(0, Math.min(100, elapsed)) };
+}
+
+/** "2026-Q3", the form a quarter takes in a URL. */
+export function quarterKey(q: QuarterInfo): string {
+  return `${q.start.slice(0, 4)}-Q${Math.floor(Number(q.start.slice(5, 7)) / 3) + 1}`;
+}
+
+/** The quarter a key names, or null when it isn't one. */
+export function parseQuarterKey(key: string | undefined | null): QuarterInfo | null {
+  const m = key?.match(/^(\d{4})-Q([1-4])$/);
+  return m ? quarterOf(Number(m[1]), Number(m[2])) : null;
+}
+
+/** The quarter before this one. */
+export function previousQuarter(q: QuarterInfo): QuarterInfo {
+  const year = Number(q.start.slice(0, 4));
+  const n = Math.floor(Number(q.start.slice(5, 7)) / 3) + 1;
+  return n === 1 ? quarterOf(year - 1, 4) : quarterOf(year, n - 1);
+}
+
 /** For the CRO portfolio, which still reads growth_mission_quarter_hours. */
 export function quarterPct(h: { committed: number; achieved: number }): number {
   return h.committed > 0 ? Math.round((h.achieved / h.committed) * 100) : 0;
