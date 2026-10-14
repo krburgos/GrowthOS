@@ -84,7 +84,9 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-11 px-4 text-left align-middle text-caption font-semibold tracking-wide",
+      // px-3, the same as TableCell (fix, 2026-10-14): headers were px-4, so
+      // every column's title sat 4px right of the data beneath it.
+      "h-11 px-3 text-left align-middle text-caption font-semibold tracking-wide",
       variant === "solid" ? "text-white/90" : "uppercase text-neutral-700",
       className
     )}

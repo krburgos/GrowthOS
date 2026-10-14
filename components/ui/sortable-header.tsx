@@ -21,10 +21,13 @@ export function SortableHeader({
   field,
   label,
   variant = "default",
+  align = "left",
 }: {
   field: string;
   label: string;
   variant?: "default" | "solid";
+  /** "right" for a numeric column, so the title lines up with its right-aligned figures. */
+  align?: "left" | "right";
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -43,7 +46,11 @@ export function SortableHeader({
   return (
     <Link
       href={`${pathname}?${params.toString()}`}
-      className={cn("flex items-center gap-1", variant === "solid" ? "hover:text-white" : "hover:text-neutral-800")}
+      className={cn(
+        "flex items-center gap-1",
+        align === "right" && "justify-end",
+        variant === "solid" ? "hover:text-white" : "hover:text-neutral-800"
+      )}
     >
       {label}
       <Icon

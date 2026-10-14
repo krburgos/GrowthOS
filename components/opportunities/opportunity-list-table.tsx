@@ -29,7 +29,10 @@ export function OpportunityListTable({ opportunities }: { opportunities: Opportu
           <TableHead variant="solid"><SortableHeader variant="solid" field="contact" label="Contact" /></TableHead>
           <TableHead variant="solid">Company</TableHead>
           <TableHead variant="solid"><SortableHeader variant="solid" field="stage" label="Stage" /></TableHead>
-          <TableHead variant="solid"><SortableHeader variant="solid" field="value" label="Value" /></TableHead>
+          {/* Money reads right-aligned, so its digits line up row to row. */}
+          <TableHead variant="solid" className="text-right">
+            <SortableHeader variant="solid" field="value" label="Value" align="right" />
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -42,7 +45,9 @@ export function OpportunityListTable({ opportunities }: { opportunities: Opportu
             <TableCell label="Stage">
               <Badge variant={STAGE_GROUP_BADGE_VARIANT[o.stage_group]}>{o.stage_name}</Badge>
             </TableCell>
-            <TableCell label="Value">{o.value != null ? currency.format(o.value) : "—"}</TableCell>
+            <TableCell label="Value" className="text-right font-semibold tabular-nums text-primary-900">
+              {o.value != null ? currency.format(o.value) : "—"}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
