@@ -278,10 +278,9 @@ export function ContactDetailBody({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <HeroStat
             label="Prospect value"
-            tip={`$200 × the company's Employees (${Number(company?.company_size) || 0}) × 12.`}
             value={currency.format(prospectValue)}
           />
-          <HeroStat label="Opportunities value" tip="3 × Prospect value." value={currency.format(opportunitiesValue)} />
+          <HeroStat label="Opportunities value" value={currency.format(opportunitiesValue)} />
           <HeroStat label="Last activity" value={lastActivityLabel} />
         </div>
       </HeroBand>

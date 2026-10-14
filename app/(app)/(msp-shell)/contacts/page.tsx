@@ -4,7 +4,6 @@ import Link from "next/link";
 
 import { ContactsDataTable } from "@/components/contacts/contacts-data-table";
 import { ContactsToolbar, type ContactView } from "@/components/contacts/contacts-toolbar";
-import { InfoTip } from "@/components/ui/info-tip";
 import { prospectValue, usdShort } from "@/lib/companies/value";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -206,12 +205,10 @@ export default async function ContactsListPage({
             <span aria-hidden="true" className="text-neutral-300">·</span>
             <span className="inline-flex items-center gap-1.5">
               <b className="font-bold tabular-nums text-primary-900">{usdShort(totalProspect)}</b> Prospect Value
-              <InfoTip text="$200 × Employees × 12 for every company, each counted once however many contacts it has." label="About Prospect Value" />
             </span>
             <span aria-hidden="true" className="text-neutral-300">·</span>
             <span className="inline-flex items-center gap-1.5">
               <b className="font-bold tabular-nums text-primary-900">{usdShort(totalProspect * 3)}</b> Opportunities Value
-              <InfoTip text="3 × Prospect Value." label="About Opportunities Value" />
             </span>
           </p>
         </div>

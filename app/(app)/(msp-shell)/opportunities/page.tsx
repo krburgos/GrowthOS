@@ -173,13 +173,11 @@ export default async function OpportunitiesPage({
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Tile
             label="Prospects Value"
-            tip="Every open opportunity's Prospect Value added together ($200 × the company's Employees × 12 each)."
             value={usdShort(openValue)}
             sub={`${open.length} open ${open.length === 1 ? "opportunity" : "opportunities"}`}
           />
           <Tile
             label="Opportunities Value"
-            tip="3 × Prospects Value."
             value={usdShort(openValue * 3)}
             sub={`${open.length} open ${open.length === 1 ? "opportunity" : "opportunities"}`}
           />

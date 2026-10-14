@@ -75,7 +75,7 @@ export function OpportunityCard({ opportunity: o, open }: { opportunity: Opportu
       </span>
 
       <div className="mt-0.5 flex items-center gap-2">
-        <span className="text-body font-bold tabular-nums text-primary-900" title="Prospect Value: $200 × Employees × 12">
+        <span className="text-body font-bold tabular-nums text-primary-900">
           {usd.format(o.prospect_value)}
         </span>
         {open && (

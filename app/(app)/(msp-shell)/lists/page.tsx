@@ -196,7 +196,6 @@ export default async function ListsIndexPage({
             <Tile label="Contacts on a list" value={contactIds.length.toLocaleString()} sub="each counted once" />
             <Tile
               label="Prospect Value on lists"
-              tip="$200 × Employees × 12 for every company with a contact on a list, each company counted once."
               value={usdShort(listedValue)}
               sub={`${usdShort(listedValue * 3)} Opportunities Value`}
             />

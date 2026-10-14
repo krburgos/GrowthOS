@@ -155,11 +155,10 @@ export default async function CompaniesListPage({
             <Tile label="Companies" value={all.length.toLocaleString()} sub={`${addedThisMonth} added this month`} />
             <Tile
               label="Prospects Value"
-              tip="$200 × Employees × 12 for every company, added together."
               value={usdShort(totalValue)}
               sub={`${all.length.toLocaleString()} companies`}
             />
-            <Tile label="Opportunities Value" tip="3 × Prospects Value." value={usdShort(totalValue * 3)} sub={`${all.length.toLocaleString()} companies`} />
+            <Tile label="Opportunities Value" value={usdShort(totalValue * 3)} sub={`${all.length.toLocaleString()} companies`} />
             <Tile
               label="With an open opportunity"
               value={withOpen.toLocaleString()}
