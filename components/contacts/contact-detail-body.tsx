@@ -349,6 +349,7 @@ export function ContactDetailBody({
               </div>
             </div>
             <ActivityTimeline
+              showFilters={false}
               activities={activityFilter === "all" ? activities : activities.filter((a) => a.type === activityFilter)}
             />
           </TabsContent>

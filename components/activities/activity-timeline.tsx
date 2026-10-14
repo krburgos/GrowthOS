@@ -69,7 +69,14 @@ export function dayLabel(dateStr: string): string {
  * (rather than one neutral circle for everything), and a type filter
  * row so a long history can be narrowed to one kind of activity.
  */
-export function ActivityTimeline({ activities }: { activities: ActivityRow[] }) {
+export function ActivityTimeline({
+  activities,
+  showFilters = true,
+}: {
+  activities: ActivityRow[];
+  /** Off where the page draws its own filter row (Contact Detail, beside Log activity), so there is only one. */
+  showFilters?: boolean;
+}) {
   const router = useRouter();
   const [filter, setFilter] = useState<"all" | ActivityRow["type"]>("all");
 
@@ -102,23 +109,25 @@ export function ActivityTimeline({ activities }: { activities: ActivityRow[] }) 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-1.5">
-        {TYPE_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setFilter(f.value)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-caption font-medium transition-colors",
-              filter === f.value
-                ? "border-primary-800 bg-primary-800 text-white"
-                : "border-neutral-200 bg-white text-neutral-600 hover:border-primary-700 hover:text-primary-800"
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      {showFilters && (
+        <div className="flex flex-wrap gap-1.5">
+          {TYPE_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setFilter(f.value)}
+              className={cn(
+                "rounded-full border px-3 py-1 text-caption font-medium transition-colors",
+                filter === f.value
+                  ? "border-primary-800 bg-primary-800 text-white"
+                  : "border-neutral-200 bg-white text-neutral-600 hover:border-primary-700 hover:text-primary-800"
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <p className="text-body text-neutral-500">No activity yet</p>
