@@ -1,7 +1,7 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Plus, Search, User } from "lucide-react";
+import { Loader2, Plus, Search, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 
@@ -43,6 +43,19 @@ const ACTIONS: { key: string; label: string; href: string; icon: ComponentType<{
  * Opens on click, or globally via Cmd/Ctrl+K from anywhere in the app
  * (the listener lives here since this component is mounted once, in
  * the Top Bar, for the lifetime of the authenticated shell).
+ *
+ * Fixes (2026-10-14, the client found it clunky):
+ * - Hover set the highlight from a counter that had already run to the
+ *   last row during render, so pointing at any result highlighted the
+ *   bottom one, and Enter opened that. Each row now knows its own index.
+ * - Results were cleared and refilled on every keystroke, so the panel
+ *   shrank, grew and reshuffled. The last results now stay until the new
+ *   ones arrive, behind a small spinner in the field, over a list with a
+ *   steady minimum height.
+ * - The highlight is kept in range when results change, and scrolls into
+ *   view as the arrow keys move it.
+ * - The shortcut reads Ctrl K off a Mac, and the panel keeps a margin on
+ *   phones. Search matches email as well as name.
  */
 export function CommandPalette({
   access,
@@ -58,6 +71,10 @@ export function CommandPalette({
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  // Decided after mount, so the server render and the first client render match.
+  const [isMac, setIsMac] = useState(true);
+  useEffect(() => setIsMac(/mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent)), []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -86,8 +103,10 @@ export function CommandPalette({
         .eq("account_id", accountId)
         .is("archived_at", null);
 
-      const { data } = query.trim()
-        ? await request.ilike("full_name", `%${query.trim()}%`).order("full_name").limit(8)
+      // Commas and brackets would break PostgREST's or() syntax.
+      const term = query.trim().replace(/[,()%]/g, " ").trim();
+      const { data } = term
+        ? await request.or(`full_name.ilike.%${term}%,email.ilike.%${term}%`).order("full_name").limit(8)
         : await request.order("updated_at", { ascending: false }).limit(5);
 
       setContacts((data ?? []) as unknown as ContactHit[]);
@@ -143,6 +162,17 @@ export function CommandPalette({
   ].filter((g) => g.items.length > 0);
 
   const flatItems = groups.flatMap((g) => g.items);
+  const indexOf = new Map(flatItems.map((item, i) => [item.key, i]));
+
+  // Keep the highlight on a real row when the results change.
+  useEffect(() => {
+    if (activeIndex > flatItems.length - 1) setActiveIndex(Math.max(0, flatItems.length - 1));
+  }, [flatItems.length, activeIndex]);
+
+  // Follow the highlight when the arrow keys move it past the visible rows.
+  useEffect(() => {
+    listRef.current?.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex]);
 
   const go = (item: PaletteItem) => {
     setOpen(false);
@@ -163,8 +193,6 @@ export function CommandPalette({
     }
   };
 
-  let runningIndex = -1;
-
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
       <DialogPrimitive.Trigger asChild>
@@ -181,7 +209,7 @@ export function CommandPalette({
           <span className="hidden flex-1 text-left lg:block">Search or jump to…</span>
           <span className="hidden items-center gap-0.5 lg:flex">
             <kbd className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-caption font-semibold text-neutral-500">
-              ⌘
+              {isMac ? "⌘" : "Ctrl"}
             </kbd>
             <kbd className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-caption font-semibold text-neutral-500">
               K
@@ -193,15 +221,15 @@ export function CommandPalette({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-primary-950/40" />
         <DialogPrimitive.Content
-          className="fixed left-1/2 top-[15%] z-50 w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-lg bg-white shadow-lg"
+          className="fixed left-1/2 top-4 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg sm:top-[15%]"
           onOpenAutoFocus={(e) => {
             e.preventDefault();
             inputRef.current?.focus();
           }}
         >
           <DialogPrimitive.Title className="sr-only">Search or jump to</DialogPrimitive.Title>
-          <div className="flex items-center gap-2.5 border-b border-neutral-200 px-4 py-3">
-            <Search className="size-4 shrink-0 text-neutral-400" />
+          <div className="flex h-14 items-center gap-2.5 border-b border-neutral-200 px-4">
+            <Search className="size-[18px] shrink-0 text-neutral-400" />
             <input
               ref={inputRef}
               value={query}
@@ -210,17 +238,18 @@ export function CommandPalette({
                 setActiveIndex(0);
               }}
               onKeyDown={handleKeyDown}
-              placeholder="Search or jump to…"
-              className="flex-1 text-body text-neutral-800 outline-none placeholder:text-neutral-400"
+              placeholder="Search contacts, or jump to a page…"
+              aria-label="Search contacts, or jump to a page"
+              className="min-w-0 flex-1 bg-transparent text-body text-neutral-800 outline-none placeholder:text-neutral-400"
             />
+            {loading && <Loader2 aria-label="Searching" className="size-4 shrink-0 animate-spin text-neutral-400 motion-reduce:animate-none" />}
           </div>
 
-          <div className="max-h-80 overflow-y-auto p-2">
-            {loading && query.trim() && (
-              <p className="px-2 py-3 text-caption text-neutral-400">Searching…</p>
-            )}
+          <div ref={listRef} className="max-h-[min(22rem,60vh)] min-h-[12rem] overflow-y-auto p-2">
             {!loading && flatItems.length === 0 && (
-              <p className="px-2 py-3 text-caption text-neutral-400">No matches.</p>
+              <p className="px-2.5 py-6 text-center text-body-sm text-neutral-400">
+                No contacts or pages match &ldquo;{query.trim()}&rdquo;.
+              </p>
             )}
             {groups.map((group) => (
               <div key={group.label} className="mb-1 last:mb-0">
@@ -228,17 +257,18 @@ export function CommandPalette({
                   {group.label}
                 </p>
                 {group.items.map((item) => {
-                  runningIndex += 1;
-                  const isActive = runningIndex === activeIndex;
+                  const index = indexOf.get(item.key) ?? 0;
+                  const isActive = index === activeIndex;
                   const Icon = item.icon;
                   return (
                     <button
                       key={item.key}
                       type="button"
+                      data-index={index}
                       onClick={() => go(item)}
-                      onMouseEnter={() => setActiveIndex(runningIndex)}
+                      onMouseMove={() => index !== activeIndex && setActiveIndex(index)}
                       className={cn(
-                        "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-body-sm",
+                        "flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-body-sm",
                         isActive ? "bg-secondary-50 text-secondary-800" : "text-neutral-700"
                       )}
                     >
@@ -251,8 +281,28 @@ export function CommandPalette({
               </div>
             ))}
           </div>
+
+          <div className="hidden items-center gap-4 border-t border-neutral-100 bg-neutral-50 px-4 py-2 text-caption text-neutral-500 sm:flex">
+            <span>
+              <Kbd>↑</Kbd> <Kbd>↓</Kbd> to move
+            </span>
+            <span>
+              <Kbd>Enter</Kbd> to open
+            </span>
+            <span>
+              <Kbd>Esc</Kbd> to close
+            </span>
+          </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+  );
+}
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="rounded border border-neutral-300 bg-white px-1.5 py-px font-sans text-caption font-semibold text-neutral-600">
+      {children}
+    </kbd>
   );
 }
