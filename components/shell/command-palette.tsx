@@ -56,6 +56,11 @@ const ACTIONS: { key: string; label: string; href: string; icon: ComponentType<{
  *   view as the arrow keys move it.
  * - The shortcut reads Ctrl K off a Mac, and the panel keeps a margin on
  *   phones. Search matches email as well as name.
+ * - Alignment (same day): on desktop the panel no longer floats in the
+ *   middle of the screen. It opens anchored to the search bar, over it,
+ *   with the same left edge, width, height and icon position, so the
+ *   field stays where it was and the results drop down beneath. Phones,
+ *   where the trigger is only an icon, keep the centred panel.
  */
 export function CommandPalette({
   access,
@@ -72,6 +77,23 @@ export function CommandPalette({
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  // Where the search bar sits, on desktop only; null means "centre it".
+  const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const el = triggerRef.current;
+      if (!el || window.innerWidth < 1024) return setAnchor(null);
+      const r = el.getBoundingClientRect();
+      // Exactly the bar: same top, left and width, so both edges line up.
+      setAnchor({ top: r.top, left: r.left, width: r.width });
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [open]);
   // Decided after mount, so the server render and the first client render match.
   const [isMac, setIsMac] = useState(true);
   useEffect(() => setIsMac(/mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent)), []);
@@ -201,9 +223,10 @@ export function CommandPalette({
             trigger is a real button, so dropping it entirely would take
             search away from touch users who have no Cmd+K. */}
         <button
+          ref={triggerRef}
           type="button"
           aria-label="Search or jump to"
-          className="flex size-10 items-center justify-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 text-body-sm text-neutral-400 transition-colors hover:border-secondary-300 lg:h-9 lg:w-full lg:max-w-sm lg:justify-start lg:px-3"
+          className="flex size-10 items-center justify-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 text-body-sm text-neutral-400 transition-colors hover:border-secondary-300 lg:h-9 lg:w-full lg:max-w-md lg:justify-start lg:px-3"
         >
           <Search className="size-4 shrink-0" />
           <span className="hidden flex-1 text-left lg:block">Search or jump to…</span>
@@ -219,17 +242,30 @@ export function CommandPalette({
       </DialogPrimitive.Trigger>
 
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-primary-950/40" />
+        <DialogPrimitive.Overlay className={cn("fixed inset-0 z-50", anchor ? "bg-primary-950/15" : "bg-primary-950/40")} />
         <DialogPrimitive.Content
-          className="fixed left-1/2 top-4 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg sm:top-[15%]"
+          style={anchor ? { top: anchor.top, left: anchor.left, width: anchor.width } : undefined}
+          className={cn(
+            "fixed z-50 overflow-hidden border bg-white shadow-lg",
+            anchor
+              ? "rounded-lg border-secondary-300 ring-2 ring-secondary-500/20"
+              : "left-1/2 top-4 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 rounded-xl border-neutral-200 sm:top-[15%]"
+          )}
           onOpenAutoFocus={(e) => {
             e.preventDefault();
             inputRef.current?.focus();
           }}
         >
           <DialogPrimitive.Title className="sr-only">Search or jump to</DialogPrimitive.Title>
-          <div className="flex h-14 items-center gap-2.5 border-b border-neutral-200 px-4">
-            <Search className="size-[18px] shrink-0 text-neutral-400" />
+          {/* Anchored, this row matches the search bar exactly (h-9, px-3,
+              a 16px icon and the same gap), so nothing moves when it opens. */}
+          <div
+            className={cn(
+              "flex items-center border-b border-neutral-200",
+              anchor ? "h-[34px] gap-2 px-3" : "h-14 gap-2.5 px-4"
+            )}
+          >
+            <Search className={cn("shrink-0 text-neutral-400", anchor ? "size-4" : "size-[18px]")} />
             <input
               ref={inputRef}
               value={query}
@@ -240,9 +276,13 @@ export function CommandPalette({
               onKeyDown={handleKeyDown}
               placeholder="Search contacts, or jump to a page…"
               aria-label="Search contacts, or jump to a page"
-              className="min-w-0 flex-1 bg-transparent text-body text-neutral-800 outline-none placeholder:text-neutral-400"
+              className={cn(
+                "min-w-0 flex-1 bg-transparent text-neutral-800 outline-none placeholder:text-neutral-400",
+                anchor ? "text-body-sm" : "text-body"
+              )}
             />
             {loading && <Loader2 aria-label="Searching" className="size-4 shrink-0 animate-spin text-neutral-400 motion-reduce:animate-none" />}
+            {anchor && !loading && <Kbd>Esc</Kbd>}
           </div>
 
           <div ref={listRef} className="max-h-[min(22rem,60vh)] min-h-[12rem] overflow-y-auto p-2">
