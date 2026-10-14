@@ -146,7 +146,7 @@ export async function getMissionData(accountId: string, quarter: QuarterInfo): P
   const [{ data: taskRows }, team, { data: allotmentRows }, { data: stepRows }] = await Promise.all([
     supabase
       .from("growth_mission_tasks")
-      .select("step_slug, hours, state, due_date, completed_at")
+      .select("step_slug, hours, state, due_date, completed_at, delegated")
       .eq("account_id", accountId)
       .is("archived_at", null),
     getTeamMembers(accountId),
@@ -155,7 +155,14 @@ export async function getMissionData(accountId: string, quarter: QuarterInfo): P
   ]);
 
   const tasks: CapacityTask[] = (
-    (taskRows ?? []) as { step_slug: string; hours: number | string; state: string; due_date: string | null; completed_at: string | null }[]
+    (taskRows ?? []) as {
+      step_slug: string;
+      hours: number | string;
+      state: string;
+      due_date: string | null;
+      completed_at: string | null;
+      delegated: boolean;
+    }[]
   ).map((t) => ({ ...t, hours: Number(t.hours) }));
   const allotments: CreditAllotment[] = (
     (allotmentRows ?? []) as { effective_month: string; monthly_credits: number | string }[]
@@ -279,6 +286,9 @@ interface TaskRow {
   hours: number | string;
   due_date: string | null;
   completed_at: string | null;
+  delegated: boolean;
+  sort_order: number;
+  created_at: string;
   account_team_members: { id: string; name: string; kind: TeamKind } | { id: string; name: string; kind: TeamKind }[] | null;
 }
 
@@ -297,12 +307,15 @@ function toTask(row: TaskRow): Task {
     hours: Number(row.hours),
     due_date: row.due_date,
     completed_at: row.completed_at,
+    delegated: row.delegated,
+    sort_order: row.sort_order,
+    created_at: row.created_at,
     assignee: unwrap(row.account_team_members),
   };
 }
 
 const SELECT =
-  "id, step_slug, title, detail, priority, state, hours, due_date, completed_at, account_team_members(id, name, kind)";
+  "id, step_slug, title, detail, priority, state, hours, due_date, completed_at, delegated, sort_order, created_at, account_team_members(id, name, kind)";
 
 /** Every live task for an account, for the Mission Card counts. */
 export async function getTasks(accountId: string): Promise<Task[]> {

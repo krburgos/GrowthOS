@@ -6,8 +6,9 @@ import { SetupBlock } from "@/components/dashboard/setup-block";
 import { COMPANY_PROFILE_COLUMNS, type CompanyProfile } from "@/lib/accounts/company-profile";
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
 import type { StageGroup } from "@/lib/opportunities/stages";
-import { currentQuarter } from "@/lib/growth-mission/hours";
-import { getKpiBand, getMissionData } from "@/lib/growth-mission/queries";
+import { MissionOrders } from "@/components/growth-mission/mission-orders";
+import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/growth-mission/hours";
+import { getKpiBand, getMissionData, getTasks } from "@/lib/growth-mission/queries";
 import { TOTAL_QUESTION_COUNT, countAnswered } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
 import { getTeamMembers } from "@/lib/team/queries";
@@ -46,6 +47,9 @@ const PROFILE_EDIT_ROLES = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"
  * and Mission Progress, the same figures as the Command Center. Recent
  * activity and the Today rail are removed, which leaves Opportunities by
  * Stage at full width under the block.
+ *
+ * Client-confirmed (2026-10-14, approved mockup "Mission Orders Design"):
+ * the account-wide Mission Orders table sits below Opportunities by Stage.
  */
 export default async function HeadquartersPage() {
   const user = await getCurrentUser();
@@ -73,6 +77,7 @@ export default async function HeadquartersPage() {
     kpiSources,
     mission,
     teamMembers,
+    orders,
   ] = await Promise.all([
     supabase
       .from("opportunity_stages")
@@ -87,6 +92,7 @@ export default async function HeadquartersPage() {
     getKpiBand(user.account_id!),
     getMissionData(user.account_id!, quarter),
     getTeamMembers(user.account_id!),
+    getTasks(user.account_id!),
   ]);
 
   // ---- Pipeline by stage ----
@@ -148,6 +154,15 @@ export default async function HeadquartersPage() {
       />
 
       <PipelineByStage stages={stages} />
+
+      <MissionOrders
+        mode="overview"
+        accountId={user.account_id!}
+        orders={orders}
+        team={teamMembers}
+        canEdit={HOURS_EDIT_ROLES.includes(user.role)}
+        isCroLeader={canSetCredits}
+      />
     </main>
   );
 }

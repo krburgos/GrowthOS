@@ -3,7 +3,16 @@ import type PDFDocument from "pdfkit";
 import { drawLogoChip } from "@/lib/pdf/brand";
 import { POPPINS } from "@/lib/pdf/poppins";
 import type { KpiStat } from "@/lib/growth-mission/playbook";
-import { TASK_STATE_LABEL, type Task } from "@/lib/growth-mission/tasks";
+import { CREDITS_PER_HOUR } from "@/lib/growth-mission/capacity";
+import {
+  PRIORITIES,
+  PRIORITY_LABEL,
+  PRIORITY_MEANING,
+  TASK_STATE_LABEL,
+  byPosition,
+  rankOrders,
+  type Task,
+} from "@/lib/growth-mission/tasks";
 
 /** Design System §9 tokens, as hex — pdfkit has no CSS variables. */
 const NAVY_950 = "#0a192e";
@@ -152,22 +161,27 @@ export function renderStatusReport(doc: InstanceType<typeof PDFDocument>, data: 
     y += 14;
   }
 
-  // ---- What to do next ---------------------------------------------
+  // ---- Mission Orders ----------------------------------------------
+  // Client-confirmed (2026-10-14): Must / Should / Could, each tier in its
+  // ABC-123 order, open orders numbered and completed ones last.
   if (data.tasks.length > 0) {
     y = breakFor(doc, y, 44 + 40);
-    y = heading(doc, "What to do next", y, W);
+    y = heading(doc, "Mission Orders – Tasks/Tickets", y, W);
+    const rank = rankOrders(data.tasks);
 
-    for (const priority of ["high", "medium", "low"] as const) {
-      const group = data.tasks.filter((t) => t.priority === priority);
+    for (const priority of PRIORITIES) {
+      const group = data.tasks
+        .filter((t) => t.priority === priority)
+        .sort((a, b) => Number(a.state === "complete") - Number(b.state === "complete") || byPosition(a, b));
       if (group.length === 0) continue;
 
       // Keep a group label with at least its first row.
       y = breakFor(doc, y, 24 + 44);
       const groupHours = group.reduce((sum, t) => sum + t.hours, 0);
       doc.font(POPPINS.bold).fontSize(10).fillColor(PRIORITY_INK[priority]);
-      doc.text(`${cap(priority)} priority`, M, y, { width: W / 2, lineBreak: false });
+      doc.text(`${PRIORITY_LABEL[priority]} · ${PRIORITY_MEANING[priority]}`, M, y, { width: W / 2, lineBreak: false });
       doc.font(POPPINS.regular).fontSize(9).fillColor(FAINT);
-      doc.text(`${group.length} ${group.length === 1 ? "task" : "tasks"} · ${fmt(groupHours)} hrs`, M + W / 2, y, {
+      doc.text(`${group.length} ${group.length === 1 ? "order" : "orders"} · ${fmt(groupHours)} hrs`, M + W / 2, y, {
         width: W / 2,
         align: "right",
         lineBreak: false,
@@ -176,11 +190,13 @@ export function renderStatusReport(doc: InstanceType<typeof PDFDocument>, data: 
 
       for (const task of group) {
         const textW = W - 168;
+        const n = rank.get(task.id);
+        const title = n ? `${n}.  ${task.title}` : task.title;
         // Both the title and the detail can wrap, so both count toward the
         // row's height. Measuring only the detail used to let a two-line
         // title overlap the row below it.
         doc.font(POPPINS.semibold).fontSize(10);
-        const titleH = doc.heightOfString(task.title, { width: textW });
+        const titleH = doc.heightOfString(title, { width: textW });
         doc.font(POPPINS.regular).fontSize(8.5);
         const detailH = task.detail ? doc.heightOfString(task.detail, { width: textW }) : 0;
         const rowH = Math.max(42, 16 + titleH + (detailH ? detailH + 3 : 0));
@@ -191,16 +207,17 @@ export function renderStatusReport(doc: InstanceType<typeof PDFDocument>, data: 
         doc.rect(M, y + rowH + 2, W, 0.7).fill(RULE);
 
         doc.font(POPPINS.semibold).fontSize(10).fillColor(NAVY_900);
-        doc.text(task.title, M + 14, y + 8, { width: textW });
+        doc.text(title, M + 14, y + 8, { width: textW });
         if (task.detail) {
           doc.font(POPPINS.regular).fontSize(8.5).fillColor(MUTED);
           doc.text(task.detail, M + 14, doc.y + 2, { width: textW });
         }
 
-        // Right rail: who has it, then state · hours · due.
+        // Right rail: who has it, then state · hours (· credits) · due.
         const rx = M + W - 150;
-        doc.font(POPPINS.medium).fontSize(8.5).fillColor(task.assignee ? MUTED : FAINT);
-        doc.text(task.assignee ? task.assignee.name : "Unassigned", rx, y + 9, {
+        const owner = task.delegated ? "GrowthMission" : (task.assignee?.name ?? null);
+        doc.font(POPPINS.medium).fontSize(8.5).fillColor(owner ? MUTED : FAINT);
+        doc.text(owner ?? "Unassigned", rx, y + 9, {
           width: 146,
           align: "right",
           lineBreak: false,
@@ -210,7 +227,8 @@ export function renderStatusReport(doc: InstanceType<typeof PDFDocument>, data: 
         const due = task.due_date
           ? new Date(`${task.due_date}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" })
           : null;
-        const rail = [TASK_STATE_LABEL[task.state], `${fmt(task.hours)} hrs`, due].filter(Boolean).join("  ·  ");
+        const credits = task.delegated ? `${task.hours * CREDITS_PER_HOUR} cr` : null;
+        const rail = [TASK_STATE_LABEL[task.state], `${fmt(task.hours)} hrs`, credits, due].filter(Boolean).join("  ·  ");
         doc.font(POPPINS.semibold).fontSize(8).fillColor(stateInk);
         doc.text(rail, rx, y + 23, { width: 146, align: "right", lineBreak: false });
 
@@ -261,8 +279,4 @@ function breakFor(doc: InstanceType<typeof PDFDocument>, y: number, needed: numb
 
 function fmt(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
-function cap(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }

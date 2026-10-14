@@ -39,9 +39,9 @@ const TIPS = {
   hoursRequired: "Hours on mission orders due this quarter, across every discipline.",
   hoursAvailable: "Every team member's weekly hours from the Company Profile, × 13 weeks.",
   hoursCompleted: "Hours on mission orders completed this quarter.",
-  creditsRequired: "Hours required × 25 credits per hour.",
+  creditsRequired: "Hours on GrowthMission orders due this quarter × 25 credits per hour. Internal and Outsourced orders use no credits.",
   creditsAvailable: "Credits left to spend: monthly allotments plus anything rolled over, minus credits used.",
-  creditsUsed: "Hours completed this quarter × 25 credits per hour.",
+  creditsUsed: "Hours on GrowthMission orders CRO Leader confirmed complete this quarter × 25 credits per hour.",
   creditsUnset: "CRO Leader hasn't set credits for this account yet.",
 };
 

@@ -201,6 +201,7 @@ These were flagged during the questions review as uncertain or deferred by the c
 - Website Assessment tooling approach (§10) is a recommendation pending client confirmation
 - One-month timeline for the full scope in §6 is achievable but tight — email sending/campaigns with deliverability and tracking (§6.6) is typically the largest line item; if the timeline slips, that is the section most likely to need to flex into a fast-follow rather than launch day one
 - **Client-confirmed (2026-10-13): credits.** Accounts now carry **credits** — 25 credits per hour of work (1 credit = $1 at $25/hour) — shown to everyone on the account in Mission Capacity (App Flow §4.3a). For now CRO Leader types each account's monthly allotment; unused credits roll over monthly. A credits allocation per subscription tier is expected to replace the typed figure once the pricing model is settled. This tracks credits only — billing and payment processing stay out of scope (§10, §12), and invoicing still happens outside GrowthMission.
+- **Client-confirmed (2026-10-14): three ways to get a mission order done.** Each order is **Internal** (the MSP's own team), **Outsourced** (an outside partner on the roster) or **GrowthMission** (delegated to CRO Leader). **Only GrowthMission orders use credits**, and only CRO Leader confirms them complete. Mission orders are prioritised with the ABC-123 method, labelled Must / Should / Could, and listed in one table on each discipline page, the Command Center and Headquarters (App Flow §4.3a).
 
 ## 12. Explicit Out of Scope — Phase 1
 

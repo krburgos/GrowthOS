@@ -20,6 +20,8 @@ export interface CapacityTask {
   state: string;
   due_date: string | null;
   completed_at: string | null;
+  /** A GrowthMission order — the only kind that spends credits. */
+  delegated: boolean;
 }
 
 export interface CreditAllotment {
@@ -111,6 +113,11 @@ function monthStart(d: Date): string {
  * every hour completed since that first month spends 25. Nothing resets at
  * the quarter, so unused credits roll over. Work completed before credits
  * were first set is not charged against them.
+ *
+ * Client-confirmed (2026-10-14): only GrowthMission orders spend credits.
+ * Internal and Outsourced work is the account's own, so credits Required,
+ * Used and the balance read delegated orders alone, while the hours
+ * figures still count every order.
  */
 export function missionCapacity(
   tasks: CapacityTask[],
@@ -125,6 +132,10 @@ export function missionCapacity(
   const completed = hourTasks.filter((t) => isCompletedThisQuarter(t, q)).reduce((s, t) => s + t.hours, 0);
   const available = team.reduce((s, m) => s + m.weekly_hours, 0) * WEEKS_PER_QUARTER;
 
+  const creditTasks = hourTasks.filter((t) => t.delegated);
+  const creditHoursRequired = creditTasks.filter((t) => isRequiredThisQuarter(t, q)).reduce((s, t) => s + t.hours, 0);
+  const creditHoursUsed = creditTasks.filter((t) => isCompletedThisQuarter(t, q)).reduce((s, t) => s + t.hours, 0);
+
   const sorted = [...allotments].sort((a, b) => a.effective_month.localeCompare(b.effective_month));
   let creditsAvailable: number | null = null;
   let monthly: number | null = null;
@@ -137,7 +148,7 @@ export function missionCapacity(
       granted += allotmentFor(monthStart(cursor), sorted);
       cursor.setUTCMonth(cursor.getUTCMonth() + 1);
     }
-    const spentHours = hourTasks
+    const spentHours = creditTasks
       .filter((t) => t.state === "complete" && t.completed_at && t.completed_at.slice(0, 10) >= first)
       .reduce((s, t) => s + t.hours, 0);
     creditsAvailable = granted - spentHours * CREDITS_PER_HOUR;
@@ -147,9 +158,9 @@ export function missionCapacity(
   return {
     hours: { required, available, completed },
     credits: {
-      required: required * CREDITS_PER_HOUR,
+      required: creditHoursRequired * CREDITS_PER_HOUR,
       available: creditsAvailable,
-      used: completed * CREDITS_PER_HOUR,
+      used: creditHoursUsed * CREDITS_PER_HOUR,
       monthly,
     },
   };

@@ -101,9 +101,10 @@ export function ReportPanel({
       {/* Inline, not a card (client-confirmed, 2026-10-02). A full-width
           panel spent a whole row of the page on one filename; here the
           report rides the hours header, and the page gets that row back
-          for the task sheet. */}
+          for the task sheet. That header is navy since 2026-10-14
+          ("Discipline Header Blue" A), so everything here is light on dark. */}
       <span className="flex min-w-0 flex-wrap items-center gap-2">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-secondary-100 text-secondary-800">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-white/10 text-secondary-300">
           <FileText className="size-4" />
         </span>
 
@@ -112,12 +113,12 @@ export function ReportPanel({
             <button
               type="button"
               onClick={() => setOpen(latest)}
-              className="min-w-0 truncate text-body-sm font-semibold text-primary-900 hover:text-secondary-700 hover:underline"
+              className="min-w-0 truncate text-body-sm font-semibold text-white hover:text-secondary-300 hover:underline"
               title={latest.title}
             >
               {latest.title}
             </button>
-            <span className="hidden text-caption text-neutral-400 lg:inline">
+            <span className="hidden text-caption text-white/60 lg:inline">
               {[formatReportDate(latest.created_at), formatFileSize(latest.file_size)].filter(Boolean).join(" · ")}
             </span>
             <Button size="sm" variant="secondary" onClick={() => setOpen(latest)}>
@@ -125,7 +126,7 @@ export function ReportPanel({
             </Button>
           </>
         ) : (
-          <span className="text-body-sm text-neutral-400">
+          <span className="text-body-sm text-white/65">
             {canUpload ? "No report uploaded yet" : "No report yet"}
           </span>
         )}
@@ -134,7 +135,7 @@ export function ReportPanel({
           <button
             type="button"
             onClick={() => setShowHistory((v) => !v)}
-            className="inline-flex items-center gap-1 text-caption font-semibold text-secondary-700 hover:underline"
+            className="inline-flex items-center gap-1 text-caption font-semibold text-secondary-300 hover:underline"
           >
             <History className="size-3.5" />
             {earlier.length} earlier
@@ -158,7 +159,7 @@ export function ReportPanel({
               type="button"
               onClick={() => fileInput.current?.click()}
               disabled={busy}
-              className="inline-flex items-center gap-1 text-caption font-semibold text-secondary-700 hover:underline disabled:opacity-50"
+              className="inline-flex items-center gap-1 text-caption font-semibold text-secondary-300 hover:underline disabled:opacity-50"
             >
               <Upload className="size-3.5" />
               {busy ? "Uploading…" : latest ? "Replace" : "Upload"}
@@ -170,17 +171,17 @@ export function ReportPanel({
       {/* The archive drops below the whole header rather than inside the
           inline run, so it is not squeezed into one line. */}
       {showHistory && earlier.length > 0 && (
-        <ul className="order-last w-full border-t border-neutral-100 pt-2">
+        <ul className="order-last w-full border-t border-white/15 pt-2">
           {earlier.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center gap-3 py-1.5">
-              <span className="min-w-0 flex-1 truncate text-body-sm text-neutral-700">{r.title}</span>
-              <span className="text-caption text-neutral-400">
+              <span className="min-w-0 flex-1 truncate text-body-sm text-white/85">{r.title}</span>
+              <span className="text-caption text-white/60">
                 {[formatReportDate(r.created_at), formatFileSize(r.file_size)].filter(Boolean).join(" · ")}
               </span>
               <button
                 type="button"
                 onClick={() => setOpen(r)}
-                className="text-caption font-semibold text-secondary-700 hover:underline"
+                className="text-caption font-semibold text-secondary-300 hover:underline"
               >
                 View
               </button>

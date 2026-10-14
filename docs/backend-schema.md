@@ -1077,6 +1077,7 @@ $$;
 - **Nothing stores the balance or the spend.** Available = the sum of the allotment in force for every month from the first row through the current month, minus 25 credits for every hour on a mission order completed since that first month. Unused credits therefore roll over, and there is no second ledger to drift from the tasks. Used (this quarter) = hours completed this quarter × 25.
 - **Access.** Select: own account, CRO Leader, granted partner — everyone on the account sees credits. Insert/update: `auth_has_any_role('cro_admin','cro_advisor')`. No delete policy and no `archived_at`: a later row supersedes an earlier one, and history is what the rollover is computed from.
 - **Typed by CRO Leader for now.** Subscription tiers are expected to supply `monthly_credits` later; there is still no billing or payment processing in the app (PRD §10).
+- **Client-confirmed amendment (2026-10-14): only GrowthMission orders spend credits.** Every "hour on a mission order" above now means an hour on a `delegated` order (§6.6f amendment). Internal and Outsourced orders use no credits. Hours Required/Completed still count every order.
 
 ```sql
 create table account_credit_allotments (
@@ -1141,6 +1142,16 @@ create policy growth_mission_tasks_update on growth_mission_tasks for update
 ```
 
 Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream at 28.0 achieved hours went to 35.5 on completing a 7.5-hour task, back to 28.0 on re-opening it, to 38.0 when the completed task's hours were edited to 10.0, and back to 28.0 when it was archived.
+
+**Client-confirmed amendment (2026-10-14, App Flow §4.3a "Mission Orders table")** — order types and ABC-123 priority. Migrations `20261014000001_mission_order_types_and_rank.sql` (schema) and `20261014000002_cro_leader_team_to_growthmission.sql` (data, applied with the release that reads it).
+
+- **`delegated boolean not null default false`** marks a **GrowthMission** order: delegated to CRO Leader for credits. A delegated order has no person, so `check (not delegated or assignee_id is null)`, and a trigger clears `assignee_id` whenever `delegated` is set. The other two types are not stored. **Internal** and **Outsourced** are read from the assignee's roster `kind`, so an order cannot disagree with the roster it points at. An order with neither an assignee nor `delegated` has no type.
+- **`guard_growthmission_orders()`** (before insert or update) holds the completion rule, the same "RLS decides the row, a trigger decides the columns" shape as `prevent_self_role_escalation`. Callers other than CRO Admin/Advisor (and the service role) may not: mark a delegated order complete, or delegate one that is already complete (either would spend credits); change the state, hours, type or archive flag of a completed delegated order (credits already spent); or take back or archive a delegated order once it has left Active. It raises `42501`.
+- **Priority stays the `growth_mission_priority` enum** (`high` / `medium` / `low`), shown as **Must / Should / Could**. The labels changed and the stored values did not, so `growth_mission_suggestions`, which shares the enum, is untouched.
+- **The priority number is `sort_order`**, already on the table (the suggestions carried across in 2026-09 had kept their old list positions; new tasks got 0). An order's number is its position among the open orders with the same account, `step_slug` and priority, ordered by `sort_order` then `created_at`, so it is computed rather than stored and cannot duplicate or skip. The migration renumbers `sort_order` 1…n within each group, keeping the existing order and breaking ties by `created_at`. `place_mission_order()` (before insert, and before update of `priority` or `step_slug`) puts a new or re-tiered order at the bottom of its group. Dragging calls **`reorder_mission_orders(p_ids uuid[])`**, `security invoker` so RLS still decides which rows the caller may update, which writes `sort_order` = each id's position in one statement.
+- **No new policies.** Select, insert and update are unchanged from the 2026-09-25 amendments above.
+- **Credits read `delegated`** (§6.6i amendment). `sync_task_achieved_hours()` is unchanged, because a type change moves no hours.
+- **Data migration.** The CRO Leader account's "CRO Leader Team" outsourced roster member was how GrowthMission work was recorded before this column existed. Its 17 live orders (4 complete) become `delegated` with no assignee, and the member is archived. It had no discipline assignments.
 
 
 ### 6.6g growth_mission_reports

@@ -7,7 +7,7 @@ import { EditOverviewPanel } from "@/components/growth-mission/edit-overview-pan
 import { ReportPanel } from "@/components/growth-mission/report-panel";
 import { StepHeader } from "@/components/growth-mission/step-header";
 import { StepHoursPanel } from "@/components/growth-mission/step-hours-panel";
-import { TaskList } from "@/components/growth-mission/task-list";
+import { MissionOrders } from "@/components/growth-mission/mission-orders";
 import { ADVOCATE_DASH_SLUG } from "@/lib/advocate-dash/targets";
 import { getTargets } from "@/lib/advocate-dash/queries";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
@@ -55,8 +55,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
  * growth_mission_kpis keeps its rows, and duties stay in the playbook shape,
  * so neither is lost.
  */
-export default async function GrowthMissionStepPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function GrowthMissionStepPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  /** `order` opens that mission order's panel — the overview tables link here with it. */
+  searchParams: Promise<{ order?: string }>;
+}) {
   const { slug } = await params;
+  const { order: openOrderId } = await searchParams;
   const user = await getCurrentUser();
   if (!user || !user.account_id) return null;
 
@@ -141,14 +149,21 @@ export default async function GrowthMissionStepPage({ params }: { params: Promis
             }
           />
 
-          <TaskList
+          {/* Client-confirmed (2026-10-14, approved mockup "Mission Orders
+              Design"): "What to do next" becomes Mission Orders –
+              Tasks/Tickets, grouped Must / Should / Could. Only CRO Leader
+              confirms a GrowthMission order complete (canEdit here is the
+              CRO Admin/Advisor check). */}
+          <MissionOrders
+            mode="discipline"
             accountId={user.account_id}
             slug={step.slug}
-            tasks={tasks}
+            orders={tasks}
             team={team}
             memberLoad={memberLoad}
-            canAssign={canAuthorTasks}
-            canDefine={canAuthorTasks}
+            canEdit={canAuthorTasks}
+            isCroLeader={canEdit}
+            openOrderId={openOrderId}
           />
         </>
       )}

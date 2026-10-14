@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { HoursBar, OutsourcedChip } from "@/components/growth-mission/hours-ui";
+import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { formatWhole, type QuarterInfo, type StepHours } from "@/lib/growth-mission/hours";
 import { createClient } from "@/lib/supabase/client";
@@ -78,10 +79,12 @@ export function StepHoursPanel({
   ];
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-neutral-100 px-5 py-3">
-        <h2 className="shrink-0 text-h4 text-primary-900">
-          Hours <span className="font-normal text-neutral-400">· {quarter.label}</span>
+    // Client-confirmed (2026-10-14, "Discipline Header Blue" A): a navy title
+    // bar and the figures on light blue, matching the Mission Orders table.
+    <section className="overflow-hidden rounded-lg border border-primary-200 bg-white">
+      <div className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 ${NAVY_GRADIENT}`}>
+        <h2 className="shrink-0 text-h4 text-white">
+          Hours <span className="font-normal text-secondary-300">· {quarter.label}</span>
         </h2>
         {/* The report sits between the title and the actions, so one line
             carries everything about this discipline that is not a number. */}
@@ -89,8 +92,8 @@ export function StepHoursPanel({
         <div className="ml-auto flex items-center gap-3">
           {canEditOutsourced ? (
             <div className="flex items-center gap-2">
-              <span className="text-body-sm font-medium text-neutral-600">Outsourced</span>
-              <div className="inline-flex overflow-hidden rounded-md border border-neutral-300" role="group" aria-label="Outsourced">
+              <span className="text-body-sm font-medium text-white/80">Outsourced</span>
+              <div className="inline-flex overflow-hidden rounded-md border border-white/30" role="group" aria-label="Outsourced">
                 {[true, false].map((v) => (
                   <button
                     key={String(v)}
@@ -119,10 +122,10 @@ export function StepHoursPanel({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 sm:divide-x sm:divide-neutral-100">
+      <div className="grid grid-cols-2 bg-primary-50 sm:grid-cols-4 sm:divide-x sm:divide-primary-200">
         {stats.map((s) => (
           <div key={s.label} className="flex flex-col gap-0.5 px-5 py-3.5">
-            <span className="text-caption text-neutral-500">{s.label}</span>
+            <span className="text-caption text-primary-700">{s.label}</span>
             <span className="text-h3 font-bold tabular-nums text-primary-900">
               {formatWhole(s.value)} <span className="text-body-sm font-medium text-neutral-400">hrs</span>
             </span>
@@ -130,15 +133,15 @@ export function StepHoursPanel({
         ))}
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-neutral-100 px-5 py-3.5">
-        <div className="flex flex-wrap justify-between gap-1 text-caption text-neutral-500">
+      <div className="flex flex-col gap-2 border-t border-primary-200 bg-primary-50 px-5 py-3.5">
+        <div className="flex flex-wrap justify-between gap-1 text-caption text-primary-700">
           <span>
             <b className="font-semibold tabular-nums text-neutral-800">{pct}%</b> of this quarter&apos;s required hours
             completed
           </span>
           <span className="tabular-nums">{quarter.elapsedPct}% of the quarter elapsed</span>
         </div>
-        <HoursBar pct={pct} elapsedPct={quarter.elapsedPct} />
+        <HoursBar pct={pct} elapsedPct={quarter.elapsedPct} className="bg-white" />
       </div>
     </section>
   );

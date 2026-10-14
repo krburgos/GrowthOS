@@ -1,4 +1,5 @@
 import { SampleButtons } from "@/components/advocate-dash/sample-buttons";
+import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { targetSummary, type AdvocateTarget } from "@/lib/advocate-dash/targets";
 
 /**
@@ -32,18 +33,20 @@ export function DropbyPanel({ targets }: { targets: AdvocateTarget[] }) {
   ];
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-neutral-100 px-5 py-3">
-        <h2 className="shrink-0 text-h4 text-primary-900">
-          Drop-bys <span className="font-normal text-neutral-400">· all time</span>
+    // Client-confirmed (2026-10-14, "Discipline Header Blue" A): the same
+    // navy title bar and light blue figures as the other disciplines' Hours.
+    <section className="overflow-hidden rounded-lg border border-primary-200 bg-white">
+      <div className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 ${NAVY_GRADIENT}`}>
+        <h2 className="shrink-0 text-h4 text-white">
+          Drop-bys <span className="font-normal text-secondary-300">· all time</span>
         </h2>
         <SampleButtons />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 sm:divide-x sm:divide-neutral-100">
+      <div className="grid grid-cols-2 bg-primary-50 sm:grid-cols-4 sm:divide-x sm:divide-primary-200">
         {stats.map((s) => (
           <div key={s.label} className="flex flex-col gap-0.5 px-5 py-3.5">
-            <span className="text-caption text-neutral-500">{s.label}</span>
+            <span className="text-caption text-primary-700">{s.label}</span>
             <span
               className={`text-h3 font-bold tabular-nums ${
                 s.highlight ? "text-secondary-700" : "text-primary-900"

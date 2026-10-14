@@ -16,7 +16,7 @@ import { KPI_BOXES, boxTotal, type KpiBox, type KpiSource } from "@/lib/growth-m
  * so the boxes and their rules cannot drift apart between the two pages.
  *
  * What changed from the KPI band:
- * - Opportunities is Active · Interested · In progress · Quoted · Won
+ * - Opportunities is Total (labelled "Active" until 2026-10-14) · Interested · In progress · Quoted · Won
  *   (stage rules in lib/growth-mission/kpi-band.ts). Active is first, in a
  *   wider cell on a cyan tint, because it is the figure to see first;
  *   Ghosted and Lost no longer have boxes of their own.

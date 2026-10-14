@@ -10,17 +10,21 @@ import { cn } from "@/lib/utils";
  */
 export function HeroBand({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <section
-      className={cn(
-        "flex flex-col gap-4 rounded-xl p-4 text-white md:p-5",
-        "bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]",
-        className
-      )}
-    >
+    <section className={cn("flex flex-col gap-4 rounded-xl p-4 text-white md:p-5", NAVY_GRADIENT, className)}>
       {children}
     </section>
   );
 }
+
+/**
+ * The band's navy → teal gradient, on its own so a panel's title bar can
+ * carry it too (client-confirmed, 2026-10-14, "Mission Orders Blue" and
+ * "Discipline Header Blue" option A: the Mission Orders table and a
+ * discipline's Hours panel each get a navy title bar). That supersedes the
+ * "never repeated further down" rule above for those two panels only.
+ */
+export const NAVY_GRADIENT =
+  "bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]";
 
 /**
  * The button style for an action sitting inside a HeroBand. Exported so a

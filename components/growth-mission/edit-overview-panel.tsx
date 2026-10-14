@@ -63,13 +63,13 @@ export function EditOverviewPanel({
   };
 
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3.5">
+    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-primary-200 bg-primary-100 p-3.5">
       <div>
-        <label className="text-caption font-semibold text-neutral-600">Status</label>
+        <label className="text-caption font-semibold text-primary-700">Status</label>
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as PlaybookStatus)}
-          className="block h-9 rounded-md border border-neutral-300 px-2 text-body-sm"
+          className="block h-9 rounded-md border border-neutral-300 bg-white px-2 text-body-sm"
         >
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
@@ -79,11 +79,11 @@ export function EditOverviewPanel({
         </select>
       </div>
       <div>
-        <label className="text-caption font-semibold text-neutral-600">Headline label</label>
+        <label className="text-caption font-semibold text-primary-700">Headline label</label>
         <Input value={headlineLabel} onChange={(e) => setHeadlineLabel(e.target.value)} className="w-48" />
       </div>
       <div>
-        <label className="text-caption font-semibold text-neutral-600">Headline value</label>
+        <label className="text-caption font-semibold text-primary-700">Headline value</label>
         <Input value={headlineValue} onChange={(e) => setHeadlineValue(e.target.value)} className="w-32" />
       </div>
       <Button onClick={save} disabled={saving} size="sm">

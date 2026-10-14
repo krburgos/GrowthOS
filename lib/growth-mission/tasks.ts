@@ -59,21 +59,44 @@ export const TASK_STATE_CELL: Record<TaskState, string> = {
 };
 
 /**
- * Rows are grouped by priority rather than by state, so "what to do next"
- * reads top to bottom. State is a column, which keeps it changeable in
- * place without moving the row out from under the pointer.
+ * ABC-123 priority, labelled Must / Should / Could (client-confirmed,
+ * 2026-10-14). The stored enum stays high / medium / low, which
+ * growth_mission_suggestions shares; only the words changed.
  */
-/**
- * Priority as a column (client-confirmed, 2026-10-02). The board used to
- * group by priority; the sheet sorts by it instead, so what is left is the
- * colour of the flag on each row.
- */
-export const TASK_PRIORITY_INK: Record<TaskPriority, string> = {
-  high: "text-error-700",
-  medium: "text-warning-800",
-  low: "text-neutral-400",
+export const PRIORITIES: TaskPriority[] = ["high", "medium", "low"];
+
+export const PRIORITY_LABEL: Record<TaskPriority, string> = {
+  high: "Must",
+  medium: "Should",
+  low: "Could",
 };
 
+/** The group heading's description, beside the tier name. */
+export const PRIORITY_MEANING: Record<TaskPriority, string> = {
+  high: "Needed to hit the goal",
+  medium: "Important, not critical",
+  low: "If there's room",
+};
+
+/** The priority chip: tinted ground, darker ink, one per tier. */
+export const PRIORITY_CHIP: Record<TaskPriority, string> = {
+  high: "bg-error-100 text-error-700",
+  medium: "bg-warning-100 text-warning-800",
+  low: "bg-neutral-100 text-neutral-600",
+};
+
+/**
+ * Who gets an order done (client-confirmed, 2026-10-14). Only GrowthMission
+ * is stored (`delegated`); Internal and Outsourced are the assignee's
+ * roster kind, so an order can never disagree with the person it names.
+ */
+export type OrderType = "internal" | "outsourced" | "growthmission";
+
+export const ORDER_TYPE_LABEL: Record<OrderType, string> = {
+  internal: "Internal",
+  outsourced: "Outsourced",
+  growthmission: "GrowthMission",
+};
 
 export interface Task {
   id: string;
@@ -86,7 +109,55 @@ export interface Task {
   due_date: string | null;
   /** Stamped when the task first reached 'complete'; null otherwise. */
   completed_at: string | null;
+  /** Delegated to GrowthMission (CRO Leader) for credits. Never has an assignee. */
+  delegated: boolean;
+  /** Position within its discipline and priority; the number is derived from it. */
+  sort_order: number;
+  created_at: string;
   assignee: { id: string; name: string; kind: TeamKind } | null;
+}
+
+/** Null when nobody owns the order yet. */
+export function orderType(task: Pick<Task, "delegated" | "assignee">): OrderType | null {
+  if (task.delegated) return "growthmission";
+  if (!task.assignee) return null;
+  return task.assignee.kind === "outsourced" ? "outsourced" : "internal";
+}
+
+/**
+ * Who may tick an order complete or reopen it. A GrowthMission order spends
+ * credits on completion, so only CRO Leader may (the database's
+ * guard_growthmission_orders() trigger enforces the same rule).
+ */
+export function canToggleComplete(task: Pick<Task, "delegated">, perms: { canEdit: boolean; isCroLeader: boolean }) {
+  return perms.canEdit && (!task.delegated || perms.isCroLeader);
+}
+
+/**
+ * The number in "Must 2": each open order's position among the open orders
+ * in the same discipline and tier, by sort_order and then age. Computed
+ * rather than stored, so it can never duplicate or skip. Completed orders
+ * get no number.
+ */
+export function rankOrders(tasks: Task[]): Map<string, number> {
+  const groups = new Map<string, Task[]>();
+  for (const t of tasks) {
+    if (t.state === "complete") continue;
+    const key = `${t.step_slug}|${t.priority}`;
+    const g = groups.get(key);
+    if (g) g.push(t);
+    else groups.set(key, [t]);
+  }
+  const rank = new Map<string, number>();
+  for (const g of groups.values()) {
+    g.sort(byPosition).forEach((t, i) => rank.set(t.id, i + 1));
+  }
+  return rank;
+}
+
+/** Position order within one discipline and tier. */
+export function byPosition(a: Task, b: Task) {
+  return a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id);
 }
 
 /** What the Mission Card shows: progress, and whether anything is unowned. */
@@ -96,7 +167,7 @@ export function taskSummary(tasks: Task[]) {
     total: tasks.length,
     done,
     open: tasks.length - done,
-    unassigned: tasks.filter((t) => t.state !== "complete" && !t.assignee).length,
+    unassigned: tasks.filter((t) => t.state !== "complete" && orderType(t) === null).length,
     hours: tasks.reduce((sum, t) => sum + t.hours, 0),
   };
 }

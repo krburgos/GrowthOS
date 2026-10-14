@@ -37,7 +37,10 @@ export interface KpiBox {
 export const KPI_BOXES: KpiBox[] = [
   { key: "mqc", label: "MQCs", group: "prospects", tip: "Contacts with the MQC status." },
   { key: "mql", label: "MQLs", group: "prospects", tip: "Contacts with the MQL status." },
-  { key: "active", label: "Active", group: "pipeline", tone: "active", tip: "Every opportunity, including won and lost." },
+  // Client-confirmed (2026-10-14): labelled "Total", because it counts won
+  // and lost opportunities too and "Active" read as open ones only. The key
+  // stays "active" so nothing that refers to the box changes.
+  { key: "active", label: "Total", group: "pipeline", tone: "active", tip: "Every opportunity, including won and lost." },
   { key: "interested", label: "Interested", group: "pipeline", tip: "Opportunities at Showing Interest." },
   {
     key: "in_progress",
