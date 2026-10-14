@@ -51,6 +51,9 @@ export default async function ContactsListPage({
   const { sort, dir, view: rawView, q, ...pageParams } = await searchParams;
   const view: ContactView = rawView === "mine" || rawView === "new" || rawView === "hot" ? rawView : "all";
   const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();
+  // contacts has two links to users since 2026-10-14 (owner_id and
+  // notes_updated_by), so the salesperson embed names its foreign key;
+  // a bare users(...) is ambiguous and PostgREST refuses it (HTTP 300).
   // Commas and brackets would break PostgREST's or() syntax.
   const term = q?.replace(/[,()%]/g, " ").trim();
   const sortColumn = SORT_COLUMNS[sort ?? "updated_at"] ?? "updated_at";
@@ -95,7 +98,7 @@ export default async function ContactsListPage({
       supabase
         .from("contacts")
         .select(
-          "id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, status_id, contact_statuses(name), company_id, companies(name, phone, address_line1, city, state, company_size, linkedin_url), owner_id, users(full_name), updated_at"
+          "id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, status_id, contact_statuses(name), company_id, companies(name, phone, address_line1, city, state, company_size, linkedin_url), owner_id, users:users!contacts_owner_id_fkey(full_name), updated_at"
         )
     )
       .order(sortColumn, { ascending, referencedTable: sortColumn.includes("(") ? sortColumn.split("(")[0] : undefined })
