@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Bell, ClipboardList, Coins, Compass } from "lucide-react";
+import { ArrowRight, Bell, Building2, ClipboardList, Coins, Compass } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -81,6 +81,9 @@ export function TopBar({
   visionBoardAnsweredCount,
   visionBoardComplete,
   credits,
+  profileFilled,
+  profileTotal,
+  profileComplete = true,
 }: {
   fullName: string;
   /** Omitted on the CRO Leader's lightweight header (App Flow §4.10) —
@@ -93,13 +96,21 @@ export function TopBar({
   questionnaireComplete?: boolean;
   visionBoardAnsweredCount?: number;
   visionBoardComplete?: boolean;
+  /**
+   * Company Profile completeness, for the bell (client-confirmed,
+   * 2026-10-15): the same eleven fields the Headquarters card scores.
+   */
+  profileFilled?: number;
+  profileTotal?: number;
+  profileComplete?: boolean;
   /** The account's credits, for the pill beside the bell. Omitted on the CRO Leader's own header. */
   credits?: MissionCapacity["credits"];
 }) {
   const router = useRouter();
   const showQuestionnaireItem = !questionnaireComplete && questionnaireAnsweredCount !== undefined;
   const showVisionBoardItem = !visionBoardComplete && visionBoardAnsweredCount !== undefined;
-  const hasNotification = showQuestionnaireItem || showVisionBoardItem;
+  const showProfileItem = !profileComplete && profileFilled !== undefined;
+  const hasNotification = showProfileItem || showQuestionnaireItem || showVisionBoardItem;
 
   const handleLogout = async () => {
     // Same "viewing as" cookie cleanup as login (components/auth/login-form.tsx)
@@ -157,6 +168,22 @@ export function TopBar({
           <DropdownMenuContent align="end" className="w-80">
             {hasNotification ? (
               <>
+                {/* First, because the Headquarters setup panels start with it. */}
+                {showProfileItem && (
+                  <DropdownMenuItem asChild className="flex items-start gap-3 py-2.5">
+                    <Link href="/settings/company">
+                      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary-100 text-secondary-700">
+                        <Building2 className="size-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-body-sm font-semibold text-neutral-800">Complete your Company Profile</span>
+                        <span className="block text-caption text-neutral-500">
+                          {profileFilled} of {profileTotal} filled in — tap to continue
+                        </span>
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 {showQuestionnaireItem && (
                   <DropdownMenuItem asChild className="flex items-start gap-3 py-2.5">
                     <Link href="/settings/growth-questionnaire">

@@ -8,6 +8,7 @@ import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-us
 import { SIDEBAR_ACCESS } from "@/lib/auth/nav-permissions";
 import { currentQuarter } from "@/lib/growth-mission/hours";
 import { getNavSummary } from "@/lib/growth-mission/queries";
+import { COMPANY_PROFILE_COLUMNS, profileCompleteness, type CompanyProfile } from "@/lib/accounts/company-profile";
 import { countAnswered } from "@/lib/questionnaire/questions";
 import { createClient } from "@/lib/supabase/server";
 import { countAnswered as countVisionBoardAnswered } from "@/lib/vision-board/sections";
@@ -54,7 +55,7 @@ export default async function MspShellLayout({ children }: { children: React.Rea
   if (needsAccountSelection(user.role) && !user.account_id) redirect("/cro");
 
   const supabase = await createClient();
-  const [{ data: questionnaireResponse }, { data: visionBoardResponse }, nav] = await Promise.all([
+  const [{ data: questionnaireResponse }, { data: visionBoardResponse }, nav, { data: profileRow }, { count: inHouseCount }] = await Promise.all([
     supabase
       .from("growth_questionnaire_responses")
       .select("answers, completed_at")
@@ -66,7 +67,19 @@ export default async function MspShellLayout({ children }: { children: React.Rea
       .eq("account_id", user.account_id)
       .maybeSingle(),
     getNavSummary(user.account_id!, currentQuarter()),
+    // The bell's Company Profile reminder (client-confirmed, 2026-10-15) scores
+    // the same eleven fields as the Headquarters card, roster included.
+    supabase.from("accounts").select(COMPANY_PROFILE_COLUMNS).eq("id", user.account_id).maybeSingle(),
+    supabase
+      .from("account_team_members")
+      .select("id", { count: "exact", head: true })
+      .eq("account_id", user.account_id)
+      .eq("kind", "in_house")
+      .is("archived_at", null),
   ]);
+  const profile = profileRow
+    ? profileCompleteness(profileRow as unknown as CompanyProfile, inHouseCount ?? 0)
+    : null;
   const questionnaireAnsweredCount = countAnswered((questionnaireResponse?.answers as Record<string, unknown>) ?? {});
   const questionnaireComplete = !!questionnaireResponse?.completed_at;
   const visionBoardAnsweredCount = countVisionBoardAnswered((visionBoardResponse?.answers as Record<string, unknown>) ?? {});
@@ -95,6 +108,9 @@ export default async function MspShellLayout({ children }: { children: React.Rea
               questionnaireComplete={questionnaireComplete}
               visionBoardAnsweredCount={visionBoardAnsweredCount}
               visionBoardComplete={visionBoardComplete}
+              profileFilled={profile?.filled}
+              profileTotal={profile?.total}
+              profileComplete={profile?.complete ?? true}
             />
             {children}
           </div>
