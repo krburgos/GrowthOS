@@ -80,7 +80,11 @@ export default async function MspShellLayout({ children }: { children: React.Rea
       <div className="flex flex-1 flex-col">
         {user.viewingAccountName && <CroLeaderBanner companyName={user.viewingAccountName} />}
         <div className="flex min-h-0 flex-1">
-          <Sidebar access={SIDEBAR_ACCESS[user.role]} overdueOrders={nav.overdueOrders} />
+          <Sidebar
+            access={SIDEBAR_ACCESS[user.role]}
+            overdueOrders={nav.overdueOrders}
+            withBanner={!!user.viewingAccountName}
+          />
           <div className="flex min-w-0 flex-1 flex-col">
             <TopBar
               fullName={user.full_name}

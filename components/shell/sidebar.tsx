@@ -120,8 +120,11 @@ const SIDEBAR_COLLAPSED_KEY = "growthmission.sidebar.collapsed";
 export function Sidebar({
   access,
   overdueOrders = 0,
+  withBanner = false,
 }: {
   access: Record<NavSection, NavAccess>;
+  /** The CRO Leader "Viewing" banner sits above the rail, so the rail is that much shorter. */
+  withBanner?: boolean;
   /** Open mission orders past due, shown on Command Center. Nothing overdue, no badge. */
   overdueOrders?: number;
 }) {
@@ -147,11 +150,19 @@ export function Sidebar({
   return (
     <>
       {/* The desktop rail. `hidden lg:flex` rather than a width of zero, so
-          a phone never has it in the layout at all. */}
+          a phone never has it in the layout at all.
+
+          Pinned to the window (bug fix, 2026-10-15): it used to stretch to
+          the full height of the page, so on a long page like Contacts the
+          Settings link at its foot sat at the very bottom of the page, out
+          of sight until you scrolled all the way down. Sticky and one
+          screen tall, Settings stays at the bottom of the screen; on a very
+          short window the rail scrolls rather than hiding it. */}
       <aside
         className={cn(
           surface,
-          "hidden shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out lg:flex",
+          "hidden shrink-0 overflow-x-hidden overflow-y-auto transition-[width] duration-200 ease-in-out lg:sticky lg:top-0 lg:flex lg:self-start",
+          withBanner ? "lg:h-[calc(100dvh-var(--banner-height))]" : "lg:h-dvh",
           collapsed ? "w-[var(--sidebar-width-collapsed)]" : "w-[var(--sidebar-width-expanded)]"
         )}
       >
