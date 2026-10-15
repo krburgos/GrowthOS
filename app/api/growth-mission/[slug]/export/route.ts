@@ -25,7 +25,8 @@ import { createClient } from "@/lib/supabase/server";
  * in next.config.ts. The layout lives in lib/pdf/status-report-doc.ts.
  *
  * Client-confirmed (2026-10-14, "PDF Exports Refresh"): the masthead says
- * "Discipline N of 17", and AdvocateDash counts drop-bys the way its card
+ * "Mission Card N of 17" (2026-10-15: "Discipline" is internal wording; users
+ * see Mission Card), and AdvocateDash counts drop-bys the way its card
  * on screen does, read through the same getTargets/targetSummary.
  */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
@@ -66,7 +67,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   renderStatusReport(doc, {
     accountName: account?.name ?? "GrowthMission Account",
     stepTitle: step.title,
-    phaseTitle: `Discipline ${shape.number} of ${PLAYBOOK_STEPS.length}`,
+    phaseTitle: `Mission Card ${shape.number} of ${PLAYBOOK_STEPS.length}`,
     quarterLabel: `${quarter.label} · ${quarter.range}`,
     summary: step.statusReportSummary,
     stats: step.statusReportStats,

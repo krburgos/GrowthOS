@@ -114,7 +114,7 @@ export function SetupBlock({
           detailLabel={questionnaire.complete ? "Where it is used" : "Why it matters"}
           detail={
             questionnaire.complete
-              ? "Your ICP is set, and the discipline readiness check reads it."
+              ? "Your ICP is set, and the Mission Card readiness check reads it."
               : "The rest of GrowthMission reads your ICP from this. Start here."
           }
         />

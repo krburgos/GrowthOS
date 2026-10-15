@@ -90,7 +90,7 @@ export function TeamRoster({
           <p className="text-h3 font-bold leading-none tabular-nums text-primary-900">
             {covered} of {PLAYBOOK_STEPS.length}
           </p>
-          <p className="mt-1 text-caption text-neutral-500">disciplines covered</p>
+          <p className="mt-1 text-caption text-neutral-500">Mission Cards covered</p>
         </div>
       </div>
 
@@ -170,7 +170,7 @@ function RosterTable({
 
       {members.length === 0 ? (
         <p className="px-5 py-8 text-center text-body-sm text-neutral-400">
-          Nobody here yet.{canEdit && " Add the people responsible for these disciplines."}
+          Nobody here yet.{canEdit && " Add the people responsible for these Mission Cards."}
         </p>
       ) : (
         <>
@@ -532,7 +532,7 @@ function MemberDialog({
           <DialogDescription className="text-body-sm text-neutral-500">
             {kind === "outsourced"
               ? "Name can carry the company too — “Rosa Pineda · Northlight Events”."
-              : "Shown on the Company Profile and on the disciplines they are assigned to."}
+              : "Shown on the Company Profile and on the Mission Cards they are assigned to."}
           </DialogDescription>
         </DialogHeader>
 

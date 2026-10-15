@@ -162,6 +162,8 @@ export default async function HeadquartersPage() {
         team={teamMembers}
         canEdit={HOURS_EDIT_ROLES.includes(user.role)}
         isCroLeader={canSetCredits}
+        // Headquarters opens on Must only (client-confirmed, 2026-10-15).
+        initialPriorities={["high"]}
       />
     </main>
   );

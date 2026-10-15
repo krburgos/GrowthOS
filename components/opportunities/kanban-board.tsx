@@ -16,6 +16,7 @@ import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { KanbanColumn } from "@/components/opportunities/kanban-column";
 import type { OpportunityCardData } from "@/components/opportunities/opportunity-card";
+import { FilterField } from "@/components/ui/filter-bar";
 import { Input } from "@/components/ui/input";
 import type { OpportunityStageRow } from "@/lib/opportunities/stages";
 import { createClient } from "@/lib/supabase/client";
@@ -136,16 +137,19 @@ export function KanbanBoard({
     <div className="flex flex-col gap-4">
       {/* Full width on a phone, where `max-w-xs` left a short search field
           stranded against the right edge with nothing beside it. */}
-      <div className="relative w-full sm:max-w-xs sm:self-end">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search opportunity, contact or company"
-          className="pl-9"
-          aria-label="Search opportunities"
-        />
-      </div>
+      {/* Named, like every table's filter row (client-confirmed, 2026-10-15). */}
+      <FilterField label="Search" className="w-full sm:w-80 sm:self-end">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Opportunity, contact or company"
+            className="pl-9"
+            aria-label="Search opportunities"
+          />
+        </div>
+      </FilterField>
 
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         {/* snap-x so a swipe lands on a stage rather than between two. The

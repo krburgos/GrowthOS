@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronRight, GripVertical, Plus } from "lucide-react";
+import { Check, ChevronRight, GripVertical, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ import {
 import { OrderPanel, OrderPrompt } from "@/components/growth-mission/order-panel";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { Button } from "@/components/ui/button";
+import { FilterField, FilterResult, FilterTitle, filterTriggerClass } from "@/components/ui/filter-bar";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { CREDITS_PER_HOUR } from "@/lib/growth-mission/capacity";
@@ -109,6 +110,7 @@ export function MissionOrders({
   canEdit,
   isCroLeader,
   openOrderId,
+  initialPriorities,
 }: {
   mode: "discipline" | "overview";
   accountId: string;
@@ -123,6 +125,11 @@ export function MissionOrders({
   isCroLeader: boolean;
   /** Discipline mode: open this order's panel on arrival (?order=). */
   openOrderId?: string;
+  /**
+   * Which tiers are ticked on arrival. Headquarters opens on Must only
+   * (client-confirmed, 2026-10-15); everywhere else shows all three.
+   */
+  initialPriorities?: TaskPriority[];
 }) {
   const router = useRouter();
   const overview = mode === "overview";
@@ -132,7 +139,11 @@ export function MissionOrders({
   const [rows, setRows] = useState(orders);
   useEffect(() => setRows(orders), [orders]);
 
-  const [pri, setPri] = useState<Record<TaskPriority, boolean>>({ high: true, medium: true, low: true });
+  const [pri, setPri] = useState<Record<TaskPriority, boolean>>(() =>
+    initialPriorities
+      ? { high: initialPriorities.includes("high"), medium: initialPriorities.includes("medium"), low: initialPriorities.includes("low") }
+      : { high: true, medium: true, low: true }
+  );
   const [owner, setOwner] = useState<string>("");
   const [disc, setDisc] = useState<string>("");
   const [due, setDue] = useState<Due>("");
@@ -247,7 +258,7 @@ export function MissionOrders({
           <p className="mt-0.5 text-body-sm tabular-nums text-secondary-300">
             {rows.length === 0
               ? "No mission orders yet."
-              : `${openAll.length} open · ${formatWhole(sum(openAll))} hrs${overview ? " across every discipline" : ""} · ${delegatedOpen.length} with GrowthMission`}
+              : `${openAll.length} open · ${formatWhole(sum(openAll))} hrs${overview ? " across every Mission Card" : ""} · ${delegatedOpen.length} with GrowthMission`}
           </p>
         </div>
         {!overview && canEdit && (
@@ -269,94 +280,105 @@ export function MissionOrders({
             ? "No mission orders yet. Open a Mission Card to issue the first one."
             : canEdit
               ? "Issue the first order once the report says what needs doing."
-              : "CRO Leader hasn't issued any mission orders for this discipline yet."}
+              : "CRO Leader hasn't issued any mission orders for this Mission Card yet."}
         </p>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2 border-b border-primary-200 bg-primary-100 px-5 py-2.5">
-            <span className="mr-0.5 text-caption font-bold uppercase tracking-wide text-primary-700">Priority</span>
-            <div className="flex gap-1">
-              {PRIORITIES.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  aria-pressed={pri[p]}
-                  title={PRIORITY_MEANING[p]}
-                  onClick={() => setPri((s) => ({ ...s, [p]: !s[p] }))}
-                  className={`rounded-full border px-3 py-1 text-caption font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 motion-reduce:transition-none ${
-                    pri[p] ? `border-transparent ${PRIORITY_CHIP[p]}` : "border-neutral-300 bg-white text-neutral-400"
-                  }`}
-                >
-                  {PRIORITY_LABEL[p]}
-                </button>
-              ))}
-            </div>
+          {/* Client-confirmed (2026-10-15, approved mockup "Table Filters"):
+              the row says it is a filter, every control is named, the
+              Priority pills carry a tick box (ticked = that tier is shown),
+              and a filtered table says how many it is showing. Clear shows
+              everything again, including on Headquarters, which opens on Must. */}
+          <div className="flex flex-wrap items-end gap-x-3.5 gap-y-2.5 border-b border-primary-200 bg-primary-100 px-5 pb-3 pt-2.5">
+            <FilterTitle />
+            <FilterField label="Priority" tone="blue">
+              <div className="flex gap-1">
+                {PRIORITIES.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    aria-pressed={pri[p]}
+                    title={`${PRIORITY_MEANING[p]}. ${pri[p] ? "Shown: click to hide." : "Hidden: click to show."}`}
+                    onClick={() => setPri((s) => ({ ...s, [p]: !s[p] }))}
+                    className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-caption font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 motion-reduce:transition-none ${
+                      pri[p] ? `border-transparent ${PRIORITY_CHIP[p]}` : "border-neutral-300 bg-white text-neutral-400"
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`flex size-3.5 items-center justify-center rounded-[4px] ${pri[p] ? "bg-current" : "border-[1.5px] border-neutral-300"}`}
+                    >
+                      {pri[p] && <Check className="size-2.5 text-white" strokeWidth={3.5} />}
+                    </span>
+                    {PRIORITY_LABEL[p]}
+                  </button>
+                ))}
+              </div>
+            </FilterField>
 
-            <Select value={owner || ANY} onValueChange={(v) => setOwner(v === ANY ? "" : v)}>
-              <SelectTrigger aria-label="Owner" className="h-8 w-auto min-w-[150px] bg-white text-body-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ANY}>All owners</SelectItem>
-                {(["in_house", "outsourced"] as const).map((kind) => {
-                  const people = team.filter((m) => m.kind === kind);
-                  return people.length === 0 ? null : (
-                    <SelectGroup key={kind}>
-                      <SelectLabel>{kind === "in_house" ? "Internal" : "Outsourced"}</SelectLabel>
-                      {people.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  );
-                })}
-                <SelectGroup>
-                  <SelectLabel>Credits</SelectLabel>
-                  <SelectItem value="growthmission">GrowthMission</SelectItem>
-                </SelectGroup>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {overview && (
-              <Select value={disc || ANY} onValueChange={(v) => setDisc(v === ANY ? "" : v)}>
-                <SelectTrigger aria-label="Discipline" className="h-8 w-auto min-w-[160px] bg-white text-body-sm">
+            <FilterField label="Owner" tone="blue">
+              <Select value={owner || ANY} onValueChange={(v) => setOwner(v === ANY ? "" : v)}>
+                <SelectTrigger aria-label="Owner" className={`h-8 w-auto min-w-[150px] text-body-sm ${filterTriggerClass(owner !== "")}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ANY}>All disciplines</SelectItem>
-                  {disciplines.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {discName(s)}
+                  <SelectItem value={ANY}>All owners</SelectItem>
+                  {(["in_house", "outsourced"] as const).map((kind) => {
+                    const people = team.filter((m) => m.kind === kind);
+                    return people.length === 0 ? null : (
+                      <SelectGroup key={kind}>
+                        <SelectLabel>{kind === "in_house" ? "Internal" : "Outsourced"}</SelectLabel>
+                        {people.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    );
+                  })}
+                  <SelectGroup>
+                    <SelectLabel>Credits</SelectLabel>
+                    <SelectItem value="growthmission">GrowthMission</SelectItem>
+                  </SelectGroup>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                </SelectContent>
+              </Select>
+            </FilterField>
+
+            {overview && (
+              <FilterField label="Mission Card" tone="blue">
+                <Select value={disc || ANY} onValueChange={(v) => setDisc(v === ANY ? "" : v)}>
+                  <SelectTrigger aria-label="Mission Card" className={`h-8 w-auto min-w-[160px] text-body-sm ${filterTriggerClass(disc !== "")}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ANY}>All Mission Cards</SelectItem>
+                    {disciplines.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {discName(s)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FilterField>
+            )}
+
+            <FilterField label="Due" tone="blue">
+              <Select value={due || ANY} onValueChange={(v) => setDue(v === ANY ? "" : (v as Due))}>
+                <SelectTrigger aria-label="Due" className={`h-8 w-auto min-w-[150px] text-body-sm ${filterTriggerClass(due !== "")}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DUE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value || ANY} value={o.value || ANY}>
+                      {o.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            )}
+            </FilterField>
 
-            <Select value={due || ANY} onValueChange={(v) => setDue(v === ANY ? "" : (v as Due))}>
-              <SelectTrigger aria-label="Due date" className="h-8 w-auto min-w-[150px] bg-white text-body-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DUE_OPTIONS.map((o) => (
-                  <SelectItem key={o.value || ANY} value={o.value || ANY}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {filtered && (
-              <button
-                type="button"
-                onClick={clear}
-                className="rounded px-1.5 py-1 text-caption font-semibold text-secondary-700 hover:text-secondary-800"
-              >
-                Clear
-              </button>
-            )}
+            {filtered && <FilterResult shown={visible.length} total={rows.length} noun="orders" onClear={clear} />}
           </div>
 
           {/* Below lg the discipline page keeps one card per order
@@ -389,10 +411,12 @@ export function MissionOrders({
           <div className={`${overview ? "block" : "hidden lg:block"} overflow-x-auto`}>
             <div className={overview ? "min-w-[1080px]" : "min-w-[960px]"}>
               <div className={`${cols} border-b border-primary-200 bg-primary-50 px-5 py-2 ${HEAD}`}>
-                <span />
+                {/* No complete column on the overviews (client-confirmed,
+                    2026-10-15): orders are completed on their Mission Card. */}
+                {!overview && <span />}
                 {overview ? <span>Priority</span> : <><span /><span className="text-center">#</span></>}
-                <span>Mission Orders</span>
-                {overview && <span>Discipline</span>}
+                <span>Mission Order</span>
+                {overview && <span>Mission Card</span>}
                 <span>Owner</span>
                 <span>Status</span>
                 <span>Due</span>
@@ -521,7 +545,7 @@ const OVERVIEW_TIER_LIMIT = 5;
 
 /** One column definition each, shared by the header and the rows. */
 const DISCIPLINE_COLS = "grid grid-cols-[28px_18px_36px_minmax(220px,1fr)_190px_118px_72px_48px_64px] items-center gap-x-3";
-const OVERVIEW_COLS = "grid grid-cols-[28px_76px_minmax(220px,1fr)_150px_190px_118px_72px_48px_64px] items-center gap-x-3";
+const OVERVIEW_COLS = "grid grid-cols-[76px_minmax(220px,1fr)_170px_190px_118px_72px_48px_64px] items-center gap-x-3";
 const HEAD = "text-caption font-bold uppercase tracking-wide text-primary-700";
 
 interface RowProps {
@@ -604,7 +628,9 @@ function OrderRow({
         dragging ? "relative z-10 bg-white shadow-lift" : "bg-white"
       }`}
     >
-      <CompleteBox task={task} canToggle={canToggleComplete(task, { canEdit, isCroLeader })} onToggle={() => onToggle(task)} />
+      {!overview && (
+        <CompleteBox task={task} canToggle={canToggleComplete(task, { canEdit, isCroLeader })} onToggle={() => onToggle(task)} />
+      )}
       {overview ? (
         <span>
           <PriorityChip task={task} rank={n} />
@@ -628,7 +654,10 @@ function OrderRow({
           </span>
         )}
       </span>
-      {overview && <span className="truncate text-body-sm text-neutral-600">{SHORT_TITLE[task.step_slug] ?? task.step_slug}</span>}
+      {/* Styled like the order's own title (client-confirmed, 2026-10-15). */}
+      {overview && (
+        <span className="truncate text-body-sm font-semibold text-neutral-900">{SHORT_TITLE[task.step_slug] ?? task.step_slug}</span>
+      )}
       <OwnerCell task={task} />
       <span>
         <StatePill state={task.state} />

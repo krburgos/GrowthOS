@@ -166,7 +166,7 @@ export default async function CompaniesListPage({
             />
           </div>
 
-          <CompaniesToolbar industries={industries} states={states} bands={EMPLOYEE_BANDS} />
+          <CompaniesToolbar industries={industries} states={states} bands={EMPLOYEE_BANDS} shown={rows.length} total={all.length} />
 
           <div>
             <CompaniesTable companies={rows.slice(from, to + 1)} maxValue={Math.max(1, ...rows.map((r) => r.prospectValue))} />

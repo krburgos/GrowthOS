@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { FilterField } from "@/components/ui/filter-bar";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,9 @@ export type ContactView = "all" | "mine" | "new" | "hot";
  * only the loaded page. They only filter the table: they never create or
  * change a list, so they are not the Smart Lists the client removed
  * (2026-09-06). Search waits for a pause in typing.
+ *
+ * Client-confirmed (2026-10-15, "Table Filters"): both controls are named,
+ * "Show" and "Search", like every table's filter row.
  */
 export function ContactsToolbar({ view, counts }: { view: ContactView; counts: Record<ContactView, number> }) {
   const router = useRouter();
@@ -50,7 +54,8 @@ export function ContactsToolbar({ view, counts }: { view: ContactView; counts: R
   ];
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
+    <div className="flex w-full flex-wrap items-end gap-x-3 gap-y-2.5 lg:w-auto">
+      <FilterField label="Show" className="max-w-full">
       <nav aria-label="Contact views" className="flex max-w-full overflow-x-auto rounded-md border border-neutral-200 bg-neutral-50 p-1 shadow-inner">
         {views.map(([v, label]) => (
           <Link
@@ -67,16 +72,19 @@ export function ContactsToolbar({ view, counts }: { view: ContactView; counts: R
           </Link>
         ))}
       </nav>
-      <div className="relative w-full sm:w-72">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-        <Input
-          value={term}
-          onChange={(e) => setTerm(e.target.value)}
-          placeholder="Search name or email"
-          className="h-9 pl-9"
-          aria-label="Search contacts"
-        />
-      </div>
+      </FilterField>
+      <FilterField label="Search" className="w-full sm:w-72">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+          <Input
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="Name or email"
+            className="h-9 pl-9"
+            aria-label="Search contacts"
+          />
+        </div>
+      </FilterField>
     </div>
   );
 }
