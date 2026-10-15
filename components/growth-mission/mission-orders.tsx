@@ -111,6 +111,7 @@ export function MissionOrders({
   isCroLeader,
   openOrderId,
   initialPriorities,
+  hideCompleted = false,
 }: {
   mode: "discipline" | "overview";
   accountId: string;
@@ -130,6 +131,12 @@ export function MissionOrders({
    * (client-confirmed, 2026-10-15); everywhere else shows all three.
    */
   initialPriorities?: TaskPriority[];
+  /**
+   * Leave completed orders out entirely. Headquarters lists them in the
+   * Mission Orders Archive right below (client-confirmed, 2026-10-15), so
+   * its "Show completed" row would show them twice.
+   */
+  hideCompleted?: boolean;
 }) {
   const router = useRouter();
   const overview = mode === "overview";
@@ -378,7 +385,14 @@ export function MissionOrders({
               </Select>
             </FilterField>
 
-            {filtered && <FilterResult shown={visible.length} total={rows.length} noun="orders" onClear={clear} />}
+            {filtered && (
+              <FilterResult
+                shown={hideCompleted ? open.length : visible.length}
+                total={hideCompleted ? openAll.length : rows.length}
+                noun={hideCompleted ? "open orders" : "orders"}
+                onClear={clear}
+              />
+            )}
           </div>
 
           {/* Below lg the discipline page keeps one card per order
@@ -475,7 +489,7 @@ export function MissionOrders({
                 );
               })}
 
-              {done.length > 0 && (
+              {!hideCompleted && done.length > 0 && (
                 <>
                   <button
                     type="button"

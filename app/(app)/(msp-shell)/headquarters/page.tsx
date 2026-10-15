@@ -7,6 +7,7 @@ import { COMPANY_PROFILE_COLUMNS, type CompanyProfile } from "@/lib/accounts/com
 import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
 import type { StageGroup } from "@/lib/opportunities/stages";
 import { MissionOrders } from "@/components/growth-mission/mission-orders";
+import { MissionOrdersArchive } from "@/components/growth-mission/mission-orders-archive";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/growth-mission/hours";
 import { getKpiBand, getMissionData, getTasks } from "@/lib/growth-mission/queries";
 import { TOTAL_QUESTION_COUNT, countAnswered } from "@/lib/questionnaire/questions";
@@ -164,7 +165,11 @@ export default async function HeadquartersPage() {
         isCroLeader={canSetCredits}
         // Headquarters opens on Must only (client-confirmed, 2026-10-15).
         initialPriorities={["high"]}
+        // Completed orders live in the archive below (client-confirmed, 2026-10-15).
+        hideCompleted
       />
+
+      <MissionOrdersArchive orders={orders} />
     </main>
   );
 }
