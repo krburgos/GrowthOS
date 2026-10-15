@@ -37,7 +37,20 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-export function InviteUserDialog({ inviteableRoles }: { inviteableRoles: UserRole[] }) {
+export function InviteUserDialog({
+  inviteableRoles,
+  accountId,
+}: {
+  inviteableRoles: UserRole[];
+  /**
+   * The account the new person joins. CRO Admin invites from inside an
+   * account it is viewing, and an MSP role must name its account, so
+   * without this every such invite failed with "account_id is required"
+   * (bug fix, 2026-10-15). The route ignores it for CRO Leader roles and
+   * uses the inviter's own account for an Owner or Admin.
+   */
+  accountId: string | null;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const {
@@ -53,7 +66,7 @@ export function InviteUserDialog({ inviteableRoles }: { inviteableRoles: UserRol
     const res = await fetch("/api/users/invite", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
+      body: JSON.stringify({ ...values, account_id: accountId ?? undefined }),
     });
     const body = await res.json();
 
