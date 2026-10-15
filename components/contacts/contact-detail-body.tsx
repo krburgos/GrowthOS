@@ -204,6 +204,7 @@ export function ContactDetailBody({
 }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [activityFilter, setActivityFilter] = useState<ActivityType | "all">("all");
+  const [editRequest, setEditRequest] = useState(0);
 
   // Client-confirmed formula (2026-09-15), replacing the real opportunity
   // sums these tiles showed before: Prospect Value is a company-size-driven
@@ -270,7 +271,14 @@ export function ContactDetailBody({
             />
             <LogActivityDialog accountId={accountId} contactId={contactId} variant="hero" />
             {canEdit && (
-              <button type="button" onClick={() => setActiveTab("overview")} className={HERO_ACTION_CLASS}>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("overview");
+                  setEditRequest((n) => n + 1);
+                }}
+                className={HERO_ACTION_CLASS}
+              >
                 <Pencil className="size-4" />
                 Edit
               </button>
@@ -321,6 +329,7 @@ export function ContactDetailBody({
               statuses={statuses}
               owners={owners}
               defaults={overviewDefaults}
+              editRequest={editRequest}
             />
           </TabsContent>
 

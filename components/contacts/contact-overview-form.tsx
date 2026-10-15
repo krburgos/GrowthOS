@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -98,7 +98,14 @@ export function ContactOverviewForm({
   statuses,
   owners,
   defaults,
+  editRequest = 0,
 }: {
+  /**
+   * Bumped by the header's Edit button. Each change opens the form for
+   * editing and brings it into view (bug fix, 2026-10-15: the button only
+   * switched tabs, so on Overview it appeared to do nothing).
+   */
+  editRequest?: number;
   contactId: string;
   accountId: string;
   companyId: string | null;
@@ -122,6 +129,12 @@ export function ContactOverviewForm({
   const values = watch();
 
   const handleEdit = () => setEditing(true);
+
+  useEffect(() => {
+    if (!editRequest || !canEdit) return;
+    setEditing(true);
+    document.getElementById("contact-overview-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [editRequest, canEdit]);
   const handleCancel = () => {
     reset(defaults);
     setFormError(null);
@@ -211,7 +224,7 @@ export function ContactOverviewForm({
   const tempLabel = values.temperature === "hot" ? "Hot" : values.temperature === "cold" ? "Cold" : undefined;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
+    <form id="contact-overview-form" onSubmit={handleSubmit(onSubmit)} noValidate className="flex scroll-mt-4 flex-col gap-5">
       {canEdit && (
         <div className="flex justify-end">
           {!editing ? (
