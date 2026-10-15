@@ -136,6 +136,20 @@ export function Sidebar({
     if (stored === "true") setCollapsed(true);
   }, []);
 
+  // How much of the CRO Leader banner is still on screen. The banner scrolls
+  // away with the page, so the rail is shorter only while it shows: a fixed
+  // `100dvh - banner` left a banner-sized gap under the rail once you had
+  // scrolled past it (bug fix, 2026-10-15).
+  const [bannerShowing, setBannerShowing] = useState(0);
+  useEffect(() => {
+    if (!withBanner) return;
+    const bannerPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--banner-height")) * 16 || 40;
+    const update = () => setBannerShowing(Math.max(0, bannerPx - window.scrollY));
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, [withBanner]);
+
   const toggle = () => {
     setCollapsed((prev) => {
       const next = !prev;
@@ -159,10 +173,11 @@ export function Sidebar({
           screen tall, Settings stays at the bottom of the screen; on a very
           short window the rail scrolls rather than hiding it. */}
       <aside
+        style={{ "--rail-banner-offset": `${bannerShowing}px` } as React.CSSProperties}
         className={cn(
           surface,
           "hidden shrink-0 overflow-x-hidden overflow-y-auto transition-[width] duration-200 ease-in-out lg:sticky lg:top-0 lg:flex lg:self-start",
-          withBanner ? "lg:h-[calc(100dvh-var(--banner-height))]" : "lg:h-dvh",
+          "lg:h-[calc(100dvh-var(--rail-banner-offset,0px))]",
           collapsed ? "w-[var(--sidebar-width-collapsed)]" : "w-[var(--sidebar-width-expanded)]"
         )}
       >
