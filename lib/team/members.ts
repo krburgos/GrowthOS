@@ -16,9 +16,10 @@
  * all fourteen workstreams — see lib/team/capacity.ts, which records why the
  * period is a quarter and why it warns rather than blocks.
  *
- * The per-workstream allocations below are still unenforced against that
- * commitment: the allocated figure is shown so it is visible, and that is
- * all. Only the task load is measured.
+ * The per-workstream allocation was removed on 2026-10-16 (client-confirmed):
+ * an assignment now only says which discipline a person covers, and the
+ * hours live on the mission orders CRO Leader sizes. `weekly_hours` on an
+ * assignment is still in the table (every row was 0) but nothing reads it.
  */
 
 export type TeamKind = "in_house" | "outsourced";
@@ -42,11 +43,6 @@ export const TEAM_KIND_LABEL: Record<TeamKind, string> = {
   in_house: "Sales & Marketing",
   outsourced: "Outsourced",
 };
-
-/** Hours already spread across this person's workstreams. */
-export function allocatedHours(member: Pick<TeamMember, "assignments">): number {
-  return member.assignments.reduce((sum, a) => sum + a.weekly_hours, 0);
-}
 
 /**
  * Everyone on one workstream, in roster order, both kinds together.

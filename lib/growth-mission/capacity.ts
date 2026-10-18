@@ -22,6 +22,8 @@ export interface CapacityTask {
   completed_at: string | null;
   /** A GrowthMission order — the only kind that spends credits. */
   delegated: boolean;
+  /** Who it is assigned to; only the per-discipline Committed figure reads it. */
+  assignee_id?: string | null;
 }
 
 export interface CreditAllotment {
@@ -68,7 +70,6 @@ export function isCompletedThisQuarter(task: CapacityTask, q: QuarterInfo): bool
 /** Per-discipline Required / Committed / Completed, for the Mission Cards and the discipline page. */
 export function stepHoursFor(
   tasks: CapacityTask[],
-  team: TeamMember[],
   outsourced: Record<string, boolean>,
   q: QuarterInfo
 ): Record<string, StepHours> {
@@ -76,17 +77,18 @@ export function stepHoursFor(
   for (const shape of PLAYBOOK_STEPS) {
     result[shape.slug] = { ...EMPTY_HOURS, outsourced: outsourced[shape.slug] ?? false };
   }
+  // Committed is the part of Required that has an owner: a roster member
+  // or GrowthMission (client-confirmed, 2026-10-16). It used to be the
+  // Company Profile's per-discipline weekly hours x 13, which the client
+  // removed; hours now come only from the mission orders CRO Leader sizes.
   for (const task of tasks) {
     const h = result[task.step_slug];
     if (!h) continue;
-    if (isRequiredThisQuarter(task, q)) h.required += task.hours;
-    if (isCompletedThisQuarter(task, q)) h.completed += task.hours;
-  }
-  for (const member of team) {
-    for (const a of member.assignments) {
-      const h = result[a.step_slug];
-      if (h) h.committed += a.weekly_hours * WEEKS_PER_QUARTER;
+    if (isRequiredThisQuarter(task, q)) {
+      h.required += task.hours;
+      if (task.delegated || task.assignee_id) h.committed += task.hours;
     }
+    if (isCompletedThisQuarter(task, q)) h.completed += task.hours;
   }
   return result;
 }

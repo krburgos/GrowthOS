@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Lock, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Lock, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { CREDITS_PER_HOUR } from "@/lib/growth-mission/capacity";
-import { SHORT_TITLE, currentQuarter } from "@/lib/growth-mission/hours";
+import { SHORT_TITLE, currentQuarter, roundUpToQuarterHour } from "@/lib/growth-mission/hours";
 import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
 import {
   ORDER_TYPE_LABEL,
@@ -29,7 +29,7 @@ import {
   type TaskState,
 } from "@/lib/growth-mission/tasks";
 import { createClient } from "@/lib/supabase/client";
-import { CAPACITY_CLASS, capacityFor, capacityShort } from "@/lib/team/capacity";
+import { CAPACITY_CLASS, WEEKS_PER_QUARTER, capacityFor, capacityShort, formatCapacityHours } from "@/lib/team/capacity";
 import type { TeamMember } from "@/lib/team/members";
 
 const NOBODY = "__none__";
@@ -131,8 +131,21 @@ export function OrderPanel({
   const lockSpent = !canEdit || spent;
 
   const gm = draft.type === "growthmission";
-  const hours = Math.ceil(Number(draft.hours) || 0);
+  const hours = roundUpToQuarterHour(draft.hours);
   const people = team.filter((m) => (draft.type === "outsourced" ? m.kind === "outsourced" : m.kind === "in_house"));
+
+  // Over-capacity warns and still saves (client-confirmed, 2026-10-16).
+  // memberLoad already counts this order for its current owner while it
+  // is open, so take that out before adding the hours being saved.
+  const owner = gm || draft.assignee_id === NOBODY ? null : people.find((m) => m.id === draft.assignee_id) ?? null;
+  const ownerCap = owner
+    ? capacityFor(
+        owner.weekly_hours,
+        (memberLoad[owner.id] ?? 0) -
+          (task && task.assignee?.id === owner.id && task.state !== "complete" ? task.hours : 0) +
+          (draft.state !== "complete" ? hours : 0)
+      )
+    : null;
   const discipline = SHORT_TITLE[task?.step_slug ?? slug] ?? PLAYBOOK_STEPS.find((s) => s.slug === slug)?.title ?? slug;
 
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
@@ -154,8 +167,8 @@ export function OrderPanel({
       detail: d.detail.trim() || null,
       priority: d.priority,
       state: d.state,
-      // Whole hours only (client-confirmed, 2026-10-13): a part hour rounds up.
-      hours: Math.ceil(Number(d.hours) || 0),
+      // Quarter hours (client-confirmed, 2026-10-16): a value in between rounds up.
+      hours: roundUpToQuarterHour(d.hours),
       due_date: d.due_date || currentQuarter().end,
       delegated,
       assignee_id: delegated || d.assignee_id === NOBODY ? null : d.assignee_id,
@@ -341,14 +354,21 @@ export function OrderPanel({
               <Input
                 type="number"
                 min="0"
-                step="1"
-                inputMode="numeric"
+                step="0.25"
+                inputMode="decimal"
                 value={draft.hours}
                 disabled={lockSpent}
                 onChange={(e) => set({ hours: e.target.value })}
               />
             </Field>
           </div>
+
+          {ownerCap?.over && (
+            <p className="flex items-start gap-2.5 rounded-lg border border-warning-300 bg-warning-50 px-3 py-2.5 text-body-sm text-warning-800">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              {`${owner!.name} would have ${formatCapacityHours(ownerCap.assigned)} hrs of open orders this quarter, ${formatCapacityHours(-ownerCap.remaining)} more than their ${formatCapacityHours(ownerCap.quarterly)} hrs (${formatCapacityHours(ownerCap.weekly)} h/wk × ${WEEKS_PER_QUARTER}). You can still save it.`}
+            </p>
+          )}
 
           {restricted && (
             <p className="flex items-start gap-2.5 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-body-sm text-neutral-600">

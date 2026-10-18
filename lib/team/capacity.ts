@@ -84,9 +84,9 @@ export const CAPACITY_CLASS: Record<CapacityTone, { text: string; bar: string; c
   over: { text: "text-error-700", bar: "bg-error-500", chip: "bg-error-100 text-error-700" },
 };
 
-/** Hours read as whole numbers when they are whole ones: 12, not 12.0. */
+/** Hours read as whole numbers when they are whole ones: 12, not 12.0; quarters keep both digits: 12.25. */
 export function formatCapacityHours(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100);
 }
 
 /** "51 of 325 hrs this quarter", or why we cannot say. */

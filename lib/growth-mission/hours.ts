@@ -5,8 +5,9 @@
  *
  *   - required: hours on the mission orders that belong to this quarter
  *     (lib/growth-mission/capacity.ts decides which those are);
- *   - committed: the discipline's weekly hours on the Company Profile
- *     roster, x 13;
+ *   - committed: the part of required that has an owner, a roster member
+ *     or GrowthMission (2026-10-16; it was the Company Profile's
+ *     per-discipline weekly hours x 13 until those were removed);
  *   - completed: hours on mission orders completed this quarter.
  *
  * `outsourced` is still the per-discipline flag in growth_mission_step_hours.
@@ -122,12 +123,22 @@ export function paceTone(pct: number, elapsedPct: number): "over" | "behind" | "
  * Mission Capacity, the Mission Cards, the discipline hours panel and the
  * PDF strip never show ".5". Totals are summed first and rounded once, so
  * rounding never compounds. A single mission order's own hours still use
- * formatHours, where 1.5 is the real size of the job.
+ * formatHours, where 1.25 is the real size of the job.
  */
 export function formatWhole(n: number): string {
   return Math.round(n).toLocaleString();
 }
 
 export function formatHours(n: number): string {
-  return Number.isInteger(n) ? n.toLocaleString() : n.toLocaleString(undefined, { maximumFractionDigits: 1 });
+  return Number.isInteger(n) ? n.toLocaleString() : n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+/**
+ * Hours are entered in quarter hours (client-confirmed, 2026-10-16,
+ * reversing the whole-hours rule of 2026-10-13). A typed value between
+ * quarters rounds up, so no estimate shrinks: 1.1 becomes 1.25.
+ */
+export function roundUpToQuarterHour(value: string | number): number {
+  const n = Number(value) || 0;
+  return n <= 0 ? 0 : Math.ceil(Math.round(n * 1000) / 250) / 4;
 }

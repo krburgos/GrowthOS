@@ -1108,6 +1108,8 @@ create table account_credit_allotments (
 
 A second migration the same day (`20261013000002_whole_hour_mission_orders.sql`, client-confirmed) rounds every part-hour `growth_mission_tasks.hours` **up** to a whole number and adds `check (hours = trunc(hours))`, so mission orders carry whole hours only.
 
+**Client-confirmed amendment (2026-10-16, App Flow §4.3a "no hours per area, Committed from orders, quarter hours")** — `20261016000001_quarter_hour_increments.sql` reverses the whole-hours rule. `growth_mission_tasks.hours` widens to `numeric(6,2)` and the whole-hours check becomes `growth_mission_tasks_quarter_hours check (hours * 4 = trunc(hours * 4))`; `account_team_members.weekly_hours` widens to `numeric(5,2)` with the same quarter-hour check; `growth_mission_quarter_snapshots.hours_*` widen to `numeric(8,2)` and `growth_mission_quarter_hours.committed_hours`/`achieved_hours` to `numeric(7,2)`. The snapshot's credits columns stay `integer`, so a closed quarter's credits are rounded to whole credits at close. `account_team_assignments.weekly_hours` is no longer written or read (every row was 0 when the per-area hours were removed); the column is kept, and Committed in `stepHoursFor()` is now the required hours on orders with an `assignee_id` or `delegated`.
+
 The first migration also gives `growth_mission_tasks.due_date` a default of the last day of the current quarter, and sets every null `due_date` to the current quarter's end, because Hours Required places each order in a quarter by its due date.
 
 

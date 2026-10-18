@@ -146,7 +146,7 @@ export async function getMissionData(accountId: string, quarter: QuarterInfo): P
   const [{ data: taskRows }, team, { data: allotmentRows }, { data: stepRows }] = await Promise.all([
     supabase
       .from("growth_mission_tasks")
-      .select("step_slug, hours, state, due_date, completed_at, delegated")
+      .select("step_slug, hours, state, due_date, completed_at, delegated, assignee_id")
       .eq("account_id", accountId)
       .is("archived_at", null),
     getTeamMembers(accountId),
@@ -162,6 +162,7 @@ export async function getMissionData(accountId: string, quarter: QuarterInfo): P
       due_date: string | null;
       completed_at: string | null;
       delegated: boolean;
+      assignee_id: string | null;
     }[]
   ).map((t) => ({ ...t, hours: Number(t.hours) }));
   const allotments: CreditAllotment[] = (
@@ -173,7 +174,7 @@ export async function getMissionData(accountId: string, quarter: QuarterInfo): P
 
   return {
     capacity: missionCapacity(tasks, team, allotments, quarter),
-    stepHours: stepHoursFor(tasks, team, outsourced, quarter),
+    stepHours: stepHoursFor(tasks, outsourced, quarter),
   };
 }
 

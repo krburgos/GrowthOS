@@ -16,13 +16,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
-import { SHORT_TITLE } from "@/lib/growth-mission/hours";
+import { SHORT_TITLE, roundUpToQuarterHour } from "@/lib/growth-mission/hours";
 import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
 import { createClient } from "@/lib/supabase/client";
 import type { StepTaskTally } from "@/lib/growth-mission/queries";
 import { CAPACITY_CLASS, capacityFor, capacityLabel, formatCapacityHours } from "@/lib/team/capacity";
 import { involvementFor, type Involvement } from "@/lib/team/involvement";
-import { allocatedHours, initialsOf, type TeamKind, type TeamMember } from "@/lib/team/members";
+import { initialsOf, type TeamKind, type TeamMember } from "@/lib/team/members";
 
 const stepLabel = (slug: string) => SHORT_TITLE[slug] ?? slug;
 
@@ -31,7 +31,8 @@ interface Draft {
   name: string;
   title: string;
   weekly_hours: string;
-  assignments: { step_slug: string; weekly_hours: string }[];
+  /** The disciplines this person covers. They carry no hours (client-confirmed, 2026-10-16). */
+  assignments: string[];
 }
 
 const emptyDraft = (): Draft => ({ id: null, name: "", title: "", weekly_hours: "", assignments: [] });
@@ -41,9 +42,14 @@ const emptyDraft = (): Draft => ({ id: null, name: "", title: "", weekly_hours: 
  * replacing the list of typed names.
  *
  * A table rather than chips, because four fields plus a list of assignments
- * will not fit a chip — and because showing the workstream and its hours
- * together lets the table answer "who does SEO, and for how long" without
- * opening anything.
+ * will not fit a chip.
+ *
+ * Areas of responsibility carry no hours (client-confirmed, 2026-10-16).
+ * The per-discipline weekly allocation was removed: a person's only number
+ * here is their weekly hours, and the hours themselves live on the mission
+ * orders CRO Leader sizes inside each Mission Card. The column
+ * account_team_assignments.weekly_hours stays (every row was 0) but is no
+ * longer written or read.
  *
  * One component serves both rosters; only the `kind` and the heading
  * differ. Editing is a dialog rather than inline, since a person is four
@@ -149,7 +155,7 @@ function RosterTable({
       name: m.name,
       title: m.title ?? "",
       weekly_hours: m.weekly_hours ? String(m.weekly_hours) : "",
-      assignments: m.assignments.map((a) => ({ step_slug: a.step_slug, weekly_hours: String(a.weekly_hours) })),
+      assignments: m.assignments.map((a) => a.step_slug),
     });
 
   return (
@@ -180,7 +186,6 @@ function RosterTable({
             figures read better stacked under them than scrolled to. */}
         <div className="flex flex-col gap-2.5 px-4 pb-4 lg:hidden">
           {members.map((m) => {
-            const allocated = allocatedHours(m);
             const cap = capacityFor(m.weekly_hours, memberLoad[m.id] ?? 0);
             const involvement = involvementFor(m, stepTasks[m.id]);
             const tone = CAPACITY_CLASS[cap.tone];
@@ -217,9 +222,7 @@ function RosterTable({
                     <span className="text-h4 font-bold tabular-nums text-primary-900">
                       {m.weekly_hours}
                       <span className="ml-0.5 text-caption font-medium text-neutral-400">h/wk</span>
-                    </span>
-                    <span className="block text-caption text-neutral-400">{allocated}h allocated</span>
-                  </div>
+                    </span>                  </div>
                   <div className="text-right">
                     <span className="block text-caption text-neutral-500">This quarter</span>
                     {cap.tone === "unset" ? (
@@ -263,7 +266,6 @@ function RosterTable({
             </thead>
             <tbody>
               {members.map((m) => {
-                const allocated = allocatedHours(m);
                 // Client-confirmed (2026-09-25): the weekly commitment is read
                 // as a quarter of capacity and compared with the unfinished
                 // task hours this person carries across all 14 workstreams.
@@ -301,9 +303,7 @@ function RosterTable({
                     <td className="px-5 py-3 text-right">
                       <div className="text-h4 font-bold tabular-nums text-primary-900">
                         {m.weekly_hours} <span className="text-caption font-medium text-neutral-400">h/wk</span>
-                      </div>
-                      <div className="text-caption text-neutral-400">{allocated}h allocated</div>
-                    </td>
+                      </div>                    </td>
                     <td className="px-5 py-3 text-right">
                       {cap.tone === "unset" ? (
                         <span className="text-body-sm text-neutral-300">Set weekly hours</span>
@@ -355,8 +355,7 @@ function RosterTable({
 }
 
 /**
- * One workstream on a person's row. A declared assignment is solid and
- * carries its planned weekly hours; a workstream known only from the tasks
+ * One workstream on a person's row. A declared assignment is solid; a workstream known only from the tasks
  * they hold is outlined and dashed, and says so on hover. The two are
  * never merged into one look, because "we planned this" and "this landed
  * on them" are different facts and the client wants both visible.
@@ -369,7 +368,7 @@ function AreaChip({ involvement: i }: { involvement: Involvement }) {
     <li
       title={
         declared
-          ? `Assigned in the Company Profile · ${i.declaredHours}h/wk${i.totalTasks ? ` · ${i.totalTasks} tasks` : ""}`
+          ? `Assigned in the Company Profile${i.totalTasks ? ` · ${i.totalTasks} ${i.totalTasks === 1 ? "task" : "tasks"}` : ""}`
           : `Not assigned here — has ${i.totalTasks} ${i.totalTasks === 1 ? "task" : "tasks"} in the Command Center`
       }
       className={
@@ -379,11 +378,7 @@ function AreaChip({ involvement: i }: { involvement: Involvement }) {
       }
     >
       {stepLabel(i.step_slug)}
-      {declared ? (
-        <b className="font-bold text-primary-900">{i.declaredHours}h</b>
-      ) : (
-        tasks && <span className="text-neutral-400">{tasks}</span>
-      )}
+      {!declared && tasks && <span className="text-neutral-400">{tasks}</span>}
     </li>
   );
 }
@@ -458,16 +453,8 @@ function MemberDialog({
   const router = useRouter();
   const [saving, setSaving] = useState(false);
 
-  const used = new Set(draft.assignments.map((a) => a.step_slug));
+  const used = new Set(draft.assignments);
   const available = PLAYBOOK_STEPS.filter((s) => !used.has(s.slug));
-  const allocated = draft.assignments.reduce((sum, a) => sum + (Number(a.weekly_hours) || 0), 0);
-  const commitment = Number(draft.weekly_hours) || 0;
-
-  const setAssignmentHours = (slug: string, value: string) =>
-    setDraft({
-      ...draft,
-      assignments: draft.assignments.map((a) => (a.step_slug === slug ? { ...a, weekly_hours: value } : a)),
-    });
 
   const save = async () => {
     if (!draft.name.trim()) {
@@ -482,7 +469,7 @@ function MemberDialog({
       kind,
       name: draft.name.trim(),
       title: draft.title.trim() || null,
-      weekly_hours: Number(draft.weekly_hours) || 0,
+      weekly_hours: roundUpToQuarterHour(draft.weekly_hours),
     };
 
     let memberId = draft.id;
@@ -500,14 +487,11 @@ function MemberDialog({
     const { error: delError } = await supabase.from("account_team_assignments").delete().eq("member_id", memberId);
     if (delError) return fail(delError);
 
-    const rows = draft.assignments
-      .filter((a) => a.step_slug)
-      .map((a) => ({
-        account_id: accountId,
-        member_id: memberId!,
-        step_slug: a.step_slug,
-        weekly_hours: Number(a.weekly_hours) || 0,
-      }));
+    const rows = draft.assignments.filter(Boolean).map((step_slug) => ({
+      account_id: accountId,
+      member_id: memberId!,
+      step_slug,
+    }));
     if (rows.length > 0) {
       const { error: insError } = await supabase.from("account_team_assignments").insert(rows);
       if (insError) return fail(insError);
@@ -545,7 +529,8 @@ function MemberDialog({
               <Input
                 type="number"
                 min="0"
-                step="0.5"
+                step="0.25"
+                inputMode="decimal"
                 value={draft.weekly_hours}
                 onChange={(e) => setDraft({ ...draft, weekly_hours: e.target.value })}
               />
@@ -560,36 +545,20 @@ function MemberDialog({
           </Field>
 
           <div>
-            <div className="mb-2 flex items-center gap-2">
+            <div className="mb-2">
               <span className="text-caption font-bold uppercase tracking-wide text-neutral-400">
                 Areas of responsibility
-              </span>
-              <span className="ml-auto text-caption text-neutral-500">
-                <b className="font-bold text-primary-900">{allocated}h</b> allocated
-                {commitment > 0 && ` of ${commitment}`}
               </span>
             </div>
 
             <div className="flex flex-col gap-2">
-              {draft.assignments.map((a) => (
-                <div key={a.step_slug} className="flex items-center gap-2.5 rounded-lg border border-neutral-200 px-3 py-2">
-                  <span className="flex-1 text-body-sm text-neutral-800">{stepLabel(a.step_slug)}</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    aria-label={`Weekly hours for ${stepLabel(a.step_slug)}`}
-                    value={a.weekly_hours}
-                    onChange={(e) => setAssignmentHours(a.step_slug, e.target.value)}
-                    className="h-8 w-[74px] text-right"
-                  />
-                  <span className="text-caption text-neutral-400">h/wk</span>
+              {draft.assignments.map((slug) => (
+                <div key={slug} className="flex items-center gap-2.5 rounded-lg border border-neutral-200 px-3 py-2">
+                  <span className="flex-1 text-body-sm text-neutral-800">{stepLabel(slug)}</span>
                   <button
                     type="button"
-                    aria-label={`Remove ${stepLabel(a.step_slug)}`}
-                    onClick={() =>
-                      setDraft({ ...draft, assignments: draft.assignments.filter((x) => x.step_slug !== a.step_slug) })
-                    }
+                    aria-label={`Remove ${stepLabel(slug)}`}
+                    onClick={() => setDraft({ ...draft, assignments: draft.assignments.filter((x) => x !== slug) })}
                     className="flex size-7 items-center justify-center rounded-md text-neutral-400 hover:bg-error-100 hover:text-error-700"
                   >
                     <X className="size-4" />
@@ -601,7 +570,7 @@ function MemberDialog({
                 <Select
                   value=""
                   onValueChange={(slug) =>
-                    setDraft({ ...draft, assignments: [...draft.assignments, { step_slug: slug, weekly_hours: "" }] })
+                    setDraft({ ...draft, assignments: [...draft.assignments, slug] })
                   }
                 >
                   <SelectTrigger className="h-10 justify-start gap-2 border-dashed text-body-sm font-semibold text-neutral-500">
