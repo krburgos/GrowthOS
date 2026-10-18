@@ -107,8 +107,8 @@ export function ContactForm({
 
     let companyId: string | null = null;
     // From Company Detail with the name left as is: link that exact company.
-    // match_or_create_company() matches on domain only, so a company with no
-    // website would otherwise be created a second time.
+    // Linking it directly also keeps a renamed company from being matched
+    // elsewhere: match_or_create_company() matches by domain, then by name.
     if (defaultCompanyId && values.company_name === defaultCompany?.company_name) {
       companyId = defaultCompanyId;
     } else if (values.company_name) {

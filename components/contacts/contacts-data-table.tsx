@@ -36,6 +36,8 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -96,6 +98,84 @@ type ColumnKey =
   | "bounced"
   | "pv"
   | "ov";
+
+/**
+ * Column widths (client-confirmed, 2026-10-18, approved mockup "Contacts
+ * Column Widths"). Every column starts at a set width, so one long title
+ * no longer stretches its whole column; text that doesn't fit ends in an
+ * ellipsis and shows in full on hover. Dragging a heading's right edge
+ * resizes it between MIN_WIDTH and MAX_WIDTH, double-clicking the edge
+ * resets it, and the widths persist per browser like the visible columns.
+ */
+type WidthKey = ColumnKey | "name" | "email";
+
+const DEFAULT_WIDTHS: Record<WidthKey, number> = {
+  name: 200,
+  linkedin: 150,
+  email: 240,
+  title: 220,
+  status: 160,
+  score: 120,
+  temp: 100,
+  pv: 150,
+  ov: 170,
+  employees: 130,
+  lists: 200,
+  company: 220,
+  companyLinkedin: 170,
+  cphone: 160,
+  mobile: 150,
+  addr: 220,
+  city: 150,
+  state: 140,
+  subscribed: 120,
+  bounced: 110,
+};
+
+const MIN_WIDTH = 80;
+const MAX_WIDTH = 600;
+/** The pinned checkbox column, which is not resizable. */
+const SELECT_WIDTH = 44;
+const WIDTHS_STORAGE_KEY = "growthmission.contacts.columnWidths";
+
+const clampWidth = (w: number) => Math.round(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, w)));
+
+function loadWidths(): Partial<Record<WidthKey, number>> {
+  try {
+    const raw = window.localStorage.getItem(WIDTHS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const out: Partial<Record<WidthKey, number>> = {};
+    for (const key of Object.keys(DEFAULT_WIDTHS) as WidthKey[]) {
+      const v = parsed[key];
+      if (typeof v === "number" && Number.isFinite(v)) out[key] = clampWidth(v);
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** The order the table draws its resizable columns in; must match the header and every row. */
+const BODY_ORDER: ColumnKey[] = [
+  "title",
+  "status",
+  "score",
+  "temp",
+  "pv",
+  "ov",
+  "employees",
+  "lists",
+  "company",
+  "companyLinkedin",
+  "cphone",
+  "mobile",
+  "addr",
+  "city",
+  "state",
+  "subscribed",
+  "bounced",
+];
 
 const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }[] }[] = [
   {
@@ -251,7 +331,44 @@ export function ContactsDataTable({
     window.localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify([...visibleColumns]));
   }, [visibleColumns, columnsHydrated]);
 
+  const [widths, setWidths] = useState<Partial<Record<WidthKey, number>>>({});
+  const [widthsHydrated, setWidthsHydrated] = useState(false);
+
+  useEffect(() => {
+    setWidths(loadWidths());
+    setWidthsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!widthsHydrated) return;
+    try {
+      window.localStorage.setItem(WIDTHS_STORAGE_KEY, JSON.stringify(widths));
+    } catch {
+      // Storage blocked: widths still apply for this visit.
+    }
+  }, [widths, widthsHydrated]);
+
+  const widthOf = (key: WidthKey) => widths[key] ?? DEFAULT_WIDTHS[key];
+  const resizeFor = (key: WidthKey, label: string): ResizeProps => ({
+    label,
+    width: widthOf(key),
+    onChange: (w) => setWidths((prev) => ({ ...prev, [key]: clampWidth(w) })),
+    onReset: () =>
+      setWidths((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }),
+  });
+
   const show = (key: ColumnKey) => visibleColumns.has(key);
+  const widthOrder: WidthKey[] = [
+    "name",
+    ...(show("linkedin") ? (["linkedin"] as const) : []),
+    "email",
+    ...BODY_ORDER.filter(show),
+  ];
+  const tableWidth = SELECT_WIDTH + widthOrder.reduce((sum, k) => sum + widthOf(k), 0);
   const toggleColumn = (key: ColumnKey, checked: boolean) => {
     setVisibleColumns((prev) => {
       const next = new Set(prev);
@@ -424,6 +541,10 @@ export function ContactsDataTable({
                   ))}
                 </div>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={Object.keys(widths).length === 0} onSelect={() => setWidths({})}>
+                Reset column widths
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -452,9 +573,19 @@ export function ContactsDataTable({
 
       <div className="hidden overflow-x-auto rounded-lg border border-neutral-200 shadow-sm lg:block">
         <table
-          className="w-full border-collapse text-body"
-          style={{ minWidth: `${560 + visibleColumns.size * 130}px` }}
+          className="border-collapse text-body"
+          // Fixed layout so the <col> widths hold; the empty last column
+          // takes any spare room, so widening the window never stretches
+          // the set widths.
+          style={{ tableLayout: "fixed", width: "100%", minWidth: `${tableWidth}px` }}
         >
+          <colgroup>
+            <col style={{ width: SELECT_WIDTH }} />
+            {widthOrder.map((k) => (
+              <col key={k} style={{ width: widthOf(k) }} />
+            ))}
+            <col />
+          </colgroup>
           <thead>
             <tr>
               <Th sticky="left-0" className="w-11">
@@ -465,86 +596,103 @@ export function ContactsDataTable({
                   className="border-white/50 data-[state=checked]:border-secondary-400 data-[state=checked]:bg-secondary-400"
                 />
               </Th>
-              <Th sticky="left-11" className="border-r border-primary-800">
+              <Th sticky="left-11" className="border-r border-primary-800" resize={resizeFor("name", "Full Name")}>
                 <User className="size-3.5" /> Full Name
               </Th>
               {show("linkedin") && (
-                <Th>
+                <Th resize={resizeFor("linkedin", "Person LinkedIn")}>
                   <LinkedInLogo className="size-3.5" /> Person LinkedIn
                 </Th>
               )}
-              <Th>
+              <Th resize={resizeFor("email", "Email")}>
                 <Mail className="size-3.5" /> Email
               </Th>
               {show("title") && (
-                <Th>
+                <Th resize={resizeFor("title", "Title")}>
                   <Briefcase className="size-3.5" /> Title
                 </Th>
               )}
               {show("status") && (
-                <Th>
+                <Th resize={resizeFor("status", "Contact Status")}>
                   <Tag className="size-3.5" /> Contact Status
                 </Th>
               )}
               {show("score") && (
-                <Th>
+                <Th resize={resizeFor("score", "Score")}>
                   <Star className="size-3.5" /> Score
                 </Th>
               )}
               {show("temp") && (
-                <Th>
+                <Th resize={resizeFor("temp", "Temp")}>
                   <Thermometer className="size-3.5" /> Temp
                 </Th>
               )}
-              {show("pv") && <Th right>Prospect Value</Th>}
-              {show("ov") && <Th right>Opportunities Value</Th>}
+              {show("pv") && (
+                <Th right resize={resizeFor("pv", "Prospect Value")}>
+                  Prospect Value
+                </Th>
+              )}
+              {show("ov") && (
+                <Th right resize={resizeFor("ov", "Opportunities Value")}>
+                  Opportunities Value
+                </Th>
+              )}
               {show("employees") && (
-                <Th right>
+                <Th right resize={resizeFor("employees", "Employees")}>
                   <Users className="size-3.5" /> Employees
                 </Th>
               )}
               {show("lists") && (
-                <Th>
+                <Th resize={resizeFor("lists", "Lists")}>
                   <ListChecks className="size-3.5" /> Lists
                 </Th>
               )}
               {show("company") && (
-                <Th>
+                <Th resize={resizeFor("company", "Company")}>
                   <Building2 className="size-3.5" /> Company
                 </Th>
               )}
               {show("companyLinkedin") && (
-                <Th>
+                <Th resize={resizeFor("companyLinkedin", "Company LinkedIn")}>
                   <Link2 className="size-3.5" /> Company LinkedIn
                 </Th>
               )}
               {show("cphone") && (
-                <Th>
+                <Th resize={resizeFor("cphone", "Company Phone")}>
                   <Phone className="size-3.5" /> Company Phone
                 </Th>
               )}
               {show("mobile") && (
-                <Th>
+                <Th resize={resizeFor("mobile", "Mobile Phone")}>
                   <Phone className="size-3.5" /> Mobile Phone
                 </Th>
               )}
               {show("addr") && (
-                <Th>
+                <Th resize={resizeFor("addr", "Company Address")}>
                   <MapPin className="size-3.5" /> Company Address
                 </Th>
               )}
               {show("city") && (
-                <Th>
+                <Th resize={resizeFor("city", "Company City")}>
                   <MapPin className="size-3.5" /> Company City
                 </Th>
               )}
               {show("state") && (
-                <Th>
+                <Th resize={resizeFor("state", "Company State")}>
                   <MapPin className="size-3.5" /> Company State
                 </Th>
               )}
-              {show("subscribed") && <Th center>Subscribed</Th>}
-              {show("bounced") && <Th right>Bounced</Th>}
+              {show("subscribed") && (
+                <Th center resize={resizeFor("subscribed", "Subscribed")}>
+                  Subscribed
+                </Th>
+              )}
+              {show("bounced") && (
+                <Th right resize={resizeFor("bounced", "Bounced")}>
+                  Bounced
+                </Th>
+              )}
+              <th aria-hidden="true" className="sticky top-0 z-20 bg-primary-900" />
             </tr>
           </thead>
           <tbody>
@@ -581,7 +729,7 @@ export function ContactsDataTable({
                           onChange={(e) => setDraft({ ...draft, full_name: e.target.value })}
                           onKeyDown={handleDraftKeyDown}
                           onDoubleClick={(e) => e.stopPropagation()}
-                          className="h-8 w-32"
+                          className="h-8 min-w-0 flex-1"
                         />
                         <button
                           type="button"
@@ -605,7 +753,11 @@ export function ContactsDataTable({
                     ) : (
                       <div className="flex items-center gap-2.5">
                         <Avatar name={c.full_name} />
-                        <Link href={`/contacts/${c.id}`} className="whitespace-nowrap font-semibold text-primary-900 hover:underline">
+                        <Link
+                          href={`/contacts/${c.id}`}
+                          title={c.full_name}
+                          className="min-w-0 truncate font-semibold text-primary-900 hover:underline"
+                        >
                           {c.full_name}
                         </Link>
                       </div>
@@ -620,7 +772,7 @@ export function ContactsDataTable({
                           onChange={(e) => setDraft({ ...draft, linkedin_url: e.target.value })}
                           onKeyDown={handleDraftKeyDown}
                           onDoubleClick={(e) => e.stopPropagation()}
-                          className="h-8 w-40"
+                          className="h-8 w-full min-w-0"
                         />
                       </Td>
                     ) : (
@@ -648,12 +800,12 @@ export function ContactsDataTable({
                         onChange={(e) => setDraft({ ...draft, email: e.target.value })}
                         onKeyDown={handleDraftKeyDown}
                         onDoubleClick={(e) => e.stopPropagation()}
-                        className="h-8 w-44"
+                        className="h-8 w-full min-w-0"
                       />
                     ) : (
-                      <div className="flex items-center gap-2 text-neutral-600">
+                      <div className="flex min-w-0 items-center gap-2 text-neutral-600" title={c.email}>
                         <Mail className="size-3.5 shrink-0 text-neutral-400" />
-                        {c.email}
+                        <span className="truncate">{c.email}</span>
                       </div>
                     )}
                   </Td>
@@ -665,17 +817,17 @@ export function ContactsDataTable({
                           onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                           onKeyDown={handleDraftKeyDown}
                           onDoubleClick={(e) => e.stopPropagation()}
-                          className="h-8 w-32"
+                          className="h-8 w-full min-w-0"
                         />
                       </Td>
                     ) : (
-                      <Td className="whitespace-nowrap">{c.title ?? "—"}</Td>
+                      <Td title={c.title}>{c.title ?? "—"}</Td>
                     ))}
                   {show("status") &&
                     (editing && draft ? (
                       <Td onDoubleClick={(e) => e.stopPropagation()}>
                         <Select value={draft.status_id} onValueChange={(v) => setDraft({ ...draft, status_id: v })}>
-                          <SelectTrigger className="h-8 w-32">
+                          <SelectTrigger className="h-8 w-full min-w-0">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -705,7 +857,7 @@ export function ContactsDataTable({
                           onChange={(e) => setDraft({ ...draft, score: e.target.value })}
                           onKeyDown={handleDraftKeyDown}
                           onDoubleClick={(e) => e.stopPropagation()}
-                          className="h-8 w-16"
+                          className="h-8 w-full min-w-0 max-w-20"
                         />
                       </Td>
                     ) : (
@@ -732,7 +884,7 @@ export function ContactsDataTable({
                           value={draft.temperature}
                           onValueChange={(v) => setDraft({ ...draft, temperature: v as ContactDraft["temperature"] })}
                         >
-                          <SelectTrigger className="h-8 w-24">
+                          <SelectTrigger className="h-8 w-full min-w-0">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -771,12 +923,12 @@ export function ContactsDataTable({
                     <Td className="text-right tabular-nums">{employeesOf(c.companies?.company_size) || "—"}</Td>
                   )}
                   {show("lists") && (
-                    <Td className="whitespace-nowrap" onDoubleClick={(e) => e.stopPropagation()}>
+                    <Td onDoubleClick={(e) => e.stopPropagation()}>
                       <ListsCell contactId={c.id} accountId={accountId} lists={c.lists ?? []} onChanged={() => router.refresh()} />
                     </Td>
                   )}
                   {show("company") && (
-                    <Td className="whitespace-nowrap">
+                    <Td title={c.companies?.name}>
                       {c.companies?.name ? (
                         <span className="font-medium text-neutral-800">{c.companies.name}</span>
                       ) : (
@@ -801,7 +953,7 @@ export function ContactsDataTable({
                       )}
                     </Td>
                   )}
-                  {show("cphone") && <Td className="whitespace-nowrap">{c.companies?.phone ?? "—"}</Td>}
+                  {show("cphone") && <Td title={c.companies?.phone}>{c.companies?.phone ?? "—"}</Td>}
                   {show("mobile") &&
                     (editing && draft ? (
                       <Td>
@@ -810,15 +962,15 @@ export function ContactsDataTable({
                           onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
                           onKeyDown={handleDraftKeyDown}
                           onDoubleClick={(e) => e.stopPropagation()}
-                          className="h-8 w-32"
+                          className="h-8 w-full min-w-0"
                         />
                       </Td>
                     ) : (
-                      <Td className="whitespace-nowrap">{c.phone ?? "—"}</Td>
+                      <Td title={c.phone}>{c.phone ?? "—"}</Td>
                     ))}
-                  {show("addr") && <Td className="whitespace-nowrap">{c.companies?.address_line1 ?? "—"}</Td>}
-                  {show("city") && <Td className="whitespace-nowrap">{c.companies?.city ?? "—"}</Td>}
-                  {show("state") && <Td className="whitespace-nowrap">{c.companies?.state ?? "—"}</Td>}
+                  {show("addr") && <Td title={c.companies?.address_line1}>{c.companies?.address_line1 ?? "—"}</Td>}
+                  {show("city") && <Td title={c.companies?.city}>{c.companies?.city ?? "—"}</Td>}
+                  {show("state") && <Td title={c.companies?.state}>{c.companies?.state ?? "—"}</Td>}
                   {show("subscribed") &&
                     (editing && draft ? (
                       <Td onDoubleClick={(e) => e.stopPropagation()}>
@@ -846,6 +998,10 @@ export function ContactsDataTable({
                       </Td>
                     ))}
                   {show("bounced") && <Td className="text-right tabular-nums text-neutral-400">0</Td>}
+                  <td
+                    aria-hidden="true"
+                    className="border-b border-neutral-100 bg-white transition-colors group-hover:bg-neutral-50 group-data-[selected=true]:bg-secondary-50 group-data-[editing=true]:bg-secondary-50"
+                  />
                 </tr>
               );
             })}
@@ -958,12 +1114,82 @@ function ContactCard({
   );
 }
 
+interface ResizeProps {
+  label: string;
+  width: number;
+  onChange: (width: number) => void;
+  onReset: () => void;
+}
+
+/**
+ * The drag edge on a column heading. Pointer drag resizes live; double-
+ * click resets; with focus, ← and → step by 16px.
+ */
+function ResizeHandle({ label, width, onChange, onReset }: ResizeProps) {
+  const [active, setActive] = useState(false);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLSpanElement>) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = width;
+    const target = e.currentTarget;
+    target.setPointerCapture(e.pointerId);
+    setActive(true);
+    const move = (ev: PointerEvent) => onChange(startWidth + ev.clientX - startX);
+    const up = () => {
+      setActive(false);
+      target.removeEventListener("pointermove", move);
+      target.removeEventListener("pointerup", up);
+      target.removeEventListener("pointercancel", up);
+    };
+    target.addEventListener("pointermove", move);
+    target.addEventListener("pointerup", up);
+    target.addEventListener("pointercancel", up);
+  };
+
+  return (
+    <span
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={`Resize ${label}`}
+      aria-valuenow={width}
+      aria-valuemin={MIN_WIDTH}
+      aria-valuemax={MAX_WIDTH}
+      tabIndex={0}
+      title="Drag to resize · double-click to reset"
+      onPointerDown={onPointerDown}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onReset();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+          e.preventDefault();
+          onChange(width + (e.key === "ArrowRight" ? 16 : -16));
+        }
+      }}
+      className="group/resize absolute inset-y-0 right-0 flex w-2.5 cursor-col-resize touch-none justify-center outline-none"
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "my-2.5 w-0.5 rounded-full bg-white/25 transition-colors group-hover/th:bg-white/55 group-focus-visible/resize:my-0 group-focus-visible/resize:w-[3px] group-focus-visible/resize:bg-secondary-500",
+          active && "my-0 w-[3px] bg-secondary-500 group-hover/th:bg-secondary-500"
+        )}
+      />
+    </span>
+  );
+}
+
 function Th({
   children,
   sticky,
   className,
   right,
   center,
+  resize,
 }: {
   children: ReactNode;
   sticky?: "left-0" | "left-11";
@@ -971,18 +1197,27 @@ function Th({
   /** A numeric column: the title lines up with its right-aligned figures. */
   right?: boolean;
   center?: boolean;
+  /** Makes the column resizable from its right edge. */
+  resize?: ResizeProps;
 }) {
   return (
     <th
       className={cn(
-        "sticky top-0 z-20 whitespace-nowrap bg-primary-900 px-4 py-4 text-left text-caption font-semibold tracking-wide text-white",
+        "group/th sticky top-0 z-20 overflow-hidden whitespace-nowrap bg-primary-900 px-4 py-4 text-left text-caption font-semibold tracking-wide text-white",
         sticky && `z-30 ${sticky}`,
         className
       )}
     >
-      <span className={cn("flex items-center gap-2 [&>svg]:text-white/70", right && "justify-end", center && "justify-center")}>
+      <span
+        className={cn(
+          "flex min-w-0 items-center gap-2 [&>svg]:shrink-0 [&>svg]:text-white/70",
+          right && "justify-end",
+          center && "justify-center"
+        )}
+      >
         {children}
       </span>
+      {resize && <ResizeHandle {...resize} />}
     </th>
   );
 }
@@ -991,18 +1226,24 @@ function Td({
   children,
   sticky,
   className,
+  title,
   onDoubleClick,
 }: {
   children: ReactNode;
   sticky?: "left-0" | "left-11";
   className?: string;
+  /** The full text, shown on hover when the column cuts it short. */
+  title?: string | null;
   onDoubleClick?: React.MouseEventHandler<HTMLTableCellElement>;
 }) {
   return (
     <td
       onDoubleClick={onDoubleClick}
+      title={title ?? undefined}
       className={cn(
-        "border-b border-neutral-100 bg-white px-4 py-3.5 align-middle text-neutral-700 transition-colors group-hover:bg-neutral-50 group-data-[selected=true]:bg-secondary-50 group-data-[editing=true]:bg-secondary-50",
+        // Fixed column widths (client-confirmed, 2026-10-18): text that
+        // doesn't fit ends in an ellipsis rather than widening the column.
+        "overflow-hidden text-ellipsis whitespace-nowrap border-b border-neutral-100 bg-white px-4 py-3.5 align-middle text-neutral-700 transition-colors group-hover:bg-neutral-50 group-data-[selected=true]:bg-secondary-50 group-data-[editing=true]:bg-secondary-50",
         sticky && `sticky z-10 ${sticky}`,
         className
       )}

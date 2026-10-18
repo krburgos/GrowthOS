@@ -1466,6 +1466,8 @@ end;
 $$;
 ```
 
+**Client-confirmed amendment (2026-10-18)** — `20261018000002_match_company_by_name.sql`: when no company matches the domain, `match_or_create_company()` now matches an existing company by exact name (ignoring case and surrounding spaces) before creating one, as long as the two can't disagree on domain (no domain given, or the existing company has none, in which case it takes the given one). Two same-named companies with different domains stay separate for Merge. This stops an import or a contact form with a company name but no website from creating a new company every time. It is exact matching, not the fuzzy matching PRD §6 leaves out of Phase 1.
+
 match_or_create_company and merge_companies both run security invoker — RLS on contacts, opportunities, and companies still applies under the caller's own session, so a caller can only merge or reassign records they already have edit rights to.
 
 ### 7.4 Opportunity mechanics: sync_opportunity_company
