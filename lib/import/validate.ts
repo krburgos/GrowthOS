@@ -63,14 +63,14 @@ export function applyMapping(rows: Record<string, string>[], mapping: Record<str
 
 /**
  * App Flow §4.4, D4 + §6 — any validation failure blocks the entire
- * import: missing required fields, invalid formats, and (a mechanical
- * necessity the doc doesn't call out separately) duplicate emails
- * within the file itself.
+ * import: missing required fields and invalid formats.
  *
  * Client-confirmed change: an email matching an existing contact is no
  * longer a validation error anywhere (plain Import Contacts or list
- * uploads) — the commit step updates that contact's fields instead of
- * rejecting the file or creating a duplicate.
+ * uploads). A second client-confirmed change (2026-10-18): an email
+ * repeated within the file is no longer an error either. The user picks
+ * whether the file overwrites or the current data is kept, and one row
+ * per email is imported — see lib/import/repeats.ts.
  */
 export async function validateRows(
   mappedRows: MappedRow[],
@@ -78,7 +78,6 @@ export async function validateRows(
   _accountId: string
 ): Promise<ImportError[]> {
   const errors: ImportError[] = [];
-  const seenInFile = new Map<string, number>();
 
   for (const row of mappedRows) {
     if (!row.first_name) {
@@ -88,16 +87,6 @@ export async function validateRows(
       errors.push({ row: row.rowNumber, message: "Missing required field: Email." });
     } else if (!EMAIL_RE.test(row.email)) {
       errors.push({ row: row.rowNumber, message: `Invalid email address: ${row.email}` });
-    } else {
-      const key = row.email.toLowerCase();
-      if (seenInFile.has(key)) {
-        errors.push({
-          row: row.rowNumber,
-          message: `Duplicate email within this file (also row ${seenInFile.get(key)}): ${row.email}`,
-        });
-      } else {
-        seenInFile.set(key, row.rowNumber);
-      }
     }
     if (row.score && !/^-?\d+$/.test(row.score)) {
       errors.push({ row: row.rowNumber, message: `Score must be a whole number: ${row.score}` });
