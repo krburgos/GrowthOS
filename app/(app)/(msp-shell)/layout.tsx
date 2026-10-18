@@ -101,6 +101,7 @@ export default async function MspShellLayout({ children }: { children: React.Rea
           <div className="flex min-w-0 flex-1 flex-col">
             <TopBar
               fullName={user.full_name}
+              avatarUrl={user.avatar_url}
               access={SIDEBAR_ACCESS[user.role]}
               accountId={user.account_id!}
               credits={nav.credits}

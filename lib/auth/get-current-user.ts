@@ -28,6 +28,8 @@ export interface CurrentUser {
   full_name: string;
   role: UserRole;
   account_id: string | null;
+  /** The profile photo from Settings › My Profile, for the header avatar. */
+  avatar_url: string | null;
   /** Set only while a CRO Leader/partner session is "viewing as" an MSP account. */
   viewingAccountName?: string;
 }
@@ -73,7 +75,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("id, email, full_name, role, account_id")
+    .select("id, email, full_name, role, account_id, avatar_url")
     .eq("id", user.id)
     .single();
 

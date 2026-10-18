@@ -7,7 +7,7 @@ export default async function CroLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex flex-1 flex-col">
-      <CroHeader fullName={user.full_name} role={user.role} />
+      <CroHeader fullName={user.full_name} avatarUrl={user.avatar_url} role={user.role} />
       {children}
     </div>
   );

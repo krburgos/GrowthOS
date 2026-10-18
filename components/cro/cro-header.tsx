@@ -36,18 +36,26 @@ function initials(name: string) {
  */
 export function CroHeader({
   fullName,
+  avatarUrl,
   role,
 }: {
   fullName: string;
+  /** The profile photo from Settings › My Profile; initials until one is uploaded. */
+  avatarUrl?: string | null;
   role: UserRole;
 }) {
   return (
     <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 bg-neutral-50 px-4 py-3 shadow-[0_1px_0_var(--color-neutral-200),0_6px_16px_-12px_rgba(10,25,46,0.15)]">
       <div className="flex items-center">
         <span className="flex items-center gap-2 rounded-full bg-primary-50 py-1 pl-1 pr-3 text-body-sm">
-          <span className="flex size-6 items-center justify-center rounded-full bg-secondary-500 text-[11px] font-semibold text-primary-900">
-            {initials(fullName)}
-          </span>
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="" className="size-6 rounded-full object-cover" />
+          ) : (
+            <span className="flex size-6 items-center justify-center rounded-full bg-secondary-500 text-[11px] font-semibold text-primary-900">
+              {initials(fullName)}
+            </span>
+          )}
           <span className="font-semibold text-primary-900">{fullName}</span>
           <span className="text-primary-700/70">· {ROLE_LABELS[role]}</span>
         </span>

@@ -8,7 +8,7 @@ import logo from "@/public/growthmission-logo.png";
 
 import { CommandPalette } from "@/components/shell/command-palette";
 import { MobileNavTrigger } from "@/components/shell/mobile-nav";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,6 +74,7 @@ function initials(name: string) {
  */
 export function TopBar({
   fullName,
+  avatarUrl,
   access,
   accountId,
   questionnaireAnsweredCount,
@@ -86,6 +87,8 @@ export function TopBar({
   profileComplete = true,
 }: {
   fullName: string;
+  /** The signed-in user's profile photo; initials show until one is uploaded. */
+  avatarUrl?: string | null;
   /** Omitted on the CRO Leader's lightweight header (App Flow §4.10) —
    * a CRO Leader who hasn't entered an MSP account yet has no account
    * context for the palette's contacts search or "Go to" section
@@ -228,6 +231,7 @@ export function TopBar({
         <DropdownMenu>
           <DropdownMenuTrigger className="rounded-full ring-2 ring-transparent ring-offset-2 transition-shadow hover:ring-secondary-100 focus-visible:outline-none focus-visible:ring-secondary-500/40">
             <Avatar>
+              {avatarUrl && <AvatarImage src={avatarUrl} alt="" className="object-cover" />}
               <AvatarFallback>{initials(fullName)}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
