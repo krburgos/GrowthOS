@@ -60,11 +60,14 @@ export default async function GrowthMissionStepPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  /** `order` opens that mission order's panel — the overview tables link here with it. */
-  searchParams: Promise<{ order?: string }>;
+  /**
+   * `order` opens that mission order's panel — the overview tables link here with it.
+   * `issue=1` opens an empty Issue order panel — the overview's Issue order picker links here with it.
+   */
+  searchParams: Promise<{ order?: string; issue?: string }>;
 }) {
   const { slug } = await params;
-  const { order: openOrderId } = await searchParams;
+  const { order: openOrderId, issue } = await searchParams;
   const user = await getCurrentUser();
   if (!user || !user.account_id) return null;
 
@@ -164,6 +167,7 @@ export default async function GrowthMissionStepPage({
             canEdit={canAuthorTasks}
             isCroLeader={canEdit}
             openOrderId={openOrderId}
+            openNew={issue === "1"}
           />
         </>
       )}

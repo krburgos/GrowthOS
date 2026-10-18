@@ -25,6 +25,7 @@ import {
   isOverdue,
   orderCredits,
 } from "@/components/growth-mission/order-bits";
+import { IssueOrderPicker } from "@/components/growth-mission/issue-order-picker";
 import { OrderPanel, OrderPrompt } from "@/components/growth-mission/order-panel";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,7 @@ export function MissionOrders({
   canEdit,
   isCroLeader,
   openOrderId,
+  openNew = false,
   initialPriorities,
   hideCompleted = false,
 }: {
@@ -126,6 +128,8 @@ export function MissionOrders({
   isCroLeader: boolean;
   /** Discipline mode: open this order's panel on arrival (?order=). */
   openOrderId?: string;
+  /** Discipline mode: open an empty Issue order panel on arrival (?issue=1, from the overview's picker). */
+  openNew?: boolean;
   /**
    * Which tiers are ticked on arrival. Headquarters opens on Must only
    * (client-confirmed, 2026-10-15); everywhere else shows all three.
@@ -168,6 +172,12 @@ export function MissionOrders({
     // Only on arrival: later refreshes must not reopen a panel someone closed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openOrderId]);
+
+  useEffect(() => {
+    if (openNew && canEdit && !overview) setPanel({ task: null });
+    // Only on arrival, as above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openNew]);
 
   const rank = useMemo(() => rankOrders(rows), [rows]);
 
@@ -252,7 +262,9 @@ export function MissionOrders({
     setDue("");
   };
 
-  const disciplines = overview ? Array.from(new Set(rows.map((t) => t.step_slug))).sort((a, b) => discName(a).localeCompare(discName(b))) : [];
+  const openBySlug: Record<string, number> = {};
+  for (const t of openAll) openBySlug[t.step_slug] = (openBySlug[t.step_slug] ?? 0) + 1;
+  const disciplines = overview ?Array.from(new Set(rows.map((t) => t.step_slug))).sort((a, b) => discName(a).localeCompare(discName(b))) : [];
 
   return (
     // Client-confirmed (2026-10-14, "Mission Orders Blue" A): a blue frame —
@@ -268,6 +280,7 @@ export function MissionOrders({
               : `${openAll.length} open · ${formatWhole(sum(openAll))} hrs${overview ? " across every Mission Card" : ""} · ${delegatedOpen.length} with GrowthMission`}
           </p>
         </div>
+        {overview && canEdit && <IssueOrderPicker openBySlug={openBySlug} />}
         {!overview && canEdit && (
           <Button
             size="sm"
@@ -284,7 +297,9 @@ export function MissionOrders({
       {rows.length === 0 ? (
         <p className="px-5 py-10 text-center text-body-sm text-neutral-400">
           {overview
-            ? "No mission orders yet. Open a Mission Card to issue the first one."
+            ? canEdit
+              ? "No mission orders yet. Use Issue order to pick a Mission Card for the first one."
+              : "No mission orders yet."
             : canEdit
               ? "Issue the first order once the report says what needs doing."
               : "CRO Leader hasn't issued any mission orders for this Mission Card yet."}
