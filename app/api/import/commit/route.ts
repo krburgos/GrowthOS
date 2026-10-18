@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { ImportMapping } from "@/lib/import/fields";
 import { parseImportFile } from "@/lib/import/parse";
 import { applyMapping, validateRows, type MappedRow } from "@/lib/import/validate";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
@@ -25,20 +26,15 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  // getCurrentUser resolves a CRO Leader's "viewing as" account; a CRO
+  // Leader has no account_id of their own, so reading users.account_id
+  // directly refused every import they tried for an MSP.
+  const profile = await getCurrentUser();
+  if (!profile) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role, account_id")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || !EDIT_ROLES.includes(profile.role) || !profile.account_id) {
+  if (!EDIT_ROLES.includes(profile.role) || !profile.account_id) {
     return NextResponse.json({ error: "You are not authorized to import contacts." }, { status: 403 });
   }
 
@@ -218,7 +214,7 @@ export async function POST(request: NextRequest) {
 
   if (listId && listContactIds.length > 0) {
     const { error: listMembersError } = await supabase.from("list_members").upsert(
-      listContactIds.map((contactId) => ({ list_id: listId, contact_id: contactId, added_by: user.id })),
+      listContactIds.map((contactId) => ({ list_id: listId, contact_id: contactId, added_by: profile.id })),
       { onConflict: "list_id,contact_id", ignoreDuplicates: true }
     );
     if (listMembersError) {

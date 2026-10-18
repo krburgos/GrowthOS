@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { guessMapping, IMPORT_FIELDS, type ImportMapping } from "@/lib/import/fields";
 import { parseImportFile } from "@/lib/import/parse";
 import { applyMapping, validateRows } from "@/lib/import/validate";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
@@ -15,20 +16,14 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  // getCurrentUser resolves a CRO Leader's "viewing as" account (see
+  // /api/import/commit); users.account_id is empty for CRO Leader.
+  const profile = await getCurrentUser();
+  if (!profile) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role, account_id")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || !EDIT_ROLES.includes(profile.role) || !profile.account_id) {
+  if (!EDIT_ROLES.includes(profile.role) || !profile.account_id) {
     return NextResponse.json({ error: "You are not authorized to import contacts." }, { status: 403 });
   }
 
