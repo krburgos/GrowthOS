@@ -102,6 +102,8 @@ export default async function MspShellLayout({ children }: { children: React.Rea
             <TopBar
               fullName={user.full_name}
               avatarUrl={user.avatar_url}
+              accountName={(profileRow as { name?: string } | null)?.name ?? user.viewingAccountName}
+              accountLogoUrl={(profileRow as { logo_url?: string | null } | null)?.logo_url}
               access={SIDEBAR_ACCESS[user.role]}
               accountId={user.account_id!}
               credits={nav.credits}

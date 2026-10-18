@@ -75,6 +75,8 @@ function initials(name: string) {
 export function TopBar({
   fullName,
   avatarUrl,
+  accountName,
+  accountLogoUrl,
   access,
   accountId,
   questionnaireAnsweredCount,
@@ -89,6 +91,10 @@ export function TopBar({
   fullName: string;
   /** The signed-in user's profile photo; initials show until one is uploaded. */
   avatarUrl?: string | null;
+  /** The MSP account whose workspace this is, shown beside the GrowthMission logo. */
+  accountName?: string | null;
+  /** That account's logo from Settings › Company; an initials tile until one is uploaded. */
+  accountLogoUrl?: string | null;
   /** Omitted on the CRO Leader's lightweight header (App Flow §4.10) —
    * a CRO Leader who hasn't entered an MSP account yet has no account
    * context for the palette's contacts search or "Go to" section
@@ -145,6 +151,32 @@ export function TopBar({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={logo.src} alt="GrowthMission" className="h-5 w-auto sm:h-6 lg:h-7" />
       </Link>
+
+      {/* The MSP's own brand beside GrowthMission's (client-confirmed,
+          2026-10-18, approved mockup "Account Branding Options" A): the
+          logo from Settings › Company at its own proportions in a fixed
+          height, with the name, which drops below sm. Without a logo, an
+          initials tile, the same fallback as the profile photo. */}
+      {accountName && (
+        <Link
+          href="/headquarters"
+          className="hidden min-w-0 shrink items-center gap-2.5 min-[360px]:flex lg:mr-4"
+          title={accountName}
+        >
+          <span aria-hidden="true" className="h-6 w-px shrink-0 bg-neutral-200 lg:h-7" />
+          {accountLogoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={accountLogoUrl} alt="" className="h-7 w-auto max-w-[96px] shrink-0 object-contain" />
+          ) : (
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary-100 text-caption font-semibold text-primary-800">
+              {initials(accountName)}
+            </span>
+          )}
+          <span className="hidden max-w-[200px] truncate text-body-sm font-semibold text-neutral-900 sm:block">
+            {accountName}
+          </span>
+        </Link>
+      )}
 
       {access && accountId && (
         <div className="ml-auto lg:ml-0 lg:flex-1">
