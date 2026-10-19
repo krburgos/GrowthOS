@@ -16,7 +16,7 @@ export function LogoutButton({ className }: { className?: string }) {
     await fetch("/api/cro/exit", { method: "POST" });
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/login?signed_out=1");
     router.refresh();
   };
 

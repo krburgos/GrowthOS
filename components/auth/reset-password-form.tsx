@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -24,7 +23,6 @@ const schema = z
 type Values = z.infer<typeof schema>;
 
 export function ResetPasswordForm() {
-  const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
@@ -44,8 +42,15 @@ export function ResetPasswordForm() {
 
     // Per App Flow §5.8, resetting a password lands back at Log In, not
     // straight into the dashboard.
-    await supabase.auth.signOut();
-    router.push("/login");
+    //
+    // Client-reported fix (2026-10-19): the page sat for ~10s after Save.
+    // A global sign-out waits on a network call and the browser client's
+    // auth lock, with no feedback meanwhile. Clearing this browser's
+    // session is all Log In needs (Supabase already ends other sessions
+    // when the password changes), and a full page load guarantees the
+    // move instead of relying on a client-side push from an auth page.
+    await supabase.auth.signOut({ scope: "local" });
+    window.location.assign("/login?reset=1");
   };
 
   return (

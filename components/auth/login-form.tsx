@@ -20,7 +20,12 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-export function LoginForm() {
+/**
+ * `next` is the page someone opened while signed out (already checked to be
+ * on this site by the Log In page). Without it, "/" sends each role home:
+ * the CRO Dashboard for CRO Leader and partners, Headquarters otherwise.
+ */
+export function LoginForm({ next = null }: { next?: string | null }) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const {
@@ -49,7 +54,7 @@ export function LoginForm() {
     // MSP staff logins, which never have this cookie set.
     await fetch("/api/cro/exit", { method: "POST" });
 
-    router.push("/headquarters");
+    router.push(next ?? "/");
     router.refresh();
   };
 

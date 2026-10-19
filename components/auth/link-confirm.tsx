@@ -6,15 +6,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { safeNext } from "@/lib/auth/safe-next";
 import { createClient } from "@/lib/supabase/client";
 
 const OTP_TYPES: EmailOtpType[] = ["invite", "recovery", "signup", "magiclink", "email", "email_change"];
-
-/** Only same-site paths, so a crafted link can't send someone elsewhere after signing in. */
-function safeNext(raw: string | null): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/headquarters";
-  return raw;
-}
 
 type State =
   | { kind: "working" }
