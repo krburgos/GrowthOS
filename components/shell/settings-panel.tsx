@@ -15,6 +15,7 @@ const ACCOUNT_SUB_BY_PATH: Record<string, AccountSub> = {
   "/settings/users": "users",
   "/settings/statuses": "customizations",
   "/settings/opportunity-stages": "customizations",
+  "/settings/email-templates": "customizations",
 };
 
 interface Row {
@@ -22,12 +23,12 @@ interface Row {
   href?: string;
 }
 
+// Client-confirmed (2026-10-20): Email Signature is live; Two Factor Auth
+// and Phone Numbers are removed rather than shown greyed out.
 const MY_PROFILE_ROWS: Row[] = [
   { label: "Contact Information", href: "/settings/profile" },
-  { label: "Email Signature" },
+  { label: "Email Signature", href: "/settings/profile/signature" },
   { label: "Password", href: "/settings/profile/password" },
-  { label: "Two Factor Auth" },
-  { label: "Phone Numbers" },
   { label: "Notifications" },
   { label: "Email Integration", href: "/settings/email" },
 ];
@@ -45,21 +46,13 @@ const ACCOUNT_SETTINGS_ROWS: (Row & { sub?: AccountSub })[] = [
 
 const ACCOUNT_SUB_ROWS: Partial<Record<AccountSub, Row[]>> = {
   users: [{ label: "Users & Roles", href: "/settings/users" }],
+  // Client-confirmed (2026-10-20): Email Templates added; the greyed-out
+  // rows with no page behind them are removed, except Signature.
   customizations: [
     { label: "Signature" },
-    { label: "Branding" },
-    { label: "Solutions" },
-    { label: "Company Types" },
     { label: "Contact Statuses", href: "/settings/statuses" },
-    { label: "Opportunity Types" },
+    { label: "Email Templates", href: "/settings/email-templates" },
     { label: "Opportunity Stages", href: "/settings/opportunity-stages" },
-    { label: "Verticals" },
-    { label: "Categories" },
-    { label: "Custom Contact Fields" },
-    { label: "Custom Company Fields" },
-    { label: "Custom Opportunity Fields" },
-    { label: "Custom Insert Tags" },
-    { label: "Custom Activity Types" },
   ],
 };
 
@@ -148,7 +141,7 @@ function NavColumn({
 export function SettingsPanel() {
   const pathname = usePathname();
 
-  if (pathname === "/settings/profile" || pathname === "/settings/profile/password" || pathname === "/settings/email") {
+  if (MY_PROFILE_ROWS.some((r) => r.href === pathname)) {
     return <NavColumn title="My Profile" rows={MY_PROFILE_ROWS} activeHref={pathname} backHref="/settings" />;
   }
 

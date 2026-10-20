@@ -90,6 +90,10 @@ This set covers the screens in the App Flow Document — tabs (contact detail), 
 | @tanstack/react-table | **8.21.3** | Sortable/filterable Contacts and Opportunity list views |
 | @dnd-kit/core | **6.3.1** | Opportunity kanban board — draggable cards between stage columns |
 | @dnd-kit/sortable | **10.0.0** | Sortable-list behavior on top of @dnd-kit/core |
+| @tiptap/react | **3.31.4** | Rich-text editor for 1-1 emails, email templates and signatures (client-confirmed 2026-10-20; see §5.3) |
+| @tiptap/core | **3.31.4** | Tiptap's core, a peer of @tiptap/react; used directly for the fill-in-field node |
+| @tiptap/pm | **3.31.4** | Tiptap's ProseMirror bundle, a peer of @tiptap/react |
+| @tiptap/starter-kit | **3.31.4** | Paragraphs, bold, italic, underline, links and lists for the editor |
 | @dnd-kit/utilities | **3.2.2** | Shared helpers used by the @dnd-kit packages |
 
 
@@ -152,6 +156,10 @@ Ready to drop into a fresh create-next-app scaffold — Claude Code should recon
     "@dnd-kit/core": "6.3.1",
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
+    "@tiptap/core": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "@tiptap/react": "3.31.4",
+    "@tiptap/starter-kit": "3.31.4",
     "date-fns": "4.4.0",
     "recharts": "3.10.1",
     "papaparse": "5.6.0",
@@ -214,6 +222,8 @@ TypeScript 7.0 — the Go-native compiler rewrite — reached general availabili
 ### 5.3 No rich-text editor for campaign emails
 
 Per your direction, campaign composition (App Flow §4.7) uses a plain-text/basic-formatting template with merge fields rather than a WYSIWYG editor — so no editor library (Tiptap or similar) is in this document. Add one if that changes; it's a self-contained addition that doesn't ripple through the rest of the stack.
+
+**Client-confirmed change (2026-10-20): Tiptap added for 1-1 emails.** The client chose a true rich-text editor (bold, italic, underline, links, lists, and fill-in fields shown as chips) for Contact Detail's email dialog, email templates and personal signatures, over a no-library marked-up text box. Pinned to **3.31.4** (released 2026-09-30, the newest release at least two weeks old on this date; 3.32.0 was a week old). Campaign composition is unchanged by this decision.
 
 ### 5.4 shadcn/ui is a methodology, not a pinned dependency
 

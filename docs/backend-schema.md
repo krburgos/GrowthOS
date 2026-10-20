@@ -1211,6 +1211,14 @@ Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream 
 
 **What it replaced.** The typed Status Report panel is gone from the workstream page (App Flow §4.3a): CRO Leader hands over the real analytics instead of retyping its findings, and collapsing a tall panel into one row is what puts "What to do next" directly under the hours. `growth_mission_step_status.status_report_summary` and `growth_mission_status_report_stats` keep their rows and are no longer read by the page — the same treatment `growth_mission_suggestions` and `growth_mission_tracker_items` received.
 
+### 6.6l email_templates and email signatures
+
+**Client-confirmed (2026-10-20)**, migration `20261020000003_email_templates_and_signatures.sql`, for Contact Detail's 1-1 email (App Flow §4.9).
+
+- **`email_templates`** — `account_id`, `name`, `subject`, `body_html`, `use_count`, `created_by`, timestamps, `archived_at` (soft delete; no delete policy). Fill-in fields are stored as text tokens (`{First name}`) in the subject and as `<span data-merge-field="first_name">` chips in the HTML, both filled in by `POST /api/email/send`. Select: own account, CRO Leader, granted partner. Insert: MSP Owner/Admin/Marketing on their account, CRO Admin/Advisor (anyone who can email contacts can save one). Update (edit, retire): MSP Owner/Admin, CRO Admin/Advisor. `record_email_template_use(p_template_id)` (security definer) bumps `use_count` for any sender without granting edit rights. `seed_default_email_templates()` gives every account four starters, via `trg_seed_default_email_templates` on `accounts` insert and once for existing accounts.
+- **`users.email_signature_html`** (text, null = none) and **`users.email_signature_auto`** (boolean, default true) — each person's signature, edited by themselves under the existing `users_update` self policy.
+- **Send.** The route cleans the HTML to the editor's own tags (`lib/email/merge-fields.ts`: no scripts, styles, event handlers or non-http(s)/mailto links), fills the fields with escaped values, sends HTML plus a plain-text part via Resend, and logs the plain text as the activity body.
+
 ### 6.6k growth_mission_files — the Arsenal
 
 **Client-confirmed (2026-10-20, approved mockup "The Arsenal")**, migration `20261020000001_arsenal_files.sql`. A file library on each Mission Card; a file belongs to the card in general (`task_id` null) or to one of its Mission Orders. The eighth file exception, and the first general one (§12).

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
+import { fillHtml, fillText, htmlToText, sanitizeEmailHtml } from "@/lib/email/merge-fields";
 import { sendWithFallback } from "@/lib/email/resend-send";
 import { createClient } from "@/lib/supabase/server";
 
@@ -35,13 +36,23 @@ import { createClient } from "@/lib/supabase/server";
  * *picked*, not which literal address the send ultimately used — the
  * display name is accurate either way, only the address can differ in
  * the fallback case) and any Cc list.
+ *
+ * Client-confirmed (2026-10-20, approved mockups "Email Composer Options" B
+ * and "Email Templates and Signature"): the message is now formatted HTML
+ * from the rich-text editor, with the signature already appended by the
+ * dialog. Fill-in fields ("{First name}" and the editor's chips) are filled
+ * in here for this contact, the HTML is cleaned to the editor's own
+ * formatting, and the email goes out as HTML with a plain-text part. The
+ * activity log keeps the plain text. `templateId` counts a template use.
  */
 const sendEmailSchema = z.object({
   contactId: z.string().uuid(),
   subject: z.string().trim().min(1),
+  /** Formatted HTML from the editor. */
   body: z.string().trim().min(1),
   fromConnectionId: z.string().uuid().nullable().optional(),
   cc: z.string().optional(),
+  templateId: z.string().uuid().nullable().optional(),
 });
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -77,11 +88,11 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Enter a subject and a message." }, { status: 400 });
   }
-  const { contactId, subject, body, fromConnectionId, cc } = parsed.data;
+  const { contactId, subject: rawSubject, body: rawBody, fromConnectionId, cc, templateId } = parsed.data;
 
   const { data: contact } = await supabase
     .from("contacts")
-    .select("id, full_name, email")
+    .select("id, full_name, first_name, last_name, title, email, companies(name)")
     .eq("id", contactId)
     .is("archived_at", null)
     .single();
@@ -115,6 +126,22 @@ export async function POST(request: NextRequest) {
     replyToEmail = connection.email_address;
   }
 
+  const company = Array.isArray(contact.companies) ? contact.companies[0] : contact.companies;
+  const values = {
+    first_name: contact.first_name,
+    last_name: contact.last_name,
+    full_name: contact.full_name,
+    company: (company as { name: string } | null)?.name ?? null,
+    title: contact.title,
+    sender_name: fromName,
+  };
+  const subject = fillText(rawSubject, values);
+  const html = fillHtml(sanitizeEmailHtml(rawBody), values);
+  const body = htmlToText(html);
+  if (!body) {
+    return NextResponse.json({ error: "Enter a subject and a message." }, { status: 400 });
+  }
+
   const { error: sendError } = await sendWithFallback({
     fromName,
     realAddress: replyToEmail,
@@ -122,7 +149,9 @@ export async function POST(request: NextRequest) {
     to: contact.email,
     cc: ccList,
     subject,
-    content: body,
+    content: html,
+    isHtml: true,
+    text: body,
   });
 
   if (sendError) {
@@ -143,6 +172,8 @@ export async function POST(request: NextRequest) {
     cc: ccList.length > 0 ? ccList.join(", ") : null,
     send_from_connection_id: fromConnectionId ?? null,
   });
+
+  if (templateId) await supabase.rpc("record_email_template_use", { p_template_id: templateId });
 
   if (activityError) {
     // The email itself already sent; only the activity log failed. Surface
