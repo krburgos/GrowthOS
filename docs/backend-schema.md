@@ -1551,6 +1551,8 @@ end;
 $$;
 ```
 
+**Client-confirmed (2026-10-20):** the defaults now have 16 stages — **FME No Show** (open, 5%) third and **Ongoing Meetings** (open, 40%) after 2nd Meeting Conducted — and both were added to every existing account in place, shifting later stages down (`20261020000002_fme_no_show_and_ongoing_meetings.sql`).
+
 Called by the `trg_seed_default_opportunity_stages` trigger on `accounts` insert (§5.5 deviation notes, `customizable_opportunity_stages` migration). Owner/Admin can rename, reorder, add, or retire these the same way as Contact Statuses (§8.9 of the Design System).
 
 **Client-confirmed addition (2026-09-06):** `opportunity_stages.win_probability` (`smallint`, `check (win_probability between 0 and 100)`, added by the `stage_probability_and_pipeline_rename` migration) is an MSP-editable win-probability percentage per stage — the client's own forecast weighting, with no other consumer in Phase 1 (it is not yet read by Reports or the Kanban board; if a weighted-pipeline metric is wanted later, that is a Reports feature to design, not implied by this column existing). Two grouping decisions the client made explicitly, since they otherwise contradict the probability's face value: **Ghosted** moved from the `lost` group into `open` (so it no longer auto-closes the opportunity per the `closed_at`-on-close logic in `components/opportunities/kanban-board.tsx`) despite previously being treated as a dead end, because it now carries a live 25% probability; **Lost Resurrected** (a new stage, replacing the old "On Hold") stays in the `lost` group despite also carrying a nonzero 25% probability.

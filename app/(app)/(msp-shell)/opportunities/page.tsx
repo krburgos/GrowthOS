@@ -1,10 +1,10 @@
-import { Plus, Target } from "lucide-react";
+import { Target } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { KanbanBoard, type BoardOpportunity } from "@/components/opportunities/kanban-board";
+import { NewOpportunityButton } from "@/components/opportunities/new-opportunity-panel";
 import { OpportunityListTable, type OpportunityListRow } from "@/components/opportunities/opportunity-list-table";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InfoTip } from "@/components/ui/info-tip";
 import { PaginationBar } from "@/components/ui/pagination-bar";
@@ -55,12 +55,13 @@ const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? nu
 export default async function OpportunitiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; page?: string; pageSize?: string; sort?: string; dir?: string }>;
+  /** `new=1` opens the New Opportunity panel; old /opportunities/new links land here with it. */
+  searchParams: Promise<{ view?: string; page?: string; pageSize?: string; sort?: string; dir?: string; new?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const { view, sort, dir, ...pageParams } = await searchParams;
+  const { view, sort, dir, new: openNew, ...pageParams } = await searchParams;
   const isListView = view === "list";
   const { page, pageSize, from, to } = parsePagination(pageParams);
 
@@ -160,12 +161,9 @@ export default async function OpportunitiesPage({
               </Link>
             ))}
           </div>
-          <Button asChild>
-            <Link href="/opportunities/new">
-              <Plus className="mr-1.5 size-4" />
-              New Opportunity
-            </Link>
-          </Button>
+          {/* Client-confirmed (2026-10-20, approved mockup "New Opportunity
+              Panel"): a side panel here, rather than a page that needed a contact. */}
+          <NewOpportunityButton accountId={user.account_id!} defaultOpen={openNew === "1"} />
         </div>
       </div>
 

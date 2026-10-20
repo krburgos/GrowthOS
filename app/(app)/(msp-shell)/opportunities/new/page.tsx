@@ -1,36 +1,12 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
-import { OpportunityCreateForm } from "@/components/opportunities/opportunity-create-form";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { createClient } from "@/lib/supabase/server";
-
-export const metadata: Metadata = { title: "Create Opportunity — GrowthMission" };
-
-export default async function NewOpportunityPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ contact_id?: string }>;
-}) {
-  const user = await getCurrentUser();
-  if (!user) return null;
-
+/**
+ * The old Create Opportunity page. New Opportunity is now a side panel
+ * (client-confirmed, 2026-10-20, approved mockup "New Opportunity Panel"):
+ * on the Opportunities page, or on Contact Detail with the contact locked.
+ * Old links land on the Opportunities page with the panel open.
+ */
+export default async function NewOpportunityPage({ searchParams }: { searchParams: Promise<{ contact_id?: string }> }) {
   const { contact_id } = await searchParams;
-  if (!contact_id) notFound();
-
-  const supabase = await createClient();
-  const { data: contact } = await supabase
-    .from("contacts")
-    .select("id, full_name")
-    .eq("id", contact_id)
-    .single();
-
-  if (!contact) notFound();
-
-  return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">
-      <h1 className="mb-6 text-h1 text-primary-900">Create Opportunity</h1>
-      <OpportunityCreateForm accountId={user.account_id!} contactId={contact.id} contactName={contact.full_name} />
-    </main>
-  );
+  redirect(contact_id ? `/contacts/${contact_id}` : "/opportunities?new=1");
 }

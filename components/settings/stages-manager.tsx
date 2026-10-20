@@ -243,13 +243,16 @@ export function StagesManager({
           <DialogHeader>
             <DialogTitle>Add a stage</DialogTitle>
           </DialogHeader>
-          <div>
+          {/* Client-reported fix (2026-10-20): the fields sat flush against each
+              other; spaced like every other form dialog. */}
+          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="new-stage-name" required>
               Name
             </Label>
             <Input id="new-stage-name" value={newName} onChange={(e) => setNewName(e.target.value)} />
           </div>
-          <div>
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="new-stage-group" required>
               Group
             </Label>
@@ -266,7 +269,7 @@ export function StagesManager({
               </SelectContent>
             </Select>
           </div>
-          <div>
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="new-stage-probability" required>
               Win Probability
             </Label>
@@ -285,6 +288,7 @@ export function StagesManager({
               </span>
             </div>
           </div>
+          </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setAddOpen(false)}>
               Cancel
@@ -301,13 +305,16 @@ export function StagesManager({
           <DialogHeader>
             <DialogTitle>Edit stage</DialogTitle>
           </DialogHeader>
-          <div>
+          {/* Client-reported fix (2026-10-20): the fields sat flush against each
+              other; spaced like every other form dialog. */}
+          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="edit-stage-name" required>
               Name
             </Label>
             <Input id="edit-stage-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
           </div>
-          <div>
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="edit-stage-group" required>
               Group
             </Label>
@@ -324,7 +331,7 @@ export function StagesManager({
               </SelectContent>
             </Select>
           </div>
-          <div>
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="edit-stage-probability" required>
               Win Probability
             </Label>
@@ -342,6 +349,7 @@ export function StagesManager({
                 %
               </span>
             </div>
+          </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEditTarget(null)}>

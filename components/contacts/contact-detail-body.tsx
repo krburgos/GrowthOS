@@ -16,6 +16,7 @@ import {
 } from "@/components/contacts/contact-overview-form";
 import { SendEmailDialog, type FromOption } from "@/components/contacts/send-email-dialog";
 import { StatusPill } from "@/components/contacts/status-pill";
+import { NewOpportunityButton } from "@/components/opportunities/new-opportunity-panel";
 import { HERO_ACTION_CLASS, HeroBand } from "@/components/shell/hero-band";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -365,9 +366,7 @@ export function ContactDetailBody({
 
           <TabsContent value="opportunities">
             <div className="mb-4 flex justify-end">
-              <Button asChild size="sm">
-                <Link href={`/opportunities/new?contact_id=${contactId}`}>Create Opportunity</Link>
-              </Button>
+              <NewOpportunityButton accountId={accountId} contactId={contactId} size="sm" />
             </div>
             {opportunities.length === 0 ? (
               <p className="text-body text-neutral-500">No opportunities yet</p>
