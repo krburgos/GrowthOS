@@ -46,11 +46,12 @@ function normalize(value: string): string {
   return value.trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
 }
 
-export function guessMapping(headers: string[]): ImportMapping {
+/** `fields` defaults to the contact import; the Mission Order import passes its own. */
+export function guessMapping(headers: string[], fields: ImportField[] = IMPORT_FIELDS): ImportMapping {
   const mapping: ImportMapping = {};
   const normalizedHeaders = headers.map(normalize);
 
-  for (const field of IMPORT_FIELDS) {
+  for (const field of fields) {
     const synonyms = field.synonyms.map(normalize);
     const matchIndex = normalizedHeaders.findIndex((h) => synonyms.includes(h));
     mapping[field.key] = matchIndex >= 0 ? headers[matchIndex] : null;

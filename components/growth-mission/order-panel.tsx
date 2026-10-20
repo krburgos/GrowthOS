@@ -1,11 +1,12 @@
 "use client";
 
-import { AlertTriangle, ArrowRight, Lock, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Lock, Paperclip, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { FileViewer, KindChip, downloadFile, fileMeta } from "@/components/growth-mission/mission-file-bits";
 import { OwnerCell, PriorityChip, StatePill, formatDue, isOverdue, orderCredits } from "@/components/growth-mission/order-bits";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,8 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { CREDITS_PER_HOUR } from "@/lib/growth-mission/capacity";
+import { ACCEPT, canPreview, rejectReason, uploadMissionFile, type MissionFile } from "@/lib/growth-mission/files";
 import { SHORT_TITLE, currentQuarter, roundUpToQuarterHour } from "@/lib/growth-mission/hours";
 import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
+import { formatFileSize } from "@/lib/growth-mission/reports";
 import {
   ORDER_TYPE_LABEL,
   PRIORITIES,
@@ -104,6 +107,8 @@ export function OrderPanel({
   canEdit,
   isCroLeader,
   onClose,
+  files = [],
+  focusFiles = false,
 }: {
   accountId: string;
   /** The discipline a new order is issued into. */
@@ -117,10 +122,16 @@ export function OrderPanel({
   canEdit: boolean;
   isCroLeader: boolean;
   onClose: () => void;
+  /** This order's files in the Arsenal (client-confirmed, 2026-10-20). */
+  files?: MissionFile[];
+  /** Opened from the Files column: scroll straight to Files. */
+  focusFiles?: boolean;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<Draft>(() => draftFor(task, initialPriority));
   const [saving, setSaving] = useState(false);
+  // Files chosen while issuing a new order upload once it exists.
+  const [pending, setPending] = useState<File[]>([]);
 
   const isNew = task === null;
   const restricted = !isCroLeader && !!task?.delegated;
@@ -175,15 +186,26 @@ export function OrderPanel({
     };
 
     const supabase = createClient();
-    const { error } = task
-      ? await supabase.from("growth_mission_tasks").update(payload).eq("id", task.id)
-      : await supabase.from("growth_mission_tasks").insert({ ...payload, account_id: accountId, step_slug: slug });
+    const { data: saved, error } = task
+      ? await supabase.from("growth_mission_tasks").update(payload).eq("id", task.id).select("id").maybeSingle()
+      : await supabase
+          .from("growth_mission_tasks")
+          .insert({ ...payload, account_id: accountId, step_slug: slug })
+          .select("id")
+          .single();
 
-    setSaving(false);
     if (error) {
+      setSaving(false);
       toast.error(getFriendlyErrorMessage(error));
       return;
     }
+    if (!task && saved && pending.length > 0) {
+      for (const file of pending) {
+        const { error: fileError } = await uploadMissionFile(supabase, { accountId, slug, taskId: saved.id, file });
+        if (fileError) toast.error(fileError);
+      }
+    }
+    setSaving(false);
     toast.success(
       overrides.state === "complete" && delegated
         ? `Confirmed complete. ${payload.hours * CREDITS_PER_HOUR} credits used.`
@@ -244,6 +266,19 @@ export function OrderPanel({
               placeholder="What good looks like, or where to start."
             />
           </Field>
+
+          {(canEdit || files.length > 0) && (
+            <OrderFiles
+              accountId={accountId}
+              slug={task?.step_slug ?? slug}
+              taskId={task?.id ?? null}
+              files={files}
+              pending={pending}
+              setPending={setPending}
+              canEdit={canEdit}
+              focus={focusFiles}
+            />
+          )}
 
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-2 text-body-sm text-neutral-500">Who&apos;s doing it</legend>
@@ -477,6 +512,149 @@ export function OrderPrompt({ task, rank, onClose }: { task: Task; rank?: number
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * The order's files (client-confirmed, 2026-10-20, approved mockup "The
+ * Arsenal"). On a saved order a file uploads at once and also shows in the
+ * Arsenal under the order's name; on a new order it waits until Save.
+ */
+function OrderFiles({
+  accountId,
+  slug,
+  taskId,
+  files,
+  pending,
+  setPending,
+  canEdit,
+  focus,
+}: {
+  accountId: string;
+  slug: string;
+  taskId: string | null;
+  files: MissionFile[];
+  pending: File[];
+  setPending: (f: File[]) => void;
+  canEdit: boolean;
+  focus: boolean;
+}) {
+  const router = useRouter();
+  const input = useRef<HTMLInputElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const [uploading, setUploading] = useState<string[]>([]);
+  const [viewing, setViewing] = useState<MissionFile | null>(null);
+
+  useEffect(() => {
+    if (focus) box.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [focus]);
+
+  const add = async (list: File[]) => {
+    const ok = list.filter((file) => {
+      const reason = rejectReason(file);
+      if (reason) toast.error(reason);
+      return !reason;
+    });
+    if (ok.length === 0) return;
+    if (!taskId) {
+      setPending([...pending, ...ok]);
+      return;
+    }
+    setUploading(ok.map((f) => f.name));
+    const supabase = createClient();
+    let saved = 0;
+    for (const file of ok) {
+      const { error } = await uploadMissionFile(supabase, { accountId, slug, taskId, file });
+      if (error) toast.error(error);
+      else saved += 1;
+      setUploading((u) => u.filter((n) => n !== file.name));
+    }
+    if (saved > 0) router.refresh();
+  };
+
+  const totalBytes = files.reduce((sum, f) => sum + (f.file_size ?? 0), 0);
+
+  return (
+    <div ref={box} className="flex scroll-mt-4 flex-col gap-1.5">
+      <span className="flex items-baseline justify-between text-body-sm text-neutral-500">
+        <span>Files</span>
+        {files.length > 0 && (
+          <span className="text-caption tabular-nums">
+            {files.length}
+            {totalBytes ? ` · ${formatFileSize(totalBytes)}` : ""}
+          </span>
+        )}
+      </span>
+      <div className="flex flex-col gap-1.5">
+        {files.map((f) => (
+          <div key={f.id} className="flex items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2">
+            <KindChip name={f.file_name} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-body-sm font-semibold text-neutral-900" title={f.file_name}>
+                {f.file_name}
+              </span>
+              <span className="block text-caption text-neutral-500">{fileMeta(f)}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => (canPreview(f.file_name) ? setViewing(f) : void downloadFile(f))}
+              className="text-caption font-semibold text-secondary-700 hover:text-secondary-800"
+            >
+              {canPreview(f.file_name) ? "View" : "Download"}
+            </button>
+          </div>
+        ))}
+        {pending.map((f, i) => (
+          <div key={`${f.name}-${i}`} className="flex items-center gap-3 rounded-lg border border-dashed border-neutral-300 px-3 py-2">
+            <KindChip name={f.name} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-body-sm font-semibold text-neutral-900">{f.name}</span>
+              <span className="block text-caption text-neutral-500">Uploads when the order is issued</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setPending(pending.filter((_, j) => j !== i))}
+              className="text-caption font-semibold text-neutral-500 hover:text-error-700"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+        {uploading.length > 0 && (
+          <p className="rounded-lg border border-neutral-200 px-3 py-2 text-caption text-neutral-600">Uploading {uploading.join(", ")}…</p>
+        )}
+        {canEdit && (
+          <>
+            <input
+              ref={input}
+              type="file"
+              multiple
+              accept={ACCEPT}
+              className="hidden"
+              onChange={(e) => {
+                const list = e.target.files ? Array.from(e.target.files) : [];
+                e.target.value = "";
+                void add(list);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => input.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                void add(Array.from(e.dataTransfer.files));
+              }}
+              className="flex items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-dashed border-neutral-300 px-3 py-2.5 text-body-sm font-semibold text-secondary-700 transition-colors hover:border-secondary-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
+            >
+              <Paperclip className="size-4" />
+              Attach files <span className="font-normal text-neutral-400">or drop them here</span>
+            </button>
+          </>
+        )}
+      </div>
+      {viewing && <FileViewer file={viewing} onClose={() => setViewing(null)} />}
+    </div>
   );
 }
 

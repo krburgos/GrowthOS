@@ -216,3 +216,5 @@ Stated plainly to prevent scope creep during the Phase 1 build:
 - No SMS outreach
 - No public API or SSO/Entra ID federation
 - No formal audit-logging or compliance program beyond baseline security hygiene
+
+**Client-confirmed scope change (2026-10-20): file storage on Mission Cards — "the Arsenal".** File attachments were left out of Phase 1, with seven narrow, field-specific exceptions approved one at a time (logos, avatars, the Mission Card status report, AdvocateDash letters and photos). The client has now approved a general file library on each Mission Card: files belong to the card in general or to one of its Mission Orders, are private to the account, and are limited to 25 MB of PDF, Office, image or CSV each. It stays bounded to Mission Cards and their orders: contacts, companies and opportunities still take no attachments (App Flow §4.3a, Backend Schema §6.6k).

@@ -11,7 +11,8 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, ChevronRight, GripVertical, Plus } from "lucide-react";
+import { Check, ChevronRight, GripVertical, Paperclip, Plus, Upload } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -27,12 +28,14 @@ import {
 } from "@/components/growth-mission/order-bits";
 import { IssueOrderPicker } from "@/components/growth-mission/issue-order-picker";
 import { OrderPanel, OrderPrompt } from "@/components/growth-mission/order-panel";
+import { useSectionView } from "@/components/growth-mission/section-switcher";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { Button } from "@/components/ui/button";
 import { FilterField, FilterResult, FilterTitle, filterTriggerClass } from "@/components/ui/filter-bar";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { CREDITS_PER_HOUR } from "@/lib/growth-mission/capacity";
+import type { MissionFile } from "@/lib/growth-mission/files";
 import { SHORT_TITLE, currentQuarter, formatWhole } from "@/lib/growth-mission/hours";
 import {
   PRIORITIES,
@@ -114,6 +117,8 @@ export function MissionOrders({
   openNew = false,
   initialPriorities,
   hideCompleted = false,
+  focusSlot,
+  files = [],
 }: {
   mode: "discipline" | "overview";
   accountId: string;
@@ -141,7 +146,14 @@ export function MissionOrders({
    * its "Show completed" row would show them twice.
    */
   hideCompleted?: boolean;
+  /** Overview on the Command Center: its Focus button (section-switcher.tsx). */
+  focusSlot?: React.ReactNode;
+  /** Discipline mode: the Arsenal's files, for each order's Files count. */
+  files?: MissionFile[];
 }) {
+  // Focused on the Command Center, the overview shows every order rather
+  // than the first few per tier (client-confirmed, 2026-10-20).
+  const focused = useSectionView() === "orders";
   const router = useRouter();
   const overview = mode === "overview";
 
@@ -162,7 +174,7 @@ export function MissionOrders({
   // Overview only: which tiers are showing every order rather than the top few.
   const [expanded, setExpanded] = useState<Record<TaskPriority, boolean>>({ high: false, medium: false, low: false });
 
-  const [panel, setPanel] = useState<{ task: Task | null; priority?: TaskPriority } | null>(null);
+  const [panel, setPanel] = useState<{ task: Task | null; priority?: TaskPriority; files?: boolean } | null>(null);
   const [prompt, setPrompt] = useState<Task | null>(null);
 
   useEffect(() => {
@@ -253,7 +265,12 @@ export function MissionOrders({
   const delegatedOpen = openAll.filter((t) => t.delegated);
 
   const cols = overview ? OVERVIEW_COLS : DISCIPLINE_COLS;
-  const rowProps = { cols, overview, draggable, rank, canEdit, isCroLeader, onOpen: openRow, onToggle: toggle };
+  // The Arsenal (client-confirmed, 2026-10-20): each order's file count, in
+  // a Files column on the Mission Card; clicking it opens the order at its Files.
+  const fileCount = new Map<string, number>();
+  for (const file of files) if (file.task_id) fileCount.set(file.task_id, (fileCount.get(file.task_id) ?? 0) + 1);
+  const openFiles = (task: Task) => setPanel({ task, files: true });
+  const rowProps = { cols, overview, draggable, rank, canEdit, isCroLeader, onOpen: openRow, onToggle: toggle, fileCount, onOpenFiles: openFiles };
 
   const clear = () => {
     setPri({ high: true, medium: true, low: true });
@@ -280,18 +297,32 @@ export function MissionOrders({
               : `${openAll.length} open · ${formatWhole(sum(openAll))} hrs${overview ? " across every Mission Card" : ""} · ${delegatedOpen.length} with GrowthMission`}
           </p>
         </div>
-        {overview && canEdit && <IssueOrderPicker openBySlug={openBySlug} />}
-        {!overview && canEdit && (
-          <Button
-            size="sm"
-            variant="secondary"
-            className="ml-auto border-transparent hover:border-transparent"
-            onClick={() => setPanel({ task: null })}
-          >
-            <Plus className="mr-1.5 size-4" />
-            Issue order
-          </Button>
-        )}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {focusSlot}
+          {overview && canEdit && <IssueOrderPicker openBySlug={openBySlug} />}
+          {/* Import lives on the Mission Card only (client-confirmed,
+              2026-10-20): never on Headquarters or the Command Center. */}
+          {!overview && canEdit && slug && (
+            <Link
+              href={`/growth-mission/${slug}/import`}
+              className="inline-flex h-7 items-center justify-center whitespace-nowrap rounded-md border border-white/30 bg-white/10 px-3 text-button text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-300"
+            >
+              <Upload className="mr-1.5 size-4" />
+              Import
+            </Link>
+          )}
+          {!overview && canEdit && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="border-transparent hover:border-transparent"
+              onClick={() => setPanel({ task: null })}
+            >
+              <Plus className="mr-1.5 size-4" />
+              Issue order
+            </Button>
+          )}
+        </div>
       </div>
 
       {rows.length === 0 ? (
@@ -438,7 +469,7 @@ export function MissionOrders({
           )}
 
           <div className={`${overview ? "block" : "hidden lg:block"} overflow-x-auto`}>
-            <div className={overview ? "min-w-[1080px]" : "min-w-[960px]"}>
+            <div className={overview ? "min-w-[1080px]" : "min-w-[1010px]"}>
               <div className={`${cols} border-b border-primary-200 bg-primary-50 px-5 py-2 ${HEAD}`}>
                 {/* No complete column on the overviews (client-confirmed,
                     2026-10-15): orders are completed on their Mission Card. */}
@@ -449,6 +480,7 @@ export function MissionOrders({
                 <span>Owner</span>
                 <span>Status</span>
                 <span>Due</span>
+                {!overview && <span className="text-center">Files</span>}
                 <span className="text-right">Hrs</span>
                 <span className="text-right">Credits</span>
               </div>
@@ -479,11 +511,11 @@ export function MissionOrders({
                         </SortableContext>
                       </DndContext>
                     ) : (
-                      (overview && !expanded[p] ? tier.slice(0, OVERVIEW_TIER_LIMIT) : tier).map((t) => (
+                      (overview && !expanded[p] && !focused ? tier.slice(0, OVERVIEW_TIER_LIMIT) : tier).map((t) => (
                         <OrderRow key={t.id} task={t} {...rowProps} />
                       ))
                     )}
-                    {overview && tier.length > OVERVIEW_TIER_LIMIT && (
+                    {overview && !focused && tier.length > OVERVIEW_TIER_LIMIT && (
                       <button
                         type="button"
                         aria-expanded={expanded[p]}
@@ -551,6 +583,8 @@ export function MissionOrders({
           task={panel.task}
           rank={panel.task ? rank.get(panel.task.id) : undefined}
           initialPriority={panel.priority}
+          files={panel.task ? files.filter((file) => file.task_id === panel.task!.id) : []}
+          focusFiles={panel.files}
           team={team}
           memberLoad={memberLoad}
           canEdit={canEdit}
@@ -573,7 +607,7 @@ export function MissionOrders({
 const OVERVIEW_TIER_LIMIT = 5;
 
 /** One column definition each, shared by the header and the rows. */
-const DISCIPLINE_COLS = "grid grid-cols-[28px_18px_36px_minmax(220px,1fr)_190px_118px_72px_48px_64px] items-center gap-x-3";
+const DISCIPLINE_COLS = "grid grid-cols-[28px_18px_36px_minmax(220px,1fr)_190px_118px_72px_50px_48px_64px] items-center gap-x-3";
 const OVERVIEW_COLS = "grid grid-cols-[76px_minmax(220px,1fr)_170px_190px_118px_72px_48px_64px] items-center gap-x-3";
 const HEAD = "text-caption font-bold uppercase tracking-wide text-primary-700";
 
@@ -587,6 +621,8 @@ interface RowProps {
   isCroLeader: boolean;
   onOpen: (task: Task) => void;
   onToggle: (task: Task) => void;
+  fileCount: Map<string, number>;
+  onOpenFiles: (task: Task) => void;
 }
 
 function SortableRow(props: RowProps) {
@@ -623,6 +659,8 @@ function OrderRow({
   isCroLeader,
   onOpen,
   onToggle,
+  fileCount,
+  onOpenFiles,
   rowRef,
   style,
   dragging,
@@ -694,6 +732,11 @@ function OrderRow({
       <span className={`text-body-sm tabular-nums ${isOverdue(task) ? "font-semibold text-error-700" : due ? "text-neutral-600" : "text-neutral-300"}`}>
         {due ?? "—"}
       </span>
+      {!overview && (
+        <span className="flex justify-center">
+          <FilesButton count={fileCount.get(task.id) ?? 0} onOpen={() => onOpenFiles(task)} />
+        </span>
+      )}
       <span className="text-right text-body-sm font-semibold tabular-nums text-neutral-700">{task.hours}</span>
       <span className={`text-right text-body-sm tabular-nums ${credits !== null ? "text-neutral-700" : "text-neutral-300"}`}>
         {credits ?? "—"}
@@ -702,7 +745,7 @@ function OrderRow({
   );
 }
 
-function OrderCard({ task, rank, canEdit, isCroLeader, onOpen, onToggle }: RowProps) {
+function OrderCard({ task, rank, canEdit, isCroLeader, onOpen, onToggle, fileCount, onOpenFiles }: RowProps) {
   const done = task.state === "complete";
   const credits = orderCredits(task);
   const due = formatDue(task.due_date);
@@ -744,8 +787,30 @@ function OrderCard({ task, rank, canEdit, isCroLeader, onOpen, onToggle }: RowPr
         <span>{task.hours} hrs</span>
         {credits !== null && <span>{credits} credits</span>}
         {due && <span className={isOverdue(task) ? "font-semibold text-error-700" : ""}>Due {due}</span>}
+        {(fileCount.get(task.id) ?? 0) > 0 && <FilesButton count={fileCount.get(task.id)!} onOpen={() => onOpenFiles(task)} />}
       </div>
     </article>
+  );
+}
+
+/** The paperclip and count in the Files column; a dash when the order has none. */
+function FilesButton({ count, onOpen }: { count: number; onOpen: () => void }) {
+  if (count === 0) return <span className="text-body-sm text-neutral-300">—</span>;
+  return (
+    <button
+      type="button"
+      title={`${count} ${count === 1 ? "file" : "files"}`}
+      aria-label={`Open this order's ${count} ${count === 1 ? "file" : "files"}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen();
+      }}
+      onKeyDown={(e) => e.stopPropagation()}
+      className="inline-flex h-6 items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-2 text-caption font-semibold tabular-nums text-primary-700 hover:border-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
+    >
+      <Paperclip className="size-3.5" />
+      {count}
+    </button>
   );
 }
 

@@ -5,6 +5,7 @@ import { MissionCapacity } from "@/components/growth-mission/mission-capacity";
 import { MissionOrders } from "@/components/growth-mission/mission-orders";
 import { MissionProgress } from "@/components/growth-mission/mission-progress";
 import { ReadinessCheck } from "@/components/growth-mission/readiness-check";
+import { FocusButton, SectionPane, SectionSwitcher } from "@/components/growth-mission/section-switcher";
 import { SectionHeading } from "@/components/shell/section-heading";
 import { getTargets } from "@/lib/advocate-dash/queries";
 import { ADVOCATE_DASH_SLUG, advocatesForCard, targetSummary } from "@/lib/advocate-dash/targets";
@@ -89,17 +90,36 @@ export default async function GrowthMissionPage() {
         </p>
       </div>
 
+      {/* Client-confirmed (2026-10-20, approved mockup "Command Center
+          Focus"): every section, or one of them full width. */}
+      <SectionSwitcher
+        sections={[
+          { view: "capacity", label: "Mission Capacity" },
+          { view: "progress", label: "Mission Progress" },
+          { view: "cards", label: "Mission Cards", count: steps.length },
+          { view: "orders", label: "Mission Orders", count: tasks.filter((t) => t.state !== "complete").length },
+        ]}
+      >
       {/* Client-confirmed (2026-10-13): Mission Capacity is its own section,
           designed exactly like Mission Progress beneath it. */}
-      <MissionCapacity
-        accountId={user.account_id}
-        capacity={mission.capacity}
-        quarter={quarter}
-        canSetCredits={isCroLeaderEditor}
-        variant="band"
-      />
+      <SectionPane view="capacity">
+        <MissionCapacity
+          accountId={user.account_id}
+          capacity={mission.capacity}
+          quarter={quarter}
+          canSetCredits={isCroLeaderEditor}
+          variant="band"
+          focusSlot={<FocusButton view="capacity" label="Mission Capacity" />}
+        />
+      </SectionPane>
 
-      <MissionProgress accountId={user.account_id} sources={kpiSources} />
+      <SectionPane view="progress">
+        <MissionProgress
+          accountId={user.account_id}
+          sources={kpiSources}
+          focusSlot={<FocusButton view="progress" label="Mission Progress" />}
+        />
+      </SectionPane>
 
       {/* Client-confirmed (2026-10-01, approved mockup "C — Navy panel"): the
           Mission Cards get a navy ground rather than sitting straight on the
@@ -112,6 +132,7 @@ export default async function GrowthMissionPage() {
 
           It is the old hero band's gradient. Since 2026-10-14 the page has a
           plain header, so this panel is the page's one navy field. */}
+      <SectionPane view="cards">
       <section className="mt-2 flex flex-col gap-3 rounded-xl p-4 shadow-lift md:p-5 bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]">
         <SectionHeading title="Mission Cards" tone="dark">
           {/* The removed hero sentence was the only thing telling anyone the
@@ -120,6 +141,7 @@ export default async function GrowthMissionPage() {
           <span className="text-caption text-white/55">
             {steps.length} disciplines · click any card for its report and mission orders
           </span>
+          <FocusButton view="cards" label="Mission Cards" />
         </SectionHeading>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -142,15 +164,20 @@ export default async function GrowthMissionPage() {
           })}
         </div>
       </section>
+      </SectionPane>
 
-      <MissionOrders
-        mode="overview"
-        accountId={user.account_id}
-        orders={tasks}
-        team={teamMembers}
-        canEdit={HOURS_EDIT_ROLES.includes(user.role)}
-        isCroLeader={isCroLeaderEditor}
-      />
+      <SectionPane view="orders">
+        <MissionOrders
+          mode="overview"
+          accountId={user.account_id}
+          orders={tasks}
+          team={teamMembers}
+          canEdit={HOURS_EDIT_ROLES.includes(user.role)}
+          isCroLeader={isCroLeaderEditor}
+          focusSlot={<FocusButton view="orders" label="Mission Orders" />}
+        />
+      </SectionPane>
+      </SectionSwitcher>
     </main>
   );
 }

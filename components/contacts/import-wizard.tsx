@@ -801,7 +801,7 @@ function RepeatsPanel({
  * recognition task against your own data, not a recall task against
  * column names you may not remember.
  */
-function ColumnCard({
+export function ColumnCard({
   header,
   index,
   fields,

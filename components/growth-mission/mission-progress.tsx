@@ -1,7 +1,7 @@
 "use client";
 
 import { Radio } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { RecordsDialog } from "@/components/growth-mission/kpi-records-dialog";
 import { SectionHeading } from "@/components/shell/section-heading";
@@ -97,7 +97,16 @@ const GROUP_LABEL =
   "flex h-10 items-center gap-2 overflow-hidden border-b border-neutral-300 px-3.5 text-caption font-bold uppercase tracking-wide";
 
 /** The Command Center's band: its own navy section, one white card. */
-export function MissionProgress({ accountId, sources }: { accountId: string; sources: KpiSource[] }) {
+export function MissionProgress({
+  accountId,
+  sources,
+  focusSlot,
+}: {
+  accountId: string;
+  sources: KpiSource[];
+  /** The Command Center's Focus button (section-switcher.tsx). */
+  focusSlot?: ReactNode;
+}) {
   const [openBox, setOpenBox] = useState<KpiBox | null>(null);
 
   return (
@@ -107,6 +116,7 @@ export function MissionProgress({ accountId, sources }: { accountId: string; sou
           <Radio className="size-3.5" />
           Live from the CRM
         </span>
+        {focusSlot}
       </SectionHeading>
 
       <div className="grid grid-cols-1 overflow-hidden rounded-lg bg-white shadow-raised lg:grid-cols-[2fr_6fr]">

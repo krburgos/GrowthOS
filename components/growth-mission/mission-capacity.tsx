@@ -149,12 +149,15 @@ export function MissionCapacity({
   quarter,
   canSetCredits,
   variant,
+  focusSlot,
 }: {
   accountId: string;
   capacity: Capacity;
   quarter: QuarterInfo;
   canSetCredits: boolean;
   variant: "band" | "panels";
+  /** The Command Center's Focus button (section-switcher.tsx); band only. */
+  focusSlot?: ReactNode;
 }) {
   const [creditsOpen, setCreditsOpen] = useState(false);
   const { hours, credits } = figures(capacity);
@@ -183,6 +186,7 @@ export function MissionCapacity({
             <CalendarRange className="size-3.5" />
             {quarter.label} · {quarter.range}
           </span>
+          {focusSlot}
         </SectionHeading>
       ) : (
         <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">

@@ -15,6 +15,7 @@ import {
   type CompanyProfile,
 } from "@/lib/accounts/company-profile";
 import { TOTAL_QUESTION_COUNT, countAnswered as countQuestionnaireAnswered } from "@/lib/questionnaire/questions";
+import type { MissionFile } from "@/lib/growth-mission/files";
 import type { WorkstreamReport } from "@/lib/growth-mission/reports";
 import type { Task, TaskPriority, TaskState } from "@/lib/growth-mission/tasks";
 import type { TeamKind } from "@/lib/team/members";
@@ -477,6 +478,44 @@ export async function getReports(accountId: string, slug: string): Promise<Works
     created_at: r.created_at,
     uploadedBy: unwrap(r.users)?.full_name ?? null,
   }));
+}
+
+/** The Arsenal's files for one Mission Card, newest first (client-confirmed, 2026-10-20). */
+export async function getStepFiles(accountId: string, slug: string): Promise<MissionFile[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("growth_mission_files")
+    .select("id, step_slug, task_id, file_name, file_path, file_size, content_type, created_at, users(full_name), growth_mission_tasks(title, archived_at)")
+    .eq("account_id", accountId)
+    .eq("step_slug", slug)
+    .is("archived_at", null)
+    .order("created_at", { ascending: false });
+
+  return ((data ?? []) as FileRow[]).map((r) => ({
+    id: r.id,
+    step_slug: r.step_slug,
+    task_id: r.task_id,
+    taskTitle: unwrap(r.growth_mission_tasks)?.title ?? null,
+    file_name: r.file_name,
+    file_path: r.file_path,
+    file_size: r.file_size,
+    content_type: r.content_type,
+    created_at: r.created_at,
+    uploadedBy: unwrap(r.users)?.full_name ?? null,
+  }));
+}
+
+interface FileRow {
+  id: string;
+  step_slug: string;
+  task_id: string | null;
+  file_name: string;
+  file_path: string;
+  file_size: number | null;
+  content_type: string | null;
+  created_at: string;
+  users: { full_name: string } | { full_name: string }[] | null;
+  growth_mission_tasks: { title: string; archived_at: string | null } | { title: string; archived_at: string | null }[] | null;
 }
 
 interface ReportRow {

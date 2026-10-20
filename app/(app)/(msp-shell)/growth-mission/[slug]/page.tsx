@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { DropbyPanel } from "@/components/advocate-dash/dropby-panel";
 import { TargetsTable } from "@/components/advocate-dash/targets-table";
+import { Arsenal } from "@/components/growth-mission/arsenal";
 import { EditOverviewPanel } from "@/components/growth-mission/edit-overview-panel";
 import { ReportPanel } from "@/components/growth-mission/report-panel";
 import { StepHeader } from "@/components/growth-mission/step-header";
@@ -15,6 +16,7 @@ import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/growth-mission/hours";
 import {
   getMemberTaskLoad,
   getReports,
+  getStepFiles,
   getStepDetail,
   getMissionData,
   getTasksForStep,
@@ -78,7 +80,7 @@ export default async function GrowthMissionStepPage({
   const isAdvocateDash = slug === ADVOCATE_DASH_SLUG;
 
   const quarter = currentQuarter();
-  const [step, mission, tasks, team, memberLoad, reports, targets] = await Promise.all([
+  const [step, mission, tasks, team, memberLoad, reports, targets, files] = await Promise.all([
     getStepDetail(user.account_id, slug),
     getMissionData(user.account_id, quarter),
     isAdvocateDash ? [] : getTasksForStep(user.account_id, slug),
@@ -88,6 +90,7 @@ export default async function GrowthMissionStepPage({
     getMemberTaskLoad(user.account_id),
     isAdvocateDash ? [] : getReports(user.account_id, slug),
     isAdvocateDash ? getTargets(user.account_id) : [],
+    isAdvocateDash ? [] : getStepFiles(user.account_id, slug),
   ]);
   if (!step) notFound();
 
@@ -152,6 +155,17 @@ export default async function GrowthMissionStepPage({
             }
           />
 
+          {/* Client-confirmed (2026-10-20, approved mockup "The Arsenal"):
+              the Mission Card's files, between the hours (which carry the
+              report) and the orders. */}
+          <Arsenal
+            accountId={user.account_id}
+            slug={step.slug}
+            files={files}
+            orders={tasks.map((t) => ({ id: t.id, title: t.title }))}
+            canEdit={canAuthorTasks}
+          />
+
           {/* Client-confirmed (2026-10-14, approved mockup "Mission Orders
               Design"): "What to do next" becomes Mission Orders –
               Tasks/Tickets, grouped Must / Should / Could. Only CRO Leader
@@ -168,6 +182,7 @@ export default async function GrowthMissionStepPage({
             isCroLeader={canEdit}
             openOrderId={openOrderId}
             openNew={issue === "1"}
+            files={files}
           />
         </>
       )}
