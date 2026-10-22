@@ -5,7 +5,12 @@ import { AccountsList, type CroAccountRow } from "@/components/cro/accounts-list
 import { CreateAccountDialog } from "@/components/cro/create-account-dialog";
 import { PartnerAccessPanel, type PartnerRow } from "@/components/cro/partner-access-panel";
 import { CroPortfolioSummary } from "@/components/cro/portfolio-summary";
-import { getCurrentUser, needsAccountSelection } from "@/lib/auth/get-current-user";
+import { AllUsersPanel } from "@/components/cro/all-users-panel";
+import type { PersonRow } from "@/components/cro/people-bits";
+import { CroTeamPanel } from "@/components/cro/team-panel";
+import { FocusButton, SectionPane, SectionSwitcher } from "@/components/growth-mission/section-switcher";
+import { getCurrentUser, needsAccountSelection, type UserRole } from "@/lib/auth/get-current-user";
+import { CRO_LEADER_ROLES, MSP_ROLES } from "@/lib/auth/roles";
 import { currentQuarter } from "@/lib/growth-mission/hours";
 import { createClient } from "@/lib/supabase/server";
 
@@ -101,6 +106,42 @@ export default async function CroDashboardPage() {
     })
   );
 
+  // People (client-confirmed, 2026-10-22, approved mockup "CRO Dashboard
+  // People"): the CRO Leader team and every client's users are managed here,
+  // not inside a client's Settings. CRO Admin only.
+  let team: PersonRow[] = [];
+  let clientUsers: PersonRow[] = [];
+  if (isCroAdmin) {
+    const [{ data: people }, { data: logins }] = await Promise.all([
+      supabase
+        .from("users")
+        .select("id, full_name, email, role, archived_at, account_id, accounts(name)")
+        .neq("role", "partner")
+        .order("full_name"),
+      supabase.rpc("get_users_with_last_login", { p_account_id: null }),
+    ]);
+    const lastLogin = new Map(
+      ((logins ?? []) as { user_id: string; last_sign_in_at: string | null }[]).map((r) => [r.user_id, r.last_sign_in_at])
+    );
+    const rows: PersonRow[] = (people ?? []).map((p) => {
+      const account = Array.isArray(p.accounts) ? p.accounts[0] : p.accounts;
+      return {
+        id: p.id,
+        full_name: p.full_name,
+        email: p.email,
+        role: p.role as UserRole,
+        archived_at: p.archived_at,
+        account_id: p.account_id,
+        account_name: (account as { name: string } | null)?.name ?? null,
+        last_sign_in_at: lastLogin.get(p.id) ?? null,
+      };
+    });
+    // Active people first, then the deactivated, each A–Z.
+    const byStatus = (a: PersonRow, b: PersonRow) => Number(!!a.archived_at) - Number(!!b.archived_at);
+    team = rows.filter((r) => CRO_LEADER_ROLES.includes(r.role)).sort(byStatus);
+    clientUsers = rows.filter((r) => MSP_ROLES.includes(r.role)).sort(byStatus);
+  }
+
   let partners: PartnerRow[] = [];
   if (isCroAdmin) {
     const [{ data: partnerUsers }, { data: grantRows }] = await Promise.all([
@@ -125,6 +166,22 @@ export default async function CroDashboardPage() {
     }));
   }
 
+  const clientsSection = (withFocus: boolean) => (
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0">
+          <h2 className="text-h4 text-primary-900">Clients</h2>
+          <p className="text-body-sm text-neutral-500">Enter an account below to view it as that MSP would.</p>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          {withFocus && <FocusButton view="clients" label="Clients" tone="light" />}
+          {isCroAdmin && <CreateAccountDialog />}
+        </div>
+      </div>
+      <AccountsList accounts={accounts} quarter={quarter} />
+    </section>
+  );
+
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-6 p-6 md:p-8">
       <CroPortfolioSummary
@@ -134,16 +191,42 @@ export default async function CroDashboardPage() {
         quarter={quarter}
       />
 
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-body text-neutral-500">Enter an account below to view it as that MSP would.</p>
-        </div>
-        {isCroAdmin && <CreateAccountDialog />}
-      </div>
-
-      <AccountsList accounts={accounts} quarter={quarter} />
-
-      {isCroAdmin && <PartnerAccessPanel partners={partners} allAccounts={accounts} />}
+      {/* Client-confirmed (2026-10-22): the Command Center's switcher, for
+          the dashboard's sections. Advisors, Service Team and partners only
+          have Clients, so they get no switcher. */}
+      {isCroAdmin ? (
+        <SectionSwitcher
+          label="CRO Leader dashboard sections"
+          storageKey="growthmission.croDashboard.view"
+          sections={[
+            { view: "clients", label: "Clients", hash: "#clients", count: accounts.length },
+            { view: "team", label: "CRO Leader Team", hash: "#team", count: team.filter((t) => !t.archived_at).length },
+            { view: "users", label: "All Users", hash: "#users", count: clientUsers.filter((u) => !u.archived_at).length },
+            { view: "partners", label: "Partners", hash: "#partners", count: partners.length },
+          ]}
+        >
+          <SectionPane view="clients">{clientsSection(true)}</SectionPane>
+          <SectionPane view="team">
+            <CroTeamPanel members={team} currentUserId={user.id} focusSlot={<FocusButton view="team" label="CRO Leader Team" />} />
+          </SectionPane>
+          <SectionPane view="users">
+            <AllUsersPanel
+              users={clientUsers}
+              clients={accounts.map((a) => ({ id: a.id, name: a.name }))}
+              focusSlot={<FocusButton view="users" label="All Users" />}
+            />
+          </SectionPane>
+          <SectionPane view="partners">
+            <PartnerAccessPanel
+              partners={partners}
+              allAccounts={accounts}
+              focusSlot={<FocusButton view="partners" label="Partners" tone="light" />}
+            />
+          </SectionPane>
+        </SectionSwitcher>
+      ) : (
+        clientsSection(false)
+      )}
     </main>
   );
 }

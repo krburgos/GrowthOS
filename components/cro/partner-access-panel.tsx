@@ -39,9 +39,12 @@ export interface PartnerRow {
 export function PartnerAccessPanel({
   partners,
   allAccounts,
+  focusSlot,
 }: {
   partners: PartnerRow[];
   allAccounts: { id: string; name: string }[];
+  /** The dashboard switcher's Focus button (2026-10-22). */
+  focusSlot?: React.ReactNode;
 }) {
   const router = useRouter();
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -122,6 +125,8 @@ export function PartnerAccessPanel({
     <div className="rounded-lg border border-neutral-200 bg-white">
       <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3.5">
         <h2 className="text-h4 text-primary-900">Partners</h2>
+        <div className="flex items-center gap-2">
+        {focusSlot}
         <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
           <DialogTrigger asChild>
             <Button size="sm">Invite Partner</Button>
@@ -157,6 +162,7 @@ export function PartnerAccessPanel({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {partners.length === 0 ? (

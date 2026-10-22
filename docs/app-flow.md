@@ -602,6 +602,12 @@ One shared page for all roles (no role-specific dashboards, per the PRD). Sectio
 
 ### 4.10 CRO Leader Dashboard (J1)
 
+**Client-confirmed (2026-10-22, approved mockup "CRO Dashboard People") — people are managed here.** "The CRO Leader team is the backbone," so the team and every client's users are managed from this dashboard rather than inside a client. For CRO Admins the page gets the Command Center's switcher (§4.3a): **All sections · Clients · CRO Leader Team · All Users · Partners**, each with Focus, remembered per browser, addresses `#clients`, `#team`, `#users`, `#partners`. Other CRO Leader roles and partners see Clients only, with no switcher.
+- **CRO Leader Team.** Every CRO Admin, Advisor and Service Team member: role (changed among those three), last login, status, Deactivate. **Invite team member** asks name, email and role, with no client. Nobody changes or deactivates themselves.
+- **All Users.** Every client's users, filterable by Client, Role and a name/email search, 10 per page: role (among the client roles), last login, status, Deactivate. **Invite user** asks which client they join.
+- **Inside a client**, Settings → Users & Roles now offers only client roles, to CRO Admin as well; client Owners and Admins keep managing their own users there.
+- A client user moving onto the team is invited as a team member (ideally with a separate email), rather than converted in place.
+
 Kept intentionally light, per the client's direction. One primary element: a **search-by-MSP box** at the top of the page, returning matching accounts as the CRO Leader Admin/Advisor types. Selecting an account enters it (§2.5, §5.7) — everything past that point is the same MSP screens described above, with the viewing-as banner.
 
 **Client-confirmed addition (2026-09-08) — this screen doubles as the Partner Dashboard.** A new "partner" user (not in the original PRD role table — a vendor/agency relationship distinct from CRO Leader staff) reaches this exact same URL and layout, but the account list only shows accounts they've been explicitly granted, not every MSP on the platform; "New MSP Account" and the Partners management panel (invite a partner, grant/revoke which accounts they see) only render for CRO Admin. One screen, role-aware, rather than a second near-duplicate one — the two are structurally identical ("search and enter an account") once the RLS layer distinguishes who can see what.

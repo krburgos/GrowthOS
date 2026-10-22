@@ -4,7 +4,7 @@ import { InviteUserDialog } from "@/components/settings/invite-user-dialog";
 import { UsersTable, type UserRow } from "@/components/settings/users-table";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { getCurrentUser, isCroLeaderRole } from "@/lib/auth/get-current-user";
-import { CRO_LEADER_ROLES, MSP_ROLES } from "@/lib/auth/roles";
+import { MSP_ROLES } from "@/lib/auth/roles";
 import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,6 +16,10 @@ export const metadata: Metadata = { title: "Users & Roles — GrowthMission" };
  * the account can view (Backend Schema §2's broad-view interpretation).
  * CRO Admin's cross-account entry point (search + enter an MSP) is
  * Milestone 11 — this screen is account-scoped for now.
+ *
+ * Client-confirmed (2026-10-22): only client roles are offered here, to
+ * everyone including CRO Admin. The CRO Leader team, and every client's
+ * users at once, are managed on the CRO Leader dashboard instead.
  */
 export default async function UsersRolesPage({
   searchParams,
@@ -69,13 +73,13 @@ export default async function UsersRolesPage({
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-h1 text-primary-900">Users & Roles</h1>
         {canEdit && <InviteUserDialog
-            inviteableRoles={user.role === "cro_admin" ? [...MSP_ROLES, ...CRO_LEADER_ROLES] : MSP_ROLES}
+            inviteableRoles={MSP_ROLES}
             accountId={user.account_id}
           />}
       </div>
       <UsersTable
         users={users}
-        assignableRoles={user.role === "cro_admin" ? [...MSP_ROLES, ...CRO_LEADER_ROLES] : MSP_ROLES}
+        assignableRoles={MSP_ROLES}
         canEdit={canEdit}
         currentUserId={user.id}
       />
