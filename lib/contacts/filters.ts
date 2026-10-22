@@ -121,8 +121,11 @@ export function isActive(r: ContactRule): boolean {
 
 const SEP = "~";
 
+/** encodeURIComponent leaves "~" alone, and "~" separates the parts, so a typed one is escaped too. */
+const encodePart = (s: string) => encodeURIComponent(s).replace(/~/g, "%7E");
+
 export function encodeRule(r: ContactRule): string {
-  return [r.field, r.op, r.value ?? "", r.from ?? "", r.to ?? ""].map(encodeURIComponent).join(SEP);
+  return [r.field, r.op, r.value ?? "", r.from ?? "", r.to ?? ""].map(encodePart).join(SEP);
 }
 
 export function decodeRule(s: string): ContactRule | null {
