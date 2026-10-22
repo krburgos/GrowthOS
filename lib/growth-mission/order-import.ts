@@ -14,6 +14,14 @@ import type { TeamMember } from "@/lib/team/members";
  * capacity, an order already on the card) explain and let it go ahead.
  */
 
+/**
+ * Who may import Mission Orders: CRO Admin only, for now (client-confirmed,
+ * 2026-10-22; it was every role that can issue orders). Checked on the
+ * Import button, the import page and both import routes. Issuing orders one
+ * at a time is unchanged.
+ */
+export const ORDER_IMPORT_ROLES = ["cro_admin"];
+
 export const ORDER_IMPORT_FIELDS: ImportField[] = [
   { key: "title", label: "Mission Order", required: true, synonyms: ["mission order", "order", "task", "title", "name", "ticket", "mission order name"] },
   { key: "detail", label: "Description", required: false, synonyms: ["description", "detail", "details", "notes"] },

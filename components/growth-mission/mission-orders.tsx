@@ -113,6 +113,7 @@ export function MissionOrders({
   memberLoad = {},
   canEdit,
   isCroLeader,
+  canImport = false,
   openOrderId,
   openNew = false,
   initialPriorities,
@@ -131,6 +132,8 @@ export function MissionOrders({
   /** MSP Owner/Admin and CRO Admin/Advisor. RLS is the control; this decides what is drawn. */
   canEdit: boolean;
   isCroLeader: boolean;
+  /** Discipline mode: shows Import (CRO Admin only, client-confirmed 2026-10-22; the import routes check it too). */
+  canImport?: boolean;
   /** Discipline mode: open this order's panel on arrival (?order=). */
   openOrderId?: string;
   /** Discipline mode: open an empty Issue order panel on arrival (?issue=1, from the overview's picker). */
@@ -302,7 +305,7 @@ export function MissionOrders({
           {overview && canEdit && <IssueOrderPicker openBySlug={openBySlug} />}
           {/* Import lives on the Mission Card only (client-confirmed,
               2026-10-20): never on Headquarters or the Command Center. */}
-          {!overview && canEdit && slug && (
+          {!overview && canImport && slug && (
             <Link
               href={`/growth-mission/${slug}/import`}
               className="inline-flex h-7 items-center justify-center whitespace-nowrap rounded-md border border-white/30 bg-white/10 px-3 text-button text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-300"

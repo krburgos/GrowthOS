@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { OrderImportWizard } from "@/components/growth-mission/order-import-wizard";
 import { ADVOCATE_DASH_SLUG } from "@/lib/advocate-dash/targets";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { HOURS_EDIT_ROLES } from "@/lib/growth-mission/hours";
+import { ORDER_IMPORT_ROLES } from "@/lib/growth-mission/order-import";
 import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
 
 export const metadata: Metadata = { title: "Import Mission Orders — GrowthMission" };
@@ -15,8 +15,8 @@ export const metadata: Metadata = { title: "Import Mission Orders — GrowthMiss
  * Import Mission Orders onto one Mission Card (client-confirmed,
  * 2026-10-20, approved mockup "Import Mission Orders"). Reached from the
  * Import button on that card's Mission Orders title bar; there is no
- * import on Headquarters or the Command Center. Only the roles that can
- * issue orders get here.
+ * import on Headquarters or the Command Center. CRO Admin only, for now
+ * (client-confirmed, 2026-10-22); anyone else is sent back to the card.
  */
 export default async function ImportMissionOrdersPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -25,7 +25,7 @@ export default async function ImportMissionOrdersPage({ params }: { params: Prom
 
   const step = PLAYBOOK_STEPS.find((s) => s.slug === slug);
   if (!step || slug === ADVOCATE_DASH_SLUG) notFound();
-  if (!HOURS_EDIT_ROLES.includes(user.role)) redirect(`/growth-mission/${slug}`);
+  if (!ORDER_IMPORT_ROLES.includes(user.role)) redirect(`/growth-mission/${slug}`);
 
   return (
     <main className="mx-auto w-full max-w-[1440px] flex-1 p-6 md:p-8">

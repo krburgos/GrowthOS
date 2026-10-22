@@ -1,6 +1,6 @@
 import { ADVOCATE_DASH_SLUG } from "@/lib/advocate-dash/targets";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
-import { HOURS_EDIT_ROLES } from "@/lib/growth-mission/hours";
+import { ORDER_IMPORT_ROLES } from "@/lib/growth-mission/order-import";
 import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
 import { getMemberTaskLoad, getTasksForStep } from "@/lib/growth-mission/queries";
 import { parseImportFile, type ParsedFile } from "@/lib/import/parse";
@@ -19,10 +19,9 @@ export interface OrderImportContext {
 }
 
 /**
- * What both import routes need, or the response to send instead. Only the
- * roles that can issue Mission Orders may import them (the same set the
- * growth_mission_tasks insert policy allows), and only onto a real Mission
- * Card with orders — AdvocateDash runs on drop-by targets.
+ * What both import routes need, or the response to send instead. Only CRO
+ * Admin may import (ORDER_IMPORT_ROLES, 2026-10-22), and only onto a real
+ * Mission Card with orders — AdvocateDash runs on drop-by targets.
  */
 export async function loadOrderImport(
   slug: string,
@@ -30,8 +29,8 @@ export async function loadOrderImport(
 ): Promise<{ ctx: OrderImportContext } | { error: string; status: number }> {
   const user = await getCurrentUser();
   if (!user || !user.account_id) return { error: "Unauthorized", status: 401 };
-  if (!HOURS_EDIT_ROLES.includes(user.role)) {
-    return { error: "You are not authorized to import mission orders.", status: 403 };
+  if (!ORDER_IMPORT_ROLES.includes(user.role)) {
+    return { error: "Only CRO Leader admins can import mission orders.", status: 403 };
   }
   if (slug === ADVOCATE_DASH_SLUG || !PLAYBOOK_STEPS.some((s) => s.slug === slug)) {
     return { error: "That Mission Card doesn't take mission orders.", status: 404 };

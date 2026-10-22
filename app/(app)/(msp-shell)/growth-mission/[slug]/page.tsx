@@ -34,6 +34,7 @@ import { CallDesk } from "@/components/sdr/call-desk";
 import { CAMPAIGN_EDIT_ROLES, EMAIL_CAMPAIGNING_SLUG, getCampaignRows } from "@/lib/campaigns/queries";
 import { ASSIGN_LIST_ROLES, SDR_OUTREACH_SLUG, TARGET_EDIT_ROLES, VIEW_ANY_QUEUE_ROLES } from "@/lib/sdr/desk";
 import { getSdrDesk } from "@/lib/sdr/queries";
+import { ORDER_IMPORT_ROLES } from "@/lib/growth-mission/order-import";
 
 /** Who can log calls: the roles that may add activities (Backend Schema §2). */
 const LOG_CALL_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor", "partner"];
@@ -267,6 +268,7 @@ export default async function GrowthMissionStepPage({
               memberLoad={memberLoad}
               canEdit={canAuthorTasks}
               isCroLeader={canEdit}
+              canImport={ORDER_IMPORT_ROLES.includes(user.role)}
               openOrderId={openOrderId}
               openNew={issue === "1"}
               files={files}
