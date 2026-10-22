@@ -1,5 +1,6 @@
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
-export const DEFAULT_PAGE_SIZE = 25;
+/** Client-confirmed (2026-10-22): every table starts at 10 rows. */
+export const DEFAULT_PAGE_SIZE = 10;
 
 /**
  * Client-confirmed (2026-09-15) — shared page/pageSize parsing for every

@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   Columns3,
+  GripVertical,
   ListChecks,
   Link2,
   Mail,
@@ -21,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { Children, isValidElement, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
@@ -177,6 +178,62 @@ const BODY_ORDER: ColumnKey[] = [
   "bounced",
 ];
 
+/**
+ * Column order (client-confirmed, 2026-10-22, approved mockup "Contacts
+ * Filters"): every heading after Full Name can be dragged left or right;
+ * the checkbox and Full Name stay pinned first. The order persists per
+ * browser like the visible columns and widths, and Columns › Reset column
+ * order puts it back.
+ */
+type OrderKey = ColumnKey | "email";
+
+const DEFAULT_ORDER: OrderKey[] = ["linkedin", "email", ...BODY_ORDER];
+const ORDER_STORAGE_KEY = "growthmission.contacts.columnOrder";
+
+function loadOrder(): OrderKey[] {
+  try {
+    const raw = window.localStorage.getItem(ORDER_STORAGE_KEY);
+    if (!raw) return DEFAULT_ORDER;
+    const saved = (JSON.parse(raw) as string[]).filter((k): k is OrderKey => (DEFAULT_ORDER as string[]).includes(k));
+    // Columns added since this order was saved go at the end.
+    return [...new Set([...saved, ...DEFAULT_ORDER])];
+  } catch {
+    return DEFAULT_ORDER;
+  }
+}
+
+const HEADINGS: Record<OrderKey, { label: string; icon?: ReactNode; right?: boolean; center?: boolean }> = {
+  linkedin: { label: "Person LinkedIn", icon: <LinkedInLogo className="size-3.5" /> },
+  email: { label: "Email", icon: <Mail className="size-3.5" /> },
+  title: { label: "Title", icon: <Briefcase className="size-3.5" /> },
+  status: { label: "Contact Status", icon: <Tag className="size-3.5" /> },
+  score: { label: "Score", icon: <Star className="size-3.5" /> },
+  temp: { label: "Temp", icon: <Thermometer className="size-3.5" /> },
+  pv: { label: "Prospect Value", right: true },
+  ov: { label: "Opportunities Value", right: true },
+  employees: { label: "Employees", icon: <Users className="size-3.5" />, right: true },
+  lists: { label: "Lists", icon: <ListChecks className="size-3.5" /> },
+  company: { label: "Company", icon: <Building2 className="size-3.5" /> },
+  companyLinkedin: { label: "Company LinkedIn", icon: <Link2 className="size-3.5" /> },
+  cphone: { label: "Company Phone", icon: <Phone className="size-3.5" /> },
+  mobile: { label: "Mobile Phone", icon: <Phone className="size-3.5" /> },
+  addr: { label: "Company Address", icon: <MapPin className="size-3.5" /> },
+  city: { label: "Company City", icon: <MapPin className="size-3.5" /> },
+  state: { label: "Company State", icon: <MapPin className="size-3.5" /> },
+  subscribed: { label: "Subscribed", center: true },
+  bounced: { label: "Bounced", right: true },
+};
+
+/** Puts a row's tagged cells (`col`) in the current column order. */
+function OrderedCells({ order, children }: { order: OrderKey[]; children: ReactNode }) {
+  const cells = Children.toArray(children).filter(isValidElement) as React.ReactElement<{ col?: OrderKey }>[];
+  const at = (el: React.ReactElement<{ col?: OrderKey }>) => {
+    const i = el.props.col ? order.indexOf(el.props.col) : -1;
+    return i < 0 ? order.length : i;
+  };
+  return <>{[...cells].sort((a, b) => at(a) - at(b))}</>;
+}
+
 const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }[] }[] = [
   {
     label: "Contact",
@@ -303,9 +360,12 @@ export function ContactsDataTable({
   scope,
   currentListId,
   toolbar,
+  belowToolbar,
 }: {
   /** Views and search, drawn on the table's own toolbar row (Contacts page). */
   toolbar?: ReactNode;
+  /** A full-width row under the toolbar: the active filter chips (Contacts page). */
+  belowToolbar?: ReactNode;
   contacts: ContactListRow[];
   totalCount: number;
   accountId: string;
@@ -361,13 +421,53 @@ export function ContactsDataTable({
       }),
   });
 
+  const [order, setOrder] = useState<OrderKey[]>(DEFAULT_ORDER);
+  const [orderHydrated, setOrderHydrated] = useState(false);
+  useEffect(() => {
+    setOrder(loadOrder());
+    setOrderHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!orderHydrated) return;
+    try {
+      window.localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(order));
+    } catch {
+      // Storage blocked: the order still applies for this visit.
+    }
+  }, [order, orderHydrated]);
+  const orderChanged = order.some((k, i) => k !== DEFAULT_ORDER[i]);
+
+  // Which heading is being dragged, and where it would land.
+  const [dragging, setDragging] = useState<OrderKey | null>(null);
+  const [dropAt, setDropAt] = useState<{ key: OrderKey; after: boolean } | null>(null);
+  const dragFor = (key: OrderKey, label: string): DragProps => ({
+    label,
+    dragging: dragging === key,
+    dropSide: dropAt?.key === key ? (dropAt.after ? "after" : "before") : null,
+    onStart: () => setDragging(key),
+    onOver: (after) => {
+      if (dragging && dragging !== key) setDropAt({ key, after });
+    },
+    onDrop: () => {
+      if (dragging && dropAt && dragging !== dropAt.key) {
+        setOrder((prev) => {
+          const rest = prev.filter((k) => k !== dragging);
+          const i = rest.indexOf(dropAt.key) + (dropAt.after ? 1 : 0);
+          return [...rest.slice(0, i), dragging, ...rest.slice(i)];
+        });
+      }
+      setDragging(null);
+      setDropAt(null);
+    },
+    onEnd: () => {
+      setDragging(null);
+      setDropAt(null);
+    },
+  });
+
   const show = (key: ColumnKey) => visibleColumns.has(key);
-  const widthOrder: WidthKey[] = [
-    "name",
-    ...(show("linkedin") ? (["linkedin"] as const) : []),
-    "email",
-    ...BODY_ORDER.filter(show),
-  ];
+  const visibleOrder = order.filter((k) => k === "email" || show(k));
+  const widthOrder: WidthKey[] = ["name", ...visibleOrder];
   const tableWidth = SELECT_WIDTH + widthOrder.reduce((sum, k) => sum + widthOf(k), 0);
   const toggleColumn = (key: ColumnKey, checked: boolean) => {
     setVisibleColumns((prev) => {
@@ -545,10 +645,15 @@ export function ContactsDataTable({
               <DropdownMenuItem disabled={Object.keys(widths).length === 0} onSelect={() => setWidths({})}>
                 Reset column widths
               </DropdownMenuItem>
+              <DropdownMenuItem disabled={!orderChanged} onSelect={() => setOrder(DEFAULT_ORDER)}>
+                Reset column order
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
+
+      {belowToolbar}
 
       {/* Below lg the table becomes one card per contact (client-confirmed,
           2026-10-05). Eighteen toggleable columns cannot be made good at
@@ -599,99 +704,15 @@ export function ContactsDataTable({
               <Th sticky="left-11" className="border-r border-primary-800" resize={resizeFor("name", "Full Name")}>
                 <User className="size-3.5" /> Full Name
               </Th>
-              {show("linkedin") && (
-                <Th resize={resizeFor("linkedin", "Person LinkedIn")}>
-                  <LinkedInLogo className="size-3.5" /> Person LinkedIn
-                </Th>
-              )}
-              <Th resize={resizeFor("email", "Email")}>
-                <Mail className="size-3.5" /> Email
-              </Th>
-              {show("title") && (
-                <Th resize={resizeFor("title", "Title")}>
-                  <Briefcase className="size-3.5" /> Title
-                </Th>
-              )}
-              {show("status") && (
-                <Th resize={resizeFor("status", "Contact Status")}>
-                  <Tag className="size-3.5" /> Contact Status
-                </Th>
-              )}
-              {show("score") && (
-                <Th resize={resizeFor("score", "Score")}>
-                  <Star className="size-3.5" /> Score
-                </Th>
-              )}
-              {show("temp") && (
-                <Th resize={resizeFor("temp", "Temp")}>
-                  <Thermometer className="size-3.5" /> Temp
-                </Th>
-              )}
-              {show("pv") && (
-                <Th right resize={resizeFor("pv", "Prospect Value")}>
-                  Prospect Value
-                </Th>
-              )}
-              {show("ov") && (
-                <Th right resize={resizeFor("ov", "Opportunities Value")}>
-                  Opportunities Value
-                </Th>
-              )}
-              {show("employees") && (
-                <Th right resize={resizeFor("employees", "Employees")}>
-                  <Users className="size-3.5" /> Employees
-                </Th>
-              )}
-              {show("lists") && (
-                <Th resize={resizeFor("lists", "Lists")}>
-                  <ListChecks className="size-3.5" /> Lists
-                </Th>
-              )}
-              {show("company") && (
-                <Th resize={resizeFor("company", "Company")}>
-                  <Building2 className="size-3.5" /> Company
-                </Th>
-              )}
-              {show("companyLinkedin") && (
-                <Th resize={resizeFor("companyLinkedin", "Company LinkedIn")}>
-                  <Link2 className="size-3.5" /> Company LinkedIn
-                </Th>
-              )}
-              {show("cphone") && (
-                <Th resize={resizeFor("cphone", "Company Phone")}>
-                  <Phone className="size-3.5" /> Company Phone
-                </Th>
-              )}
-              {show("mobile") && (
-                <Th resize={resizeFor("mobile", "Mobile Phone")}>
-                  <Phone className="size-3.5" /> Mobile Phone
-                </Th>
-              )}
-              {show("addr") && (
-                <Th resize={resizeFor("addr", "Company Address")}>
-                  <MapPin className="size-3.5" /> Company Address
-                </Th>
-              )}
-              {show("city") && (
-                <Th resize={resizeFor("city", "Company City")}>
-                  <MapPin className="size-3.5" /> Company City
-                </Th>
-              )}
-              {show("state") && (
-                <Th resize={resizeFor("state", "Company State")}>
-                  <MapPin className="size-3.5" /> Company State
-                </Th>
-              )}
-              {show("subscribed") && (
-                <Th center resize={resizeFor("subscribed", "Subscribed")}>
-                  Subscribed
-                </Th>
-              )}
-              {show("bounced") && (
-                <Th right resize={resizeFor("bounced", "Bounced")}>
-                  Bounced
-                </Th>
-              )}
+              {visibleOrder.map((k) => {
+                const h = HEADINGS[k];
+                return (
+                  <Th key={k} right={h.right} center={h.center} resize={resizeFor(k, h.label)} drag={dragFor(k, h.label)}>
+                    {h.icon}
+                    {h.label}
+                  </Th>
+                );
+              })}
               <th aria-hidden="true" className="sticky top-0 z-20 bg-primary-900" />
             </tr>
           </thead>
@@ -763,9 +784,10 @@ export function ContactsDataTable({
                       </div>
                     )}
                   </Td>
+                  <OrderedCells order={visibleOrder}>
                   {show("linkedin") &&
                     (editing && draft ? (
-                      <Td>
+                      <Td col="linkedin">
                         <Input
                           placeholder="https://linkedin.com/in/…"
                           value={draft.linkedin_url}
@@ -776,7 +798,7 @@ export function ContactsDataTable({
                         />
                       </Td>
                     ) : (
-                      <Td>
+                      <Td col="linkedin">
                         {c.linkedin_url ? (
                           <a
                             href={c.linkedin_url}
@@ -792,7 +814,7 @@ export function ContactsDataTable({
                         )}
                       </Td>
                     ))}
-                  <Td>
+                  <Td col="email">
                     {editing && draft ? (
                       <Input
                         type="email"
@@ -811,7 +833,7 @@ export function ContactsDataTable({
                   </Td>
                   {show("title") &&
                     (editing && draft ? (
-                      <Td>
+                      <Td col="title">
                         <Input
                           value={draft.title}
                           onChange={(e) => setDraft({ ...draft, title: e.target.value })}
@@ -821,11 +843,11 @@ export function ContactsDataTable({
                         />
                       </Td>
                     ) : (
-                      <Td title={c.title}>{c.title ?? "—"}</Td>
+                      <Td col="title" title={c.title}>{c.title ?? "—"}</Td>
                     ))}
                   {show("status") &&
                     (editing && draft ? (
-                      <Td onDoubleClick={(e) => e.stopPropagation()}>
+                      <Td col="status" onDoubleClick={(e) => e.stopPropagation()}>
                         <Select value={draft.status_id} onValueChange={(v) => setDraft({ ...draft, status_id: v })}>
                           <SelectTrigger className="h-8 w-full min-w-0">
                             <SelectValue />
@@ -840,7 +862,7 @@ export function ContactsDataTable({
                         </Select>
                       </Td>
                     ) : (
-                      <Td>
+                      <Td col="status">
                         {c.contact_statuses && (
                           <StatusPill name={c.contact_statuses.name} color={c.contact_statuses.color} />
                         )}
@@ -848,7 +870,7 @@ export function ContactsDataTable({
                     ))}
                   {show("score") &&
                     (editing && draft ? (
-                      <Td>
+                      <Td col="score">
                         <Input
                           type="number"
                           min={0}
@@ -861,7 +883,7 @@ export function ContactsDataTable({
                         />
                       </Td>
                     ) : (
-                      <Td>
+                      <Td col="score">
                         {c.score != null ? (
                           <div className="flex items-center gap-2">
                             <span className="h-1.5 w-12 overflow-hidden rounded-full bg-neutral-100">
@@ -879,7 +901,7 @@ export function ContactsDataTable({
                     ))}
                   {show("temp") &&
                     (editing && draft ? (
-                      <Td onDoubleClick={(e) => e.stopPropagation()}>
+                      <Td col="temp" onDoubleClick={(e) => e.stopPropagation()}>
                         <Select
                           value={draft.temperature}
                           onValueChange={(v) => setDraft({ ...draft, temperature: v as ContactDraft["temperature"] })}
@@ -895,7 +917,7 @@ export function ContactsDataTable({
                         </Select>
                       </Td>
                     ) : (
-                      <Td>
+                      <Td col="temp">
                         {c.temperature ? (
                           <span className="inline-flex items-center gap-1.5 text-body-sm text-neutral-700">
                             <span
@@ -910,25 +932,25 @@ export function ContactsDataTable({
                       </Td>
                     ))}
                   {show("pv") && (
-                    <Td className="text-right font-semibold tabular-nums text-primary-900">
+                    <Td col="pv" className="text-right font-semibold tabular-nums text-primary-900">
                       {c.companies ? usd.format(prospectValue(c.companies.company_size)) : "—"}
                     </Td>
                   )}
                   {show("ov") && (
-                    <Td className="text-right tabular-nums text-neutral-600">
+                    <Td col="ov" className="text-right tabular-nums text-neutral-600">
                       {c.companies ? usd.format(opportunitiesValue(c.companies.company_size)) : "—"}
                     </Td>
                   )}
                   {show("employees") && (
-                    <Td className="text-right tabular-nums">{employeesOf(c.companies?.company_size) || "—"}</Td>
+                    <Td col="employees" className="text-right tabular-nums">{employeesOf(c.companies?.company_size) || "—"}</Td>
                   )}
                   {show("lists") && (
-                    <Td onDoubleClick={(e) => e.stopPropagation()}>
+                    <Td col="lists" onDoubleClick={(e) => e.stopPropagation()}>
                       <ListsCell contactId={c.id} accountId={accountId} lists={c.lists ?? []} onChanged={() => router.refresh()} />
                     </Td>
                   )}
                   {show("company") && (
-                    <Td title={c.companies?.name}>
+                    <Td col="company" title={c.companies?.name}>
                       {c.companies?.name ? (
                         <span className="font-medium text-neutral-800">{c.companies.name}</span>
                       ) : (
@@ -937,7 +959,7 @@ export function ContactsDataTable({
                     </Td>
                   )}
                   {show("companyLinkedin") && (
-                    <Td>
+                    <Td col="companyLinkedin">
                       {c.companies?.linkedin_url ? (
                         <a
                           href={c.companies.linkedin_url}
@@ -953,10 +975,10 @@ export function ContactsDataTable({
                       )}
                     </Td>
                   )}
-                  {show("cphone") && <Td title={c.companies?.phone}>{c.companies?.phone ?? "—"}</Td>}
+                  {show("cphone") && <Td col="cphone" title={c.companies?.phone}>{c.companies?.phone ?? "—"}</Td>}
                   {show("mobile") &&
                     (editing && draft ? (
-                      <Td>
+                      <Td col="mobile">
                         <Input
                           value={draft.phone}
                           onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
@@ -966,14 +988,14 @@ export function ContactsDataTable({
                         />
                       </Td>
                     ) : (
-                      <Td title={c.phone}>{c.phone ?? "—"}</Td>
+                      <Td col="mobile" title={c.phone}>{c.phone ?? "—"}</Td>
                     ))}
-                  {show("addr") && <Td title={c.companies?.address_line1}>{c.companies?.address_line1 ?? "—"}</Td>}
-                  {show("city") && <Td title={c.companies?.city}>{c.companies?.city ?? "—"}</Td>}
-                  {show("state") && <Td title={c.companies?.state}>{c.companies?.state ?? "—"}</Td>}
+                  {show("addr") && <Td col="addr" title={c.companies?.address_line1}>{c.companies?.address_line1 ?? "—"}</Td>}
+                  {show("city") && <Td col="city" title={c.companies?.city}>{c.companies?.city ?? "—"}</Td>}
+                  {show("state") && <Td col="state" title={c.companies?.state}>{c.companies?.state ?? "—"}</Td>}
                   {show("subscribed") &&
                     (editing && draft ? (
-                      <Td onDoubleClick={(e) => e.stopPropagation()}>
+                      <Td col="subscribed" onDoubleClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           role="switch"
@@ -993,11 +1015,12 @@ export function ContactsDataTable({
                         </button>
                       </Td>
                     ) : (
-                      <Td className="text-center">
+                      <Td col="subscribed" className="text-center">
                         <Badge variant={c.email_opt_out ? "neutral" : "success"}>{c.email_opt_out ? "No" : "Yes"}</Badge>
                       </Td>
                     ))}
-                  {show("bounced") && <Td className="text-right tabular-nums text-neutral-400">0</Td>}
+                  {show("bounced") && <Td col="bounced" className="text-right tabular-nums text-neutral-400">0</Td>}
+                  </OrderedCells>
                   <td
                     aria-hidden="true"
                     className="border-b border-neutral-100 bg-white transition-colors group-hover:bg-neutral-50 group-data-[selected=true]:bg-secondary-50 group-data-[editing=true]:bg-secondary-50"
@@ -1114,6 +1137,17 @@ function ContactCard({
   );
 }
 
+interface DragProps {
+  label: string;
+  dragging: boolean;
+  /** Where the dragged column would land, drawn as a cyan edge. */
+  dropSide: "before" | "after" | null;
+  onStart: () => void;
+  onOver: (after: boolean) => void;
+  onDrop: () => void;
+  onEnd: () => void;
+}
+
 interface ResizeProps {
   label: string;
   width: number;
@@ -1190,6 +1224,7 @@ function Th({
   right,
   center,
   resize,
+  drag,
 }: {
   children: ReactNode;
   sticky?: "left-0" | "left-11";
@@ -1199,15 +1234,59 @@ function Th({
   center?: boolean;
   /** Makes the column resizable from its right edge. */
   resize?: ResizeProps;
+  /** Makes the heading draggable to move its column. */
+  drag?: DragProps;
 }) {
+  // A press that starts on the resize edge resizes; it must not also drag.
+  const fromResizeEdge = useRef(false);
   return (
     <th
+      draggable={!!drag}
+      title={drag ? `Drag to move ${drag.label}` : undefined}
+      onPointerDown={(e) => {
+        fromResizeEdge.current = !!(e.target as HTMLElement).closest('[role="separator"]');
+      }}
+      onDragStart={(e) => {
+        if (!drag || fromResizeEdge.current) {
+          e.preventDefault();
+          return;
+        }
+        e.dataTransfer.effectAllowed = "move";
+        try {
+          e.dataTransfer.setData("text/plain", drag.label);
+        } catch {
+          // Some browsers refuse custom data; the drag still works.
+        }
+        drag.onStart();
+      }}
+      onDragOver={(e) => {
+        if (!drag) return;
+        e.preventDefault();
+        const r = e.currentTarget.getBoundingClientRect();
+        drag.onOver(e.clientX > r.left + r.width / 2);
+      }}
+      onDrop={(e) => {
+        if (!drag) return;
+        e.preventDefault();
+        drag.onDrop();
+      }}
+      onDragEnd={() => drag?.onEnd()}
       className={cn(
         "group/th sticky top-0 z-20 overflow-hidden whitespace-nowrap bg-primary-900 px-4 py-4 text-left text-caption font-semibold tracking-wide text-white",
         sticky && `z-30 ${sticky}`,
+        drag && "cursor-grab active:cursor-grabbing",
+        drag?.dragging && "opacity-50",
+        drag?.dropSide === "before" && "shadow-[inset_3px_0_0_var(--color-secondary-500)]",
+        drag?.dropSide === "after" && "shadow-[inset_-3px_0_0_var(--color-secondary-500)]",
         className
       )}
     >
+      {drag && (
+        <GripVertical
+          aria-hidden="true"
+          className="absolute left-0.5 top-1/2 size-3.5 -translate-y-1/2 text-white/0 transition-colors group-hover/th:text-white/60"
+        />
+      )}
       <span
         className={cn(
           "flex min-w-0 items-center gap-2 [&>svg]:shrink-0 [&>svg]:text-white/70",
@@ -1229,6 +1308,8 @@ function Td({
   title,
   onDoubleClick,
 }: {
+  /** Which column this cell belongs to, read by OrderedCells. */
+  col?: OrderKey;
   children: ReactNode;
   sticky?: "left-0" | "left-11";
   className?: string;

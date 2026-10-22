@@ -5,7 +5,9 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { ContactsFilterButton } from "@/components/contacts/contacts-filter-panel";
 import { FilterField } from "@/components/ui/filter-bar";
+import type { RuleOptions } from "@/lib/contacts/filters";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +24,16 @@ export type ContactView = "all" | "mine" | "new" | "hot";
  * Client-confirmed (2026-10-15, "Table Filters"): both controls are named,
  * "Show" and "Search", like every table's filter row.
  */
-export function ContactsToolbar({ view, counts }: { view: ContactView; counts: Record<ContactView, number> }) {
+export function ContactsToolbar({
+  view,
+  counts,
+  filterOptions,
+}: {
+  view: ContactView;
+  counts: Record<ContactView, number>;
+  /** The filter panel's choices (client-confirmed, 2026-10-22). */
+  filterOptions: RuleOptions;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -85,6 +96,7 @@ export function ContactsToolbar({ view, counts }: { view: ContactView; counts: R
           />
         </div>
       </FilterField>
+      <ContactsFilterButton options={filterOptions} />
     </div>
   );
 }

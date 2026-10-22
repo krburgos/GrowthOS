@@ -211,6 +211,8 @@ Tokens are encrypted application-side (AES-256-GCM, Node.js crypto, key from the
 
 ### 5.3 companies, contact_statuses, contacts
 
+**Client-confirmed addition (2026-10-22, App Flow §4.4 "Contacts Filters").** `companies.employee_count integer`, generated and stored from `company_size` (a plain whole number, else null), indexed on (`account_id`, `employee_count`), migration `20261022000002_companies_employee_count.sql`. It lets the Employee Size and Prospect Value filters (`lib/contacts/filters.ts`) narrow in the database. No grant or policy change.
+
 **Client-confirmed addition (2026-10-14, App Flow §4.4 "Contact Detail").** `contacts.notes_updated_at timestamptz` and `contacts.notes_updated_by uuid references users(id) on delete set null` record who last changed a contact's notes and when, for the Notes panel's "Last edited by" line. `stamp_contact_notes()` (before insert, and before update of `notes`) sets both whenever the notes text changes; the editor is `auth.uid()` when that user has a `users` row, otherwise null with the time still recorded. Notes written before this migration (`20261014000004_stage_entered_and_notes_stamp.sql`) show no line until next edited.
 
 ```
