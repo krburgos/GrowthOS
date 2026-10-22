@@ -13,10 +13,10 @@ import { cn } from "@/lib/utils";
  * header carries a Focus button that does the same.
  *
  * The view lives in the address (each section's `hash`), so Back works and
- * a focused view can be shared or bookmarked, and the last one chosen is
- * remembered in this browser under `storageKey` (one key per page, so each
- * Mission Card keeps its own). Sections stay mounted while hidden, so their
- * filters survive switching.
+ * a focused view can be shared or bookmarked. Every page opens on All
+ * sections (client-confirmed, 2026-10-22; it used to reopen on the last
+ * view chosen), unless its address names a section. Sections stay mounted
+ * while hidden, so their filters survive switching.
  */
 export interface SwitcherSection {
   view: string;
@@ -36,12 +36,10 @@ export function useSectionView(): string | null {
 
 export function SectionSwitcher({
   sections,
-  storageKey,
   label,
   children,
 }: {
   sections: SwitcherSection[];
-  storageKey: string;
   /** Names the tab list for screen readers, e.g. "Command Center sections". */
   label: string;
   children: ReactNode;
@@ -51,19 +49,10 @@ export function SectionSwitcher({
 
   const viewFromHash = useCallback((hash: string) => sections.find((s) => s.hash === hash)?.view ?? null, [sections]);
 
-  // On arrival: the address wins, then the last view chosen here.
+  // On arrival: a section named in the address, otherwise All sections.
   useEffect(() => {
     const fromHash = viewFromHash(window.location.hash);
-    if (fromHash) {
-      setView(fromHash);
-      return;
-    }
-    try {
-      const saved = window.localStorage.getItem(storageKey);
-      if (saved && (saved === "all" || sections.some((s) => s.view === saved))) setView(saved);
-    } catch {
-      // Storage blocked: start on every section.
-    }
+    if (fromHash) setView(fromHash);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -83,14 +72,9 @@ export function SectionSwitcher({
       const hash = sections.find((s) => s.view === v)?.hash ?? "";
       const url = window.location.pathname + window.location.search + hash;
       window.history.pushState(null, "", url);
-      try {
-        window.localStorage.setItem(storageKey, v);
-      } catch {
-        // Storage blocked: the address still carries the view.
-      }
       window.scrollTo({ top: 0 });
     },
-    [sections, storageKey]
+    [sections]
   );
 
   const tabs: { view: string; label: string; count?: number }[] = [{ view: "all", label: "All sections" }, ...sections];

@@ -198,7 +198,6 @@ export default async function CroDashboardPage() {
       {isCroAdmin ? (
         <SectionSwitcher
           label="CRO Leader dashboard sections"
-          storageKey="growthmission.croDashboard.view"
           sections={[
             { view: "clients", label: "Clients", hash: "#clients", count: accounts.length },
             { view: "team", label: "CRO Leader Team", hash: "#team", count: team.filter((t) => !t.archived_at).length },

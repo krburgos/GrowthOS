@@ -161,7 +161,7 @@ export default async function GrowthMissionStepPage({
           Workspaces" v3): every Mission Card gets the Command Center's
           switcher, for the sections it has. Each card remembers its own
           last view. */}
-      <SectionSwitcher label="Mission Card sections" storageKey={`growthmission.missionCard.${step.slug}.view`} sections={sections}>
+      <SectionSwitcher label="Mission Card sections" sections={sections}>
       {isAdvocateDash ? (
         <>
           {/* No hours panel and no report control: this workstream is

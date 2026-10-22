@@ -94,7 +94,6 @@ export default async function GrowthMissionPage() {
           Focus"): every section, or one of them full width. */}
       <SectionSwitcher
         label="Command Center sections"
-        storageKey="growthmission.commandCenter.view"
         sections={[
           { view: "capacity", label: "Mission Capacity", hash: "#mission-capacity" },
           { view: "progress", label: "Mission Progress", hash: "#mission-progress" },
