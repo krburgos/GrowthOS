@@ -48,6 +48,10 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { section: "dashboard", label: "Headquarters", href: "/headquarters", icon: Landmark, group: "mission" },
   { section: "growthMission", label: "Command Center", href: "/growth-mission", icon: LayoutGrid, group: "mission" },
+  // Reports, renamed Intel and moved under Mission (client-confirmed,
+  // 2026-10-22). The Outreach section is gone: Campaigns moved onto the
+  // Email Campaigning Mission Card, leaving Reports on its own there.
+  { section: "reports", label: "Intel", href: "/reports", icon: BarChart3, group: "mission" },
   {
     section: "myVisits",
     label: "My Visits",
@@ -60,9 +64,6 @@ export const NAV_ITEMS: NavItem[] = [
   { section: "companies", label: "Companies", href: "/companies", icon: Building2, group: "crm" },
   { section: "opportunities", label: "Opportunities", href: "/opportunities", icon: Target, group: "crm" },
   { section: "lists", label: "Lists", href: "/lists", icon: ListChecks, group: "crm" },
-  // No Campaigns item (client-confirmed, 2026-10-22): campaigns live on the
-  // Email Campaigning Mission Card, reached from the Command Center.
-  { section: "reports", label: "Reports", href: "/reports", icon: BarChart3, group: "outreach" },
   {
     section: "settings",
     label: "Settings",
@@ -78,11 +79,10 @@ export const NAV_ITEMS: NavItem[] = [
  * "Navigation and Credits" B). Settings has no heading: it sits on its own
  * at the foot of the rail, above the collapse toggle.
  */
-export type NavGroup = "mission" | "crm" | "outreach" | "settings";
+export type NavGroup = "mission" | "crm" | "settings";
 const GROUP_LABEL: Record<Exclude<NavGroup, "settings">, string> = {
   mission: "Mission",
   crm: "CRM",
-  outreach: "Outreach",
 };
 
 const SIDEBAR_COLLAPSED_KEY = "growthmission.sidebar.collapsed";

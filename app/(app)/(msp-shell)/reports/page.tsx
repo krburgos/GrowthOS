@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { currentQuarter, parseQuarterKey } from "@/lib/growth-mission/hours";
 import { getReportsData } from "@/lib/reports/data";
 
-export const metadata: Metadata = { title: "Reports — GrowthMission" };
+export const metadata: Metadata = { title: "Intel — GrowthMission" };
 
 /**
  * PRD §6.7, App Flow §4.8 (H1) — one shared reporting view for every role.

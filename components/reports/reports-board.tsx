@@ -82,7 +82,7 @@ export function ReportsBoard({ data }: { data: ReportsData }) {
     <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-6 md:p-8">
       <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
         <div>
-          <h1 className="text-h1 text-primary-900">Reports</h1>
+          <h1 className="text-h1 text-primary-900">Intel</h1>
           <p className="text-body text-neutral-500">How the account is doing, quarter by quarter, from real data.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
