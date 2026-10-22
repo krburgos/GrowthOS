@@ -20,7 +20,7 @@ export const IMPORT_FIELDS: ImportField[] = [
   { key: "last_name", label: "Last Name", required: false, synonyms: ["last name", "lastname", "surname", "family name"] },
   { key: "email", label: "Email", required: true, synonyms: ["email", "email address"] },
   { key: "title", label: "Title", required: false, synonyms: ["title", "job title"] },
-  { key: "phone", label: "Mobile Phone", required: false, synonyms: ["phone", "phone number", "mobile phone", "mobile", "cell"] },
+  { key: "phone", label: "Work Phone", required: false, synonyms: ["phone", "phone number", "work phone", "office phone", "direct phone", "business phone", "mobile phone", "mobile", "cell"] },
   { key: "status", label: "Status", required: false, synonyms: ["status"] },
   { key: "score", label: "Score", required: false, synonyms: ["score"] },
   { key: "temperature", label: "Temp", required: false, synonyms: ["temp", "temperature"] },

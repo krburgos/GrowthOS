@@ -253,7 +253,7 @@ export function ContactForm({
             {errors.email && <p className="mt-1 text-body-sm text-error-600">{errors.email.message}</p>}
           </div>
           <div>
-            <Label htmlFor="phone">Mobile phone</Label>
+            <Label htmlFor="phone">Work phone</Label>
             <Input id="phone" {...register("phone")} />
           </div>
           <div>

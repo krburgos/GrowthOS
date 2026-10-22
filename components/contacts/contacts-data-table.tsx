@@ -55,11 +55,12 @@ import { cn } from "@/lib/utils";
 
 /**
  * Client-confirmed redesign ("double-click a row to edit it inline,"
- * mockup review): only the contact's own fields are editable here —
- * Company-group columns live on the shared `companies` row and stay
- * read-only (already editable from Contact Detail's Company card),
- * since changing them from one contact's row would silently change
- * every other contact at that company too. Lists membership has its
+ * mockup review): originally only the contact's own fields were editable
+ * here, Company-group columns staying read-only because they live on the
+ * shared `companies` row. Superseded 2026-10-22 at the client's request:
+ * Employees, Company LinkedIn, Company Phone, Address, City and State edit
+ * too (see `company` below), and the save says it changed the company for
+ * everyone there. Company name stays read-only. Lists membership has its
  * own always-on popover (`ListsCell`, below) independent of row-edit
  * mode, since it's a relationship, not a plain field.
  */
@@ -73,6 +74,24 @@ interface ContactDraft {
   phone: string;
   linkedin_url: string;
   subscribed: boolean;
+  /**
+   * The contact's company fields (client-confirmed, 2026-10-22, reversing
+   * the read-only rule above at the client's request). They live on the
+   * shared `companies` row, so saving changes them for every contact at
+   * that company; each input's tooltip and the save message say so. Null when the
+   * contact has no company. The company's name stays read-only: renaming
+   * it from one contact is more likely a mistake than a rename.
+   */
+  company: CompanyDraft | null;
+}
+
+interface CompanyDraft {
+  company_size: string;
+  linkedin_url: string;
+  phone: string;
+  address_line1: string;
+  city: string;
+  state: string;
 }
 
 /**
@@ -219,7 +238,7 @@ const HEADINGS: Record<OrderKey, { label: string; icon?: ReactNode; right?: bool
   company: { label: "Company", icon: <Building2 className="size-3.5" /> },
   companyLinkedin: { label: "Company LinkedIn", icon: <Link2 className="size-3.5" /> },
   cphone: { label: "Company Phone", icon: <Phone className="size-3.5" /> },
-  mobile: { label: "Mobile Phone", icon: <Phone className="size-3.5" /> },
+  mobile: { label: "Work Phone", icon: <Phone className="size-3.5" /> },
   addr: { label: "Company Address", icon: <MapPin className="size-3.5" /> },
   city: { label: "Company City", icon: <MapPin className="size-3.5" /> },
   state: { label: "Company State", icon: <MapPin className="size-3.5" /> },
@@ -246,7 +265,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
       { key: "score", label: "Score" },
       { key: "temp", label: "Temp" },
       { key: "lists", label: "Lists" },
-      { key: "mobile", label: "Mobile Phone" },
+      { key: "mobile", label: "Work Phone" },
       { key: "linkedin", label: "Person LinkedIn" },
     ],
   },
@@ -320,7 +339,7 @@ function loadVisibleColumns(): Set<ColumnKey> {
  * Client-confirmed redesign, modeled on a reference CRM's Contacts
  * table: every requested column (Email, Full Name, Title, Contact
  * Status, Score, Temp, Employees, Lists, Company, Company Phone,
- * Mobile Phone, LinkedIn, Company Address 1, Company City, Company
+ * Work Phone (was Mobile Phone), LinkedIn, Company Address 1, Company City, Company
  * State, Subscribed, Bounced), horizontally scrollable rather than
  * wrapping, no per-row Actions column — every mutation happens through
  * the bulk toolbar instead. Shared between the All Contacts view and a
@@ -536,8 +555,39 @@ export function ContactsDataTable({
       phone: c.phone ?? "",
       linkedin_url: c.linkedin_url ?? "",
       subscribed: !c.email_opt_out,
+      company: c.company_id && c.companies ? companyDraftOf(c) : null,
     });
   };
+
+  const companyDraftOf = (c: ContactListRow): CompanyDraft => ({
+    company_size: c.companies?.company_size ?? "",
+    linkedin_url: c.companies?.linkedin_url ?? "",
+    phone: c.companies?.phone ?? "",
+    address_line1: c.companies?.address_line1 ?? "",
+    city: c.companies?.city ?? "",
+    state: c.companies?.state ?? "",
+  });
+
+  /** One company field while the row is being edited. */
+  const companyInput = (field: keyof CompanyDraft, placeholder: string, numeric = false) =>
+    draft?.company ? (
+      <Input
+        value={draft.company[field]}
+        inputMode={numeric ? "numeric" : undefined}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        title={`Changes this for everyone at ${contacts.find((x) => x.id === editingId)?.companies?.name ?? "this company"}`}
+        onChange={(e) =>
+          setDraft({
+            ...draft,
+            company: { ...draft.company!, [field]: numeric ? e.target.value.replace(/\D/g, "").slice(0, 9) : e.target.value },
+          })
+        }
+        onKeyDown={handleDraftKeyDown}
+        onDoubleClick={(e) => e.stopPropagation()}
+        className={cn("h-8 w-full min-w-0", numeric && "text-right tabular-nums")}
+      />
+    ) : null;
 
   const cancelEdit = () => {
     setEditingId(null);
@@ -568,13 +618,41 @@ export function ContactsDataTable({
         email_opt_out: !draft.subscribed,
       })
       .eq("id", editingId);
-    setSaving(false);
 
     if (error) {
+      setSaving(false);
       toast.error(getFriendlyErrorMessage(error));
       return;
     }
-    toast.success("Contact updated.");
+
+    // The company's own fields, only when one of them actually changed.
+    const row = contacts.find((x) => x.id === editingId);
+    const before = row && row.company_id && row.companies ? companyDraftOf(row) : null;
+    const after = draft.company;
+    let companyNote = "";
+    if (row?.company_id && before && after && (Object.keys(after) as (keyof CompanyDraft)[]).some((k) => after[k].trim() !== before[k].trim())) {
+      const blank = (v: string) => v.trim() || null;
+      const { error: companyError } = await supabase
+        .from("companies")
+        .update({
+          company_size: blank(after.company_size),
+          linkedin_url: blank(after.linkedin_url),
+          phone: blank(after.phone),
+          address_line1: blank(after.address_line1),
+          city: blank(after.city),
+          state: blank(after.state),
+        })
+        .eq("id", row.company_id);
+      if (companyError) {
+        setSaving(false);
+        toast.error(`Contact saved, but the company's details weren't: ${getFriendlyErrorMessage(companyError)}`);
+        router.refresh();
+        return;
+      }
+      companyNote = ` ${row.companies?.name ?? "The company"} updated for everyone there.`;
+    }
+    setSaving(false);
+    toast.success(`Contact updated.${companyNote}`);
     setEditingId(null);
     setDraft(null);
     router.refresh();
@@ -726,7 +804,8 @@ export function ContactsDataTable({
                 resize={resizeFor("name", "Full Name")}
                 sort={sortFor("name", "Full Name")}
               >
-                <User className="size-3.5" /> Full Name
+                <User className="size-3.5" />
+                <span className="min-w-0 truncate">Full Name</span>
               </Th>
               {visibleOrder.map((k) => {
                 const h = HEADINGS[k];
@@ -740,7 +819,7 @@ export function ContactsDataTable({
                     sort={k === "lists" ? undefined : sortFor(k, h.label)}
                   >
                     {h.icon}
-                    {h.label}
+                    <span className="min-w-0 truncate">{h.label}</span>
                   </Th>
                 );
               })}
@@ -972,9 +1051,12 @@ export function ContactsDataTable({
                       {c.companies ? usd.format(opportunitiesValue(c.companies.company_size)) : "—"}
                     </Td>
                   )}
-                  {show("employees") && (
-                    <Td col="employees" className="text-right tabular-nums">{employeesOf(c.companies?.company_size) || "—"}</Td>
-                  )}
+                  {show("employees") &&
+                    (editing && draft?.company ? (
+                      <Td col="employees">{companyInput("company_size", "Employees", true)}</Td>
+                    ) : (
+                      <Td col="employees" className="text-right tabular-nums">{employeesOf(c.companies?.company_size) || "—"}</Td>
+                    ))}
                   {show("lists") && (
                     <Td col="lists" onDoubleClick={(e) => e.stopPropagation()}>
                       <ListsCell contactId={c.id} accountId={accountId} lists={c.lists ?? []} onChanged={() => router.refresh()} />
@@ -989,7 +1071,10 @@ export function ContactsDataTable({
                       )}
                     </Td>
                   )}
-                  {show("companyLinkedin") && (
+                  {show("companyLinkedin") && editing && draft?.company && (
+                    <Td col="companyLinkedin">{companyInput("linkedin_url", "https://linkedin.com/company/…")}</Td>
+                  )}
+                  {show("companyLinkedin") && !(editing && draft?.company) && (
                     <Td col="companyLinkedin">
                       {c.companies?.linkedin_url ? (
                         <a
@@ -1006,7 +1091,12 @@ export function ContactsDataTable({
                       )}
                     </Td>
                   )}
-                  {show("cphone") && <Td col="cphone" title={c.companies?.phone}>{c.companies?.phone ?? "—"}</Td>}
+                  {show("cphone") &&
+                    (editing && draft?.company ? (
+                      <Td col="cphone">{companyInput("phone", "Company phone")}</Td>
+                    ) : (
+                      <Td col="cphone" title={c.companies?.phone}>{c.companies?.phone ?? "—"}</Td>
+                    ))}
                   {show("mobile") &&
                     (editing && draft ? (
                       <Td col="mobile">
@@ -1021,9 +1111,24 @@ export function ContactsDataTable({
                     ) : (
                       <Td col="mobile" title={c.phone}>{c.phone ?? "—"}</Td>
                     ))}
-                  {show("addr") && <Td col="addr" title={c.companies?.address_line1}>{c.companies?.address_line1 ?? "—"}</Td>}
-                  {show("city") && <Td col="city" title={c.companies?.city}>{c.companies?.city ?? "—"}</Td>}
-                  {show("state") && <Td col="state" title={c.companies?.state}>{c.companies?.state ?? "—"}</Td>}
+                  {show("addr") &&
+                    (editing && draft?.company ? (
+                      <Td col="addr">{companyInput("address_line1", "Street address")}</Td>
+                    ) : (
+                      <Td col="addr" title={c.companies?.address_line1}>{c.companies?.address_line1 ?? "—"}</Td>
+                    ))}
+                  {show("city") &&
+                    (editing && draft?.company ? (
+                      <Td col="city">{companyInput("city", "City")}</Td>
+                    ) : (
+                      <Td col="city" title={c.companies?.city}>{c.companies?.city ?? "—"}</Td>
+                    ))}
+                  {show("state") &&
+                    (editing && draft?.company ? (
+                      <Td col="state">{companyInput("state", "State")}</Td>
+                    ) : (
+                      <Td col="state" title={c.companies?.state}>{c.companies?.state ?? "—"}</Td>
+                    ))}
                   {show("subscribed") &&
                     (editing && draft ? (
                       <Td col="subscribed" onDoubleClick={(e) => e.stopPropagation()}>
@@ -1292,7 +1397,8 @@ function Th({
   return (
     <th
       draggable={!!drag}
-      title={drag ? `Drag to move ${drag.label}` : undefined}
+      // The full name too, since a narrow column cuts it short.
+      title={drag ? `${drag.label} · drag to move` : sort?.label}
       onPointerDown={(e) => {
         fromResizeEdge.current = !!(e.target as HTMLElement).closest('[role="separator"]');
       }}
@@ -1324,6 +1430,8 @@ function Th({
       className={cn(
         "group/th sticky top-0 z-20 overflow-hidden whitespace-nowrap bg-primary-900 px-4 py-4 text-left text-caption font-semibold tracking-wide text-white",
         sticky && `z-30 ${sticky}`,
+        // Keeps the sort arrow clear of the resize edge.
+        resize && "pr-5",
         drag && "cursor-grab active:cursor-grabbing",
         drag?.dragging && "opacity-50",
         drag?.dropSide === "before" && "shadow-[inset_3px_0_0_var(--color-secondary-500)]",

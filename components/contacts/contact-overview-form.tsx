@@ -256,7 +256,7 @@ export function ContactOverviewForm({
                 <Value>{values.email}</Value>
               )}
             </Row>
-            <Row icon={Phone} label="Mobile Phone" fieldId="phone">
+            <Row icon={Phone} label="Work Phone" fieldId="phone">
               {editing ? <Input id="phone" {...register("phone")} className="flex-1" /> : <Value>{values.phone}</Value>}
             </Row>
             <Row icon={Briefcase} label="Title" fieldId="title">
