@@ -138,8 +138,8 @@ export function AccountsList({ accounts, quarter }: { accounts: CroAccountRow[];
             <TableHeader variant="solid">
               <TableRow className="border-b-0 hover:bg-transparent">
                 <TableHead variant="solid">Account</TableHead>
-                <TableHead variant="solid">GrowthMission Solution Questionnaire</TableHead>
-                <TableHead variant="solid">GrowthMission Vision Board</TableHead>
+                <TableHead variant="solid">Solution Questionnaire</TableHead>
+                <TableHead variant="solid">Vision Board</TableHead>
                 <TableHead variant="solid">Hours this quarter</TableHead>
                 <TableHead variant="solid">Last activity</TableHead>
                 <TableHead variant="solid" />

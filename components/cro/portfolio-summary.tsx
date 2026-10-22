@@ -64,13 +64,13 @@ export function CroPortfolioSummary({
           <Tile
             value={String(questionnaires)}
             unit={`of ${total}`}
-            label="GrowthMission Solution Questionnaires complete"
+            label="Solution Questionnaires complete"
             barPct={share(questionnaires)}
           />
           <Tile
             value={String(visionBoards)}
             unit={`of ${total}`}
-            label="GrowthMission Vision Boards complete"
+            label="Vision Boards complete"
             barPct={share(visionBoards)}
           />
           <Tile

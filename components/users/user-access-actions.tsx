@@ -1,11 +1,18 @@
 "use client";
 
+import { MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type Action = "deactivate" | "reactivate" | "remove";
 
@@ -68,22 +75,32 @@ export function UserAccessActions({
     onDone();
   };
 
-  const link = "rounded-md px-2.5 py-1 text-caption font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40";
-
+  // One ⋯ menu per row, like the Arsenal's file menu (client-confirmed,
+  // 2026-10-22): two text buttons took a whole column.
   return (
-    <div className="flex justify-end gap-1">
-      {deactivated ? (
-        <button type="button" onClick={() => setAction("reactivate")} className={cn(link, "text-secondary-700 hover:bg-secondary-50")}>
-          Reactivate
-        </button>
-      ) : (
-        <button type="button" onClick={() => setAction("deactivate")} className={cn(link, "text-neutral-600 hover:bg-neutral-100")}>
-          Deactivate
-        </button>
-      )}
-      <button type="button" onClick={() => setAction("remove")} className={cn(link, "text-error-700 hover:bg-error-100")}>
-        Remove
-      </button>
+    <div className="flex justify-end">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Access for ${name}`}
+            className="flex size-7 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
+          >
+            <MoreHorizontal className="size-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {deactivated ? (
+            <DropdownMenuItem onSelect={() => setAction("reactivate")}>Reactivate</DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onSelect={() => setAction("deactivate")}>Deactivate</DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setAction("remove")} className="text-error-700">
+            Remove
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Dialog open={!!action} onOpenChange={(o) => !o && setAction(null)}>
         <DialogContent>
