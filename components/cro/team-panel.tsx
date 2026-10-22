@@ -39,7 +39,10 @@ export function CroTeamPanel({
   const [inviting, setInviting] = useState(false);
   const active = members.filter((m) => !m.archived_at);
   const count = (role: string) => active.filter((m) => m.role === role).length;
-  const summary = CRO_LEADER_ROLES.map((r) => `${count(r)} ${ROLE_LABELS[r]}`).join(" · ");
+  // "2 CRO Leader Admins · 1 CRO Leader Advisor", skipping roles nobody holds.
+  const summary = CRO_LEADER_ROLES.filter((r) => count(r) > 0)
+    .map((r) => `${count(r)} ${ROLE_LABELS[r]}${count(r) === 1 ? "" : "s"}`)
+    .join(" · ");
 
   return (
     <section className="overflow-hidden rounded-xl border border-primary-200 bg-white">

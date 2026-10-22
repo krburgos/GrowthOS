@@ -142,7 +142,7 @@ const DEFAULT_WIDTHS: Record<WidthKey, number> = {
   title: 220,
   status: 185,
   score: 125,
-  temp: 115,
+  temp: 130,
   pv: 175,
   ov: 210,
   employees: 155,

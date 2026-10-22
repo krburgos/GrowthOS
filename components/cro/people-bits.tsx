@@ -105,7 +105,11 @@ export function RoleSelect({
   };
   return (
     <Select value={person.role} onValueChange={(v) => change(v as UserRole)}>
-      <SelectTrigger className="h-8 w-48" disabled={pending} aria-label={`Role for ${person.full_name}`}>
+      <SelectTrigger
+        className="h-8 w-60 whitespace-nowrap [&>span]:truncate"
+        disabled={pending}
+        aria-label={`Role for ${person.full_name}`}
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
