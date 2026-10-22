@@ -570,6 +570,34 @@ export function ContactsDataTable({
     state: c.companies?.state ?? "",
   });
 
+  /**
+   * A company column while editing a contact with no company (client-
+   * confirmed, 2026-10-22): says why it can't be edited instead of a bare
+   * "—", with the reason in the tooltip. The Company cell adds the way to
+   * fix it, which is Contact Detail.
+   */
+  const noCompanyCell = (col: OrderKey, c: ContactListRow) => (
+    <Td col={col}>
+      <span
+        className="inline-flex items-center gap-1.5 text-caption text-neutral-400"
+        title={`${c.full_name} has no company linked, so company details can't be edited here. Add a company on their contact page.`}
+      >
+        No company
+        {col === "company" && (
+          <Link
+            href={`/contacts/${c.id}`}
+            className="font-semibold text-secondary-700 hover:underline"
+            // Leaving for Contact Detail keeps whatever was typed in the row.
+            onClick={() => void saveRef.current()}
+            onDoubleClick={(e) => e.stopPropagation()}
+          >
+            Add one
+          </Link>
+        )}
+      </span>
+    </Td>
+  );
+
   /** One company field while the row is being edited. */
   const companyInput = (field: keyof CompanyDraft, placeholder: string, numeric = false) =>
     draft?.company ? (
@@ -862,6 +890,8 @@ export function ContactsDataTable({
             {contacts.map((c) => {
               const selected = isSelected(c.id);
               const editing = editingId === c.id;
+              // Editing a contact with no company: the company columns say so.
+              const noCompany = editing && !!draft && !draft.company;
               return (
                 <tr
                   key={c.id}
@@ -1084,7 +1114,7 @@ export function ContactsDataTable({
                     </Td>
                   )}
                   {show("employees") &&
-                    (editing && draft?.company ? (
+                    (noCompany ? noCompanyCell("employees", c) : editing && draft?.company ? (
                       <Td col="employees">{companyInput("company_size", "Employees", true)}</Td>
                     ) : (
                       <Td col="employees" className="text-right tabular-nums">{employeesOf(c.companies?.company_size) || "—"}</Td>
@@ -1094,7 +1124,8 @@ export function ContactsDataTable({
                       <ListsCell contactId={c.id} accountId={accountId} lists={c.lists ?? []} onChanged={() => router.refresh()} />
                     </Td>
                   )}
-                  {show("company") && (
+                  {show("company") && noCompany && noCompanyCell("company", c)}
+                  {show("company") && !noCompany && (
                     <Td col="company" title={c.companies?.name}>
                       {c.companies?.name ? (
                         <span className="font-medium text-neutral-800">{c.companies.name}</span>
@@ -1106,7 +1137,8 @@ export function ContactsDataTable({
                   {show("companyLinkedin") && editing && draft?.company && (
                     <Td col="companyLinkedin">{companyInput("linkedin_url", "https://linkedin.com/company/…")}</Td>
                   )}
-                  {show("companyLinkedin") && !(editing && draft?.company) && (
+                  {show("companyLinkedin") && noCompany && noCompanyCell("companyLinkedin", c)}
+                  {show("companyLinkedin") && !noCompany && !(editing && draft?.company) && (
                     <Td col="companyLinkedin">
                       {c.companies?.linkedin_url ? (
                         <a
@@ -1124,7 +1156,7 @@ export function ContactsDataTable({
                     </Td>
                   )}
                   {show("cphone") &&
-                    (editing && draft?.company ? (
+                    (noCompany ? noCompanyCell("cphone", c) : editing && draft?.company ? (
                       <Td col="cphone">{companyInput("phone", "Company phone")}</Td>
                     ) : (
                       <Td col="cphone" title={c.companies?.phone}>{c.companies?.phone ?? "—"}</Td>
@@ -1144,19 +1176,19 @@ export function ContactsDataTable({
                       <Td col="mobile" title={c.phone}>{c.phone ?? "—"}</Td>
                     ))}
                   {show("addr") &&
-                    (editing && draft?.company ? (
+                    (noCompany ? noCompanyCell("addr", c) : editing && draft?.company ? (
                       <Td col="addr">{companyInput("address_line1", "Street address")}</Td>
                     ) : (
                       <Td col="addr" title={c.companies?.address_line1}>{c.companies?.address_line1 ?? "—"}</Td>
                     ))}
                   {show("city") &&
-                    (editing && draft?.company ? (
+                    (noCompany ? noCompanyCell("city", c) : editing && draft?.company ? (
                       <Td col="city">{companyInput("city", "City")}</Td>
                     ) : (
                       <Td col="city" title={c.companies?.city}>{c.companies?.city ?? "—"}</Td>
                     ))}
                   {show("state") &&
-                    (editing && draft?.company ? (
+                    (noCompany ? noCompanyCell("state", c) : editing && draft?.company ? (
                       <Td col="state">{companyInput("state", "State")}</Td>
                     ) : (
                       <Td col="state" title={c.companies?.state}>{c.companies?.state ?? "—"}</Td>
