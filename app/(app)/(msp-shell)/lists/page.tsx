@@ -63,8 +63,8 @@ export default async function ListsIndexPage({
     list_id: string;
     contact_id: string;
     contacts:
-      | { email_opt_out: boolean; companies: { id: string; company_size: string | null } | { id: string; company_size: string | null }[] | null }
-      | { email_opt_out: boolean; companies: { id: string; company_size: string | null } | { id: string; company_size: string | null }[] | null }[]
+      | { email_opt_out: boolean; email_bounced_at?: string | null; companies: { id: string; company_size: string | null } | { id: string; company_size: string | null }[] | null }
+      | { email_opt_out: boolean; email_bounced_at?: string | null; companies: { id: string; company_size: string | null } | { id: string; company_size: string | null }[] | null }[]
       | null;
   };
   const memberRows: MemberRow[] =
@@ -72,7 +72,7 @@ export default async function ListsIndexPage({
       ? await readAll<MemberRow>((lo, hi) =>
           supabase
             .from("list_members")
-            .select("list_id, contact_id, contacts(email_opt_out, companies(id, company_size))")
+            .select("list_id, contact_id, contacts(email_opt_out, email_bounced_at, companies(id, company_size))")
             .in("list_id", listIds)
             .order("contact_id")
             .range(lo, hi)
@@ -89,11 +89,11 @@ export default async function ListsIndexPage({
   );
 
   const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
-  const contacts = new Map<string, { optOut: boolean; companyId: string | null; value: number }>();
+  const contacts = new Map<string, { optOut: boolean; bounced: boolean; companyId: string | null; value: number }>();
   for (const m of memberRows) {
     const c = one(m.contacts);
     const co = one(c?.companies ?? null);
-    contacts.set(m.contact_id, { optOut: !!c?.email_opt_out, companyId: co?.id ?? null, value: prospectValue(co?.company_size) });
+    contacts.set(m.contact_id, { optOut: !!c?.email_opt_out, bounced: !!c?.email_bounced_at, companyId: co?.id ?? null, value: prospectValue(co?.company_size) });
   }
   const contactIds = [...contacts.keys()];
   const bounced = new Set(bounceRows.map((r) => r.contact_id));
@@ -114,7 +114,7 @@ export default async function ListsIndexPage({
       const c = contacts.get(id);
       if (!c) continue;
       if (c.optOut) unsubscribed += 1;
-      else if (bounced.has(id)) bouncedCount += 1;
+      else if (c.bounced || bounced.has(id)) bouncedCount += 1;
       if (c.companyId) companyValue.set(c.companyId, c.value);
     }
     return {

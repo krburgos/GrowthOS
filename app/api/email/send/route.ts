@@ -152,6 +152,8 @@ export async function POST(request: NextRequest) {
     content: html,
     isHtml: true,
     text: body,
+    // So a bounce comes back to this contact (app/api/webhooks/resend).
+    tags: [{ name: "contact_id", value: contact.id }],
   });
 
   if (sendError) {

@@ -221,7 +221,7 @@ const HEADINGS: Record<OrderKey, { label: string; icon?: ReactNode; right?: bool
   city: { label: "Company City", icon: <MapPin className="size-3.5" /> },
   state: { label: "Company State", icon: <MapPin className="size-3.5" /> },
   subscribed: { label: "Subscribed", center: true },
-  bounced: { label: "Bounced", right: true },
+  bounced: { label: "Bounced", center: true },
 };
 
 /** Puts a row's tagged cells (`col`) in the current column order. */
@@ -1019,7 +1019,16 @@ export function ContactsDataTable({
                         <Badge variant={c.email_opt_out ? "neutral" : "success"}>{c.email_opt_out ? "No" : "Yes"}</Badge>
                       </Td>
                     ))}
-                  {show("bounced") && <Td col="bounced" className="text-right tabular-nums text-neutral-400">0</Td>}
+                  {show("bounced") && (
+                    <Td
+                      col="bounced"
+                      className="text-center"
+                      title={c.email_bounced_at ? `Bounced ${new Date(c.email_bounced_at).toLocaleDateString()}` : undefined}
+                    >
+                      {/* Client-confirmed (2026-10-22): a lasting bounce from any email, campaign or 1-1. */}
+                      <Badge variant={c.email_bounced_at ? "error" : "neutral"}>{c.email_bounced_at ? "Yes" : "No"}</Badge>
+                    </Td>
+                  )}
                   </OrderedCells>
                   <td
                     aria-hidden="true"

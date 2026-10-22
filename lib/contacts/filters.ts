@@ -19,6 +19,7 @@ export type RuleField =
   | "lists"
   | "activity"
   | "subscribed"
+  | "bounced"
   | "employees"
   | "pv"
   | "company"
@@ -75,6 +76,7 @@ export const FIELDS: Record<RuleField, FieldDef> = {
     ],
   },
   subscribed: { label: "Subscribed", group: "Marketing", kind: "select", ops: [{ value: "is", label: "is" }] },
+  bounced: { label: "Bounced", group: "Marketing", kind: "select", ops: [{ value: "is", label: "is" }] },
   employees: { label: "Employee Size", group: "Company", kind: "range", ops: [{ value: "between", label: "is from" }] },
   pv: { label: "Prospect Value", group: "Company", kind: "range", money: true, ops: [{ value: "between", label: "is from" }] },
   company: { label: "Company", group: "Company", kind: "text", ops: [{ value: "contains", label: "contains" }] },
@@ -211,6 +213,9 @@ export function applyRules<Q extends { [k: string]: any }>(query: Q, rules: Cont
       case "subscribed":
         q = q.eq("email_opt_out", v === "no");
         break;
+      case "bounced":
+        q = v === "yes" ? q.not("email_bounced_at", "is", null) : q.is("email_bounced_at", null);
+        break;
       case "lists":
         if (r.op === "in") q = q.eq(`${a}.list_id`, v);
         else if (r.op === "not_in") q = q.eq(`${a}.list_id`, v).is(a, null);
@@ -285,7 +290,7 @@ export function describeRule(r: ContactRule, o: RuleOptions): [string, string] {
           : o.owners.find((s) => s.id === v)?.label
         : r.field === "temp"
           ? TEMP_OPTIONS.find((t) => t.value === v)?.label
-          : r.field === "subscribed"
+          : r.field === "subscribed" || r.field === "bounced"
             ? YES_NO.find((t) => t.value === v)?.label
             : v;
   return [def.label, `${opLabel} ${valueLabel ?? v}`];

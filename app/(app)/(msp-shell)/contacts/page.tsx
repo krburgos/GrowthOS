@@ -115,7 +115,7 @@ export default async function ContactsListPage({
       supabase
         .from("contacts")
         .select(
-          ("id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, status_id, contact_statuses(name, color), company_id, companies(name, phone, address_line1, city, state, company_size, linkedin_url), owner_id, users:users!contacts_owner_id_fkey(full_name), updated_at" +
+          ("id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, email_bounced_at, status_id, contact_statuses(name, color), company_id, companies(name, phone, address_line1, city, state, company_size, linkedin_url), owner_id, users:users!contacts_owner_id_fkey(full_name), updated_at" +
             embeds) as string
         )
     )

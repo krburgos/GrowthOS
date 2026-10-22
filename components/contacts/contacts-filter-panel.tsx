@@ -193,7 +193,7 @@ function RuleRow({
         ? [...options.owners.map((o) => ({ value: o.id, label: o.label })), { value: NO_OWNER, label: "No owner" }]
         : rule.field === "temp"
           ? TEMP_OPTIONS
-          : rule.field === "subscribed"
+          : rule.field === "subscribed" || rule.field === "bounced"
             ? YES_NO
             : rule.field === "state"
               ? options.states.map((s) => ({ value: s, label: s }))

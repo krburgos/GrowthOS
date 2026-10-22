@@ -10,6 +10,8 @@ export interface ContactListRow {
   temperature: "hot" | "cold" | null;
   linkedin_url: string | null;
   email_opt_out: boolean;
+  /** When an email to this contact last bounced for good; null when it hasn't (2026-10-22). */
+  email_bounced_at?: string | null;
   status_id: string;
   contact_statuses: { name: string; color: string } | null;
   company_id: string | null;

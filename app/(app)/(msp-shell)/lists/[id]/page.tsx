@@ -19,7 +19,7 @@ export const metadata: Metadata = { title: "List — GrowthMission" };
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 
 const CONTACT_FIELDS =
-  "id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, status_id, contact_statuses(name, color), company_id, companies(name, phone, address_line1, city, state, company_size, linkedin_url)";
+  "id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, email_bounced_at, status_id, contact_statuses(name, color), company_id, companies(name, phone, address_line1, city, state, company_size, linkedin_url)";
 
 /**
  * App Flow §4.6, F2 — List Detail. Client-confirmed redesign: shares
