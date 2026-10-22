@@ -237,7 +237,38 @@ export function MissionOrders({
     router.refresh();
   };
 
-  const toggle = (task: Task) => void patch(task, { state: task.state === "complete" ? "active" : "complete" });
+  // Completing an order (Design System §Motion, 2026-10-22): its check and
+  // strike-through show where it sits, it folds away, then it moves to
+  // Show completed. The save goes straight to the database; only the move
+  // between lists waits for the fold. Reopening, or "Reduce motion", is
+  // immediate.
+  const [completing, setCompleting] = useState<Set<string>>(new Set());
+  const toggle = (task: Task) => {
+    // Mid-fold, the row reads as done; a second click must not reopen it.
+    if (completing.has(task.id)) return;
+    const completingNow = task.state !== "complete";
+    if (!completingNow || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      void patch(task, { state: completingNow ? "complete" : "active" });
+      return;
+    }
+    setCompleting((prev) => new Set(prev).add(task.id));
+    void (async () => {
+      const { error } = await createClient().from("growth_mission_tasks").update({ state: "complete" }).eq("id", task.id);
+      await new Promise((r) => setTimeout(r, 650));
+      setCompleting((prev) => {
+        const next = new Set(prev);
+        next.delete(task.id);
+        return next;
+      });
+      if (error) {
+        toast.error(getFriendlyErrorMessage(error));
+        return;
+      }
+      setRows((prev) => prev.map((t) => (t.id === task.id ? { ...t, state: "complete" } : t)));
+      if (task.delegated) toast.success(`Confirmed complete. ${task.hours * CREDITS_PER_HOUR} credits used.`);
+      router.refresh();
+    })();
+  };
 
   const reorder = async (tier: Task[], event: DragEndEvent) => {
     const { active, over } = event;
@@ -273,7 +304,7 @@ export function MissionOrders({
   const fileCount = new Map<string, number>();
   for (const file of files) if (file.task_id) fileCount.set(file.task_id, (fileCount.get(file.task_id) ?? 0) + 1);
   const openFiles = (task: Task) => setPanel({ task, files: true });
-  const rowProps = { cols, overview, draggable, rank, canEdit, isCroLeader, onOpen: openRow, onToggle: toggle, fileCount, onOpenFiles: openFiles };
+  const rowProps = { cols, overview, draggable, rank, canEdit, isCroLeader, onOpen: openRow, onToggle: toggle, fileCount, onOpenFiles: openFiles, completing };
 
   const clear = () => {
     setPri({ high: true, medium: true, low: true });
@@ -626,6 +657,8 @@ interface RowProps {
   onToggle: (task: Task) => void;
   fileCount: Map<string, number>;
   onOpenFiles: (task: Task) => void;
+  /** Orders mid-completion: shown done, then folding away (Design System §Motion). */
+  completing?: Set<string>;
 }
 
 function SortableRow(props: RowProps) {
@@ -664,6 +697,7 @@ function OrderRow({
   onToggle,
   fileCount,
   onOpenFiles,
+  completing,
   rowRef,
   style,
   dragging,
@@ -674,6 +708,8 @@ function OrderRow({
   dragging?: boolean;
   grip?: React.ReactNode;
 }) {
+  const folding = !!completing?.has(task.id);
+  if (folding) task = { ...task, state: "complete" };
   const done = task.state === "complete";
   const credits = orderCredits(task);
   const due = formatDue(task.due_date);
@@ -696,7 +732,7 @@ function OrderRow({
       }}
       className={`${cols} min-h-[54px] cursor-pointer border-b border-neutral-100 px-5 py-2 hover:bg-neutral-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-secondary-500/40 ${
         dragging ? "relative z-10 bg-white shadow-lift" : "bg-white"
-      }`}
+      } ${folding ? "pointer-events-none animate-fold-out overflow-hidden" : ""}`}
     >
       {!overview && (
         <CompleteBox task={task} canToggle={canToggleComplete(task, { canEdit, isCroLeader })} onToggle={() => onToggle(task)} />
@@ -748,7 +784,9 @@ function OrderRow({
   );
 }
 
-function OrderCard({ task, rank, canEdit, isCroLeader, onOpen, onToggle, fileCount, onOpenFiles }: RowProps) {
+function OrderCard({ task: rawTask, rank, canEdit, isCroLeader, onOpen, onToggle, fileCount, onOpenFiles, completing }: RowProps) {
+  const folding = !!completing?.has(rawTask.id);
+  const task: Task = folding ? { ...rawTask, state: "complete" } : rawTask;
   const done = task.state === "complete";
   const credits = orderCredits(task);
   const due = formatDue(task.due_date);
@@ -765,7 +803,7 @@ function OrderCard({ task, rank, canEdit, isCroLeader, onOpen, onToggle, fileCou
           onOpen(task);
         }
       }}
-      className="cursor-pointer rounded-xl border border-neutral-200 bg-white p-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
+      className={`cursor-pointer rounded-xl border border-neutral-200 bg-white p-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 ${folding ? "pointer-events-none animate-fold-out overflow-hidden" : ""}`}
     >
       <div className="flex items-start gap-3">
         <span className="mt-0.5">

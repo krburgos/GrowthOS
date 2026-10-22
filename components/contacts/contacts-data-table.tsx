@@ -51,6 +51,7 @@ import type { ContactSelectionScope } from "@/lib/contacts/bulk-actions";
 import { createClient } from "@/lib/supabase/client";
 import type { ContactListRow } from "@/lib/contacts/types";
 import { employeesOf, opportunitiesValue, prospectValue, usd } from "@/lib/companies/value";
+import { useFlash } from "@/lib/use-flash";
 import { cn } from "@/lib/utils";
 
 /**
@@ -544,6 +545,8 @@ export function ContactsDataTable({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ContactDraft | null>(null);
   const [saving, setSaving] = useState(false);
+  // The saved-row glow (Design System §Motion, 2026-10-22).
+  const { flashId, flash } = useFlash();
 
   const startEdit = (c: ContactListRow) => {
     if (editingId) return; // finish or cancel the row already being edited first
@@ -697,6 +700,7 @@ export function ContactsDataTable({
     }
     setSaving(false);
     toast.success(`Contact updated.${companyNote}`);
+    flash(editingId);
     setEditingId(null);
     setDraft(null);
     router.refresh();
@@ -901,6 +905,7 @@ export function ContactsDataTable({
                   className="group"
                   data-selected={selected ? "true" : undefined}
                   data-editing={editing ? "true" : undefined}
+                  data-flash={flashId === c.id ? "true" : undefined}
                   onDoubleClick={() => startEdit(c)}
                 >
                   <Td sticky="left-0" className="w-11">
@@ -1235,7 +1240,7 @@ export function ContactsDataTable({
                   </OrderedCells>
                   <td
                     aria-hidden="true"
-                    className="border-b border-neutral-100 bg-white transition-colors group-hover:bg-neutral-50 group-data-[selected=true]:bg-secondary-50 group-data-[editing=true]:bg-secondary-50"
+                    className="border-b border-neutral-100 bg-white transition-colors group-hover:bg-neutral-50 group-data-[selected=true]:bg-secondary-50 group-data-[editing=true]:bg-secondary-50 group-data-[flash=true]:animate-saved"
                   />
                 </tr>
               );
@@ -1569,7 +1574,7 @@ function Td({
       className={cn(
         // Fixed column widths (client-confirmed, 2026-10-18): text that
         // doesn't fit ends in an ellipsis rather than widening the column.
-        "overflow-hidden text-ellipsis whitespace-nowrap border-b border-neutral-100 bg-white px-4 py-3.5 align-middle text-neutral-700 transition-colors group-hover:bg-neutral-50 group-data-[selected=true]:bg-secondary-50 group-data-[editing=true]:bg-secondary-50",
+        "overflow-hidden text-ellipsis whitespace-nowrap border-b border-neutral-100 bg-white px-4 py-3.5 align-middle text-neutral-700 transition-colors group-hover:bg-neutral-50 group-data-[selected=true]:bg-secondary-50 group-data-[editing=true]:bg-secondary-50 group-data-[flash=true]:animate-saved",
         sticky && `sticky z-10 ${sticky}`,
         className
       )}

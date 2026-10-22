@@ -3,7 +3,7 @@
 import { Filter, Phone, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { StatusPill } from "@/components/contacts/status-pill";
@@ -12,6 +12,7 @@ import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { AssignListDialog } from "@/components/sdr/assign-list-dialog";
 import { LogCallPanel } from "@/components/sdr/log-call-panel";
 import { Button } from "@/components/ui/button";
+import { CountUp } from "@/components/ui/count-up";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
 import { SortHeading, useTableSort } from "@/components/ui/sort-heading";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,6 +32,7 @@ import {
   type SdrPerson,
 } from "@/lib/sdr/desk";
 import { createClient } from "@/lib/supabase/client";
+import { useFlash } from "@/lib/use-flash";
 import { cn } from "@/lib/utils";
 
 type Show = "today" | "new" | "tomorrow" | "all";
@@ -113,6 +115,9 @@ export function CallDesk({
   const [pageSize, setPageSize] = useState(10);
   const [logging, setLogging] = useState<QueueRow | null>(null);
   const [assigning, setAssigning] = useState(false);
+  const { flashId, flash } = useFlash();
+  // True when the panel moved on with Save & next call: the next contact slides in.
+  const [chained, setChained] = useState(false);
   // Due-ness depends on the viewer's clock, so it is worked out after mount.
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => setNow(new Date()), []);
@@ -183,10 +188,15 @@ export function CallDesk({
   const afterSave = (next: boolean) => {
     const current = logging;
     setLogging(null);
+    // Glow the row just called, if it's still in view (Design System §Motion).
+    if (current) flash(current.contact_id);
     if (next && current) {
       // The next one down the queue as it's sorted on screen.
       const nextRow = sorted.find((r) => r.due === "today" && r.row.contact_id !== current.contact_id);
-      if (nextRow) setLogging(nextRow.row);
+      if (nextRow) {
+        setChained(true);
+        setLogging(nextRow.row);
+      }
     }
     router.refresh();
   };
@@ -209,12 +219,33 @@ export function CallDesk({
   );
 
   const target = targetOf(sdrId);
+  const meetingsHit = target.meetings > 0 && selected.meetings >= target.meetings;
   const stats = [
-    { label: `${whose} calls today`.trim(), value: selected.calls, of: target.calls },
+    {
+      label: `${whose} calls today`.trim(),
+      value: selected.calls,
+      of: target.calls,
+      bar: target.calls > 0 ? Math.min(100, Math.round((selected.calls / target.calls) * 100)) : 100,
+    },
     { label: "Connects", value: selected.connects, suffix: ` · ${rate(selected.connects, selected.calls)}%` },
-    { label: "Meetings booked", value: selected.meetings, of: target.meetings, highlight: true },
+    { label: "Meetings booked", value: selected.meetings, of: target.meetings, highlight: true, hit: meetingsHit },
     { label: "Calls due in the queue", value: count("today") },
   ];
+
+  // One pulse when the meeting target is reached, never on arrival
+  // (Design System §Motion, 2026-10-22).
+  const [pulse, setPulse] = useState(false);
+  const lastMeetings = useRef<{ sdr: string | null; n: number } | null>(null);
+  useEffect(() => {
+    const prev = lastMeetings.current;
+    lastMeetings.current = { sdr: sdrId, n: selected.meetings };
+    if (!prev || prev.sdr !== sdrId || !now) return;
+    if (prev.n < target.meetings && selected.meetings >= target.meetings && target.meetings > 0) {
+      setPulse(true);
+      const t = setTimeout(() => setPulse(false), 750);
+      return () => clearTimeout(t);
+    }
+  }, [selected.meetings, sdrId, target.meetings, now]);
 
   return (
     <>
@@ -253,13 +284,30 @@ export function CallDesk({
 
         <div className="grid grid-cols-2 bg-primary-50 sm:grid-cols-4 sm:divide-x sm:divide-primary-200">
           {stats.map((s) => (
-            <div key={s.label} className="flex flex-col gap-0.5 px-5 py-3.5">
+            <div key={s.label} className={cn("flex flex-col gap-0.5 px-5 py-3.5", s.hit && pulse && "animate-target-hit rounded-md")}>
               <span className="text-caption text-primary-700">{s.label}</span>
-              <span className={cn("text-h3 font-bold tabular-nums", s.highlight ? "text-secondary-700" : "text-primary-900")}>
-                {now ? s.value : "—"}
+              <span
+                className={cn(
+                  "text-h3 font-bold tabular-nums transition-colors duration-200",
+                  s.hit ? "text-success-700" : s.highlight ? "text-secondary-700" : "text-primary-900"
+                )}
+              >
+                {/* Counts up when a call is logged, not on arrival. */}
+                {now ? <CountUp value={s.value} fromZero={false} /> : "—"}
                 {s.of != null && <span className="text-body-sm font-medium text-neutral-400"> / {s.of}</span>}
                 {s.suffix && now && <span className="text-body-sm font-medium text-neutral-400">{s.suffix}</span>}
               </span>
+              {s.bar != null && now && (
+                <span className="mt-1 h-1.5 overflow-hidden rounded-full bg-white" aria-hidden="true">
+                  <span
+                    className={cn(
+                      "block h-full rounded-full transition-[width] duration-200 ease-[var(--ease-enter)]",
+                      s.bar >= 100 ? "bg-success-600" : "bg-secondary-500"
+                    )}
+                    style={{ width: `${s.bar}%` }}
+                  />
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -290,7 +338,10 @@ export function CallDesk({
                     <span className="flex items-center gap-2.5">
                       <span className="h-2 flex-1 overflow-hidden rounded-full bg-primary-100" aria-hidden="true">
                         <span
-                          className={cn("block h-full rounded-full", pct >= 100 ? "bg-success-600" : "bg-secondary-500")}
+                          className={cn(
+                            "block h-full rounded-full transition-[width] duration-200 ease-[var(--ease-enter)]",
+                            pct >= 100 ? "bg-success-600" : "bg-secondary-500"
+                          )}
                           style={{ width: `${pct}%` }}
                         />
                       </span>
@@ -483,7 +534,10 @@ export function CallDesk({
                 {/* Below lg each contact is a card. */}
                 <div className="flex flex-col gap-2.5 px-4 py-4 lg:hidden">
                   {shown.map(({ row, due }) => (
-                    <QueueCard key={row.contact_id} row={row} due={due} canLog={canLog} onLog={() => setLogging(row)} />
+                    <QueueCard key={row.contact_id} row={row} due={due} canLog={canLog} onLog={() => {
+                        setChained(false);
+                        setLogging(row);
+                      }} />
                   ))}
                 </div>
 
@@ -513,7 +567,13 @@ export function CallDesk({
                     {shown.map(({ row }) => {
                       const phone = row.phone ?? row.company_phone;
                       return (
-                        <div key={row.contact_id} className={`${QUEUE_COLS} min-h-[58px] border-b border-neutral-100 bg-white px-5 py-2 hover:bg-neutral-50/70`}>
+                        <div
+                          key={row.contact_id}
+                          className={cn(
+                            `${QUEUE_COLS} min-h-[58px] border-b border-neutral-100 bg-white px-5 py-2 hover:bg-neutral-50/70`,
+                            flashId === row.contact_id && "animate-saved"
+                          )}
+                        >
                           <span className="flex min-w-0 items-center gap-2.5">
                             <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-caption font-bold text-primary-700">
                               {initials(row.full_name)}
@@ -551,7 +611,14 @@ export function CallDesk({
                           <span className="text-right text-body-sm tabular-nums text-neutral-700">{row.attempts}</span>
                           <span className="text-right">
                             {canLog && (
-                              <Button size="sm" onClick={() => setLogging(row)} className="gap-1.5">
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setChained(false);
+                                  setLogging(row);
+                                }}
+                                className="gap-1.5"
+                              >
                                 <Phone className="size-3.5" />
                                 Log call
                               </Button>
@@ -586,6 +653,7 @@ export function CallDesk({
         <LogCallPanel
           key={logging.contact_id}
           row={logging}
+          slideIn={chained}
           accountId={accountId}
           meetingStageId={meetingStageId}
           salespeople={salespeople}

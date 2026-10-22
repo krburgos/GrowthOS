@@ -48,6 +48,7 @@ export function LogCallPanel({
   scriptName,
   onClose,
   onSaved,
+  slideIn = false,
 }: {
   row: QueueRow;
   accountId: string;
@@ -58,6 +59,8 @@ export function LogCallPanel({
   onClose: () => void;
   /** `next`: open the next due contact rather than closing. */
   onSaved: (next: boolean) => void;
+  /** Arrived by Save & next call: the contents slide in (Design System §Motion). */
+  slideIn?: boolean;
 }) {
   const [outcome, setOutcome] = useState<CallOutcome | null>(null);
   const [note, setNote] = useState("");
@@ -156,7 +159,7 @@ export function LogCallPanel({
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="left-auto right-0 top-0 flex h-dvh max-h-dvh w-full max-w-[460px] translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:rounded-l-lg [&>button]:text-white/80 [&>button]:hover:text-white">
-        <div className={`px-5 py-4 pr-12 ${NAVY_GRADIENT}`}>
+        <div className={cn(`px-5 py-4 pr-12 ${NAVY_GRADIENT}`, slideIn && "[&>*]:animate-slide-in")}>
           <p className="text-caption font-semibold uppercase tracking-wide text-secondary-300">Log a call</p>
           <DialogTitle className="truncate text-h4 text-white">{row.full_name}</DialogTitle>
           <DialogDescription className="truncate text-body-sm text-white/75">
@@ -164,7 +167,7 @@ export function LogCallPanel({
           </DialogDescription>
         </div>
 
-        <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
+        <div className={cn("flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5", slideIn && "animate-slide-in")}>
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3.5 py-3">
             <Phone className="size-4 text-secondary-700" aria-hidden="true" />
             {phone ? (

@@ -34,6 +34,7 @@ import type { UserRole } from "@/lib/auth/get-current-user";
 import { ROLE_LABELS } from "@/lib/auth/role-labels";
 import { CRO_LEADER_ROLES } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/client";
+import { useFlash } from "@/lib/use-flash";
 
 export interface UserRow {
   id: string;
@@ -57,6 +58,8 @@ export function UsersTable({
 }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  // The saved-row glow after a role change (Design System §Motion, 2026-10-22).
+  const { flashId, flash } = useFlash();
   const [deactivateTarget, setDeactivateTarget] = useState<UserRow | null>(null);
   // A move from an MSP role to a CRO Leader role, waiting on confirmation.
   const [promoteTarget, setPromoteTarget] = useState<{ user: UserRow; role: UserRole } | null>(null);
@@ -93,6 +96,7 @@ export function UsersTable({
         ? `${target.full_name} is now ${ROLE_LABELS[role]}. They've left this account's list and can enter every account from the CRO Leader dashboard.`
         : "Role updated."
     );
+    flash(target.id);
     router.refresh();
   };
 
@@ -129,7 +133,7 @@ export function UsersTable({
         </TableHeader>
         <TableBody>
           {users.map((u) => (
-            <TableRow key={u.id}>
+            <TableRow key={u.id} className={flashId === u.id ? "animate-saved" : undefined}>
               <TableCell label="Name" className="font-medium text-neutral-800">{u.full_name}</TableCell>
               <TableCell label="Email" className="break-all">{u.email}</TableCell>
               <TableCell label="Role">

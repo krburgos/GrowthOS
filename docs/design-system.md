@@ -600,3 +600,30 @@ Implemented as `components/shell/hero-band.tsx` (`HeroBand`, `HeroLabel`). Compo
 For any chart or grouped stat that needs more than one color, use this fixed order — blue `primary-500 #2873e1`, teal `secondary-500 #03b8de`, green `success-600 #50af28`, red `error-600 #d60000`. As an ordered set it passes lightness-band, chroma, colorblind-separation (deutan/protan/tritan) and normal-vision checks; teal and green fall below 3:1 against white, so marks in those colors always carry a visible label or an adjacent value.
 
 **Amber (`warning-*`) is not a series color.** It failed colorblind separation against green (ΔE 2.2 deutan), so it stays reserved for the "Needs Attention" status — always paired with its label, never color alone.
+
+## 13. Motion (client-confirmed, 2026-10-22, approved mockup "GrowthMission Motion")
+
+Motion confirms an action or guides the eye. It extends the one rule that existed (the sidebar, §8.9: `200ms`, ease-in-out) and is CSS only, with no animation library. The tokens live in the `@theme` block of `app/globals.css`.
+
+| Token | Value | Used for |
+| --- | --- | --- |
+| fast | `150ms` | Chips, fades, the Focus rise, small state changes |
+| base | `200ms` | Panels, bars, folding rows (the sidebar's speed) |
+| slow | `1000ms` | The saved-row glow and count-ups only |
+| `--ease-standard` | `cubic-bezier(0.4, 0, 0.2, 1)` | Things changing in place (the sidebar's curve) |
+| `--ease-enter` | `cubic-bezier(0.2, 0, 0, 1)` | Things arriving: fast start, soft landing |
+
+**Where it appears**
+- **Saved-row glow** (`animate-saved`): a row washes `secondary-100` and fades to white over 1s after it saves. Contacts and List Detail (inline edit), CRO Leader Team and All Users (role change), Settings › Users & Roles (role change), the Call Queue (a logged call). Shared through `lib/use-flash.ts`.
+- **Filter chips** (`animate-chip-in`): a chip scales in over 150ms; a removed chip fades for 150ms before the table refilters.
+- **Call Desk**: figures count up when a call is logged (`CountUp` with `fromZero={false}`, so not on arrival); the calls and scoreboard bars fill over 200ms; reaching the day's meeting target turns the figure green with one pulse (`animate-target-hit`).
+- **Save & next call** (`animate-slide-in`): the next contact slides in from the right over 200ms, with no wait for the previous one to leave.
+- **Focus switcher** (`animate-rise`): a section fades and rises 8px over 150ms when the person switches (Command Center, every Mission Card, the CRO Leader dashboard). Not when a page reopens on a remembered view.
+- **Completing a Mission Order** (`animate-fold-out`): the check and strike-through show for 450ms, then the row folds over 200ms into Show completed. The save is immediate; only the move between lists waits. Reopening is immediate.
+
+**Rules**
+- Nothing animates on page load.
+- Nothing longer than 200ms stands between a click and the next one; the 1s glow and count-ups never block.
+- Only opacity, transform, width, max-height and background colour animate, on one element at a time.
+- "Reduce motion" (`prefers-reduced-motion: reduce`): every animation and transition snaps to its end state.
+- Not changing: loading stays a spinner (App Flow §6), not a skeleton.

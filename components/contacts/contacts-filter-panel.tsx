@@ -323,8 +323,22 @@ function RuleRow({
  */
 export function ContactsFilterChips({ options, shown, total }: { options: RuleOptions; shown: number; total: number }) {
   const { rules, write } = useAddressRules();
+  // A removed chip fades for 150ms before the table refilters (Design System §Motion).
+  const [leaving, setLeaving] = useState<number | null>(null);
   const active = rules.filter(isActive);
   if (active.length === 0) return null;
+
+  const remove = (i: number) => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setLeaving(i);
+    setTimeout(
+      () => {
+        setLeaving(null);
+        write(active.filter((_, j) => j !== i));
+      },
+      reduce ? 0 : 150
+    );
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-2" aria-live="polite">
@@ -337,13 +351,16 @@ export function ContactsFilterChips({ options, shown, total }: { options: RuleOp
         return (
           <span
             key={`${encodeRule(r)}-${i}`}
-            className="inline-flex h-7 items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 pl-3 pr-1 text-body-sm text-primary-900"
+            className={cn(
+              "inline-flex h-7 animate-chip-in items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 pl-3 pr-1 text-body-sm text-primary-900 transition-[opacity,transform] duration-150",
+              leaving === i && "scale-95 opacity-0"
+            )}
           >
             <span className="text-neutral-500">{label}</span>
             <b className="font-semibold">{text}</b>
             <button
               type="button"
-              onClick={() => write(active.filter((_, j) => j !== i))}
+              onClick={() => remove(i)}
               aria-label={`Remove the ${label} filter`}
               className="flex size-5 items-center justify-center rounded-full text-primary-700 hover:bg-primary-100"
             >

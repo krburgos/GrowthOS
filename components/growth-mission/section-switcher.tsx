@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft, Maximize2 } from "lucide-react";
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -26,7 +26,8 @@ export interface SwitcherSection {
   count?: number;
 }
 
-const SectionViewContext = createContext<{ view: string; show: (v: string) => void } | null>(null);
+// `switches` counts views chosen by the person (a tab, Focus, Back), not the view restored on arrival.
+const SectionViewContext = createContext<{ view: string; show: (v: string) => void; switches: number } | null>(null);
 
 /** The current view ("all" or a section's view), or null outside a switcher (Headquarters shares MissionOrders). */
 export function useSectionView(): string | null {
@@ -46,6 +47,7 @@ export function SectionSwitcher({
   children: ReactNode;
 }) {
   const [view, setView] = useState("all");
+  const [switches, setSwitches] = useState(0);
 
   const viewFromHash = useCallback((hash: string) => sections.find((s) => s.hash === hash)?.view ?? null, [sections]);
 
@@ -66,7 +68,10 @@ export function SectionSwitcher({
   }, []);
 
   useEffect(() => {
-    const onPop = () => setView(viewFromHash(window.location.hash) ?? "all");
+    const onPop = () => {
+      setView(viewFromHash(window.location.hash) ?? "all");
+      setSwitches((n) => n + 1);
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, [viewFromHash]);
@@ -74,6 +79,7 @@ export function SectionSwitcher({
   const show = useCallback(
     (v: string) => {
       setView(v);
+      setSwitches((n) => n + 1);
       const hash = sections.find((s) => s.view === v)?.hash ?? "";
       const url = window.location.pathname + window.location.search + hash;
       window.history.pushState(null, "", url);
@@ -90,7 +96,7 @@ export function SectionSwitcher({
   const tabs: { view: string; label: string; count?: number }[] = [{ view: "all", label: "All sections" }, ...sections];
 
   return (
-    <SectionViewContext.Provider value={{ view, show }}>
+    <SectionViewContext.Provider value={{ view, show, switches }}>
       <div
         role="tablist"
         aria-label={label}
@@ -142,10 +148,32 @@ export function SectionSwitcher({
   );
 }
 
-/** One section; hidden (but kept mounted) while another is focused. */
+/**
+ * One section; hidden (but kept mounted) while another is focused. When the
+ * view changes it rises into place (Design System §Motion, 2026-10-22). The
+ * class is restarted on the same element rather than by remounting, so the
+ * section's own state, filters and typing, survives the switch.
+ */
 export function SectionPane({ view, children }: { view: string; children: ReactNode }) {
-  const current = useContext(SectionViewContext)?.view ?? "all";
-  return <div hidden={current !== "all" && current !== view}>{children}</div>;
+  const ctx = useContext(SectionViewContext);
+  const current = ctx?.view ?? "all";
+  const switches = ctx?.switches ?? 0;
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Only when the person switches: nothing animates on page load, even
+    // when the page reopens on a remembered view.
+    if (switches === 0) return;
+    const el = ref.current;
+    if (!el || el.hidden) return;
+    el.classList.remove("animate-rise");
+    void el.offsetWidth;
+    el.classList.add("animate-rise");
+  }, [switches]);
+  return (
+    <div ref={ref} hidden={current !== "all" && current !== view}>
+      {children}
+    </div>
+  );
 }
 
 /**

@@ -34,9 +34,22 @@ function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-export function CountUp({ value, className }: { value: number; className?: string }) {
+export function CountUp({
+  value,
+  className,
+  fromZero = true,
+}: {
+  value: number;
+  className?: string;
+  /**
+   * Count from 0 when the number first appears (the KPI band's behaviour).
+   * Off, it only counts when the value changes, as the Call Desk does after
+   * a call is logged (Design System §Motion: nothing animates on load).
+   */
+  fromZero?: boolean;
+}) {
   const [shown, setShown] = useState(value);
-  const fromRef = useRef(0);
+  const fromRef = useRef(fromZero ? 0 : value);
   const frameRef = useRef<number | null>(null);
 
   useIsomorphicLayoutEffect(() => {

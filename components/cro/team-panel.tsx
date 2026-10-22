@@ -14,9 +14,11 @@ import {
   type PersonRow,
 } from "@/components/cro/people-bits";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
+import { useFlash } from "@/lib/use-flash";
 import { Button } from "@/components/ui/button";
 import { ROLE_LABELS } from "@/lib/auth/role-labels";
 import { CRO_LEADER_ROLES } from "@/lib/auth/roles";
+import { cn } from "@/lib/utils";
 
 const HEAD = "h-10 px-3 text-left text-caption font-bold uppercase tracking-wide text-primary-700";
 
@@ -36,6 +38,8 @@ export function CroTeamPanel({
   focusSlot?: ReactNode;
 }) {
   const router = useRouter();
+  // The saved-row glow after a role change (Design System §Motion, 2026-10-22).
+  const { flashId, flash } = useFlash();
   const [inviting, setInviting] = useState(false);
   const active = members.filter((m) => !m.archived_at);
   const count = (role: string) => active.filter((m) => m.role === role).length;
@@ -78,7 +82,7 @@ export function CroTeamPanel({
               const you = m.id === currentUserId;
               const off = !!m.archived_at;
               return (
-                <tr key={m.id} className={off ? "border-b border-neutral-100 opacity-60" : "border-b border-neutral-100 hover:bg-neutral-50"}>
+                <tr key={m.id} className={cn(off ? "border-b border-neutral-100 opacity-60" : "border-b border-neutral-100 hover:bg-neutral-50", flashId === m.id && "animate-saved")}>
                   <td className="px-3 py-2.5">
                     <PersonCell person={m} you={you} />
                   </td>
@@ -86,7 +90,10 @@ export function CroTeamPanel({
                     {you || off ? (
                       <span className="text-body-sm text-neutral-600">{ROLE_LABELS[m.role]}</span>
                     ) : (
-                      <RoleSelect person={m} roles={CRO_LEADER_ROLES} onChanged={() => router.refresh()} />
+                      <RoleSelect person={m} roles={CRO_LEADER_ROLES} onChanged={() => {
+                        flash(m.id);
+                        router.refresh();
+                      }} />
                     )}
                   </td>
                   <td className="px-3 py-2.5 text-body-sm text-neutral-600">{lastLoginLabel(m.last_sign_in_at)}</td>

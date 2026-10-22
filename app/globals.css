@@ -159,6 +159,67 @@
      deeper shadow than one on a pale ground — the two above are tuned for
      white-on-light and all but vanish against navy. */
   --shadow-raised: 0 2px 4px rgb(2 20 50 / 0.18), 0 14px 30px -14px rgb(2 20 50 / 0.5);
+
+  /* ----------------------------------------------------------------------
+     Motion (client-confirmed, 2026-10-22, approved mockup "GrowthMission
+     Motion"; Design System §Motion). Extends the sidebar's existing 200ms
+     ease-in-out. Motion confirms an action or guides the eye: nothing
+     animates on page load, and "Reduce motion" turns all of it off (below).
+     Each --animate-* is a Tailwind utility (animate-saved, …).
+     ---------------------------------------------------------------------- */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-enter: cubic-bezier(0.2, 0, 0, 1);
+
+  /* A saved row washes light cyan and fades out: where the change landed. */
+  --animate-saved: gm-saved 1000ms var(--ease-standard) both;
+  /* A filter chip arriving. */
+  --animate-chip-in: gm-chip-in 150ms var(--ease-enter) both;
+  /* A focused section rising into place. */
+  --animate-rise: gm-rise 150ms var(--ease-enter) both;
+  /* The next contact in the Log call panel. */
+  --animate-slide-in: gm-slide-in 200ms var(--ease-enter) both;
+  /* A daily target reached: one pulse. */
+  --animate-target-hit: gm-target-hit 700ms var(--ease-standard) 1;
+  /* A completed Mission Order folding away, after its check shows. */
+  --animate-fold-out: gm-fold-out 200ms var(--ease-standard) 450ms both;
+
+  @keyframes gm-saved {
+    0% { background-color: var(--color-secondary-100); }
+    /* White, not transparent: pinned table cells must stay opaque over the scroll. */
+    100% { background-color: #fff; }
+  }
+  @keyframes gm-chip-in {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes gm-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes gm-slide-in {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes gm-target-hit {
+    0% { box-shadow: 0 0 0 0 rgb(80 175 40 / 0.45); }
+    100% { box-shadow: 0 0 0 10px rgb(80 175 40 / 0); }
+  }
+  @keyframes gm-fold-out {
+    from { opacity: 1; max-height: 160px; }
+    to { opacity: 0; max-height: 0; min-height: 0; padding-top: 0; padding-bottom: 0; border-width: 0; }
+  }
+}
+
+/* "Reduce motion": every animation and transition snaps to its end state. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }
 
 body {

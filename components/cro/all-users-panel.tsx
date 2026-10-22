@@ -14,6 +14,7 @@ import {
   type PersonRow,
 } from "@/components/cro/people-bits";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
+import { useFlash } from "@/lib/use-flash";
 import { Button } from "@/components/ui/button";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,6 +42,8 @@ export function AllUsersPanel({
   focusSlot?: ReactNode;
 }) {
   const router = useRouter();
+  // The saved-row glow after a role change (Design System §Motion, 2026-10-22).
+  const { flashId, flash } = useFlash();
   const [client, setClient] = useState("all");
   const [role, setRole] = useState("all");
   const [query, setQuery] = useState("");
@@ -169,7 +172,7 @@ export function AllUsersPanel({
                 {shown.map((u) => {
                   const off = !!u.archived_at;
                   return (
-                    <tr key={u.id} className={off ? "border-b border-neutral-100 opacity-60" : "border-b border-neutral-100 hover:bg-neutral-50"}>
+                    <tr key={u.id} className={cn(off ? "border-b border-neutral-100 opacity-60" : "border-b border-neutral-100 hover:bg-neutral-50", flashId === u.id && "animate-saved")}>
                       <td className="px-3 py-2.5">
                         <PersonCell person={u} />
                       </td>
@@ -180,7 +183,10 @@ export function AllUsersPanel({
                         {off ? (
                           <span className="text-body-sm text-neutral-500">{ROLE_LABELS[u.role]}</span>
                         ) : (
-                          <RoleSelect person={u} roles={MSP_ROLES} onChanged={() => router.refresh()} />
+                          <RoleSelect person={u} roles={MSP_ROLES} onChanged={() => {
+                        flash(u.id);
+                        router.refresh();
+                      }} />
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-body-sm text-neutral-600">{lastLoginLabel(u.last_sign_in_at)}</td>
