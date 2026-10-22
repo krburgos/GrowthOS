@@ -12,10 +12,10 @@ import { cn } from "@/lib/utils";
  * title shows every section or just one, full width; each section's own
  * header carries a Focus button that does the same.
  *
- * The view lives in the address (each section's `hash`), so Back works and
- * a focused view can be shared or bookmarked. Every page opens on All
+ * The view goes into the address (each section's `hash`) as you switch, so
+ * Back works within a visit. Every page opens on All
  * sections (client-confirmed, 2026-10-22; it used to reopen on the last
- * view chosen), unless its address names a section. Sections stay mounted
+ * view chosen), even from a link that names a section. Sections stay mounted
  * while hidden, so their filters survive switching.
  */
 export interface SwitcherSection {
@@ -49,10 +49,14 @@ export function SectionSwitcher({
 
   const viewFromHash = useCallback((hash: string) => sections.find((s) => s.hash === hash)?.view ?? null, [sections]);
 
-  // On arrival: a section named in the address, otherwise All sections.
+  // On arrival: always All sections, even from a link that names one
+  // (client-confirmed, 2026-10-22). The section is dropped from the address
+  // so it never claims a view that isn't showing, and the page starts at
+  // the top rather than wherever the browser jumped for the anchor.
   useEffect(() => {
-    const fromHash = viewFromHash(window.location.hash);
-    if (fromHash) setView(fromHash);
+    if (!viewFromHash(window.location.hash)) return;
+    window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+    window.scrollTo({ top: 0 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

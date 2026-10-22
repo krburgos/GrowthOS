@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 export const CAMPAIGN_EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 
 /** Where Campaigns lives since 2026-10-22: on the Email Campaigning Mission Card. */
-export const CAMPAIGNS_HOME = "/growth-mission/email-campaigning#campaigns";
+export const CAMPAIGNS_HOME = "/growth-mission/email-campaigning";
 
 export const EMAIL_CAMPAIGNING_SLUG = "email-campaigning";
 
