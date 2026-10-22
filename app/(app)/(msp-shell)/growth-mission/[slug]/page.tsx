@@ -23,6 +23,14 @@ import {
 } from "@/lib/growth-mission/queries";
 import { getTeamMembers } from "@/lib/team/queries";
 import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
+import { CampaignsWorkspace } from "@/components/campaigns/campaigns-workspace";
+import { CallDesk } from "@/components/sdr/call-desk";
+import { CAMPAIGN_EDIT_ROLES, EMAIL_CAMPAIGNING_SLUG, getCampaignRows } from "@/lib/campaigns/queries";
+import { ASSIGN_LIST_ROLES, SDR_OUTREACH_SLUG, TARGET_EDIT_ROLES, VIEW_ANY_QUEUE_ROLES } from "@/lib/sdr/desk";
+import { getSdrDesk } from "@/lib/sdr/queries";
+
+/** Who can log calls: the roles that may add activities (Backend Schema §2). */
+const LOG_CALL_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor", "partner"];
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -78,9 +86,14 @@ export default async function GrowthMissionStepPage({
   // of rows. Branching here rather than fetching both keeps the other
   // fifteen workstreams from paying for a table they never show.
   const isAdvocateDash = slug === ADVOCATE_DASH_SLUG;
+  // Client-confirmed (2026-10-22, approved mockup "Mission Card
+  // Workspaces"): Mission Cards become where the work happens. Two cards so
+  // far carry a workspace of their own between Hours and the Arsenal.
+  const isEmailCampaigning = slug === EMAIL_CAMPAIGNING_SLUG;
+  const isSdrOutreach = slug === SDR_OUTREACH_SLUG;
 
   const quarter = currentQuarter();
-  const [step, mission, tasks, team, memberLoad, reports, targets, files] = await Promise.all([
+  const [step, mission, tasks, team, memberLoad, reports, targets, files, campaigns, sdrDesk] = await Promise.all([
     getStepDetail(user.account_id, slug),
     getMissionData(user.account_id, quarter),
     isAdvocateDash ? [] : getTasksForStep(user.account_id, slug),
@@ -91,6 +104,8 @@ export default async function GrowthMissionStepPage({
     isAdvocateDash ? [] : getReports(user.account_id, slug),
     isAdvocateDash ? getTargets(user.account_id) : [],
     isAdvocateDash ? [] : getStepFiles(user.account_id, slug),
+    isEmailCampaigning ? getCampaignRows() : null,
+    isSdrOutreach ? getSdrDesk(user.account_id) : null,
   ]);
   if (!step) notFound();
 
@@ -154,6 +169,28 @@ export default async function GrowthMissionStepPage({
               />
             }
           />
+
+          {campaigns && <CampaignsWorkspace campaigns={campaigns} canEdit={CAMPAIGN_EDIT_ROLES.includes(user.role)} />}
+
+          {sdrDesk && (
+            <CallDesk
+              accountId={user.account_id}
+              viewerId={user.id}
+              canAssign={ASSIGN_LIST_ROLES.includes(user.role)}
+              canViewAny={VIEW_ANY_QUEUE_ROLES.includes(user.role)}
+              canLog={LOG_CALL_ROLES.includes(user.role)}
+              canSetTargets={TARGET_EDIT_ROLES.includes(user.role)}
+              people={sdrDesk.people}
+              assignments={sdrDesk.assignments}
+              queues={sdrDesk.queues}
+              recentCalls={sdrDesk.recentCalls}
+              targets={sdrDesk.targets}
+              lists={sdrDesk.lists}
+              meetingStageId={sdrDesk.meetingStageId}
+              salespeople={sdrDesk.salespeople}
+              scriptName={files.find((f) => /script/i.test(f.file_name))?.file_name ?? null}
+            />
+          )}
 
           {/* Client-confirmed (2026-10-20, approved mockup "The Arsenal"):
               the Mission Card's files, between the hours (which carry the

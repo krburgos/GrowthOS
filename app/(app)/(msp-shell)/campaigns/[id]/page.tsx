@@ -6,6 +6,7 @@ import { CampaignRecipientsTable, type RecipientRow } from "@/components/campaig
 import { Badge } from "@/components/ui/badge";
 import { SendCampaignControls } from "@/components/campaigns/send-campaign-controls";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { CAMPAIGNS_HOME } from "@/lib/campaigns/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Campaign — GrowthMission" };
@@ -75,7 +76,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
   return (
     <main className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col gap-5 p-6 md:p-8">
       <div className="flex items-center gap-2 text-caption text-neutral-500">
-        <Link href="/campaigns" className="font-semibold text-secondary-700 hover:underline">
+        <Link href={CAMPAIGNS_HOME} className="font-semibold text-secondary-700 hover:underline">
           Campaigns
         </Link>
         <span>/</span>

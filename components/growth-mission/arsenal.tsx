@@ -159,6 +159,7 @@ export function Arsenal({
 
   return (
     <section
+      id="arsenal"
       {...dropProps}
       className={cn(
         "overflow-hidden rounded-xl border bg-white transition-shadow motion-reduce:transition-none",

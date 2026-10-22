@@ -434,6 +434,24 @@ Palette, typeface and the type scale are unchanged — Design System §9 fixes t
 
 **Client-confirmed amendment (2026-09-17):** both Dashboard banners drop the "Complete your…" / "…complete" wording and the extra in-progress sentence — in every state the title is just the document's name ("GrowthMission Solution Questionnaire" / "GrowthMission Vision Board"), the line is just the answered count (e.g. "75 of 75 questions answered"), and the button always reads "View →". Green when complete, blue while in progress, as before.
 
+### 4.3e SDR Outreach — the Call Desk (C2–C3)
+
+**Client-confirmed (2026-10-22, approved mockup "Mission Card Workspaces" v2).** The SDR Outreach card (step 12) keeps Hours, the Arsenal and Mission Orders, and adds two sections between Hours and the Arsenal:
+
+- **Call Desk.** Today's calls, connects (with rate), meetings booked and calls due for the selected SDR, against that SDR's own daily target. Below it, a scoreboard row per SDR, each against their own target, plus a team total.
+- **Daily targets are set by CRO Leader** (client-confirmed, 2026-10-22): CRO Admin and CRO Advisor get **Set target** in the Call Desk header (calls and meetings per day) for the SDR being viewed. An SDR with no target set uses 60 calls and 3 meetings.
+- **Call Queue.** The contacts on the lists assigned to the selected SDR, each once. Views: Due today, Never called, Tomorrow, All; a List filter when the SDR has more than one list; search. Columns: contact (title and source lists), company, phone, status, last touch, attempts, **Log call**.
+
+**Who does what.**
+- **Assigning lists: CRO Admin only** (client-confirmed). **Assign list** picks a list and an SDR; a list belongs to one SDR at a time, so giving a held list to someone else moves it. Each assigned list shows as a chip; its ✕ takes it off the queue.
+- **SDRs use existing roles** (client-confirmed): an in-house SDR is an MSP Marketing user, an outsourced one a Partner granted the account. No SDR role exists.
+- **Viewing.** CRO Leader roles and MSP Owner/Admin choose whose queue to see. Everyone else sees their own queue, read-only as to lists.
+- **SDRs land on Headquarters** like everyone else (client-confirmed); the card is reached from the Command Center.
+
+**Logging a call.** A side panel shows the number (copyable), the attempt count, a link to a call script in the Arsenal when one is there, and five outcomes: No answer and Voicemail (next try in 2 business days), Connected (pick a call-back), Not interested (leaves the queue), Meeting booked (asks for the opportunity name, date, time and salesperson, then creates the opportunity at FME Scheduled with a "First meeting" on its timeline). The call is an ordinary call activity on the contact's timeline. **Save & next call** opens the next contact due today.
+
+**Due dates come from the latest call by anyone** (client-confirmed): a contact on two SDRs' lists shows in both queues, but once either logs a call it is no longer due for either, so nobody is called twice in a day. Whether a contact is due is worked out against the viewer's own date.
+
 ### 4.3c AdvocateDash — the drop-by workstream (C2–C3)
 
 **Client-confirmed (2026-10-05).** AdvocateDash is a drop-by service CRO Leader runs, or trains somebody else to run. An **Advocate** visits a target business in person, leaves the drop-by letter, and files a VictoryVisit After-Action Report back to the MSP Owner. Sourced from the client's own two documents — "AdvocateDash Dropby letter.docx" and "Victory Visit Report.pdf", a completed report for ABTech - Boston.
@@ -537,7 +555,9 @@ The client's direction: "My customers want to manually add contacts to a list" �
 
 ### 4.7 Campaigns (G1–G3)
 
-**Campaigns Index (G1).** Table of past and active campaigns: name, list sent to, send date, status (draft/sending/sent), and headline stats. "Create Campaign" button top-right.
+**Moved onto the Email Campaigning Mission Card (client-confirmed, 2026-10-22, approved mockup "Mission Card Workspaces").** The client wants Mission Cards to be where every user works, converted one card at a time. G1 is no longer its own page: the Email Campaigning card (step 10) shows a **Campaigns** section between Hours and the Arsenal, with the four campaign figures, a Status filter (All / Drafts / Scheduled / Sent), search, the campaigns table and **New Campaign**. `/campaigns` redirects to `/growth-mission/email-campaigning#campaigns`, and **the sidebar no longer has a Campaigns item** (client-confirmed): the card is reached from the Command Center. G2 and G3 are unchanged and keep their own addresses; G2's breadcrumb leads back to the card.
+
+**Campaigns Index (G1, as originally specified).** Table of past and active campaigns: name, list sent to, send date, status (draft/sending/sent), and headline stats. "Create Campaign" button top-right.
 **Campaign Detail (G2).** Recipient list, send status, and full stats: **sent, opened, clicked, bounced, and unsubscribed** — each with timestamps for opens and clicks, per the client's direction and the PRD's tracking requirement.
 **Compose Campaign (G3).** A linear flow: **Compose** (subject, body, sender identity from the user's connected email account) → **Select List** (choose a list as the recipient set) → **Preview** (rendered preview + a test-send option) → **Send** (immediate or scheduled). If no email account is connected yet, this flow doesn't start — see §5.5 and §6.
 
@@ -652,6 +672,8 @@ Flagged for confirmation before or during build, rather than blocking this docum
 - **Onboarding wizard steps (§4.2)** are condensed from the PRD's full onboarding-profile field list into five steps for a Phase 1 "basic version, single pass" — confirm the grouping, or whether any fields should move to a later phase.
 - **Exit-to-dashboard placement (§2.5)** — placed inside the viewing-as banner itself; flag if a top-bar location is preferred instead.
 - This document assumes the same left-sidebar/top-bar shell for CRO Leader users as for MSP users (with the added banner) rather than a visually distinct admin shell — confirm that reads as "light" enough for Phase 1, or if the CRO Leader dashboard should look more clearly separate.
+- **SDR daily targets (§4.3e).** The client said targets are set by CRO Leader; per SDR, and CRO Advisor alongside CRO Admin, are this document's reading of that. Confirm, or narrow it to CRO Admin as list assignment is.
+- **Not interested (§4.3e).** Takes the contact out of every queue but does not change its contact status: account statuses are custom, so there is no status the app can rely on. Confirm whether it should move the contact to a named status.
 
 **Client-confirmed color direction (2026-09-17), "Concept B — navy command bar"** (chosen from three compared mockups): the Dashboard now opens with a single navy-to-teal band holding the Company Profile and the week's KPI tiles, and the GrowthMission Strategy and Assignment Dashboard opens with the same band holding its title, the quarter, and the hours totals strip. Everything below each band keeps the existing white surfaces, and no other screen uses it. See Design System §12 for the band and §12.1 for the validated chart palette.
 

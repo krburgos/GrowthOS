@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { CampaignComposerForm } from "@/components/campaigns/campaign-composer-form";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { CAMPAIGNS_HOME } from "@/lib/campaigns/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "New Campaign — GrowthMission" };
@@ -13,7 +14,7 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro
 export default async function NewCampaignPage() {
   const user = await getCurrentUser();
   if (!user) return null;
-  if (!EDIT_ROLES.includes(user.role)) redirect("/campaigns");
+  if (!EDIT_ROLES.includes(user.role)) redirect(CAMPAIGNS_HOME);
 
   const supabase = await createClient();
 

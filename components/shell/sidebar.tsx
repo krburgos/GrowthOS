@@ -7,7 +7,6 @@ import {
   Landmark,
   LayoutGrid,
   ListChecks,
-  Mail,
   MapPin,
   Settings,
   Target,
@@ -61,7 +60,8 @@ export const NAV_ITEMS: NavItem[] = [
   { section: "companies", label: "Companies", href: "/companies", icon: Building2, group: "crm" },
   { section: "opportunities", label: "Opportunities", href: "/opportunities", icon: Target, group: "crm" },
   { section: "lists", label: "Lists", href: "/lists", icon: ListChecks, group: "crm" },
-  { section: "campaigns", label: "Campaigns", href: "/campaigns", icon: Mail, group: "outreach" },
+  // No Campaigns item (client-confirmed, 2026-10-22): campaigns live on the
+  // Email Campaigning Mission Card, reached from the Command Center.
   { section: "reports", label: "Reports", href: "/reports", icon: BarChart3, group: "outreach" },
   {
     section: "settings",

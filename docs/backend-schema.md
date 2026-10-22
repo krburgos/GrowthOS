@@ -1219,6 +1219,16 @@ Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream 
 - **`users.email_signature_html`** (text, null = none) and **`users.email_signature_auto`** (boolean, default true) — each person's signature, edited by themselves under the existing `users_update` self policy.
 - **Send.** The route cleans the HTML to the editor's own tags (`lib/email/merge-fields.ts`: no scripts, styles, event handlers or non-http(s)/mailto links), fills the fields with escaped values, sends HTML plus a plain-text part via Resend, and logs the plain text as the activity body.
 
+### 6.6m sdr_list_assignments and call outcomes — the SDR Call Desk
+
+**Client-confirmed (2026-10-22, approved mockup "Mission Card Workspaces" v2)**, migration `20261022000001_sdr_call_desk.sql`, for the SDR Outreach Mission Card (App Flow §4.3e).
+
+- **`sdr_list_assignments`** — `account_id`, `list_id` (→ `lists`), `sdr_user_id` (→ `users`), `assigned_by`, timestamps, `archived_at` (soft delete; no delete policy). One SDR per list at a time: partial unique index on `list_id` where `archived_at is null`. Moving a list updates `sdr_user_id`; taking it off sets `archived_at`. Select: own account, CRO Leader, granted partner. Insert/update: **CRO Admin only**, and only for a list in the same account. Explicit `grant select, insert, update` to `authenticated` and `service_role` (Supabase stops auto-granting new public tables on 2026-10-30).
+- **`sdr_daily_targets`** — `account_id`, `sdr_user_id`, `calls` (0–1000, default 60), `meetings` (0–100, default 3), `updated_by`, timestamps, `archived_at`; unique on (`account_id`, `sdr_user_id`), saved by upsert. Select: own account, CRO Leader, granted partner. Insert/update: CRO Admin and CRO Advisor (client-confirmed: targets are set by CRO Leader). An SDR with no row uses the app default in `lib/sdr/desk.ts`. Explicit grants as above.
+- **`activities.call_outcome`** (`sdr_call_outcome`: no_answer, voicemail, connected, not_interested, meeting_booked; only on `type = 'call'`) and **`activities.follow_up_on`** (date). No activity policy changes: Marketing users and partners could already add activities and opportunities.
+- **`sdr_candidates(p_account_id)`** (security definer) — the account's Marketing users, its granted partners, and anyone holding a list, so the Assign dialog and scoreboard can name partners, whom MSP users cannot read in `users`. The caller must be able to see the account.
+- **`sdr_call_queue(p_account_id, p_sdr_user_id)`** (security invoker, so RLS applies) — every live contact on the SDR's assigned lists, once, with its lists, company, status, attempt count and latest call by anyone (outcome, time, follow-up date).
+
 ### 6.6k growth_mission_files — the Arsenal
 
 **Client-confirmed (2026-10-20, approved mockup "The Arsenal")**, migration `20261020000001_arsenal_files.sql`. A file library on each Mission Card; a file belongs to the card in general (`task_id` null) or to one of its Mission Orders. The eighth file exception, and the first general one (§12).
