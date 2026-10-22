@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { StatusPill } from "@/components/contacts/status-pill";
+import { FocusButton, SectionPane } from "@/components/growth-mission/section-switcher";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { AssignListDialog } from "@/components/sdr/assign-list-dialog";
 import { LogCallPanel } from "@/components/sdr/log-call-panel";
@@ -208,6 +209,7 @@ export function CallDesk({
   return (
     <>
       {/* Call Desk: today's numbers against the daily target. */}
+      <SectionPane view="desk">
       <section className="overflow-hidden rounded-lg border border-primary-200 bg-white">
         <div className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 ${NAVY_GRADIENT}`}>
           <h2 className="shrink-0 text-h4 text-white">
@@ -217,6 +219,7 @@ export function CallDesk({
             </span>
           </h2>
           <div className="ml-auto flex flex-wrap items-center gap-3">
+            <FocusButton view="desk" label="Call Desk" />
             {sdrId && (
               <span className="text-body-sm text-white/80">
                 {isMe ? "Your daily target" : `Daily target${sdrName ? ` for ${sdrName.split(" ")[0]}` : ""}`}{" "}
@@ -309,8 +312,10 @@ export function CallDesk({
           </div>
         )}
       </section>
+      </SectionPane>
 
       {/* Call Queue: the contacts on this SDR's assigned lists. */}
+      <SectionPane view="queue">
       <section id="call-queue" className="scroll-mt-6 overflow-hidden rounded-xl border border-primary-200 bg-white">
         <div className={`flex flex-wrap items-center gap-3 px-5 py-4 ${NAVY_GRADIENT}`}>
           <div className="min-w-0">
@@ -322,6 +327,7 @@ export function CallDesk({
             </p>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
+            <FocusButton view="queue" label="Call Queue" />
             {canViewAny && holders.length > 0 ? (
               <label className="flex items-center gap-2 text-body-sm text-white/80">
                 Queue of
@@ -552,6 +558,7 @@ export function CallDesk({
           </>
         )}
       </section>
+      </SectionPane>
 
       {logging && (
         <LogCallPanel

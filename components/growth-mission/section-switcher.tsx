@@ -6,46 +6,48 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { cn } from "@/lib/utils";
 
 /**
- * Command Center, one section at a time (client-confirmed, 2026-10-20,
- * approved mockup "Command Center Focus"). A switcher under the page title
- * shows every section or just one, full width; each section's own header
- * carries a Focus button that does the same.
+ * One section at a time (client-confirmed, 2026-10-20, approved mockup
+ * "Command Center Focus"; extended to every Mission Card 2026-10-22,
+ * approved mockup "Mission Card Workspaces" v3). A switcher under the page
+ * title shows every section or just one, full width; each section's own
+ * header carries a Focus button that does the same.
  *
- * The view lives in the address (#mission-orders, …), so Back works and a
- * focused view can be shared or bookmarked, and the last one chosen is
- * remembered in this browser. Sections stay mounted while hidden, so their
+ * The view lives in the address (each section's `hash`), so Back works and
+ * a focused view can be shared or bookmarked, and the last one chosen is
+ * remembered in this browser under `storageKey` (one key per page, so each
+ * Mission Card keeps its own). Sections stay mounted while hidden, so their
  * filters survive switching.
  */
-export type SectionView = "all" | "capacity" | "progress" | "cards" | "orders";
-
-const HASH: Record<Exclude<SectionView, "all">, string> = {
-  capacity: "#mission-capacity",
-  progress: "#mission-progress",
-  cards: "#mission-cards",
-  orders: "#mission-orders",
-};
-const STORAGE_KEY = "growthmission.commandCenter.view";
-
-function viewFromHash(hash: string): SectionView | null {
-  const found = (Object.keys(HASH) as (keyof typeof HASH)[]).find((k) => HASH[k] === hash);
-  return found ?? null;
+export interface SwitcherSection {
+  view: string;
+  label: string;
+  /** In the address, e.g. "#mission-orders". */
+  hash: string;
+  count?: number;
 }
 
-const SectionViewContext = createContext<{ view: SectionView; show: (v: SectionView) => void } | null>(null);
+const SectionViewContext = createContext<{ view: string; show: (v: string) => void } | null>(null);
 
-/** The current view, or null outside the Command Center (Headquarters shares MissionOrders). */
-export function useSectionView(): SectionView | null {
+/** The current view ("all" or a section's view), or null outside a switcher (Headquarters shares MissionOrders). */
+export function useSectionView(): string | null {
   return useContext(SectionViewContext)?.view ?? null;
 }
 
 export function SectionSwitcher({
   sections,
+  storageKey,
+  label,
   children,
 }: {
-  sections: { view: Exclude<SectionView, "all">; label: string; count?: number }[];
+  sections: SwitcherSection[];
+  storageKey: string;
+  /** Names the tab list for screen readers, e.g. "Command Center sections". */
+  label: string;
   children: ReactNode;
 }) {
-  const [view, setView] = useState<SectionView>("all");
+  const [view, setView] = useState("all");
+
+  const viewFromHash = useCallback((hash: string) => sections.find((s) => s.hash === hash)?.view ?? null, [sections]);
 
   // On arrival: the address wins, then the last view chosen here.
   useEffect(() => {
@@ -55,38 +57,43 @@ export function SectionSwitcher({
       return;
     }
     try {
-      const saved = window.localStorage.getItem(STORAGE_KEY) as SectionView | null;
-      if (saved && (saved === "all" || saved in HASH)) setView(saved);
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved && (saved === "all" || sections.some((s) => s.view === saved))) setView(saved);
     } catch {
       // Storage blocked: start on every section.
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const onPop = () => setView(viewFromHash(window.location.hash) ?? "all");
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, []);
+  }, [viewFromHash]);
 
-  const show = useCallback((v: SectionView) => {
-    setView(v);
-    const url = window.location.pathname + window.location.search + (v === "all" ? "" : HASH[v]);
-    window.history.pushState(null, "", url);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, v);
-    } catch {
-      // Storage blocked: the address still carries the view.
-    }
-    window.scrollTo({ top: 0 });
-  }, []);
+  const show = useCallback(
+    (v: string) => {
+      setView(v);
+      const hash = sections.find((s) => s.view === v)?.hash ?? "";
+      const url = window.location.pathname + window.location.search + hash;
+      window.history.pushState(null, "", url);
+      try {
+        window.localStorage.setItem(storageKey, v);
+      } catch {
+        // Storage blocked: the address still carries the view.
+      }
+      window.scrollTo({ top: 0 });
+    },
+    [sections, storageKey]
+  );
 
-  const tabs: { view: SectionView; label: string; count?: number }[] = [{ view: "all", label: "All sections" }, ...sections];
+  const tabs: { view: string; label: string; count?: number }[] = [{ view: "all", label: "All sections" }, ...sections];
 
   return (
     <SectionViewContext.Provider value={{ view, show }}>
       <div
         role="tablist"
-        aria-label="Command Center sections"
+        aria-label={label}
         className="sticky top-0 z-20 -mx-1 flex gap-1 overflow-x-auto rounded-xl border border-neutral-200 bg-white p-1 shadow-lift [scrollbar-width:none]"
       >
         {tabs.map((t) => {
@@ -136,13 +143,17 @@ export function SectionSwitcher({
 }
 
 /** One section; hidden (but kept mounted) while another is focused. */
-export function SectionPane({ view, children }: { view: Exclude<SectionView, "all">; children: ReactNode }) {
+export function SectionPane({ view, children }: { view: string; children: ReactNode }) {
   const current = useContext(SectionViewContext)?.view ?? "all";
   return <div hidden={current !== "all" && current !== view}>{children}</div>;
 }
 
-/** The ⤢ Focus button in a section's own header; only while every section shows. */
-export function FocusButton({ view, label }: { view: Exclude<SectionView, "all">; label: string }) {
+/**
+ * The ⤢ Focus button in a section's own header; only while every section
+ * shows. `tone="light"` for the few section headers that are white rather
+ * than navy (AdvocateDash's targets).
+ */
+export function FocusButton({ view, label, tone = "dark" }: { view: string; label: string; tone?: "dark" | "light" }) {
   const ctx = useContext(SectionViewContext);
   if (!ctx || ctx.view !== "all") return null;
   return (
@@ -150,7 +161,12 @@ export function FocusButton({ view, label }: { view: Exclude<SectionView, "all">
       type="button"
       onClick={() => ctx.show(view)}
       aria-label={`Show only ${label}`}
-      className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-1 text-caption font-semibold text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-300"
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-caption font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2",
+        tone === "dark"
+          ? "bg-white/10 text-white hover:bg-white/20 focus-visible:ring-secondary-300"
+          : "bg-primary-50 text-primary-800 hover:bg-primary-100 focus-visible:ring-secondary-500/40"
+      )}
     >
       <Maximize2 className="size-3.5" />
       Focus

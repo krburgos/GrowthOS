@@ -64,7 +64,16 @@ const dateOf = (c: CampaignRow) =>
  * and the Arsenal: navy title bar, the four figures on light blue, a light
  * blue filter row and column headings, white rows.
  */
-export function CampaignsWorkspace({ campaigns, canEdit }: { campaigns: CampaignRow[]; canEdit: boolean }) {
+export function CampaignsWorkspace({
+  campaigns,
+  canEdit,
+  focusSlot,
+}: {
+  campaigns: CampaignRow[];
+  canEdit: boolean;
+  /** The Mission Card's Focus button. */
+  focusSlot?: React.ReactNode;
+}) {
   const [show, setShow] = useState<Show>("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -120,14 +129,17 @@ export function CampaignsWorkspace({ campaigns, canEdit }: { campaigns: Campaign
               : `${sent.length} sent · ${count("scheduled")} scheduled · ${count("draft")} ${count("draft") === 1 ? "draft" : "drafts"}`}
           </p>
         </div>
-        {canEdit && (
-          <Button size="sm" variant="secondary" className="ml-auto border-transparent hover:border-transparent" asChild>
-            <Link href="/campaigns/new">
-              <Plus className="mr-1.5 size-4" />
-              New Campaign
-            </Link>
-          </Button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {focusSlot}
+          {canEdit && (
+            <Button size="sm" variant="secondary" className="border-transparent hover:border-transparent" asChild>
+              <Link href="/campaigns/new">
+                <Plus className="mr-1.5 size-4" />
+                New Campaign
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 border-b border-primary-200 bg-primary-50 sm:grid-cols-4 sm:divide-x sm:divide-primary-200">

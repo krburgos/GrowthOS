@@ -29,6 +29,7 @@ export function StepHoursPanel({
   quarter,
   canEditOutsourced,
   reportSlot,
+  focusSlot,
 }: {
   accountId: string;
   slug: string;
@@ -42,6 +43,8 @@ export function StepHoursPanel({
    * way StepHeader takes its overview slot.
    */
   reportSlot?: ReactNode;
+  /** The Mission Card's Focus button (2026-10-22). */
+  focusSlot?: ReactNode;
 }) {
   const router = useRouter();
   const [outsourced, setOutsourced] = useState(hours.outsourced);
@@ -90,6 +93,7 @@ export function StepHoursPanel({
             carries everything about this discipline that is not a number. */}
         {reportSlot}
         <div className="ml-auto flex items-center gap-3">
+          {focusSlot}
           {canEditOutsourced ? (
             <div className="flex items-center gap-2">
               <span className="text-body-sm font-medium text-white/80">Outsourced</span>

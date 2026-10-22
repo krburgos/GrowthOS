@@ -22,7 +22,7 @@ import { targetSummary, type AdvocateTarget } from "@/lib/advocate-dash/targets"
  * A server component: it renders counts and one client island
  * (SampleButtons), so there is nothing for it to hold state about.
  */
-export function DropbyPanel({ targets }: { targets: AdvocateTarget[] }) {
+export function DropbyPanel({ targets, focusSlot }: { targets: AdvocateTarget[]; focusSlot?: React.ReactNode }) {
   const summary = targetSummary(targets);
 
   const stats = [
@@ -41,6 +41,7 @@ export function DropbyPanel({ targets }: { targets: AdvocateTarget[] }) {
           Drop-bys <span className="font-normal text-secondary-300">· all time</span>
         </h2>
         <SampleButtons />
+        {focusSlot && <div className="ml-auto">{focusSlot}</div>}
       </div>
 
       <div className="grid grid-cols-2 bg-primary-50 sm:grid-cols-4 sm:divide-x sm:divide-primary-200">

@@ -93,11 +93,13 @@ export default async function GrowthMissionPage() {
       {/* Client-confirmed (2026-10-20, approved mockup "Command Center
           Focus"): every section, or one of them full width. */}
       <SectionSwitcher
+        label="Command Center sections"
+        storageKey="growthmission.commandCenter.view"
         sections={[
-          { view: "capacity", label: "Mission Capacity" },
-          { view: "progress", label: "Mission Progress" },
-          { view: "cards", label: "Mission Cards", count: steps.length },
-          { view: "orders", label: "Mission Orders", count: tasks.filter((t) => t.state !== "complete").length },
+          { view: "capacity", label: "Mission Capacity", hash: "#mission-capacity" },
+          { view: "progress", label: "Mission Progress", hash: "#mission-progress" },
+          { view: "cards", label: "Mission Cards", hash: "#mission-cards", count: steps.length },
+          { view: "orders", label: "Mission Orders", hash: "#mission-orders", count: tasks.filter((t) => t.state !== "complete").length },
         ]}
       >
       {/* Client-confirmed (2026-10-13): Mission Capacity is its own section,

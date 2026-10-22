@@ -9,6 +9,12 @@ import { ReportPanel } from "@/components/growth-mission/report-panel";
 import { StepHeader } from "@/components/growth-mission/step-header";
 import { StepHoursPanel } from "@/components/growth-mission/step-hours-panel";
 import { MissionOrders } from "@/components/growth-mission/mission-orders";
+import {
+  FocusButton,
+  SectionPane,
+  SectionSwitcher,
+  type SwitcherSection,
+} from "@/components/growth-mission/section-switcher";
 import { ADVOCATE_DASH_SLUG } from "@/lib/advocate-dash/targets";
 import { getTargets } from "@/lib/advocate-dash/queries";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
@@ -117,6 +123,24 @@ export default async function GrowthMissionStepPage({
   // checks even though only the task list changed.
   const canAuthorTasks = HOURS_EDIT_ROLES.includes(user.role);
 
+  const sections: SwitcherSection[] = isAdvocateDash
+    ? [
+        { view: "dropbys", label: "Drop-bys", hash: "#drop-bys" },
+        { view: "targets", label: "Targets", hash: "#targets", count: targets.length },
+      ]
+    : [
+        { view: "hours", label: "Hours", hash: "#hours" },
+        ...(campaigns ? [{ view: "campaigns", label: "Campaigns", hash: "#campaigns", count: campaigns.length }] : []),
+        ...(sdrDesk
+          ? [
+              { view: "desk", label: "Call Desk", hash: "#call-desk" },
+              { view: "queue", label: "Call Queue", hash: "#call-queue" },
+            ]
+          : []),
+        { view: "arsenal", label: "The Arsenal", hash: "#arsenal", count: files.length },
+        { view: "orders", label: "Mission Orders", hash: "#mission-orders", count: tasks.filter((t) => t.state !== "complete").length },
+      ];
+
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-6 md:p-8">
       <StepHeader
@@ -132,20 +156,30 @@ export default async function GrowthMissionStepPage({
         }
       />
 
+      {/* Client-confirmed (2026-10-22, approved mockup "Mission Card
+          Workspaces" v3): every Mission Card gets the Command Center's
+          switcher, for the sections it has. Each card remembers its own
+          last view. */}
+      <SectionSwitcher label="Mission Card sections" storageKey={`growthmission.missionCard.${step.slug}.view`} sections={sections}>
       {isAdvocateDash ? (
         <>
           {/* No hours panel and no report control: this workstream is
               measured in drop-bys, and its reports are per-visit rather
               than per-account. The two sample documents ride this panel's
               header the way the report rides the hours header elsewhere. */}
-          <DropbyPanel targets={targets} />
+          <SectionPane view="dropbys">
+            <DropbyPanel targets={targets} focusSlot={<FocusButton view="dropbys" label="Drop-bys" />} />
+          </SectionPane>
 
-          <TargetsTable
-            accountId={user.account_id}
-            targets={targets}
-            team={team}
-            canEdit={canAuthorTasks}
-          />
+          <SectionPane view="targets">
+            <TargetsTable
+              accountId={user.account_id}
+              targets={targets}
+              team={team}
+              canEdit={canAuthorTasks}
+              focusSlot={<FocusButton view="targets" label="Drop-by targets" tone="light" />}
+            />
+          </SectionPane>
         </>
       ) : (
         <>
@@ -153,25 +187,37 @@ export default async function GrowthMissionStepPage({
               rather than taking a card of its own. Two stacked panels spent a
               whole row on one filename and pushed the tasks down; one line now
               carries the quarter, the report and both actions. */}
-          <StepHoursPanel
-            accountId={user.account_id}
-            slug={step.slug}
-            hours={mission.stepHours[step.slug]}
-            quarter={quarter}
-            canEditOutsourced={canEditOutsourced}
-            reportSlot={
-              <ReportPanel
-                accountId={user.account_id}
-                slug={step.slug}
-                stepTitle={step.title}
-                reports={reports}
-                canUpload={canEdit}
+          <SectionPane view="hours">
+            <StepHoursPanel
+              accountId={user.account_id}
+              slug={step.slug}
+              hours={mission.stepHours[step.slug]}
+              quarter={quarter}
+              canEditOutsourced={canEditOutsourced}
+              reportSlot={
+                <ReportPanel
+                  accountId={user.account_id}
+                  slug={step.slug}
+                  stepTitle={step.title}
+                  reports={reports}
+                  canUpload={canEdit}
+                />
+              }
+              focusSlot={<FocusButton view="hours" label="Hours" />}
+            />
+          </SectionPane>
+
+          {campaigns && (
+            <SectionPane view="campaigns">
+              <CampaignsWorkspace
+                campaigns={campaigns}
+                canEdit={CAMPAIGN_EDIT_ROLES.includes(user.role)}
+                focusSlot={<FocusButton view="campaigns" label="Campaigns" />}
               />
-            }
-          />
+            </SectionPane>
+          )}
 
-          {campaigns && <CampaignsWorkspace campaigns={campaigns} canEdit={CAMPAIGN_EDIT_ROLES.includes(user.role)} />}
-
+          {/* Call Desk and Call Queue are two sections; CallDesk places its own panes. */}
           {sdrDesk && (
             <CallDesk
               accountId={user.account_id}
@@ -195,34 +241,41 @@ export default async function GrowthMissionStepPage({
           {/* Client-confirmed (2026-10-20, approved mockup "The Arsenal"):
               the Mission Card's files, between the hours (which carry the
               report) and the orders. */}
-          <Arsenal
-            accountId={user.account_id}
-            slug={step.slug}
-            files={files}
-            orders={tasks.map((t) => ({ id: t.id, title: t.title }))}
-            canEdit={canAuthorTasks}
-          />
+          <SectionPane view="arsenal">
+            <Arsenal
+              accountId={user.account_id}
+              slug={step.slug}
+              files={files}
+              orders={tasks.map((t) => ({ id: t.id, title: t.title }))}
+              canEdit={canAuthorTasks}
+              focusSlot={<FocusButton view="arsenal" label="The Arsenal" />}
+            />
+          </SectionPane>
 
           {/* Client-confirmed (2026-10-14, approved mockup "Mission Orders
               Design"): "What to do next" becomes Mission Orders –
               Tasks/Tickets, grouped Must / Should / Could. Only CRO Leader
               confirms a GrowthMission order complete (canEdit here is the
               CRO Admin/Advisor check). */}
-          <MissionOrders
-            mode="discipline"
-            accountId={user.account_id}
-            slug={step.slug}
-            orders={tasks}
-            team={team}
-            memberLoad={memberLoad}
-            canEdit={canAuthorTasks}
-            isCroLeader={canEdit}
-            openOrderId={openOrderId}
-            openNew={issue === "1"}
-            files={files}
-          />
+          <SectionPane view="orders">
+            <MissionOrders
+              mode="discipline"
+              accountId={user.account_id}
+              slug={step.slug}
+              orders={tasks}
+              team={team}
+              memberLoad={memberLoad}
+              canEdit={canAuthorTasks}
+              isCroLeader={canEdit}
+              openOrderId={openOrderId}
+              openNew={issue === "1"}
+              files={files}
+              focusSlot={<FocusButton view="orders" label="Mission Orders" />}
+            />
+          </SectionPane>
         </>
       )}
+      </SectionSwitcher>
     </main>
   );
 }

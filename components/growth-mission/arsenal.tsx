@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { FileViewer, KindChip, downloadFile, fileMeta } from "@/components/growth-mission/mission-file-bits";
 import { OwnerAvatar } from "@/components/growth-mission/order-bits";
+import { useSectionView } from "@/components/growth-mission/section-switcher";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -47,6 +48,7 @@ export function Arsenal({
   files,
   orders,
   canEdit,
+  focusSlot,
 }: {
   accountId: string;
   slug: string;
@@ -54,10 +56,14 @@ export function Arsenal({
   /** This card's orders, for attaching a file to one. */
   orders: { id: string; title: string }[];
   canEdit: boolean;
+  /** The Mission Card's Focus button (2026-10-22). */
+  focusSlot?: React.ReactNode;
 }) {
   const router = useRouter();
   const storageKey = `growthmission.arsenal.collapsed.${slug}`;
   const [collapsed, setCollapsed] = useState(false);
+  // Focusing the Arsenal always shows its files, whatever its own collapse says.
+  const focused = useSectionView() === "arsenal";
   const [show, setShow] = useState<Show>("all");
   const [query, setQuery] = useState("");
   const [uploading, setUploading] = useState<string[]>([]);
@@ -186,6 +192,7 @@ export function Arsenal({
             </span>
           </span>
         </button>
+        {focusSlot && <div className="ml-auto">{focusSlot}</div>}
         {canEdit && (
           <>
             <input
@@ -214,7 +221,7 @@ export function Arsenal({
         )}
       </div>
 
-      {!collapsed && (
+      {(!collapsed || focused) && (
         <>
           {files.length > 0 && (
             <div className="flex flex-wrap items-end gap-x-3.5 gap-y-2.5 border-b border-primary-200 bg-primary-100 px-5 pb-3 pt-2.5">

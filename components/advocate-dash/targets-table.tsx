@@ -92,11 +92,14 @@ export function TargetsTable({
   targets,
   team,
   canEdit,
+  focusSlot,
 }: {
   accountId: string;
   targets: AdvocateTarget[];
   team: TeamMember[];
   canEdit: boolean;
+  /** The Mission Card's Focus button (2026-10-22). */
+  focusSlot?: React.ReactNode;
 }) {
   const router = useRouter();
   // A local copy, so an inline change lands on click rather than after a
@@ -261,12 +264,15 @@ export function TargetsTable({
                   .join(" · ")}
           </p>
         </div>
-        {canEdit && (
-          <Button size="sm" className="ml-auto" onClick={() => setDraft(emptyDraft())}>
-            <Plus className="mr-1.5 size-4" />
-            Add target
-          </Button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {focusSlot}
+          {canEdit && (
+            <Button size="sm" onClick={() => setDraft(emptyDraft())}>
+              <Plus className="mr-1.5 size-4" />
+              Add target
+            </Button>
+          )}
+        </div>
       </div>
 
       {rows.length === 0 ? (
