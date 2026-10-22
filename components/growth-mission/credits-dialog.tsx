@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
-import { CREDITS_PER_HOUR, type MissionCapacity } from "@/lib/growth-mission/capacity";
+import type { MissionCapacity } from "@/lib/growth-mission/capacity";
 import { formatWhole } from "@/lib/growth-mission/hours";
 import { createClient } from "@/lib/supabase/client";
 
@@ -67,7 +67,8 @@ export function CreditsDialog({
 
   const rows = [
     {
-      label: `Used this quarter (${formatWhole(capacity.hours.completed)} hrs × ${CREDITS_PER_HOUR})`,
+      // No hourly rate in the app's copy (client-confirmed, 2026-10-22).
+      label: "Used this quarter",
       value: formatWhole(capacity.credits.used),
     },
     {
@@ -106,7 +107,7 @@ export function CreditsDialog({
               </span>
             </div>
             <p className="mt-1.5 text-caption text-neutral-500">
-              Added on the 1st of each month. Unused credits roll over. {CREDITS_PER_HOUR} credits = 1 hour.
+              Added on the 1st of each month. Unused credits roll over.
             </p>
           </div>
 

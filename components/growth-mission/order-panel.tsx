@@ -51,7 +51,8 @@ interface Draft {
 const TYPES: { value: OrderType; hint: string }[] = [
   { value: "internal", hint: "Your in-house team" },
   { value: "outsourced", hint: "Your partners" },
-  { value: "growthmission", hint: `${CREDITS_PER_HOUR} credits / hr` },
+  // No hourly rate in the app's copy (client-confirmed, 2026-10-22).
+  { value: "growthmission", hint: "Uses credits" },
 ];
 
 function draftFor(task: Task | null, priority: TaskPriority): Draft {
@@ -313,7 +314,7 @@ export function OrderPanel({
             {gm ? (
               <div className="flex items-center justify-between rounded-lg border border-secondary-200 bg-secondary-50 px-3 py-2.5 text-body-sm text-secondary-800">
                 <span className="tabular-nums">
-                  {hours} hrs × {CREDITS_PER_HOUR} credits
+                  {hours} hrs
                   {task?.state === "complete" && task.delegated ? " · used" : " · used on completion"}
                 </span>
                 <span className="text-h4 font-bold tabular-nums text-primary-900">{hours * CREDITS_PER_HOUR} credits</span>
