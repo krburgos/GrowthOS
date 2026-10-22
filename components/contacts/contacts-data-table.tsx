@@ -545,7 +545,10 @@ export function ContactsDataTable({
   const startEdit = (c: ContactListRow) => {
     if (editingId) return; // finish or cancel the row already being edited first
     setEditingId(c.id);
-    setDraft({
+    setDraft(draftOf(c));
+  };
+
+  const draftOf = (c: ContactListRow): ContactDraft => ({
       full_name: c.full_name,
       email: c.email,
       title: c.title ?? "",
@@ -556,8 +559,7 @@ export function ContactsDataTable({
       linkedin_url: c.linkedin_url ?? "",
       subscribed: !c.email_opt_out,
       company: c.company_id && c.companies ? companyDraftOf(c) : null,
-    });
-  };
+  });
 
   const companyDraftOf = (c: ContactListRow): CompanyDraft => ({
     company_size: c.companies?.company_size ?? "",
@@ -595,7 +597,17 @@ export function ContactsDataTable({
   };
 
   const saveEdit = async () => {
-    if (!editingId || !draft) return;
+    if (!editingId || !draft || saving) return;
+    const row = contacts.find((x) => x.id === editingId);
+    const original = row ? draftOf(row) : null;
+    // The contact's own fields, without the company's.
+    const own = (d: ContactDraft) => JSON.stringify({ ...d, company: null });
+    const contactChanged = !original || own(draft) !== own(original);
+    // Nothing changed: just leave edit mode, with no save and no message.
+    if (original && JSON.stringify(draft) === JSON.stringify(original)) {
+      cancelEdit();
+      return;
+    }
     if (!draft.full_name.trim() || !draft.email.trim()) {
       toast.error("Name and email can't be empty.");
       return;
@@ -603,21 +615,23 @@ export function ContactsDataTable({
     setSaving(true);
     const supabase = createClient();
     const [first_name, ...rest] = draft.full_name.trim().split(/\s+/);
-    const { error } = await supabase
-      .from("contacts")
-      .update({
-        first_name,
-        last_name: rest.length > 0 ? rest.join(" ") : null,
-        email: draft.email.trim(),
-        title: draft.title.trim() || null,
-        status_id: draft.status_id,
-        score: draft.score.trim() ? Number(draft.score) : null,
-        temperature: draft.temperature === "none" ? null : draft.temperature,
-        phone: draft.phone.trim() || null,
-        linkedin_url: draft.linkedin_url.trim() || null,
-        email_opt_out: !draft.subscribed,
-      })
-      .eq("id", editingId);
+    const { error } = contactChanged
+      ? await supabase
+          .from("contacts")
+          .update({
+            first_name,
+            last_name: rest.length > 0 ? rest.join(" ") : null,
+            email: draft.email.trim(),
+            title: draft.title.trim() || null,
+            status_id: draft.status_id,
+            score: draft.score.trim() ? Number(draft.score) : null,
+            temperature: draft.temperature === "none" ? null : draft.temperature,
+            phone: draft.phone.trim() || null,
+            linkedin_url: draft.linkedin_url.trim() || null,
+            email_opt_out: !draft.subscribed,
+          })
+          .eq("id", editingId)
+      : { error: null };
 
     if (error) {
       setSaving(false);
@@ -626,7 +640,6 @@ export function ContactsDataTable({
     }
 
     // The company's own fields, only when one of them actually changed.
-    const row = contacts.find((x) => x.id === editingId);
     const before = row && row.company_id && row.companies ? companyDraftOf(row) : null;
     const after = draft.company;
     let companyNote = "";
@@ -657,6 +670,25 @@ export function ContactsDataTable({
     setDraft(null);
     router.refresh();
   };
+
+  // Client-confirmed (2026-10-22): clicking anywhere outside the row being
+  // edited saves it, as well as Enter and the ✓. Clicks inside the row, or
+  // in a dropdown it opened (Status, Temp), don't count as outside. A ref
+  // keeps the listener on the latest draft without re-binding per keystroke.
+  const saveRef = useRef(saveEdit);
+  saveRef.current = saveEdit;
+  useEffect(() => {
+    if (!editingId) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Element | null;
+      if (!target?.closest) return;
+      if (target.closest('tr[data-editing="true"]')) return;
+      if (target.closest("[data-radix-popper-content-wrapper], [role='listbox'], [role='dialog'], [role='menu']")) return;
+      void saveRef.current();
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [editingId]);
 
   const handleDraftKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
