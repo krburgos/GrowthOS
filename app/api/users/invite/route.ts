@@ -86,6 +86,42 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient();
+
+  // Someone who was removed or deactivated keeps their account, so an invite
+  // to their email restores it rather than failing as "already registered"
+  // (client-confirmed, 2026-10-22). They come back in the role and account
+  // this invite names, and get a link to set a password and sign in.
+  const { data: existing } = await admin
+    .from("users")
+    .select("id, account_id, archived_at, removed_at")
+    .ilike("email", email.trim())
+    .maybeSingle();
+  if (existing) {
+    if (!existing.archived_at && !existing.removed_at) {
+      return NextResponse.json({ error: "That email already has an active account." }, { status: 400 });
+    }
+    // Only CRO Admin may bring back someone from another account (or the
+    // CRO Leader team); an Owner or Admin restores their own people only.
+    if (inviter.role !== "cro_admin" && existing.account_id !== targetAccountId) {
+      return NextResponse.json({ error: "That email already has an account. Ask CRO Leader to restore it." }, { status: 400 });
+    }
+    const { error: restoreError } = await admin
+      .from("users")
+      .update({ role, account_id: targetAccountId, full_name, archived_at: null, removed_at: null })
+      .eq("id", existing.id);
+    if (restoreError) return NextResponse.json({ error: restoreError.message }, { status: 400 });
+    const { error: unbanError } = await admin.auth.admin.updateUserById(existing.id, {
+      ban_duration: "none",
+      user_metadata: { account_id: targetAccountId, role, full_name },
+    });
+    if (unbanError) return NextResponse.json({ error: unbanError.message }, { status: 400 });
+    const { error: linkError } = await admin.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${new URL(request.url).origin}/auth/callback?next=/reset-password`,
+    });
+    if (linkError) return NextResponse.json({ error: linkError.message }, { status: 400 });
+    return NextResponse.json({ success: true, restored: true });
+  }
+
   const { error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { account_id: targetAccountId, role, full_name },
     redirectTo: `${new URL(request.url).origin}/auth/confirm?next=/accept-invite`,

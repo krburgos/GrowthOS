@@ -51,9 +51,11 @@ export default async function UsersRolesPage({
       .from("users")
       .select("id, full_name, email, role, archived_at")
       .eq("account_id", user.account_id)
+      // Removed people are left off every user list (client-confirmed, 2026-10-22).
+      .is("removed_at", null)
       .order("full_name")
       .range(from, to),
-    supabase.from("users").select("*", { count: "exact", head: true }).eq("account_id", user.account_id),
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("account_id", user.account_id).is("removed_at", null),
     supabase.rpc("get_users_with_last_login", { p_account_id: user.account_id }),
   ]);
 

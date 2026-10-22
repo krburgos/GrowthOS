@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
 
 import {
-  DeactivateButton,
   InvitePersonDialog,
   PersonCell,
   RoleSelect,
@@ -14,6 +13,7 @@ import {
   type PersonRow,
 } from "@/components/cro/people-bits";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
+import { UserAccessActions } from "@/components/users/user-access-actions";
 import { useFlash } from "@/lib/use-flash";
 import { Button } from "@/components/ui/button";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
@@ -194,11 +194,7 @@ export function AllUsersPanel({
                         <StatusBadge deactivated={off} />
                       </td>
                       <td className="px-3 py-2.5">
-                        {!off && (
-                          <div className="flex justify-end">
-                            <DeactivateButton person={u} onDone={() => router.refresh()} />
-                          </div>
-                        )}
+                        <UserAccessActions userId={u.id} name={u.full_name} deactivated={off} onDone={() => router.refresh()} />
                       </td>
                     </tr>
                   );

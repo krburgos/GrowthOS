@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 import {
-  DeactivateButton,
   InvitePersonDialog,
   PersonCell,
   RoleSelect,
@@ -14,6 +13,7 @@ import {
   type PersonRow,
 } from "@/components/cro/people-bits";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
+import { UserAccessActions } from "@/components/users/user-access-actions";
 import { useFlash } from "@/lib/use-flash";
 import { Button } from "@/components/ui/button";
 import { ROLE_LABELS } from "@/lib/auth/role-labels";
@@ -101,10 +101,8 @@ export function CroTeamPanel({
                     <StatusBadge deactivated={off} />
                   </td>
                   <td className="px-3 py-2.5">
-                    {!you && !off && (
-                      <div className="flex justify-end">
-                        <DeactivateButton person={m} onDone={() => router.refresh()} />
-                      </div>
+                    {!you && (
+                      <UserAccessActions userId={m.id} name={m.full_name} deactivated={off} onDone={() => router.refresh()} />
                     )}
                   </td>
                 </tr>

@@ -117,6 +117,7 @@ export default async function CroDashboardPage() {
         .from("users")
         .select("id, full_name, email, role, archived_at, account_id, accounts(name)")
         .neq("role", "partner")
+        .is("removed_at", null)
         .order("full_name"),
       supabase.rpc("get_users_with_last_login", { p_account_id: null }),
     ]);

@@ -123,54 +123,6 @@ export function RoleSelect({
   );
 }
 
-/** Deactivate, behind a confirmation, as on Users & Roles. */
-export function DeactivateButton({ person, onDone }: { person: PersonRow; onDone: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
-  const run = async () => {
-    setPending(true);
-    const res = await fetch(`/api/users/${person.id}/deactivate`, { method: "POST" });
-    const body = await res.json().catch(() => ({}));
-    setPending(false);
-    setOpen(false);
-    if (!res.ok) {
-      toast.error(body.error ?? "Couldn't deactivate that user.");
-      return;
-    }
-    toast.success(`${person.full_name} deactivated.`);
-    onDone();
-  };
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="rounded-md px-2.5 py-1 text-caption font-semibold text-error-700 hover:bg-error-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
-      >
-        Deactivate
-      </button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Deactivate user</DialogTitle>
-            <DialogDescription>
-              {person.full_name} will immediately lose access to GrowthMission. This can&apos;t be undone from this screen.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={run} disabled={pending}>
-              Deactivate
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
 /** Invite a team member (no client) or a client user (a client is required). */
 export function InvitePersonDialog({
   open,

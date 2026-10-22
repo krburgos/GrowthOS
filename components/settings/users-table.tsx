@@ -35,6 +35,7 @@ import { ROLE_LABELS } from "@/lib/auth/role-labels";
 import { CRO_LEADER_ROLES } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/client";
 import { useFlash } from "@/lib/use-flash";
+import { UserAccessActions } from "@/components/users/user-access-actions";
 
 export interface UserRow {
   id: string;
@@ -60,7 +61,6 @@ export function UsersTable({
   const [pendingId, setPendingId] = useState<string | null>(null);
   // The saved-row glow after a role change (Design System §Motion, 2026-10-22).
   const { flashId, flash } = useFlash();
-  const [deactivateTarget, setDeactivateTarget] = useState<UserRow | null>(null);
   // A move from an MSP role to a CRO Leader role, waiting on confirmation.
   const [promoteTarget, setPromoteTarget] = useState<{ user: UserRow; role: UserRole } | null>(null);
 
@@ -97,24 +97,6 @@ export function UsersTable({
         : "Role updated."
     );
     flash(target.id);
-    router.refresh();
-  };
-
-  const handleDeactivate = async () => {
-    if (!deactivateTarget) return;
-    setPendingId(deactivateTarget.id);
-
-    const res = await fetch(`/api/users/${deactivateTarget.id}/deactivate`, { method: "POST" });
-    const body = await res.json();
-
-    setPendingId(null);
-    setDeactivateTarget(null);
-
-    if (!res.ok) {
-      toast.error(body.error ?? "Couldn't deactivate that user.");
-      return;
-    }
-    toast.success(`${deactivateTarget.full_name} deactivated.`);
     router.refresh();
   };
 
@@ -169,14 +151,14 @@ export function UsersTable({
               </TableCell>
               {canEdit && (
                 <TableCell>
-                  {!u.archived_at && u.id !== currentUserId && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeactivateTarget(u)}
-                    >
-                      Deactivate
-                    </Button>
+                  {/* Deactivate / Reactivate / Remove (client-confirmed, 2026-10-22). */}
+                  {u.id !== currentUserId && (
+                    <UserAccessActions
+                      userId={u.id}
+                      name={u.full_name}
+                      deactivated={!!u.archived_at}
+                      onDone={() => router.refresh()}
+                    />
                   )}
                 </TableCell>
               )}
@@ -209,29 +191,6 @@ export function UsersTable({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deactivateTarget} onOpenChange={(o) => !o && setDeactivateTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Deactivate user</DialogTitle>
-            <DialogDescription>
-              {deactivateTarget?.full_name} will immediately lose access to GrowthMission. This can&apos;t
-              be undone from this screen.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeactivateTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeactivate}
-              disabled={pendingId === deactivateTarget?.id}
-            >
-              Deactivate
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
