@@ -132,27 +132,30 @@ type ColumnKey =
  */
 type WidthKey = ColumnKey | "name" | "email";
 
+// Widened 2026-10-22 so every heading fits beside its sort arrow at the
+// default width (seen cut short in the live app). A width someone has
+// dragged is kept; these only apply to columns left alone.
 const DEFAULT_WIDTHS: Record<WidthKey, number> = {
   name: 200,
-  linkedin: 150,
+  linkedin: 185,
   email: 240,
   title: 220,
-  status: 160,
-  score: 120,
-  temp: 100,
-  pv: 150,
-  ov: 170,
-  employees: 130,
+  status: 185,
+  score: 125,
+  temp: 115,
+  pv: 175,
+  ov: 210,
+  employees: 155,
   lists: 200,
   company: 220,
-  companyLinkedin: 170,
-  cphone: 160,
-  mobile: 150,
-  addr: 220,
-  city: 150,
-  state: 140,
-  subscribed: 120,
-  bounced: 110,
+  companyLinkedin: 200,
+  cphone: 190,
+  mobile: 165,
+  addr: 230,
+  city: 175,
+  state: 180,
+  subscribed: 145,
+  bounced: 130,
 };
 
 const MIN_WIDTH = 80;

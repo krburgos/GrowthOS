@@ -7,6 +7,18 @@ export interface ParsedFile {
 }
 
 /**
+ * One cell's text. Excel marks a number typed as text ('+1 603…) with a
+ * leading apostrophe, and some exports keep it in the file; it is never
+ * part of the value, so it's dropped (bug fix, 2026-10-22: company phones
+ * were importing as "'+1 603-598-4526").
+ */
+function cellText(v: unknown): string {
+  return String(v ?? "")
+    .trim()
+    .replace(/^'(?=\S)/, "");
+}
+
+/**
  * Backend Schema §10 — POST /api/import/validate parses CSV via papaparse
  * and XLSX via ExcelJS (Tech Stack Lockfile §3.7).
  */
@@ -19,6 +31,7 @@ export async function parseImportFile(file: File): Promise<ParsedFile> {
       header: true,
       skipEmptyLines: true,
       transformHeader: (h) => h.trim(),
+      transform: (value) => cellText(value),
     });
     const headers = result.meta.fields ?? [];
     return { headers, rows: result.data };
@@ -43,7 +56,7 @@ export async function parseImportFile(file: File): Promise<ParsedFile> {
       const record: Record<string, string> = {};
       headers.forEach((header, index) => {
         const cell = row.getCell(index + 1);
-        record[header] = cell.value != null ? String(cell.value).trim() : "";
+        record[header] = cell.value != null ? cellText(cell.value) : "";
       });
       if (Object.values(record).some((v) => v !== "")) {
         rows.push(record);
