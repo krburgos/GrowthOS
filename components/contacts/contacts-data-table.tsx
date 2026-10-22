@@ -1,6 +1,9 @@
 "use client";
 
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Briefcase,
   Building2,
   Check,
@@ -21,7 +24,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Children, isValidElement, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
@@ -465,6 +468,22 @@ export function ContactsDataTable({
     },
   });
 
+  // Sorting is server-side, through `sort`/`dir` in the address, so it
+  // covers every contact (or every member, on List Detail). Lists can't
+  // sort: a contact can be in several.
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeSort = searchParams.get("sort");
+  const activeDir = searchParams.get("dir") === "desc" ? "desc" : "asc";
+  const sortFor = (key: string, label: string): SortProps => {
+    const active = activeSort === key;
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("sort", key);
+    p.set("dir", active && activeDir === "asc" ? "desc" : "asc");
+    p.delete("page");
+    return { label, active, dir: activeDir, href: `${pathname}?${p.toString()}` };
+  };
+
   const show = (key: ColumnKey) => visibleColumns.has(key);
   const visibleOrder = order.filter((k) => k === "email" || show(k));
   const widthOrder: WidthKey[] = ["name", ...visibleOrder];
@@ -701,13 +720,25 @@ export function ContactsDataTable({
                   className="border-white/50 data-[state=checked]:border-secondary-400 data-[state=checked]:bg-secondary-400"
                 />
               </Th>
-              <Th sticky="left-11" className="border-r border-primary-800" resize={resizeFor("name", "Full Name")}>
+              <Th
+                sticky="left-11"
+                className="border-r border-primary-800"
+                resize={resizeFor("name", "Full Name")}
+                sort={sortFor("name", "Full Name")}
+              >
                 <User className="size-3.5" /> Full Name
               </Th>
               {visibleOrder.map((k) => {
                 const h = HEADINGS[k];
                 return (
-                  <Th key={k} right={h.right} center={h.center} resize={resizeFor(k, h.label)} drag={dragFor(k, h.label)}>
+                  <Th
+                    key={k}
+                    right={h.right}
+                    center={h.center}
+                    resize={resizeFor(k, h.label)}
+                    drag={dragFor(k, h.label)}
+                    sort={k === "lists" ? undefined : sortFor(k, h.label)}
+                  >
                     {h.icon}
                     {h.label}
                   </Th>
@@ -1146,6 +1177,13 @@ function ContactCard({
   );
 }
 
+interface SortProps {
+  label: string;
+  active: boolean;
+  dir: "asc" | "desc";
+  href: string;
+}
+
 interface DragProps {
   label: string;
   dragging: boolean;
@@ -1234,6 +1272,7 @@ function Th({
   center,
   resize,
   drag,
+  sort,
 }: {
   children: ReactNode;
   sticky?: "left-0" | "left-11";
@@ -1245,6 +1284,8 @@ function Th({
   resize?: ResizeProps;
   /** Makes the heading draggable to move its column. */
   drag?: DragProps;
+  /** Makes the heading a sort link (client-confirmed, 2026-10-22). */
+  sort?: SortProps;
 }) {
   // A press that starts on the resize edge resizes; it must not also drag.
   const fromResizeEdge = useRef(false);
@@ -1303,11 +1344,31 @@ function Th({
           center && "justify-center"
         )}
       >
-        {children}
+        {sort ? (
+          // Sort arrows as on every other sortable table (Design System §8.5,
+          // SortableHeader's solid variant). A click sorts; a drag still moves.
+          <Link
+            href={sort.href}
+            scroll={false}
+            draggable={false}
+            aria-label={`Sort by ${sort.label}${sort.active ? `, now ${sort.dir === "asc" ? "ascending" : "descending"}` : ""}`}
+            className="flex min-w-0 items-center gap-2 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-300 [&>svg]:shrink-0 [&>svg]:text-white/70"
+          >
+            {children}
+            <SortIcon active={sort.active} dir={sort.dir} />
+          </Link>
+        ) : (
+          children
+        )}
       </span>
       {resize && <ResizeHandle {...resize} />}
     </th>
   );
+}
+
+function SortIcon({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
+  const Icon = active ? (dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return <Icon aria-hidden="true" className={cn("size-3.5 shrink-0", active ? "!text-secondary-300" : "!text-white/50")} />;
 }
 
 function Td({

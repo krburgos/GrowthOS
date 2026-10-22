@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { FileViewer, KindChip, downloadFile, fileMeta } from "@/components/growth-mission/mission-file-bits";
 import { OwnerAvatar } from "@/components/growth-mission/order-bits";
 import { useSectionView } from "@/components/growth-mission/section-switcher";
+import { SortHeading, useTableSort } from "@/components/ui/sort-heading";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -129,6 +130,14 @@ export function Arsenal({
       (show === "all" || (show === "general" ? !f.task_id : !!f.task_id)) &&
       (!q || f.file_name.toLowerCase().includes(q))
   );
+  // Sortable headings (client-confirmed, 2026-10-22); the upload order until one is clicked.
+  const { sorted, headingFor } = useTableSort(visible, {
+    file: (f) => f.file_name,
+    belongs: (f) => f.taskTitle ?? "General",
+    by: (f) => f.uploadedBy,
+    uploaded: (f) => f.created_at,
+    size: (f) => f.file_size,
+  });
   const open = (f: MissionFile) => (canPreview(f.file_name) ? setViewing(f) : void downloadFile(f));
 
   const dropProps = canEdit
@@ -268,7 +277,7 @@ export function Arsenal({
             <>
               {/* Below lg, one card per file, like the Mission Orders table. */}
               <div className="flex flex-col gap-2.5 px-4 py-4 lg:hidden">
-                {visible.map((f) => (
+                {sorted.map((f) => (
                   <article key={f.id} className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-white p-3.5">
                     <KindChip name={f.file_name} />
                     <div className="min-w-0 flex-1">
@@ -286,14 +295,24 @@ export function Arsenal({
               <div className="hidden overflow-x-auto lg:block">
                 <div className="min-w-[960px]">
                   <div className={`${COLS} border-b border-primary-200 bg-primary-50 px-5 py-2 ${HEAD}`}>
-                    <span>File</span>
-                    <span>Belongs to</span>
-                    <span>Uploaded by</span>
-                    <span>Uploaded</span>
-                    <span className="text-right">Size</span>
+                    <span>
+                      <SortHeading label="File" {...headingFor("file")} />
+                    </span>
+                    <span>
+                      <SortHeading label="Belongs to" {...headingFor("belongs")} />
+                    </span>
+                    <span>
+                      <SortHeading label="Uploaded by" {...headingFor("by")} />
+                    </span>
+                    <span>
+                      <SortHeading label="Uploaded" {...headingFor("uploaded")} />
+                    </span>
+                    <span className="text-right">
+                      <SortHeading label="Size" {...headingFor("size")} />
+                    </span>
                     <span />
                   </div>
-                  {visible.map((f) => (
+                  {sorted.map((f) => (
                     <div key={f.id} className={`${COLS} min-h-[54px] border-b border-neutral-100 bg-white px-5 py-2 hover:bg-neutral-50/70`}>
                       <span className="flex min-w-0 items-center gap-3">
                         <KindChip name={f.file_name} />

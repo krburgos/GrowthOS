@@ -13,6 +13,7 @@ import { AssignListDialog } from "@/components/sdr/assign-list-dialog";
 import { LogCallPanel } from "@/components/sdr/log-call-panel";
 import { Button } from "@/components/ui/button";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
+import { SortHeading, useTableSort } from "@/components/ui/sort-heading";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { SdrTargetEditor } from "@/components/sdr/target-editor";
@@ -134,7 +135,15 @@ export function CallDesk({
       .filter((r) => show === "all" || r.due === show)
       .filter((r) => !q || r.row.full_name.toLowerCase().includes(q) || (r.row.company_name ?? "").toLowerCase().includes(q));
   }, [live, show, query]);
-  const shown = rows.slice((page - 1) * pageSize, page * pageSize);
+  const { sorted, headingFor } = useTableSort(rows, {
+    contact: (r) => r.row.full_name,
+    company: (r) => r.row.company_name,
+    phone: (r) => r.row.phone ?? r.row.company_phone,
+    status: (r) => r.row.status_name,
+    last: (r) => r.row.last_call_at,
+    attempts: (r) => r.row.attempts,
+  });
+  const shown = sorted.slice((page - 1) * pageSize, page * pageSize);
 
   // Scoreboard: today's calls, by whoever logged them, each against that SDR's own target.
   const targetOf = (id: string | null): DailyTarget => (id && targets[id]) || DEFAULT_TARGET;
@@ -175,7 +184,8 @@ export function CallDesk({
     const current = logging;
     setLogging(null);
     if (next && current) {
-      const nextRow = rows.find((r) => r.due === "today" && r.row.contact_id !== current.contact_id);
+      // The next one down the queue as it's sorted on screen.
+      const nextRow = sorted.find((r) => r.due === "today" && r.row.contact_id !== current.contact_id);
       if (nextRow) setLogging(nextRow.row);
     }
     router.refresh();
@@ -480,12 +490,24 @@ export function CallDesk({
                 <div className="hidden overflow-x-auto lg:block">
                   <div className="min-w-[1080px]">
                     <div className={`${QUEUE_COLS} border-b border-primary-200 bg-primary-50 px-5 py-2 ${HEAD}`}>
-                      <span>Contact</span>
-                      <span>Company</span>
-                      <span>Phone</span>
-                      <span>Status</span>
-                      <span>Last touch</span>
-                      <span className="text-right">Attempts</span>
+                      <span>
+                        <SortHeading label="Contact" {...headingFor("contact")} />
+                      </span>
+                      <span>
+                        <SortHeading label="Company" {...headingFor("company")} />
+                      </span>
+                      <span>
+                        <SortHeading label="Phone" {...headingFor("phone")} />
+                      </span>
+                      <span>
+                        <SortHeading label="Status" {...headingFor("status")} />
+                      </span>
+                      <span>
+                        <SortHeading label="Last touch" {...headingFor("last")} />
+                      </span>
+                      <span className="text-right">
+                        <SortHeading label="Attempts" {...headingFor("attempts")} />
+                      </span>
                       <span className="text-right">{canLog ? "Action" : ""}</span>
                     </div>
                     {shown.map(({ row }) => {

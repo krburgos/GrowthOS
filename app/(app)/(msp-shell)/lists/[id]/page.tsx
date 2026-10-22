@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { CONTACT_SELECT, CONTACT_SORTS, orderContacts } from "@/lib/contacts/sort";
 import type { ContactListRow } from "@/lib/contacts/types";
 import { parsePagination } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
@@ -18,8 +19,6 @@ export const metadata: Metadata = { title: "List — GrowthMission" };
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 
-const CONTACT_FIELDS =
-  "id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, email_bounced_at, status_id, contact_statuses(name, color), company_id, companies(name, phone, address_line1, city, state, company_size, linkedin_url)";
 
 /**
  * App Flow §4.6, F2 — List Detail. Client-confirmed redesign: shares
@@ -32,13 +31,18 @@ export default async function ListDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ page?: string; pageSize?: string }>;
+  searchParams: Promise<{ page?: string; pageSize?: string; sort?: string; dir?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) return null;
 
   const { id } = await params;
-  const { page, pageSize, from, to } = parsePagination(await searchParams);
+  const sp = await searchParams;
+  const { page, pageSize, from, to } = parsePagination(sp);
+  // Sortable columns (client-confirmed, 2026-10-22). Until a heading is
+  // clicked the list keeps its own order, oldest member first; a sort reads
+  // contacts directly so it can order by any column.
+  const sorted = !!(sp.sort && CONTACT_SORTS[sp.sort]);
   const supabase = await createClient();
 
   const { data: list } = await supabase
@@ -54,17 +58,27 @@ export default async function ListDetailPage({
   let contacts: ContactListRow[] = [];
 
   const [{ data }, { count: totalCount }] = await Promise.all([
-    supabase
-      .from("list_members")
-      .select(`contacts(${CONTACT_FIELDS})`)
-      .eq("list_id", id)
-      .order("added_at")
-      .range(from, to),
+    sorted
+      ? orderContacts(
+          supabase
+            .from("contacts")
+            .select(`${CONTACT_SELECT}, member:list_members!inner(list_id)` as string)
+            .eq("member.list_id", id),
+          sp.sort,
+          sp.dir
+        ).range(from, to)
+      : supabase
+          .from("list_members")
+          .select(`contacts(${CONTACT_SELECT})` as string)
+          .eq("list_id", id)
+          .order("added_at")
+          .range(from, to),
     supabase.from("list_members").select("*", { count: "exact", head: true }).eq("list_id", id),
   ]);
-  contacts = (data ?? [])
+  contacts = ((data ?? []) as unknown as ({ contacts?: unknown } & Record<string, unknown>)[])
     .map((row) => {
-      const c = row.contacts as unknown as ContactListRow | ContactListRow[] | null;
+      if (sorted) return row as unknown as ContactListRow;
+      const c = row.contacts as ContactListRow | ContactListRow[] | null;
       return Array.isArray(c) ? c[0] : c;
     })
     .filter((c): c is ContactListRow => !!c);

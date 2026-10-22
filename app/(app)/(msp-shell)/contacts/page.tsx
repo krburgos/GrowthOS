@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ContactsDataTable } from "@/components/contacts/contacts-data-table";
 import { ContactsFilterChips } from "@/components/contacts/contacts-filter-panel";
 import { applyRules, decodeRules, isActive, ruleEmbeds, type RuleOptions } from "@/lib/contacts/filters";
+import { CONTACT_SELECT, orderContacts } from "@/lib/contacts/sort";
 import { ContactsToolbar, type ContactView } from "@/components/contacts/contacts-toolbar";
 import { prospectValue, usdShort } from "@/lib/companies/value";
 import { Button } from "@/components/ui/button";
@@ -17,16 +18,6 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Contacts — GrowthMission" };
 
-const SORT_COLUMNS: Record<string, string> = {
-  name: "full_name",
-  company: "companies(name)",
-  status: "contact_statuses(name)",
-  owner: "users(full_name)",
-  employee_size: "companies(company_size)",
-  city: "companies(city)",
-  state: "companies(state)",
-  updated_at: "updated_at",
-};
 
 /**
  * App Flow §4.4, D1 — Contacts List. Server-driven sort (searchParams)
@@ -72,8 +63,6 @@ export default async function ContactsListPage({
   // a bare users(...) is ambiguous and PostgREST refuses it (HTTP 300).
   // Commas and brackets would break PostgREST's or() syntax.
   const term = q?.replace(/[,()%]/g, " ").trim();
-  const sortColumn = SORT_COLUMNS[sort ?? "updated_at"] ?? "updated_at";
-  const ascending = dir !== "desc";
   const { page, pageSize, from, to } = parsePagination(pageParams);
 
   const supabase = await createClient();
@@ -111,16 +100,7 @@ export default async function ContactsListPage({
     companyFacts,
     { data: listRows },
   ] = await Promise.all([
-    scoped(
-      supabase
-        .from("contacts")
-        .select(
-          ("id, first_name, last_name, full_name, title, email, phone, score, temperature, linkedin_url, email_opt_out, email_bounced_at, status_id, contact_statuses(name, color), company_id, companies(name, phone, address_line1, city, state, company_size, linkedin_url), owner_id, users:users!contacts_owner_id_fkey(full_name), updated_at" +
-            embeds) as string
-        )
-    )
-      .order(sortColumn, { ascending, referencedTable: sortColumn.includes("(") ? sortColumn.split("(")[0] : undefined })
-      .range(from, to),
+    orderContacts(scoped(supabase.from("contacts").select((CONTACT_SELECT + embeds) as string)), sort, dir).range(from, to),
     scoped(supabase.from("contacts").select(`id${embeds}` as string, { count: "exact", head: true })),
     supabase
       .from("contact_statuses")

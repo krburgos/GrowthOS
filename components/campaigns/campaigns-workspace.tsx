@@ -9,6 +9,7 @@ import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
+import { SortHeading, useTableSort } from "@/components/ui/sort-heading";
 import { cn } from "@/lib/utils";
 
 type Show = "all" | "draft" | "scheduled" | "sent";
@@ -92,7 +93,16 @@ export function CampaignsWorkspace({
         (!q || c.name.toLowerCase().includes(q) || c.listName.toLowerCase().includes(q))
     );
   }, [campaigns, show, query]);
-  const shown = rows.slice((page - 1) * pageSize, page * pageSize);
+  const { sorted, headingFor } = useTableSort(rows, {
+    name: (c) => c.name,
+    status: (c) => STATUS_LABEL[c.status],
+    recipients: (c) => c.recipients,
+    open: (c) => c.openRate,
+    click: (c) => c.clickRate,
+    // Unsent campaigns have no date that means anything; they sort as blank.
+    date: (c) => (c.dateLabel === "Created" ? null : c.date),
+  });
+  const shown = sorted.slice((page - 1) * pageSize, page * pageSize);
 
   const stats = [
     { label: "Campaigns sent", value: String(sent.length) },
@@ -217,12 +227,24 @@ export function CampaignsWorkspace({
               <div className="hidden overflow-x-auto lg:block">
                 <div className="min-w-[960px]">
                   <div className={`${COLS} border-b border-primary-200 bg-primary-50 px-5 py-2 ${HEAD}`}>
-                    <span>Campaign</span>
-                    <span>Status</span>
-                    <span className="text-right">Recipients</span>
-                    <span className="text-right">Open rate</span>
-                    <span className="text-right">Click rate</span>
-                    <span className="text-right">Date</span>
+                    <span>
+                      <SortHeading label="Campaign" {...headingFor("name")} />
+                    </span>
+                    <span>
+                      <SortHeading label="Status" {...headingFor("status")} />
+                    </span>
+                    <span className="text-right">
+                      <SortHeading label="Recipients" {...headingFor("recipients")} />
+                    </span>
+                    <span className="text-right">
+                      <SortHeading label="Open rate" {...headingFor("open")} />
+                    </span>
+                    <span className="text-right">
+                      <SortHeading label="Click rate" {...headingFor("click")} />
+                    </span>
+                    <span className="text-right">
+                      <SortHeading label="Date" {...headingFor("date")} />
+                    </span>
                   </div>
                   {shown.map((c) => (
                     <div key={c.id} className={`${COLS} min-h-[58px] border-b border-neutral-100 bg-white px-5 py-2 hover:bg-neutral-50/70`}>
