@@ -35,6 +35,17 @@ import { CAMPAIGN_EDIT_ROLES, EMAIL_CAMPAIGNING_SLUG, getCampaignRows } from "@/
 import { ASSIGN_LIST_ROLES, SDR_OUTREACH_SLUG, TARGET_EDIT_ROLES, VIEW_ANY_QUEUE_ROLES } from "@/lib/sdr/desk";
 import { getSdrDesk } from "@/lib/sdr/queries";
 import { ORDER_IMPORT_ROLES } from "@/lib/growth-mission/order-import";
+import { IcpProfile } from "@/components/icp/icp-profile";
+import { ListsWorkspace } from "@/components/lists/lists-workspace";
+import type { OrderPrefill } from "@/components/growth-mission/order-panel";
+import { getIcpFit, getIcpState, getListsCard, hasIcpList } from "@/lib/icp/queries";
+
+/** Client-confirmed (2026-10-23, approved mockup "ICP & List Building Cards"). */
+const ICP_SLUG = "icp-development";
+const LIST_BUILDING_SLUG = "list-building";
+/** Who can make lists: the Lists page's own edit roles. */
+const LIST_EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
+const ORDER_TYPES = ["internal", "outsourced", "growthmission"] as const;
 
 /** Who can log calls: the roles that may add activities (Backend Schema §2). */
 const LOG_CALL_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor", "partner"];
@@ -81,10 +92,15 @@ export default async function GrowthMissionStepPage({
    * `order` opens that mission order's panel — the overview tables link here with it.
    * `issue=1` opens an empty Issue order panel — the overview's Issue order picker links here with it.
    */
-  searchParams: Promise<{ order?: string; issue?: string }>;
+  searchParams: Promise<{ order?: string; issue?: string; type?: string; title?: string }>;
 }) {
   const { slug } = await params;
-  const { order: openOrderId, issue } = await searchParams;
+  const { order: openOrderId, issue, type: newType, title: newTitle } = await searchParams;
+  // Build ICP list's "Not enough contacts?" tiles arrive with a type and title for the new order.
+  const newOrder: OrderPrefill = {
+    type: ORDER_TYPES.find((t) => t === newType),
+    title: newTitle?.slice(0, 200),
+  };
   const user = await getCurrentUser();
   if (!user || !user.account_id) return null;
 
@@ -98,6 +114,8 @@ export default async function GrowthMissionStepPage({
   // far carry a workspace of their own between Hours and the Arsenal.
   const isEmailCampaigning = slug === EMAIL_CAMPAIGNING_SLUG;
   const isSdrOutreach = slug === SDR_OUTREACH_SLUG;
+  const isIcp = slug === ICP_SLUG;
+  const isListBuilding = slug === LIST_BUILDING_SLUG;
 
   const quarter = currentQuarter();
   const [step, mission, tasks, team, memberLoad, reports, targets, files, campaigns, sdrDesk] = await Promise.all([
@@ -116,6 +134,14 @@ export default async function GrowthMissionStepPage({
   ]);
   if (!step) notFound();
 
+  // The ICP feeds both cards: its profile on one, its filter rules on the other.
+  const icpState = isIcp || isListBuilding ? await getIcpState(user.account_id) : null;
+  const [icpFit, icpListMade, listsCard] = await Promise.all([
+    isIcp && icpState ? getIcpFit(user.account_id, icpState.rules) : null,
+    isIcp ? hasIcpList(user.account_id) : false,
+    isListBuilding && icpState ? getListsCard(user.account_id, icpState.rules) : null,
+  ]);
+
   const canEdit = user.role === "cro_admin" || user.role === "cro_advisor";
   const canEditOutsourced = HOURS_EDIT_ROLES.includes(user.role);
   // Client-confirmed (2026-09-25): MSP Owner and Admin author tasks too -
@@ -132,6 +158,8 @@ export default async function GrowthMissionStepPage({
     : [
         { view: "hours", label: "Hours", hash: "#hours" },
         ...(campaigns ? [{ view: "campaigns", label: "Campaigns", hash: "#campaigns", count: campaigns.length }] : []),
+        ...(icpFit ? [{ view: "icp", label: "ICP Profile", hash: "#icp-profile" }] : []),
+        ...(listsCard ? [{ view: "lists", label: "Lists", hash: "#lists", count: listsCard.rows.length }] : []),
         ...(sdrDesk
           ? [
               { view: "desk", label: "Call Desk", hash: "#call-desk" },
@@ -218,6 +246,32 @@ export default async function GrowthMissionStepPage({
             </SectionPane>
           )}
 
+          {icpState && icpFit && (
+            <SectionPane view="icp">
+              <IcpProfile
+                state={icpState}
+                fit={icpFit}
+                hasIcpList={icpListMade}
+                viewerRole={user.role}
+                accountId={user.account_id}
+                focusSlot={<FocusButton view="icp" label="ICP Profile" />}
+              />
+            </SectionPane>
+          )}
+
+          {icpState && listsCard && (
+            <SectionPane view="lists">
+              <ListsWorkspace
+                card={listsCard}
+                icp={icpState.icp}
+                icpReady={icpState.complete && icpState.approved}
+                accountId={user.account_id}
+                canEdit={LIST_EDIT_ROLES.includes(user.role)}
+                focusSlot={<FocusButton view="lists" label="Lists" />}
+              />
+            </SectionPane>
+          )}
+
           {/* Call Desk and Call Queue are two sections; CallDesk places its own panes. */}
           {sdrDesk && (
             <CallDesk
@@ -271,6 +325,7 @@ export default async function GrowthMissionStepPage({
               canImport={ORDER_IMPORT_ROLES.includes(user.role)}
               openOrderId={openOrderId}
               openNew={issue === "1"}
+              newOrder={newOrder}
               files={files}
               focusSlot={<FocusButton view="orders" label="Mission Orders" />}
             />

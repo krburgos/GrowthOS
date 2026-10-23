@@ -27,7 +27,7 @@ import {
   orderCredits,
 } from "@/components/growth-mission/order-bits";
 import { IssueOrderPicker } from "@/components/growth-mission/issue-order-picker";
-import { OrderPanel, OrderPrompt } from "@/components/growth-mission/order-panel";
+import { OrderPanel, OrderPrompt, type OrderPrefill } from "@/components/growth-mission/order-panel";
 import { useSectionView } from "@/components/growth-mission/section-switcher";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { Button } from "@/components/ui/button";
@@ -116,6 +116,7 @@ export function MissionOrders({
   canImport = false,
   openOrderId,
   openNew = false,
+  newOrder,
   initialPriorities,
   hideCompleted = false,
   focusSlot,
@@ -137,6 +138,8 @@ export function MissionOrders({
   /** Discipline mode: open this order's panel on arrival (?order=). */
   openOrderId?: string;
   /** Discipline mode: open an empty Issue order panel on arrival (?issue=1, from the overview's picker). */
+  /** With openNew: the new order's starting type and title (?type=, ?title=). */
+  newOrder?: OrderPrefill;
   openNew?: boolean;
   /**
    * Which tiers are ticked on arrival. Headquarters opens on Must only
@@ -617,6 +620,7 @@ export function MissionOrders({
           task={panel.task}
           rank={panel.task ? rank.get(panel.task.id) : undefined}
           initialPriority={panel.priority}
+          prefill={panel.task ? undefined : newOrder}
           files={panel.task ? files.filter((file) => file.task_id === panel.task!.id) : []}
           focusFiles={panel.files}
           team={team}

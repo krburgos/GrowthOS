@@ -15,11 +15,12 @@ const EDIT_ROLES = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"];
  * RLS-scoped read here (hybrid access, no secret involved); the wizard
  * itself writes back the same way.
  */
-export default async function GrowthQuestionnairePage() {
+export default async function GrowthQuestionnairePage({ searchParams }: { searchParams: Promise<{ step?: string }> }) {
   const user = await getCurrentUser();
   if (!user || !user.account_id) return null;
 
   const canEdit = EDIT_ROLES.includes(user.role);
+  const { step } = await searchParams;
 
   const supabase = await createClient();
   const { data: response } = await supabase
@@ -34,7 +35,8 @@ export default async function GrowthQuestionnairePage() {
         accountId={user.account_id}
         initialAnswers={(response?.answers as QuestionnaireAnswers) ?? {}}
         canEdit={canEdit}
-        exitHref="/headquarters"
+        exitHref={step?.startsWith("icp_") ? "/growth-mission/icp-development" : "/headquarters"}
+        initialStepKey={step}
       />
     </main>
   );

@@ -1235,6 +1235,14 @@ Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream 
 - **`sdr_candidates(p_account_id)`** (security definer) — the account's Marketing users, its granted partners, and anyone holding a list, so the Assign dialog and scoreboard can name partners, whom MSP users cannot read in `users`. The caller must be able to see the account.
 - **`sdr_call_queue(p_account_id, p_sdr_user_id)`** (security invoker, so RLS applies) — every live contact on the SDR's assigned lists, once, with its lists, company, status, attempt count and latest call by anyone (outcome, time, follow-up date).
 
+### 6.6n icp_approvals and lists.built_from_icp — the ICP and List Building cards
+
+**Client-confirmed (2026-10-23, approved mockup "ICP & List Building Cards")**, migration `20261023000001_icp_approvals.sql`, for App Flow §4.3f.
+
+- **`icp_approvals`** — insert-only history, one row per sign-off: `account_id`, `approved_by` (→ `users`), `approver_role` (`msp_owner` | `cro_admin`), `answers` (snapshot of the questionnaire's ICP keys), `approved_at`, `archived_at`, `created_at`. The ICP is approved when the latest `msp_owner` row and the latest `cro_admin` row both hold the current ICP answers (compared in `lib/icp/rules.ts`). Select: own account, CRO Leader, granted partner. Insert: the signer themself, an MSP Owner for their own account or a CRO Admin for any account. No update or delete policy. Explicit `grant select, insert` to `authenticated` and `service_role`.
+- **`lists.built_from_icp`** (boolean, default false) — set by Build ICP list; drives the ICP chip and the card's steps.
+- **Contacts filter fields Industry and Job title** (`lib/contacts/filters.ts`): "is any of" / "contains any of" over `companies.industry` and `contacts.title` (case-insensitive, several values). Decision makers also match their spelled-out titles (e.g. CEO ↔ "Chief Executive").
+
 ### 6.6k growth_mission_files — the Arsenal
 
 **Client-confirmed (2026-10-20, approved mockup "The Arsenal")**, migration `20261020000001_arsenal_files.sql`. A file library on each Mission Card; a file belongs to the card in general (`task_id` null) or to one of its Mission Orders. The eighth file exception, and the first general one (§12).

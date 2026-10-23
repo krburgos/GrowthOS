@@ -373,14 +373,17 @@ export function GrowthQuestionnaireWizard({
   initialAnswers,
   canEdit,
   exitHref,
+  initialStepKey,
 }: {
   accountId: string;
   initialAnswers: QuestionnaireAnswers;
   canEdit: boolean;
   exitHref: string;
+  /** Open on this section (?step=), e.g. from the ICP Mission Card's Edit links. */
+  initialStepKey?: string;
 }) {
   const router = useRouter();
-  const [stepIndex, setStepIndex] = useState(0);
+  const [stepIndex, setStepIndex] = useState(() => Math.max(0, QUESTIONNAIRE_SECTIONS.findIndex((s) => s.key === initialStepKey)));
   const [answers, setAnswers] = useState<QuestionnaireAnswers>(initialAnswers);
   const [saving, setSaving] = useState(false);
 

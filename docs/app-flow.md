@@ -454,6 +454,17 @@ Palette, typeface and the type scale are unchanged — Design System §9 fixes t
 
 **Due dates come from the latest call by anyone** (client-confirmed): a contact on two SDRs' lists shows in both queues, but once either logs a call it is no longer due for either, so nobody is called twice in a day. Whether a contact is due is worked out against the viewer's own date.
 
+### 4.3f ICP and List Building — the ICP Profile and Lists sections (C2–C3)
+
+**Client-confirmed (2026-10-23, approved mockup "ICP & List Building Cards").** Two more Mission Cards get a section between Hours and the Arsenal. Each opens with **Your mission on this card**: numbered steps that tick themselves off from real data, the first one not done outlined as current, each explained in an info tooltip.
+
+**ICP card (step 6) — ICP Profile.** The Solution Questionnaire's ICP answers, shown and never captured again: five cards (Target companies, Decision makers & technology, Business needs & lead type, Your MSP & messaging, Buying-intent topics), each with **Edit** opening that questionnaire step (`/settings/growth-questionnaire?step=…`, which returns to the card). Steps: Review the profile → Approve it with your sales lead → Build a list from it.
+- **Approval needs both an MSP Owner and a CRO Admin** (client-confirmed). A sign-off row shows both slots ("Approved by … · date" or "Waiting"); **Approve ICP** appears only to a viewer whose slot is open, and only once the ICP part of the questionnaire is complete. Editing the answers afterwards shows "Changed since approval" and both slots wait again.
+- **Fit check:** the share of the account's contacts matching the ICP's industries, employee size and decision-maker titles, each and all three; "See the N contacts" opens Contacts with those filters.
+
+**List Building card (step 7) — Lists.** Every list with **ICP fit** (share of its members matching the whole ICP), Contacts, Prospect Value, Health, **Working it** (the SDR it is assigned to and the campaigns sent to it; "Not used" when neither) and Added; an **ICP** chip on lists made by Build ICP list. Steps: ICP approved → Build an ICP list → Clean it (no bounced or unsubscribed contacts on ICP lists) → Put it to work (every ICP list has an SDR or a campaign). While the ICP is unfinished or not approved by both, a warning sits under the header with a link to the ICP card; **Build ICP list is never locked** (client-confirmed).
+- **Build ICP list** opens a dialog: a name, the Contacts filter rows filled in from the ICP (Industry is any of, Employee Size, Job title contains any of; location is not filled in because the questionnaire's coverage area is free text, client-confirmed), "Leave out bounced and unsubscribed", and a live count. **Create list** makes an ordinary list of the matches (filled once, up to 5,000). **Not enough contacts?** offers Import a file, Assign a Mission Order, and **Order from GrowthMission**, which opens a new GrowthMission-type Mission Order (credits) on the List Building card.
+
 ### 4.3c AdvocateDash — the drop-by workstream (C2–C3)
 
 **Client-confirmed (2026-10-05).** AdvocateDash is a drop-by service CRO Leader runs, or trains somebody else to run. An **Advocate** visits a target business in person, leaves the drop-by letter, and files a VictoryVisit After-Action Report back to the MSP Owner. Sourced from the client's own two documents — "AdvocateDash Dropby letter.docx" and "Victory Visit Report.pdf", a completed report for ABTech - Boston.

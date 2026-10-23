@@ -37,6 +37,11 @@ import type { TeamMember } from "@/lib/team/members";
 
 const NOBODY = "__none__";
 
+export interface OrderPrefill {
+  type?: OrderType;
+  title?: string;
+}
+
 interface Draft {
   title: string;
   detail: string;
@@ -55,10 +60,10 @@ const TYPES: { value: OrderType; hint: string }[] = [
   { value: "growthmission", hint: "Uses credits" },
 ];
 
-function draftFor(task: Task | null, priority: TaskPriority): Draft {
+function draftFor(task: Task | null, priority: TaskPriority, prefill?: OrderPrefill): Draft {
   if (!task) {
     return {
-      title: "",
+      title: prefill?.title ?? "",
       detail: "",
       priority,
       state: "active",
@@ -66,7 +71,7 @@ function draftFor(task: Task | null, priority: TaskPriority): Draft {
       // Client-confirmed (2026-10-13): a new order is due at the end of the
       // quarter unless someone picks another date.
       due_date: currentQuarter().end,
-      type: "internal",
+      type: prefill?.type ?? "internal",
       assignee_id: NOBODY,
     };
   }
@@ -110,6 +115,7 @@ export function OrderPanel({
   onClose,
   files = [],
   focusFiles = false,
+  prefill,
 }: {
   accountId: string;
   /** The discipline a new order is issued into. */
@@ -127,9 +133,11 @@ export function OrderPanel({
   files?: MissionFile[];
   /** Opened from the Files column: scroll straight to Files. */
   focusFiles?: boolean;
+  /** A new order's starting type and title (Build ICP list's "Not enough contacts?" tiles). */
+  prefill?: OrderPrefill;
 }) {
   const router = useRouter();
-  const [draft, setDraft] = useState<Draft>(() => draftFor(task, initialPriority));
+  const [draft, setDraft] = useState<Draft>(() => draftFor(task, initialPriority, prefill));
   const [saving, setSaving] = useState(false);
   // Files chosen while issuing a new order upload once it exists.
   const [pending, setPending] = useState<File[]>([]);

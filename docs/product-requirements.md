@@ -60,6 +60,8 @@ GrowthMission Phase 1 uses the roles from the Developer Brief, formalized into a
 **Client-confirmed removal — MSP Sales User (2026-09-15):** this role (originally "View/edit prospects, contacts, opportunities, activities; view-only on lists/campaigns") is removed from the product. The one seeded test user holding it was reassigned to MSP Marketing User rather than deactivated. MSP Marketing User absorbed its edit rights — full view/edit on Contacts, Companies, Opportunities, Lists, Campaigns, and Activities — while keeping its own pre-existing restrictions unchanged: Reports stays view-only, and it has no Settings access at all. See Backend Schema §2 for the resulting RLS policies.
 | CRO Leader Service Team Member | View, across all accounts (as needed for service delivery) | View | No | Limited |
 
+**Client-confirmed (2026-10-23) — ICP approval:** the Ideal Client Profile on Mission Card step 6 is approved by **both** an MSP Owner and a CRO Leader Admin; no other role approves (App Flow §4.3f, Backend Schema §6.6n).
+
 Notes:
 - MSP technicians are **not** a supported access tier in Phase 1 — no login is provisioned for them.
 - Pricing is intended to scale per user count; the billing mechanism itself is out of scope for Phase 1 (§10), so seat counts should be tracked in-app even though invoicing happens outside GrowthMission for now.
