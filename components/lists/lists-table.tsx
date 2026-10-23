@@ -21,6 +21,8 @@ export interface ListRow {
   unsubscribed: number;
   /** $200 × Employees × 12 over the companies on the list, each once. */
   prospectValue: number;
+  /** Made with Build ICP list (client-confirmed, 2026-10-23). */
+  built_from_icp: boolean;
 }
 
 const VIEW_KEY = "growthmission.lists.view";
@@ -174,7 +176,7 @@ function Num({ field, label }: { field: string; label: string }) {
   );
 }
 
-function Health({ list: l, className }: { list: ListRow; className?: string }) {
+export function Health({ list: l, className }: { list: ListRow; className?: string }) {
   const total = Math.max(l.memberCount, 1);
   return (
     <span aria-hidden="true" className={cn("flex h-2 gap-0.5 overflow-hidden rounded-full bg-neutral-100", className)}>
