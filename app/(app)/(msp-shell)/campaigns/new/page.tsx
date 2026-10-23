@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { CampaignComposerForm } from "@/components/campaigns/campaign-composer-form";
+import { CampaignsPausedNotice } from "@/components/campaigns/campaigns-paused-notice";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { CAMPAIGNS_PAUSED } from "@/lib/campaigns/paused";
 import { CAMPAIGNS_HOME } from "@/lib/campaigns/queries";
 import { createClient } from "@/lib/supabase/server";
 
@@ -48,12 +50,16 @@ export default async function NewCampaignPage() {
         <h1 className="text-h1 text-primary-900">New Campaign</h1>
         <p className="text-body text-neutral-500">Compose an email to send to one of your lists.</p>
       </div>
-      <CampaignComposerForm
-        accountId={user.account_id!}
-        currentUserName={user.full_name}
-        lists={lists}
-        fromOptions={fromOptions}
-      />
+      {CAMPAIGNS_PAUSED && <CampaignsPausedNotice />}
+      {/* Paused: the whole composer is greyed out and can't be used. */}
+      <fieldset disabled={CAMPAIGNS_PAUSED} aria-disabled={CAMPAIGNS_PAUSED} className={CAMPAIGNS_PAUSED ? "opacity-60" : undefined}>
+        <CampaignComposerForm
+          accountId={user.account_id!}
+          currentUserName={user.full_name}
+          lists={lists}
+          fromOptions={fromOptions}
+        />
+      </fieldset>
     </main>
   );
 }

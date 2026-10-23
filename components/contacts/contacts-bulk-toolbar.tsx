@@ -20,7 +20,9 @@ import {
 import { AddToListDialog } from "@/components/lists/add-to-list-dialog";
 import { MoveOrCopyDialog } from "@/components/lists/move-or-copy-dialog";
 import { resolveContactIds, type ContactSelectionScope } from "@/lib/contacts/bulk-actions";
+import { CAMPAIGNS_PAUSED_MESSAGE } from "@/lib/campaigns/paused";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 export interface ContactSelectionState {
   selectedIds: Set<string>;
@@ -121,9 +123,11 @@ export function ContactsBulkToolbar({
           <Button
             type="button"
             variant="ghost"
-            onClick={() => toast("Email requires Campaigns (Milestone 10), not set up yet.")}
+            // Greyed out while campaigns are paused (client-confirmed, 2026-10-23).
+            disabled
+            title={CAMPAIGNS_PAUSED_MESSAGE}
             aria-label="Email selected contacts"
-            className={action}
+            className={cn(action, "disabled:opacity-50")}
           >
             <Mail className="size-4" />
             Email

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
+import { CAMPAIGNS_PAUSED, CAMPAIGNS_PAUSED_MESSAGE } from "@/lib/campaigns/paused";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -25,6 +26,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (!authUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Campaigns are paused (client-confirmed, 2026-10-23): nothing is
+  // scheduled, so the send-due cron has nothing to pick up.
+  if (CAMPAIGNS_PAUSED) {
+    return NextResponse.json({ error: CAMPAIGNS_PAUSED_MESSAGE }, { status: 503 });
   }
 
   const { id } = await params;

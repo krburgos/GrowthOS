@@ -576,6 +576,8 @@ The client's direction: "My customers want to manually add contacts to a list" �
 
 ### 4.7 Campaigns (G1–G3)
 
+**Client-confirmed (2026-10-23) — campaigns paused for customer testing.** Phase 1 is done and customers are being added, but email campaigns don’t work yet. Until `CAMPAIGNS_PAUSED` (`lib/campaigns/paused.ts`) is turned off, the Campaigns section, New Campaign and Campaign Detail show a warning that campaigns are still in progress; New Campaign, the composer, Send Now / Schedule for Later and the Contacts bulk **Email** button are greyed out; and `POST /api/campaigns/[id]/send` refuses to schedule (503), so the send-due cron has nothing to send.
+
 **Moved onto the Email Campaigning Mission Card (client-confirmed, 2026-10-22, approved mockup "Mission Card Workspaces").** The client wants Mission Cards to be where every user works, converted one card at a time. G1 is no longer its own page: the Email Campaigning card (step 10) shows a **Campaigns** section between Hours and the Arsenal, with the four campaign figures, a Status filter (All / Drafts / Scheduled / Sent), search, the campaigns table and **New Campaign**. `/campaigns` redirects to `/growth-mission/email-campaigning`, and **the sidebar no longer has a Campaigns item** (client-confirmed): the card is reached from the Command Center. G2 and G3 are unchanged and keep their own addresses; G2's breadcrumb leads back to the card.
 
 **Campaigns Index (G1, as originally specified).** Table of past and active campaigns: name, list sent to, send date, status (draft/sending/sent), and headline stats. "Create Campaign" button top-right.

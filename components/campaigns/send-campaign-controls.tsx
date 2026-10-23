@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CAMPAIGNS_PAUSED, CAMPAIGNS_PAUSED_MESSAGE } from "@/lib/campaigns/paused";
 
 /**
  * Client-confirmed (2026-09-08) — Campaign Detail's send action for a
@@ -65,10 +66,10 @@ export function SendCampaignControls({ campaignId }: { campaignId: string }) {
 
   return (
     <div className="flex items-center gap-2">
-      <Button type="button" variant="secondary" onClick={() => setScheduling(true)} disabled={pending}>
+      <Button type="button" variant="secondary" onClick={() => setScheduling(true)} disabled={pending || CAMPAIGNS_PAUSED} title={CAMPAIGNS_PAUSED ? CAMPAIGNS_PAUSED_MESSAGE : undefined}>
         Schedule for Later
       </Button>
-      <Button type="button" onClick={() => send()} disabled={pending}>
+      <Button type="button" onClick={() => send()} disabled={pending || CAMPAIGNS_PAUSED} title={CAMPAIGNS_PAUSED ? CAMPAIGNS_PAUSED_MESSAGE : undefined}>
         {pending ? "Sending…" : "Send Now"}
       </Button>
     </div>
