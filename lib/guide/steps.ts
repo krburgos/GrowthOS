@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { COMPANY_PROFILE_COLUMNS, profileCompleteness, type CompanyProfile } from "@/lib/accounts/company-profile";
 import type { UserRole } from "@/lib/auth/get-current-user";
+import { CAMPAIGNS_PAUSED } from "@/lib/campaigns/paused";
 import { icpComplete, sameSnapshot } from "@/lib/icp/rules";
 import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
 import { TOTAL_QUESTION_COUNT, countAnswered as countQuestionnaireAnswered } from "@/lib/questionnaire/questions";
@@ -220,10 +221,15 @@ export async function getGuideSteps(supabase: SupabaseClient, accountId: string,
       key: "icp-work",
       group: listGroup,
       title: idle === 1 ? "1 of your ICP lists isn't being worked" : `${idle} of your ICP lists aren't being worked`,
-      body: "Nobody is calling or emailing them yet.",
+      body: CAMPAIGNS_PAUSED ? "Nobody is calling them yet." : "Nobody is calling or emailing them yet.",
       actions: [
-        { kind: "do", label: "Send a campaign", href: "/campaigns/new" },
-        { kind: "assign", label: "Assign to an SDR", href: "/growth-mission/sdr-outreach" },
+        // While campaigns are paused, calling is the way to work a list.
+        ...(CAMPAIGNS_PAUSED
+          ? [{ kind: "do" as const, label: "Assign to an SDR", href: "/growth-mission/sdr-outreach" }]
+          : [
+              { kind: "do" as const, label: "Send a campaign", href: "/campaigns/new" },
+              { kind: "assign" as const, label: "Assign to an SDR", href: "/growth-mission/sdr-outreach" },
+            ]),
         { kind: "delegate", label: "Order from GrowthMission", href: order("list-building", "growthmission", "Work our ICP lists") },
       ],
     });
