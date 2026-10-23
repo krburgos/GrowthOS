@@ -40,7 +40,8 @@ const KIND_HINT: Record<GuideAction["kind"], string> = {
  * Guide Options"): the GrowthMission figure in the bottom-right corner of
  * every page, with a count of waiting steps. It opens by itself once a day
  * when something is waiting; "Remind me tomorrow" keeps it closed until
- * the next day. The steps come from lib/guide/steps.ts and are re-read on
+ * the next day. The steps come from lib/guide/steps.ts (the 3 Foundations
+ * first, then the Mission Cards) and are re-read on
  * every page change, so finishing one ticks it off.
  */
 export function MissionGuide({ accountId, role }: { accountId: string; role: UserRole }) {
@@ -92,7 +93,7 @@ export function MissionGuide({ accountId, role }: { accountId: string; role: Use
         >
           <div className="flex items-center justify-between border-b border-primary-200 bg-primary-50 px-4 py-2.5">
             <span className="text-caption font-bold uppercase tracking-wide text-primary-700">
-              {step ? `Next step · ${index + 1} of ${waiting}` : "Mission Control"}
+              {step ? `${step.group} · ${index + 1} of ${waiting}` : "Mission Control"}
             </span>
             <button
               type="button"
