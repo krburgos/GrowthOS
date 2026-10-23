@@ -24,7 +24,9 @@ export type RuleField =
   | "pv"
   | "company"
   | "city"
-  | "state";
+  | "state"
+  | "industry"
+  | "title";
 
 export type RuleKind = "select" | "range" | "list" | "days" | "text";
 
@@ -82,6 +84,11 @@ export const FIELDS: Record<RuleField, FieldDef> = {
   company: { label: "Company", group: "Company", kind: "text", ops: [{ value: "contains", label: "contains" }] },
   city: { label: "Company City", group: "Company", kind: "text", ops: [{ value: "contains", label: "contains" }] },
   state: { label: "Company State", group: "Company", kind: "select", ops: IS },
+  // Client-confirmed (2026-10-23, approved mockup "ICP & List Building
+  // Cards"): the ICP is matched by industry and job title, both free text, so
+  // each takes several values (comma or "|" separated) and matches any of them.
+  industry: { label: "Industry", group: "Company", kind: "text", ops: [{ value: "any", label: "is any of" }] },
+  title: { label: "Job title", group: "Contact", kind: "text", ops: [{ value: "any", label: "contains any of" }] },
 };
 
 export const RULE_FIELDS = Object.keys(FIELDS) as RuleField[];
@@ -97,6 +104,17 @@ export const YES_NO = [
   { value: "no", label: "No" },
 ];
 export const NO_OWNER = "none";
+
+/** Longest typed value a rule keeps; an ICP title list with its spelled-out forms runs past 120. */
+export const MAX_TEXT = 300;
+
+/** The values of an "is any of" rule: split before cleaning, so a comma inside a value can't break or(). */
+export function anyValues(v: string): string[] {
+  return v
+    .split(/[|,]/)
+    .map(clean)
+    .filter(Boolean);
+}
 
 /** Prospect Value = $200 × employees × 12 (lib/companies/value.ts), so a value range is an employee range. */
 const PV_PER_EMPLOYEE = 200 * 12;
@@ -141,7 +159,7 @@ export function decodeRule(s: string): ContactRule | null {
   const num = (v: string) => (/^\d{1,9}$/.test(v) ? v : "");
   if (def.kind === "range") return { field: field as RuleField, op, from: num(from), to: num(to) };
   if (def.kind === "days") return DAY_OPTIONS.includes(value) ? { field: field as RuleField, op, value } : null;
-  return { field: field as RuleField, op, value: value.slice(0, 120) };
+  return { field: field as RuleField, op, value: value.slice(0, MAX_TEXT) };
 }
 
 export function decodeRules(params: string | string[] | undefined): ContactRule[] {
@@ -178,6 +196,7 @@ export function ruleEmbeds(rules: ContactRule[]): string {
         case "pv":
         case "company":
         case "city":
+        case "industry":
           return `,${a}:companies!inner(id)`;
         default:
           return "";
@@ -250,6 +269,16 @@ export function applyRules<Q extends { [k: string]: any }>(query: Q, rules: Cont
         q = q.eq(`${a}.state`, v);
         if (r.op === "is_not") q = q.is(a, null);
         break;
+      case "industry": {
+        const parts = anyValues(v);
+        if (parts.length) q = q.or(parts.map((p) => `industry.ilike.%${p}%`).join(","), { referencedTable: a });
+        break;
+      }
+      case "title": {
+        const parts = anyValues(v);
+        if (parts.length) q = q.or(parts.map((p) => `title.ilike.%${p}%`).join(","));
+        break;
+      }
     }
   });
   return q as Q;
@@ -283,6 +312,7 @@ export function describeRule(r: ContactRule, o: RuleOptions): [string, string] {
     const name = o.lists.find((l) => l.id === v)?.label ?? "a list";
     return [def.label, `${r.op === "in" ? "includes" : "excludes"} ${name}`];
   }
+  if (def.kind === "text" && r.op === "any") return [def.label, `${opLabel} ${anyValues(v).join(", ")}`];
   if (def.kind === "text") return [def.label, `contains “${v}”`];
   const valueLabel =
     r.field === "status"

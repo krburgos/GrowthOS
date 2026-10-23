@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import {
   DAY_OPTIONS,
   FIELDS,
+  MAX_TEXT,
   NO_OWNER,
   RULE_FIELDS,
   TEMP_OPTIONS,
@@ -168,7 +169,8 @@ export function ContactsFilterButton({ options }: { options: RuleOptions }) {
   );
 }
 
-function RuleRow({
+/** One "Where / And" row; the Build ICP list dialog reuses it. */
+export function RuleRow({
   index,
   rule,
   options,
@@ -234,9 +236,9 @@ function RuleRow({
     value = (
       <input
         value={rule.value ?? ""}
-        placeholder="Type a name"
+        placeholder={rule.op === "any" ? "Separate with commas" : "Type a name"}
         aria-label={def.label}
-        onChange={(e) => onChange({ value: e.target.value.slice(0, 120) }, 400)}
+        onChange={(e) => onChange({ value: e.target.value.slice(0, MAX_TEXT) }, 400)}
         className={cn(CONTROL, on(!!rule.value), "outline-none focus-visible:border-secondary-500 focus-visible:ring-2 focus-visible:ring-secondary-500/40")}
       />
     );

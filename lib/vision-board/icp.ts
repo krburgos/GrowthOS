@@ -25,6 +25,21 @@ export interface IcpAnswers {
   leadTypes: string[];
   competitors: string[];
   challenges: string[];
+  /**
+   * The rest of the ICP Worksheet, read for the ICP Mission Card's profile
+   * (client-confirmed, 2026-10-23, approved mockup "ICP & List Building
+   * Cards"). The Vision Board doesn't show these.
+   */
+  itEnvironment: string[];
+  softwareStack: string | null;
+  painPoints: string | null;
+  compliance: string | null;
+  growthStage: string | null;
+  budget: string | null;
+  valueProp: string | null;
+  keyMessages: string | null;
+  dosDonts: string | null;
+  intentTopics: string[];
 }
 
 const text = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
@@ -37,6 +52,7 @@ export function icpFromQuestionnaire(answers: Record<string, unknown>): IcpAnswe
     d === "Other" ? (otherRole ? [otherRole] : []) : [d]
   );
   const challengesOther = text(answers.icp_challenges_other);
+  const itOther = text(answers.icp_it_environment_other);
 
   return {
     targetMarket: text(answers.overview_target_market),
@@ -50,6 +66,16 @@ export function icpFromQuestionnaire(answers: Record<string, unknown>): IcpAnswe
     leadTypes: arrayAnswer(answers.icp_lead_types),
     competitors: arrayAnswer(answers.icp_competitors),
     challenges: [...arrayAnswer(answers.icp_challenges), ...(challengesOther ? [challengesOther] : [])],
+    itEnvironment: [...arrayAnswer(answers.icp_it_environment), ...(itOther ? [itOther] : [])],
+    softwareStack: text(answers.icp_software_stack),
+    painPoints: text(answers.icp_pain_points),
+    compliance: text(answers.icp_compliance),
+    growthStage: text(answers.icp_growth_stage),
+    budget: text(answers.icp_budget),
+    valueProp: text(answers.icp_value_prop),
+    keyMessages: text(answers.icp_key_messages),
+    dosDonts: text(answers.icp_dos_donts),
+    intentTopics: arrayAnswer(answers.icp_intent_topics),
   };
 }
 
