@@ -5,7 +5,9 @@ import { notFound } from "next/navigation";
 import { CampaignRecipientsTable, type RecipientRow } from "@/components/campaigns/campaign-recipients-table";
 import { Badge } from "@/components/ui/badge";
 import { SendCampaignControls } from "@/components/campaigns/send-campaign-controls";
+import { CampaignsPausedNotice } from "@/components/campaigns/campaigns-paused-notice";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { CAMPAIGNS_PAUSED } from "@/lib/campaigns/paused";
 import { CAMPAIGNS_HOME } from "@/lib/campaigns/queries";
 import { createClient } from "@/lib/supabase/server";
 
@@ -82,6 +84,8 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
         <span>/</span>
         <span>{campaign.name}</span>
       </div>
+
+      {CAMPAIGNS_PAUSED && <CampaignsPausedNotice />}
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

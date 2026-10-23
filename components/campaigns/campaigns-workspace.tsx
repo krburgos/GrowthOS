@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { CampaignRow } from "@/components/campaigns/campaigns-table";
+import { CampaignsPausedNotice } from "@/components/campaigns/campaigns-paused-notice";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
 import { SortHeading, useTableSort } from "@/components/ui/sort-heading";
+import { CAMPAIGNS_PAUSED, CAMPAIGNS_PAUSED_MESSAGE } from "@/lib/campaigns/paused";
 import { cn } from "@/lib/utils";
 
 type Show = "all" | "draft" | "scheduled" | "sent";
@@ -141,16 +143,30 @@ export function CampaignsWorkspace({
         </div>
         <div className="ml-auto flex items-center gap-2">
           {focusSlot}
-          {canEdit && (
-            <Button size="sm" variant="secondary" className="border-transparent hover:border-transparent" asChild>
-              <Link href="/campaigns/new">
+          {canEdit &&
+            (CAMPAIGNS_PAUSED ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="border-transparent hover:border-transparent"
+                disabled
+                title={CAMPAIGNS_PAUSED_MESSAGE}
+              >
                 <Plus className="mr-1.5 size-4" />
                 New Campaign
-              </Link>
-            </Button>
-          )}
+              </Button>
+            ) : (
+              <Button size="sm" variant="secondary" className="border-transparent hover:border-transparent" asChild>
+                <Link href="/campaigns/new">
+                  <Plus className="mr-1.5 size-4" />
+                  New Campaign
+                </Link>
+              </Button>
+            ))}
         </div>
       </div>
+
+      {CAMPAIGNS_PAUSED && <CampaignsPausedNotice flush />}
 
       <div className="grid grid-cols-2 border-b border-primary-200 bg-primary-50 sm:grid-cols-4 sm:divide-x sm:divide-primary-200">
         {stats.map((s) => (
@@ -163,7 +179,7 @@ export function CampaignsWorkspace({
 
       {campaigns.length === 0 ? (
         <p className="px-5 py-10 text-center text-body-sm text-neutral-400">
-          No campaigns yet{canEdit ? ". Use New Campaign to send one to a list." : "."}
+          No campaigns yet{canEdit && !CAMPAIGNS_PAUSED ? ". Use New Campaign to send one to a list." : "."}
         </p>
       ) : (
         <>
