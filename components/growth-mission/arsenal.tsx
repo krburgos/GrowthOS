@@ -219,7 +219,10 @@ export function Arsenal({
             <Button
               size="sm"
               variant="secondary"
-              className="ml-auto border-transparent hover:border-transparent"
+              // With a Focus slot, that slot takes the free space and this
+              // sits beside it; two ml-autos would split the space and strand
+              // Focus mid-bar.
+              className={cn("border-transparent hover:border-transparent", !focusSlot && "ml-auto")}
               onClick={() => input.current?.click()}
               disabled={uploading.length > 0}
             >
