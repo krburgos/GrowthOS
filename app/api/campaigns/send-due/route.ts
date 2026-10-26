@@ -6,6 +6,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
 
+/** One send at most every 550ms: under Resend's default limit of 2 per second. */
+const SEND_SPACING_MS = 550;
+/** Stop starting new sends well inside maxDuration; the next cron tick continues. */
+const SEND_BUDGET_MS = 45_000;
+
 /**
  * Backend Schema §8, steps 4–6 — POST /api/campaigns/send-due. Called
  * only by Postgres's send_due_campaigns() (via pg_cron + pg_net,
@@ -21,12 +26,12 @@ export const maxDuration = 60;
  * personalized tracking_token baked into the body's open pixel/click
  * links (lib/email/build-campaign-html) and echoed back as a Resend
  * `tag` so the bounce/complaint webhook (app/api/webhooks/resend) can
- * identify which recipient an event belongs to. Concurrency is a flat
- * Promise.allSettled over the whole batch — fine at Phase 1 scale
- * (dozens to a few hundred recipients); a genuinely large list would
- * need real batching/queueing, which is out of scope here.
+ * identify which recipient an event belongs to. Sends are paced (about
+ * 80 a minute) and a large list finishes over several cron ticks; see the
+ * loop below.
  */
 export async function POST(request: NextRequest) {
+  const startedAt = Date.now();
   const cronSecret = request.headers.get("x-cron-secret");
   if (!cronSecret || cronSecret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -107,42 +112,63 @@ export async function POST(request: NextRequest) {
 
     const appUrl = process.env.APP_URL ?? "";
 
-    await Promise.allSettled(
-      (allRecipients ?? []).map(async (recipient) => {
-        const contact = Array.isArray(recipient.contacts) ? recipient.contacts[0] : recipient.contacts;
-        if (!contact) return;
+    // Paced sending (2026-10-26): one email at a time, under Resend's
+    // default 2 per second, and a cold domain looks less like a spam
+    // burst. When the time budget runs out (or Resend says slow down), the
+    // campaign goes back to 'scheduled' so the next cron tick, a minute
+    // later, carries on with whoever is still pending.
+    let unfinished = false;
+    for (const recipient of allRecipients ?? []) {
+      if (Date.now() - startedAt > SEND_BUDGET_MS) {
+        unfinished = true;
+        break;
+      }
+      const contact = Array.isArray(recipient.contacts) ? recipient.contacts[0] : recipient.contacts;
+      if (!contact) continue;
+      const attemptAt = Date.now();
 
-        const html = buildCampaignHtml({ body: campaign.body, appUrl, trackingToken: recipient.tracking_token });
-        const text = buildCampaignText({ body: campaign.body, appUrl, trackingToken: recipient.tracking_token });
+      const html = buildCampaignHtml({ body: campaign.body, appUrl, trackingToken: recipient.tracking_token });
+      const text = buildCampaignText({ body: campaign.body, appUrl, trackingToken: recipient.tracking_token });
 
-        const { error } = await sendWithFallback({
-          fromName,
-          realAddress,
-          replyToEmail,
-          to: contact.email,
-          subject: campaign.subject,
-          content: html,
-          isHtml: true,
-          text,
-          tags: [{ name: "tracking_token", value: recipient.tracking_token }],
-          // One-click unsubscribe (RFC 8058), required of bulk senders by Gmail and Yahoo.
-          headers: {
-            "List-Unsubscribe": `<${campaignUnsubscribeUrl(appUrl, recipient.tracking_token)}>`,
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-          },
+      const { error } = await sendWithFallback({
+        fromName,
+        realAddress,
+        replyToEmail,
+        to: contact.email,
+        subject: campaign.subject,
+        content: html,
+        isHtml: true,
+        text,
+        tags: [{ name: "tracking_token", value: recipient.tracking_token }],
+        // One-click unsubscribe (RFC 8058), required of bulk senders by Gmail and Yahoo.
+        headers: {
+          "List-Unsubscribe": `<${campaignUnsubscribeUrl(appUrl, recipient.tracking_token)}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+      });
+
+      if (error && /rate limit|too many requests/i.test(error.message ?? "")) {
+        // Still pending: the next run sends it.
+        unfinished = true;
+        break;
+      }
+      if (error) {
+        await supabase.from("campaign_recipients").update({ status: "failed" }).eq("id", recipient.id);
+      } else {
+        await supabase.rpc("record_campaign_event", {
+          p_tracking_token: recipient.tracking_token,
+          p_event_type: "sent",
+          p_metadata: null,
         });
+      }
+      const wait = SEND_SPACING_MS - (Date.now() - attemptAt);
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    }
 
-        if (error) {
-          await supabase.from("campaign_recipients").update({ status: "failed" }).eq("id", recipient.id);
-        } else {
-          await supabase.rpc("record_campaign_event", {
-            p_tracking_token: recipient.tracking_token,
-            p_event_type: "sent",
-            p_metadata: null,
-          });
-        }
-      })
-    );
+    if (unfinished) {
+      await supabase.from("campaigns").update({ status: "scheduled" }).eq("id", campaignId);
+      return NextResponse.json({ success: true, continuing: true });
+    }
 
     await supabase.from("campaigns").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", campaignId);
   } catch (err) {
