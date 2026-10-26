@@ -22,6 +22,7 @@ interface OpportunityQueryRow {
   id: string;
   name: string | null;
   stage_id: string;
+  owner_id: string | null;
   closed_at: string | null;
   stage_entered_at: string;
   contacts: { full_name: string } | { full_name: string }[] | null;
@@ -34,6 +35,9 @@ interface OpportunityQueryRow {
 }
 
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
+
+/** Who may edit in the List view: the opportunities_update policy's roles. */
+const CAN_EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 
 /**
  * App Flow §4.5, E1/E2 — Opportunity Board (default) with a List view
@@ -66,11 +70,11 @@ export default async function OpportunitiesPage({
   const { page, pageSize, from, to } = parsePagination(pageParams);
 
   const supabase = await createClient();
-  const [{ data: rows }, { data: stageRows }] = await Promise.all([
+  const [{ data: rows }, { data: stageRows }, { data: ownerRows }] = await Promise.all([
     supabase
       .from("opportunities")
       .select(
-        "id, name, stage_id, closed_at, stage_entered_at, contacts(full_name), companies(name, company_size), users(full_name), opportunity_stages(name, stage_group, win_probability)"
+        "id, name, stage_id, owner_id, closed_at, stage_entered_at, contacts(full_name), companies(name, company_size), users(full_name), opportunity_stages(name, stage_group, win_probability)"
       )
       .eq("account_id", user.account_id)
       .order("created_at", { ascending: false }),
@@ -80,6 +84,8 @@ export default async function OpportunitiesPage({
       .eq("account_id", user.account_id)
       .is("archived_at", null)
       .order("sort_order"),
+    // The List view's inline Salesperson choice (2026-10-26).
+    supabase.from("users").select("id, full_name").eq("account_id", user.account_id).is("archived_at", null).order("full_name"),
   ]);
 
   const stages = (stageRows ?? []) as OpportunityStageRow[];
@@ -104,6 +110,7 @@ export default async function OpportunitiesPage({
       company_name: company?.name ?? null,
       employees: employeesOf(company?.company_size),
       prospect_value: prospectValue(company?.company_size),
+      owner_id: row.owner_id,
       owner_name: owner?.full_name ?? null,
     };
   });
@@ -196,7 +203,12 @@ export default async function OpportunitiesPage({
         <EmptyState icon={Target} />
       ) : isListView ? (
         <div>
-          <OpportunityListTable opportunities={listRows.slice(from, to + 1) as OpportunityListRow[]} />
+          <OpportunityListTable
+            opportunities={listRows.slice(from, to + 1) as OpportunityListRow[]}
+            stages={stages}
+            owners={(ownerRows ?? []) as { id: string; full_name: string }[]}
+            canEdit={CAN_EDIT_ROLES.includes(user.role)}
+          />
           <PaginationBar page={page} pageSize={pageSize} totalCount={opportunities.length} />
         </div>
       ) : (
