@@ -1,3 +1,4 @@
+import { prospectValue } from "@/lib/companies/value";
 import { isCompletedThisQuarter, missionCapacity, type CapacityTask, type CreditAllotment } from "@/lib/growth-mission/capacity";
 import { currentQuarter, previousQuarter, quarterKey, type QuarterInfo } from "@/lib/growth-mission/hours";
 import type { StageGroup } from "@/lib/opportunities/stages";
@@ -134,7 +135,7 @@ export async function getReportsData(accountId: string, selected: QuarterInfo): 
       .lt("created_at", sel.nextStart),
     supabase
       .from("opportunities")
-      .select("value, closed_at, opportunity_stages!inner(stage_group)")
+      .select("closed_at, companies(company_size), opportunity_stages!inner(stage_group)")
       .eq("account_id", accountId)
       .eq("opportunity_stages.stage_group", "won")
       .gte("closed_at", from)
@@ -230,7 +231,10 @@ export async function getReportsData(accountId: string, selected: QuarterInfo): 
     for (const o of won ?? []) {
       if (!inQ(o.closed_at)) continue;
       dealsWon += 1;
-      revenueMonthly[new Date(o.closed_at!).getUTCMonth() - months[0].getUTCMonth()] += Number(o.value ?? 0);
+      // Client-confirmed (2026-10-26): revenue is the company-size figure (Prospect
+      // Value), the same one shown everywhere else, not a typed deal value.
+      const co = Array.isArray(o.companies) ? o.companies[0] : o.companies;
+      revenueMonthly[new Date(o.closed_at!).getUTCMonth() - months[0].getUTCMonth()] += prospectValue(co?.company_size);
     }
 
     const elapsedDays = Math.floor((Date.now() - qStart) / DAY_MS);

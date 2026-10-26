@@ -90,7 +90,6 @@ interface Loaded {
   accountId: string;
   contact: ContactOption | null;
   closedAt: string | null;
-  hasValue: boolean;
   stageGroup: StageGroup | null;
 }
 
@@ -99,8 +98,8 @@ interface Loaded {
  * Panels"): the New Opportunity panel's layout for an existing one, replacing
  * the Opportunity Detail page. The contact is fixed (Open contact links to
  * it); Prospect and Opportunities Value come from the company's size, as on
- * create. Saving stores that figure only when the opportunity has no value
- * yet: a value already stored feeds Reports' Revenue from Closed-Won.
+ * create, and saving stores that figure. Reports' Revenue from Closed-Won
+ * uses the same figure (client-confirmed 2026-10-26), so there is no typed Value.
  * Salesperson is new here. The opportunity's own activity and Log activity
  * sit below the fields.
  */
@@ -131,7 +130,7 @@ function OpportunityPanel({ opportunityId, canEdit, onClose }: { opportunityId: 
     void (async () => {
       const { data: opp } = await supabase
         .from("opportunities")
-        .select("id, name, stage_id, owner_id, notes, value, closed_at, account_id, contacts(id, full_name, title, companies(name, company_size))")
+        .select("id, name, stage_id, owner_id, notes, closed_at, account_id, contacts(id, full_name, title, companies(name, company_size))")
         .eq("id", opportunityId)
         .maybeSingle();
       if (!opp) {
@@ -161,7 +160,6 @@ function OpportunityPanel({ opportunityId, canEdit, onClose }: { opportunityId: 
         accountId: opp.account_id,
         contact: contactRow ? toOption(contactRow) : null,
         closedAt: opp.closed_at,
-        hasValue: opp.value != null,
         stageGroup: stageList.find((s) => s.id === opp.stage_id)?.stage_group ?? null,
       });
     })();
@@ -185,9 +183,7 @@ function OpportunityPanel({ opportunityId, canEdit, onClose }: { opportunityId: 
         stage_id: stageId || null,
         owner_id: ownerId === NOBODY ? null : ownerId,
         notes: notes.trim() || null,
-        // Reports' Revenue from Closed-Won reads the stored value, so one already
-        // there (typed on the old page) is kept; an empty one gets the figure.
-        ...(loaded.hasValue ? {} : { value: pv || null }),
+        value: pv || null,
         // Won or Lost keeps the day it first closed; reopening clears it.
         closed_at: closing ? (wasClosed && loaded.closedAt ? loaded.closedAt : new Date().toISOString()) : null,
       })
