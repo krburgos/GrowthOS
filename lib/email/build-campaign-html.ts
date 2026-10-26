@@ -41,7 +41,7 @@ export function buildCampaignHtml({
     }
   });
 
-  const unsubscribeUrl = `${appUrl}/api/unsubscribe/${trackingToken}`;
+  const unsubscribeUrl = campaignUnsubscribeUrl(appUrl, trackingToken);
   const pixelUrl = `${appUrl}/api/track/open/${trackingToken}.gif`;
 
   return [
@@ -49,4 +49,27 @@ export function buildCampaignHtml({
     `<p style="margin-top: 32px; font-size: 12px; color: #9aa4b8;">If you no longer want to receive these emails, <a href="${escapeHtml(unsubscribeUrl)}" style="color: #9aa4b8;">unsubscribe here</a>.</p>`,
     `<img src="${escapeHtml(pixelUrl)}" width="1" height="1" alt="" style="display:none;" />`,
   ].join("\n");
+}
+
+/** The campaign's unsubscribe link, shared by the footer and the List-Unsubscribe header. */
+export function campaignUnsubscribeUrl(appUrl: string, trackingToken: string): string {
+  return `${appUrl}/api/unsubscribe/${trackingToken}`;
+}
+
+/**
+ * The plain-text part sent alongside buildCampaignHtml (added 2026-10-26): an
+ * HTML-only email is a spam signal. The same body, links through the same
+ * click tracking, and the same unsubscribe line.
+ */
+export function buildCampaignText({
+  body,
+  appUrl,
+  trackingToken,
+}: {
+  body: string;
+  appUrl: string;
+  trackingToken: string;
+}): string {
+  const content = body.replace(URL_RE, (url) => `${appUrl}/api/track/click/${trackingToken}?url=${encodeURIComponent(url)}`);
+  return `${content}\n\n--\nIf you no longer want to receive these emails, unsubscribe here: ${campaignUnsubscribeUrl(appUrl, trackingToken)}`;
 }

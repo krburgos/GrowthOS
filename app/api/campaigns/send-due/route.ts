@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { buildCampaignHtml } from "@/lib/email/build-campaign-html";
+import { buildCampaignHtml, buildCampaignText, campaignUnsubscribeUrl } from "@/lib/email/build-campaign-html";
 import { sendWithFallback } from "@/lib/email/resend-send";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
         if (!contact) return;
 
         const html = buildCampaignHtml({ body: campaign.body, appUrl, trackingToken: recipient.tracking_token });
+        const text = buildCampaignText({ body: campaign.body, appUrl, trackingToken: recipient.tracking_token });
 
         const { error } = await sendWithFallback({
           fromName,
@@ -122,7 +123,13 @@ export async function POST(request: NextRequest) {
           subject: campaign.subject,
           content: html,
           isHtml: true,
+          text,
           tags: [{ name: "tracking_token", value: recipient.tracking_token }],
+          // One-click unsubscribe (RFC 8058), required of bulk senders by Gmail and Yahoo.
+          headers: {
+            "List-Unsubscribe": `<${campaignUnsubscribeUrl(appUrl, recipient.tracking_token)}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
         });
 
         if (error) {

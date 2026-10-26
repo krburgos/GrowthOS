@@ -21,6 +21,8 @@ export interface SendWithFallbackParams {
   /** With isHtml: the plain-text part sent alongside, which helps the email past spam filters. */
   text?: string;
   tags?: { name: string; value: string }[];
+  /** Extra headers, e.g. a campaign's List-Unsubscribe pair. */
+  headers?: Record<string, string>;
 }
 
 export async function sendWithFallback(
@@ -40,6 +42,7 @@ export async function sendWithFallback(
       cc: params.cc && params.cc.length > 0 ? params.cc : undefined,
       subject: params.subject,
       tags: params.tags,
+      headers: params.headers,
       ...(params.isHtml ? { html: params.content, ...(params.text ? { text: params.text } : {}) } : { text: params.content }),
     });
 

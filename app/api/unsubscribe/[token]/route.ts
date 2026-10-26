@@ -38,9 +38,7 @@ function page(message: string) {
 </html>`;
 }
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
-  const { token } = await params;
-
+async function unsubscribe(token: string) {
   const supabase = createAdminClient();
   await supabase.rpc("record_campaign_event", {
     p_tracking_token: token,
@@ -51,4 +49,18 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   return new NextResponse(page("You won't receive marketing emails from this sender again."), {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });
+}
+
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  return unsubscribe((await params).token);
+}
+
+/**
+ * One-click unsubscribe (RFC 8058), added 2026-10-26: Gmail and Yahoo
+ * require it of bulk senders and show their own Unsubscribe button for it.
+ * They POST `List-Unsubscribe=One-Click` to the List-Unsubscribe URL every
+ * campaign email now carries (app/api/campaigns/send-due).
+ */
+export async function POST(_request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  return unsubscribe((await params).token);
 }
