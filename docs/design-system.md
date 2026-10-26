@@ -620,9 +620,10 @@ Motion confirms an action or guides the eye. It extends the one rule that existe
 - **Save & next call** (`animate-slide-in`): the next contact slides in from the right over 200ms, with no wait for the previous one to leave.
 - **Focus switcher** (`animate-rise`): a section fades and rises 8px over 150ms when the person switches (Command Center, every Mission Card, the CRO Leader dashboard). Not when a page reopens on a remembered view.
 - **Completing a Mission Order** (`animate-fold-out`): the check and strike-through show for 450ms, then the row folds over 200ms into Show completed. The save is immediate; only the move between lists waits. Reopening is immediate.
+- **Mission Control guide** (client-confirmed 2026-10-26, option A): when a step is waiting, the figure waves twice (`animate-wave`), its badge pings three times (`animate-ping`), and the panel rises over 200ms when opened (`animate-guide-in`). Never endless.
 
 **Rules**
-- Nothing animates on page load.
+- Nothing animates on page load, with one client-confirmed exception (2026-10-26): the Mission Control guide's wave and ping above, which exist to draw the eye to a waiting step.
 - Nothing longer than 200ms stands between a click and the next one; the 1s glow and count-ups never block.
 - Only opacity, transform, width, max-height and background colour animate, on one element at a time.
 - "Reduce motion" (`prefers-reduced-motion: reduce`): every animation and transition snaps to its end state.
