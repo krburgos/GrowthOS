@@ -101,7 +101,8 @@ A prospect can belong to multiple lists at once (e.g., "Manufacturing Prospects,
 
 Opportunities move through the stage pipeline defined in the Developer Brief (Identified Interest → Discovery → Proposal → Negotiation → Closed Won/Lost, etc.). Requirements:
 - Opportunities can be created manually or automatically when a prospect shows meaningful interest (e.g., meeting booked)
-- **All opportunities are retained permanently** — none are deleted or archived — and must be sortable/filterable by stage. *One-time, client-confirmed exception (2026-10-26): the 56 sample opportunities seeded into the 14 active client accounts on 2026-09-15 were deleted by the client in the Supabase SQL Editor when those accounts went live with their real owners. They were demo data, not real deals; the rule is unchanged for every real opportunity, and the app still offers no way to delete or archive one.*
+- **All opportunities are retained permanently** — none are deleted or archived — and must be sortable/filterable by stage. *One-time, client-confirmed exception (2026-10-26): the 56 sample opportunities seeded into the 14 active client accounts on 2026-09-15 were deleted by the client in the Supabase SQL Editor when those accounts went live with their real owners. They were demo data, not real deals.* **Superseded the same day by the client: opportunities can be deleted** (an opportunity created by mistake shouldn't stay on the board, and marking it Lost would distort the win rate). Delete archives it (`archived_at`, restorable) and it disappears everywhere, Reports included; only Owner, Admin and CRO Admin can delete, and a Won opportunity can't be (App Flow §4.5, Backend Schema §6).
+- **Every opportunity has a name** (client-confirmed 2026-10-26): required on create and edit, filled in with the company's name to start, and shown first wherever an opportunity appears.
 - Opportunity value feeds revenue reporting (§6.8)
 
 ### 6.5 Activity Timeline

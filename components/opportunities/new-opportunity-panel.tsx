@@ -99,6 +99,13 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
   const [stageId, setStageId] = useState("");
   const [ownerId, setOwnerId] = useState(NOBODY);
   const [name, setName] = useState("");
+  // Required since 2026-10-26: filled in with the company's name when a contact is
+  // chosen, as a real value to keep or change, until the person types their own.
+  const [nameTouched, setNameTouched] = useState(false);
+  const pick = (c: ContactOption | null) => {
+    setContact(c);
+    if (c && !nameTouched) setName(c.companyName ?? c.full_name);
+  };
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -125,7 +132,11 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
       setOwners(people);
       const me = auth.user?.id;
       if (me && people.some((p) => p.id === me)) setOwnerId(me);
-      if (preset.data) setContact(toOption(preset.data as ContactRow));
+      if (preset.data) {
+        const c = toOption(preset.data as ContactRow);
+        setContact(c);
+        setName(c.companyName ?? c.full_name);
+      }
     })();
   }, [accountId, contactId]);
 
@@ -136,6 +147,10 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
       toast.error("Choose who the opportunity is with.");
       return;
     }
+    if (!name.trim()) {
+      toast.error("Give the opportunity a name.");
+      return;
+    }
     setSaving(true);
     const { data, error } = await createClient()
       .from("opportunities")
@@ -143,7 +158,7 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
         account_id: accountId,
         contact_id: contact.id,
         owner_id: ownerId === NOBODY ? null : ownerId,
-        name: name.trim() || null,
+        name: name.trim(),
         value: pv || null,
         stage_id: stageId || null,
         notes: notes.trim() || null,
@@ -195,7 +210,7 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
                 {contactId ? (
                   <Lock className="size-4 shrink-0 text-neutral-400" aria-label="Set by this contact" />
                 ) : (
-                  <button type="button" onClick={() => setContact(null)} className="text-caption font-semibold text-secondary-700 hover:text-secondary-800">
+                  <button type="button" onClick={() => pick(null)} className="text-caption font-semibold text-secondary-700 hover:text-secondary-800">
                     Change
                   </button>
                 )}
@@ -203,7 +218,7 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
             ) : contactId ? (
               <p className="text-body-sm text-neutral-400">Loading…</p>
             ) : (
-              <ContactSearch accountId={accountId} onPick={setContact} />
+              <ContactSearch accountId={accountId} onPick={pick} />
             )}
           </div>
 
@@ -221,8 +236,17 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
           </div>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-body-sm text-neutral-500">Opportunity name</span>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={contact?.companyName ?? "Optional"} />
+            <span className="text-body-sm text-neutral-500">
+              Opportunity name <span className="text-error-600">*</span>
+            </span>
+            <Input
+              value={name}
+              onChange={(e) => {
+                setNameTouched(true);
+                setName(e.target.value);
+              }}
+              placeholder="Name this opportunity"
+            />
           </label>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -275,7 +299,7 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
           <Button variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={() => void create()} disabled={saving || !contact}>
+          <Button onClick={() => void create()} disabled={saving || !contact || !name.trim()}>
             {saving ? "Creating…" : "Create opportunity"}
           </Button>
         </DialogFooter>

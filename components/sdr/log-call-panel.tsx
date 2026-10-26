@@ -91,6 +91,11 @@ export function LogCallPanel({
 
   const save = async (next: boolean) => {
     if (!outcome || !ready) return;
+    // Every opportunity has a name (2026-10-26).
+    if (outcome === "meeting_booked" && !oppName.trim()) {
+      toast.error("Give the opportunity a name.");
+      return;
+    }
     setSaving(true);
     const supabase = createClient();
     const {
@@ -106,7 +111,7 @@ export function LogCallPanel({
           account_id: accountId,
           contact_id: row.contact_id,
           owner_id: salesperson || null,
-          name: oppName.trim() || null,
+          name: oppName.trim(),
           value: prospectValue(row.company_size) || null,
           stage_id: meetingStageId,
         })

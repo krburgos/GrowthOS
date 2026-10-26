@@ -1,5 +1,6 @@
 "use client";
 
+import { Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -13,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { opportunitiesValue, prospectValue, usd } from "@/lib/companies/value";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import type { StageGroup } from "@/lib/opportunities/stages";
@@ -23,6 +25,8 @@ import { cn } from "@/lib/utils";
 const PARAM = "opportunity";
 const NOBODY = "__nobody__";
 const CAN_EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
+/** Deleting is narrower (2026-10-26): archive_opportunity() enforces the same list. */
+const CAN_DELETE_ROLES = ["msp_owner", "msp_admin", "cro_admin"];
 
 /** This page's address with an opportunity's panel open: filters and views stay as they are. */
 export function useOpportunityHref() {
@@ -76,7 +80,15 @@ export function OpportunityPanelHost({ role }: { role: string }) {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
-  return <OpportunityPanel key={id} opportunityId={id} canEdit={CAN_EDIT_ROLES.includes(role)} onClose={close} />;
+  return (
+    <OpportunityPanel
+      key={id}
+      opportunityId={id}
+      canEdit={CAN_EDIT_ROLES.includes(role)}
+      canDelete={CAN_DELETE_ROLES.includes(role)}
+      onClose={close}
+    />
+  );
 }
 
 interface StageOption {
@@ -102,8 +114,22 @@ interface Loaded {
  * uses the same figure (client-confirmed 2026-10-26), so there is no typed Value.
  * Salesperson is new here. The opportunity's own activity and Log activity
  * sit below the fields.
+ *
+ * Same day, approved mockup section 4: the name is required, and Owner,
+ * Admin or CRO Admin can Delete (archive) an opportunity that isn't Won,
+ * after a confirmation. It then disappears everywhere (opportunities RLS).
  */
-function OpportunityPanel({ opportunityId, canEdit, onClose }: { opportunityId: string; canEdit: boolean; onClose: () => void }) {
+function OpportunityPanel({
+  opportunityId,
+  canEdit,
+  canDelete,
+  onClose,
+}: {
+  opportunityId: string;
+  canEdit: boolean;
+  canDelete: boolean;
+  onClose: () => void;
+}) {
   const router = useRouter();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [stages, setStages] = useState<StageOption[]>([]);
@@ -114,6 +140,8 @@ function OpportunityPanel({ opportunityId, canEdit, onClose }: { opportunityId: 
   const [ownerId, setOwnerId] = useState(NOBODY);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const loadActivities = useCallback(async () => {
     const { data } = await createClient()
@@ -170,8 +198,26 @@ function OpportunityPanel({ opportunityId, canEdit, onClose }: { opportunityId: 
   const contact = loaded?.contact ?? null;
   const pv = contact ? prospectValue(contact.companySize) : 0;
 
+  const remove = async () => {
+    setDeleting(true);
+    const { error } = await createClient().rpc("archive_opportunity", { p_opportunity_id: opportunityId });
+    setDeleting(false);
+    if (error) {
+      toast.error(getFriendlyErrorMessage(error));
+      return;
+    }
+    toast.success("Opportunity deleted.");
+    setConfirmingDelete(false);
+    onClose();
+    router.refresh();
+  };
+
   const save = async () => {
     if (!loaded) return;
+    if (!name.trim()) {
+      toast.error("Give the opportunity a name.");
+      return;
+    }
     const group = stages.find((s) => s.id === stageId)?.stage_group;
     const closing = group === "won" || group === "lost";
     const wasClosed = loaded.stageGroup === "won" || loaded.stageGroup === "lost";
@@ -179,7 +225,7 @@ function OpportunityPanel({ opportunityId, canEdit, onClose }: { opportunityId: 
     const { error } = await createClient()
       .from("opportunities")
       .update({
-        name: name.trim() || null,
+        name: name.trim(),
         stage_id: stageId || null,
         owner_id: ownerId === NOBODY ? null : ownerId,
         notes: notes.trim() || null,
@@ -203,7 +249,7 @@ function OpportunityPanel({ opportunityId, canEdit, onClose }: { opportunityId: 
       <DialogContent className="left-auto right-0 top-0 flex h-dvh max-h-dvh w-full max-w-[480px] translate-x-0 translate-y-0 flex-col gap-0 rounded-none p-0 sm:rounded-l-lg">
         <DialogHeader className="mb-0 flex flex-col gap-2 border-b border-neutral-100 px-6 pb-4 pt-5 pr-12">
           <p className="text-caption font-semibold text-secondary-700">Opportunities</p>
-          <DialogTitle>{loaded ? name.trim() || contact?.full_name || "Opportunity" : "Opportunity"}</DialogTitle>
+          <DialogTitle>{(loaded && name.trim()) || "Opportunity"}</DialogTitle>
           <DialogDescription className="text-body-sm text-neutral-500">Where it stands, who owns it, and what&apos;s happened.</DialogDescription>
         </DialogHeader>
 
@@ -246,8 +292,10 @@ function OpportunityPanel({ opportunityId, canEdit, onClose }: { opportunityId: 
 
             <fieldset disabled={!canEdit} className="flex flex-col gap-5">
               <label className="flex flex-col gap-1.5">
-                <span className="text-body-sm text-neutral-500">Opportunity name</span>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={contact?.companyName ?? "Optional"} />
+                <span className="text-body-sm text-neutral-500">
+                  Opportunity name <span className="text-error-600">*</span>
+                </span>
+                <Input value={name} onChange={(e) => setName(e.target.value)} error={canEdit && !name.trim()} />
               </label>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -306,17 +354,72 @@ function OpportunityPanel({ opportunityId, canEdit, onClose }: { opportunityId: 
           </div>
         )}
 
-        <DialogFooter className="mt-0 flex-wrap justify-end gap-3 border-t border-neutral-100 px-6 py-4">
+        <DialogFooter className="mt-0 flex-wrap items-center gap-3 border-t border-neutral-100 px-6 py-4">
+          {canDelete && loaded && (
+            <DeleteButton won={loaded.stageGroup === "won"} disabled={saving} onClick={() => setConfirmingDelete(true)} />
+          )}
+          <span className="flex-1" />
           <Button variant="secondary" onClick={onClose} disabled={saving}>
             {canEdit ? "Cancel" : "Close"}
           </Button>
           {canEdit && (
-            <Button onClick={() => void save()} disabled={saving || !loaded}>
+            <Button onClick={() => void save()} disabled={saving || !loaded || !name.trim()}>
               {saving ? "Saving…" : "Save changes"}
             </Button>
           )}
         </DialogFooter>
       </DialogContent>
+
+      {confirmingDelete && (
+        <Dialog open onOpenChange={(o) => !o && !deleting && setConfirmingDelete(false)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete this opportunity?</DialogTitle>
+              <DialogDescription className="text-body text-neutral-700">
+                <b className="font-semibold">{name.trim() || "This opportunity"}</b>
+                {contact && <> with {contact.full_name}</>} will be removed from the board, lists, reports and every page. It&apos;s
+                kept on record, so it can be restored if this was a mistake.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="justify-end gap-3">
+              <Button variant="secondary" onClick={() => setConfirmingDelete(false)} disabled={deleting}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={() => void remove()} disabled={deleting}>
+                {deleting ? "Deleting…" : "Delete opportunity"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
+  );
+}
+
+/** Red, at the far left of the footer, away from Save. A Won opportunity can't be deleted; hovering says why. */
+function DeleteButton({ won, disabled, onClick }: { won: boolean; disabled: boolean; onClick: () => void }) {
+  const button = (
+    <button
+      type="button"
+      onClick={won ? undefined : onClick}
+      disabled={disabled}
+      aria-disabled={won || undefined}
+      className={cn(
+        "inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-button text-error-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40",
+        won ? "cursor-not-allowed opacity-40" : "hover:bg-error-50 disabled:opacity-40"
+      )}
+    >
+      <Trash2 className="size-4" />
+      Delete
+    </button>
+  );
+  if (!won) return button;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipContent className="max-w-60 font-medium">
+        Won opportunities can&apos;t be deleted. They count toward Closed-Won revenue.
+      </TooltipContent>
+    </Tooltip>
   );
 }
