@@ -125,15 +125,29 @@ export default async function OpportunitiesPage({
   const average = opportunities.length > 0 ? opportunities.reduce((s, o) => s + o.prospect_value, 0) / opportunities.length : 0;
 
   // ---- List view sort (server-driven via SortableHeader) ----
+  // Every column sorts (client-confirmed, 2026-10-26). A missing company or
+  // salesperson sorts last whichever way the column is turned.
   const direction = dir === "desc" ? -1 : 1;
+  const byText = (x: string | null, y: string | null) =>
+    x === y ? 0 : x === null ? 1 : y === null ? -1 : direction * x.localeCompare(y, undefined, { sensitivity: "base" });
   const listRows = [...opportunities].sort((a, b) => {
     switch (sort) {
       case "contact":
         return direction * (a.name ?? a.contact_name).localeCompare(b.name ?? b.contact_name);
+      case "company":
+        return byText(a.company_name, b.company_name);
+      case "employees":
+        return direction * (a.employees - b.employees);
       case "stage":
         return direction * ((stageOrder.get(a.stage_id) ?? 0) - (stageOrder.get(b.stage_id) ?? 0));
       case "value":
+      case "opps_value":
+        // Opportunities Value is 3 × Prospect Value, so the same order.
         return direction * (a.prospect_value - b.prospect_value);
+      case "win":
+        return direction * (a.win_probability - b.win_probability);
+      case "salesperson":
+        return byText(a.owner_name, b.owner_name);
       case "days":
         return direction * (new Date(a.stage_entered_at).getTime() - new Date(b.stage_entered_at).getTime());
       default:

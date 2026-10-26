@@ -165,15 +165,19 @@ export function OpportunityListTable({
       <TableHeader variant="solid">
         <TableRow className="border-b-0 hover:bg-transparent">
           <TableHead variant="solid"><SortableHeader variant="solid" field="contact" label="Opportunity" /></TableHead>
-          <TableHead variant="solid">Company</TableHead>
-          <TableHead variant="solid" className="text-right">Employees</TableHead>
+          <TableHead variant="solid"><SortableHeader variant="solid" field="company" label="Company" /></TableHead>
+          <TableHead variant="solid" className="text-right">
+            <SortableHeader variant="solid" field="employees" label="Employees" align="right" />
+          </TableHead>
           <TableHead variant="solid"><SortableHeader variant="solid" field="stage" label="Stage" /></TableHead>
           <TableHead variant="solid" className="text-right">
             <SortableHeader variant="solid" field="value" label="Prospect Value" align="right" />
           </TableHead>
-          <TableHead variant="solid" className="text-right">Opportunities Value</TableHead>
-          <TableHead variant="solid">Win %</TableHead>
-          <TableHead variant="solid">Salesperson</TableHead>
+          <TableHead variant="solid" className="text-right">
+            <SortableHeader variant="solid" field="opps_value" label="Opportunities Value" align="right" />
+          </TableHead>
+          <TableHead variant="solid"><SortableHeader variant="solid" field="win" label="Win %" /></TableHead>
+          <TableHead variant="solid"><SortableHeader variant="solid" field="salesperson" label="Salesperson" /></TableHead>
           <TableHead variant="solid" className="text-right">
             <SortableHeader variant="solid" field="days" label="In stage" align="right" />
           </TableHead>
