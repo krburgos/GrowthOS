@@ -2,8 +2,8 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import Link from "next/link";
 
+import { OpportunityLink } from "@/components/opportunities/opportunity-panel";
 import { daysSince, usd } from "@/lib/companies/value";
 import { cn } from "@/lib/utils";
 
@@ -61,13 +61,13 @@ export function OpportunityCard({ opportunity: o, open }: { opportunity: Opportu
         isDragging && "z-10 -translate-y-0.5 shadow-md"
       )}
     >
-      <Link
-        href={`/opportunities/${o.id}`}
+      <OpportunityLink
+        id={o.id}
         className="text-body-sm font-semibold leading-snug text-neutral-900 hover:underline"
         onClick={(e) => isDragging && e.preventDefault()}
       >
         {title}
-      </Link>
+      </OpportunityLink>
       <span className="truncate text-caption text-neutral-500">
         {[title !== o.contact_name ? o.contact_name : null, o.company_name, o.employees ? `${o.employees} employees` : null]
           .filter(Boolean)

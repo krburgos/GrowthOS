@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import { CompaniesTable, type CompanyRow } from "@/components/companies/companies-table";
 import { CompaniesToolbar } from "@/components/companies/companies-toolbar";
+import { NewCompanyButton } from "@/components/companies/new-company-panel";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InfoTip } from "@/components/ui/info-tip";
 import { PaginationBar } from "@/components/ui/pagination-bar";
@@ -13,13 +14,18 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Companies — GrowthMission" };
 
+/** The roles companies_insert lets add a company. */
+const CAN_CREATE_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
+
 /** Lower bounds for the Employees filter. */
 const EMPLOYEE_BANDS = ["1", "10", "50", "100", "250"];
 
 /**
  * Companies List (App Flow D5). Client-confirmed addition (2026-09-08):
- * same field set as Contact Detail's Company card, no Add Company —
- * companies are created only through Add Contact / Import.
+ * same field set as Contact Detail's Company card. Client-confirmed
+ * (2026-10-26, approved mockup "CRM Side Panels"): New Company opens a side
+ * panel, reversing the earlier "no Add Company" — shown to the roles the
+ * companies_insert policy allows (Backend Schema §6).
  *
  * Client-confirmed redesign (2026-10-14, approved mockup "CRM Pages
  * Refresh"): a summary strip; Prospect Value ($200 × Employees × 12) and
@@ -140,11 +146,12 @@ export default async function CompaniesListPage({
 
   return (
     <main className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col gap-5 p-6 md:p-8">
-      <div>
-        <h1 className="text-h1 text-primary-900">Companies</h1>
-        <p className="text-body text-neutral-500">
-          Every organisation your contacts work for. Companies are created when you add or import a contact.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-h1 text-primary-900">Companies</h1>
+          <p className="text-body text-neutral-500">Every organisation your contacts work for.</p>
+        </div>
+        {CAN_CREATE_ROLES.includes(user.role) && <NewCompanyButton accountId={user.account_id!} />}
       </div>
 
       {all.length === 0 ? (

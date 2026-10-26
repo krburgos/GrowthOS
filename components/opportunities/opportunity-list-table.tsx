@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { OpportunityLink } from "@/components/opportunities/opportunity-panel";
 import { Badge } from "@/components/ui/badge";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -54,9 +53,9 @@ export function OpportunityListTable({ opportunities }: { opportunities: Opportu
         {opportunities.map((o) => (
           <TableRow key={o.id}>
             <TableCell label="Opportunity" className="font-medium text-neutral-800">
-              <Link href={`/opportunities/${o.id}`} className="hover:underline">
+              <OpportunityLink id={o.id} className="hover:underline">
                 {o.name?.trim() || o.contact_name}
-              </Link>
+              </OpportunityLink>
               {o.name?.trim() && <span className="block text-caption font-normal text-neutral-500">{o.contact_name}</span>}
             </TableCell>
             <TableCell label="Company">{o.company_name ?? "—"}</TableCell>

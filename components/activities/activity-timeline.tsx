@@ -72,8 +72,11 @@ export function dayLabel(dateStr: string): string {
 export function ActivityTimeline({
   activities,
   showFilters = true,
+  onChanged,
 }: {
   activities: ActivityRow[];
+  /** For a timeline the page loads itself (the Opportunity panel), so it can reload after a task is ticked. */
+  onChanged?: () => void;
   /** Off where the page draws its own filter row (Contact Detail, beside Log activity), so there is only one. */
   showFilters?: boolean;
 }) {
@@ -105,6 +108,7 @@ export function ActivityTimeline({
       return;
     }
     router.refresh();
+    onChanged?.();
   };
 
   return (

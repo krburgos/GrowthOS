@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { MissionGuide } from "@/components/guide/mission-guide";
+import { OpportunityPanelHost } from "@/components/opportunities/opportunity-panel";
 import { CroLeaderBanner } from "@/components/shell/cro-leader-banner";
 import { MobileNavProvider } from "@/components/shell/mobile-nav";
 import { Sidebar } from "@/components/shell/sidebar";
@@ -117,7 +119,11 @@ export default async function MspShellLayout({ children }: { children: React.Rea
               profileComplete={profile?.complete ?? true}
             />
             {children}
-            {/* Mission Control, option A (preview branch, 2026-10-23). */}
+            {/* Edit Opportunity (2026-10-26): ?opportunity=<id> opens its panel over any page. */}
+            <Suspense fallback={null}>
+              <OpportunityPanelHost role={user.role} />
+            </Suspense>
+            {/* Mission Control, option A (client-confirmed 2026-10-26). */}
             <MissionGuide accountId={user.account_id!} role={user.role} />
           </div>
         </div>

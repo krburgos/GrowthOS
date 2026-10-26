@@ -25,7 +25,7 @@ interface PaletteItem {
 }
 
 const ACTIONS: { key: string; label: string; href: string; icon: ComponentType<{ className?: string }> }[] = [
-  { key: "action-add-contact", label: "Add Contact", href: "/contacts/new", icon: Plus },
+  { key: "action-add-contact", label: "Add Contact", href: "/contacts?new=1", icon: Plus },
   { key: "action-create-list", label: "Create List", href: "/lists/new", icon: Plus },
 ];
 

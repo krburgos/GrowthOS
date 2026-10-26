@@ -185,6 +185,8 @@
   /* Mission Control (preview, 2026-10-23): the figure waves a few times when
      a step is waiting, its badge pings, the panel rises. Never endless. */
   --animate-wave: gm-wave 2600ms var(--ease-standard) 2;
+  /* Client-confirmed (2026-10-26): the figure also waves while hovered, for as long as the pointer stays. */
+  --animate-wave-hover: gm-wave 2600ms var(--ease-standard) infinite;
   --animate-ping: gm-ping 1600ms ease-out 3;
   --animate-guide-in: gm-guide-in 200ms var(--ease-enter) both;
 

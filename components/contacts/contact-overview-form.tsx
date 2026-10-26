@@ -67,7 +67,7 @@ type Option = { id: string; label: string };
 /**
  * Client-confirmed additions: First/Last Name split, Score, Temp,
  * contact-level LinkedIn, Company Phone/Address 1 — same shape as
- * ContactForm and the import pipeline. Editing an existing contact's
+ * Add Contact (AddContactPanel) and the import pipeline. Editing an existing contact's
  * email into collision with a *different* existing contact still
  * blocks (unlike import/add) — that's reconciling two already-
  * established records' activities/opportunities, a bigger operation

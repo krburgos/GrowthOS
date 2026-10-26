@@ -1,7 +1,8 @@
-import { Plus, Upload, Users } from "lucide-react";
+import { Upload, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { AddContactButton } from "@/components/contacts/add-contact-panel";
 import { ContactsDataTable } from "@/components/contacts/contacts-data-table";
 import { ContactsFilterChips } from "@/components/contacts/contacts-filter-panel";
 import { applyRules, decodeRules, isActive, ruleEmbeds, type RuleOptions } from "@/lib/contacts/filters";
@@ -43,12 +44,14 @@ export default async function ContactsListPage({
     view?: string;
     q?: string;
     f?: string | string[];
+    /** `new=1` opens Add Contact (the command palette; old /contacts/new links). */
+    new?: string;
   }>;
 }) {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const { sort, dir, view: rawView, q, f, ...pageParams } = await searchParams;
+  const { sort, dir, view: rawView, q, f, new: openNew, ...pageParams } = await searchParams;
   // The filter panel's rows (client-confirmed, 2026-10-22, approved mockup
   // "Contacts Filters"). Each rule that reads another table gets its own
   // aliased embed, so the same rules can narrow the rows, the total and
@@ -237,12 +240,7 @@ export default async function ContactsListPage({
               Import Contacts
             </Link>
           </Button>
-          <Button asChild>
-            <Link href="/contacts/new">
-              <Plus className="mr-1.5 size-4" />
-              Add Contact
-            </Link>
-          </Button>
+          <AddContactButton key={openNew ? "new" : "list"} accountId={user.account_id!} defaultOpen={openNew === "1"} />
         </div>
       </div>
 

@@ -2,11 +2,13 @@
 
 import { Globe, Link2, MapPin, Pencil, Phone, Plus, Tag, Users } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { ActivityTimeline, dayLabel, type ActivityRow } from "@/components/activities/activity-timeline";
 import { CompanyLogoUpload } from "@/components/companies/company-logo-upload";
 import { CompanyOverviewForm, type CompanyOverviewValues } from "@/components/companies/company-overview-form";
+import { AddContactPanel } from "@/components/contacts/add-contact-panel";
 import {
   Fact,
   HeroChip,
@@ -18,6 +20,7 @@ import {
   initials,
 } from "@/components/contacts/contact-detail-body";
 import { StatusPill } from "@/components/contacts/status-pill";
+import { OpportunityLink } from "@/components/opportunities/opportunity-panel";
 import { HERO_ACTION_CLASS, HERO_PRIMARY_ACTION_CLASS, HeroBand } from "@/components/shell/hero-band";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,7 +87,9 @@ export function CompanyDetailBody({
   const location = [company.city, company.state].filter(Boolean).join(", ");
   const employees = employeesOf(company.company_size);
   const fullAddress = [company.address_line1, location].filter(Boolean).join(", ");
-  const addContactHref = `/contacts/new?company_id=${companyId}`;
+  // Add Contact opens its side panel with this company locked (2026-10-26); ?add_contact=1 is for old /contacts/new links.
+  const params = useSearchParams();
+  const [addingContact, setAddingContact] = useState(params.get("add_contact") === "1");
 
   const statusCounts = new Map<string, { name: string; color: string; count: number }>();
   for (const c of contacts) {
@@ -134,10 +139,10 @@ export function CompanyDetailBody({
               </a>
             )}
             {canEdit && (
-              <Link href={addContactHref} className={HERO_PRIMARY_ACTION_CLASS}>
+              <button type="button" onClick={() => setAddingContact(true)} className={HERO_PRIMARY_ACTION_CLASS}>
                 <Plus className="size-4" />
                 Add Contact
-              </Link>
+              </button>
             )}
             {canEdit && (
               <button
@@ -192,11 +197,9 @@ export function CompanyDetailBody({
             <TabsContent value="contacts">
               {canEdit && (
                 <div className="mb-4 flex justify-end">
-                  <Button asChild size="sm">
-                    <Link href={addContactHref}>
-                      <Plus className="mr-1.5 size-4" />
-                      Add Contact
-                    </Link>
+                  <Button size="sm" onClick={() => setAddingContact(true)}>
+                    <Plus className="mr-1.5 size-4" />
+                    Add Contact
                   </Button>
                 </div>
               )}
@@ -262,8 +265,8 @@ export function CompanyDetailBody({
                 <ul className="flex max-h-[560px] flex-col gap-2.5 overflow-y-auto pr-1">
                   {opportunities.map((o) => (
                     <li key={o.id}>
-                      <Link
-                        href={`/opportunities/${o.id}`}
+                      <OpportunityLink
+                        id={o.id}
                         className="flex items-center gap-4 rounded-lg border border-neutral-200 bg-white px-4 py-3.5 transition-[box-shadow,transform] hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-[0_6px_16px_-8px_rgba(10,25,46,.18)]"
                       >
                         {o.stage && <span className={`h-10 w-1 shrink-0 rounded-full ${STAGE_STRIPE[o.stage.stage_group]}`} />}
@@ -288,7 +291,7 @@ export function CompanyDetailBody({
                           </span>
                           <span className="block text-caption text-neutral-500">win probability</span>
                         </span>
-                      </Link>
+                      </OpportunityLink>
                     </li>
                   ))}
                 </ul>
@@ -356,6 +359,7 @@ export function CompanyDetailBody({
           )}
         </div>
       </div>
+      {addingContact && <AddContactPanel accountId={accountId} companyId={companyId} onClose={() => setAddingContact(false)} />}
     </div>
   );
 }

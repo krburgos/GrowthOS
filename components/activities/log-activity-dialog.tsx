@@ -48,12 +48,15 @@ export function LogActivityDialog({
   contactId,
   opportunityId,
   variant = "button",
+  onLogged,
 }: {
   accountId: string;
   contactId?: string;
   opportunityId?: string;
   /** "hero" renders the trigger as a button for a HeroBand action row. */
   variant?: "button" | "hero";
+  /** For a timeline the page loads itself (the Opportunity panel), so it can reload. */
+  onLogged?: () => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -94,6 +97,7 @@ export function LogActivityDialog({
     setBody("");
     setDueAt("");
     router.refresh();
+    onLogged?.();
   };
 
   return (

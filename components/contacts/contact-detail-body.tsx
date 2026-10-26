@@ -17,6 +17,7 @@ import {
 import { SendEmailDialog, type FromOption } from "@/components/contacts/send-email-dialog";
 import { StatusPill } from "@/components/contacts/status-pill";
 import { NewOpportunityButton } from "@/components/opportunities/new-opportunity-panel";
+import { OpportunityLink } from "@/components/opportunities/opportunity-panel";
 import { HERO_ACTION_CLASS, HeroBand } from "@/components/shell/hero-band";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -374,8 +375,8 @@ export function ContactDetailBody({
               <ul className="flex max-h-[560px] flex-col gap-2.5 overflow-y-auto pr-1">
                 {opportunities.map((o) => (
                   <li key={o.id}>
-                    <Link
-                      href={`/opportunities/${o.id}`}
+                    <OpportunityLink
+                      id={o.id}
                       className="flex items-center gap-4 rounded-lg border border-neutral-200 px-4 py-3.5 transition-[box-shadow,transform] hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-[0_6px_16px_-8px_rgba(10,25,46,.18)]"
                     >
                       {o.stage && <span className={cn("h-10 w-1 shrink-0 rounded-full", STAGE_STRIPE[o.stage.stage_group])} />}
@@ -395,7 +396,7 @@ export function ContactDetailBody({
                         <span className="block text-h4 font-bold tabular-nums text-primary-900">{o.stage?.win_probability ?? 0}%</span>
                         <span className="block text-caption text-neutral-500">win probability</span>
                       </span>
-                    </Link>
+                    </OpportunityLink>
                   </li>
                 ))}
               </ul>

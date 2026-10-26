@@ -168,7 +168,7 @@ export function MissionGuide({ accountId, role }: { accountId: string; role: Use
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label={waiting ? `Mission Control, ${waiting} next ${waiting === 1 ? "step" : "steps"}` : "Mission Control, all caught up"}
-        className="pointer-events-auto relative flex size-16 items-center justify-center rounded-full border-[3px] border-white bg-white shadow-raised transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 sm:size-[72px]"
+        className="group pointer-events-auto relative flex size-16 items-center justify-center rounded-full border-[3px] border-white bg-white shadow-raised transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 sm:size-[72px]"
       >
         <MissionFigure waving={waiting > 0} className="h-[42px] w-9 sm:h-[46px] sm:w-10" />
         {waiting > 0 && (
@@ -184,7 +184,7 @@ export function MissionGuide({ accountId, role }: { accountId: string; role: Use
   );
 }
 
-/** The GrowthMission mark, drawn so the arm can wave: head, raised arm, body. */
+/** The GrowthMission mark, drawn so the arm can wave: head, raised arm, body. It also waves while its button is hovered. */
 export function MissionFigure({ waving, className }: { waving?: boolean; className?: string }) {
   return (
     <svg viewBox="0 0 380 440" className={cn("overflow-visible", className)} aria-hidden="true">
@@ -194,7 +194,7 @@ export function MissionFigure({ waving, className }: { waving?: boolean; classNa
       />
       <path
         d="M62 238 C90 160 170 110 260 98 C320 90 360 50 380 0 C372 80 330 140 250 150 C170 160 100 185 62 238 Z"
-        className={cn("fill-primary-900 origin-bottom-left [transform-box:fill-box]", waving && "animate-wave")}
+        className={cn("fill-primary-900 origin-bottom-left [transform-box:fill-box] group-hover:animate-wave-hover", waving && "animate-wave")}
       />
       <circle cx="222" cy="42" r="40" className="fill-primary-900" />
     </svg>

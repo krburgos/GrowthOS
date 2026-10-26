@@ -1,7 +1,7 @@
 "use client";
 
 import { Lock, Plus, Search } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -15,7 +15,7 @@ import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-interface ContactOption {
+export interface ContactOption {
   id: string;
   full_name: string;
   title: string | null;
@@ -31,24 +31,24 @@ interface StageOption {
 
 const NOBODY = "__nobody__";
 
-type ContactRow = {
+export type ContactRow = {
   id: string;
   full_name: string;
   title: string | null;
   companies: { name: string; company_size: string | number | null } | { name: string; company_size: string | number | null }[] | null;
 };
 
-function toOption(r: ContactRow): ContactOption {
+export function toOption(r: ContactRow): ContactOption {
   const co = Array.isArray(r.companies) ? r.companies[0] : r.companies;
   return { id: r.id, full_name: r.full_name, title: r.title, companyName: co?.name ?? null, companySize: co?.company_size ?? null };
 }
 
-function initials(name: string) {
+export function initials(name: string) {
   const p = name.trim().split(/\s+/);
   return ((p[0]?.[0] ?? "") + (p.length > 1 ? (p[p.length - 1][0] ?? "") : "")).toUpperCase();
 }
 
-function describe(c: ContactOption) {
+export function describe(c: ContactOption) {
   const employees = employeesOf(c.companySize);
   return [c.title, c.companyName, employees ? `${employees} employees` : null].filter(Boolean).join(" · ");
 }
@@ -91,6 +91,8 @@ export function NewOpportunityButton({
 
 function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: string; contactId?: string; onClose: () => void }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
   const [stages, setStages] = useState<StageOption[]>([]);
   const [owners, setOwners] = useState<{ id: string; full_name: string }[]>([]);
   const [contact, setContact] = useState<ContactOption | null>(null);
@@ -154,7 +156,12 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
       return;
     }
     toast.success("Opportunity created.");
-    router.push(`/opportunities/${data.id}`);
+    // Opens the new opportunity in its panel, on this page (Edit Opportunity, 2026-10-26).
+    const next = new URLSearchParams(params.toString());
+    next.delete("new");
+    next.set("opportunity", data.id);
+    onClose();
+    router.push(`${pathname}?${next.toString()}`, { scroll: false });
   };
 
   return (
@@ -223,7 +230,10 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
               <span className="text-body-sm text-neutral-500">Stage</span>
               <Select value={stageId} onValueChange={setStageId}>
                 <SelectTrigger aria-label="Stage">
-                  <SelectValue placeholder="Loading…" />
+                  <SelectValue placeholder="Loading…">
+                    {/* The name only: the list beside it shows each win %. */}
+                    <span className="block truncate">{stages.find((s) => s.id === stageId)?.name}</span>
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {stages.map((s) => (

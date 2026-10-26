@@ -151,7 +151,8 @@ export function KanbanBoard({
         </div>
       </FilterField>
 
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      {/* A fixed id keeps dnd-kit's aria-describedby the same on the server and in the browser (no hydration mismatch). */}
+      <DndContext id="opportunity-board" sensors={sensors} onDragEnd={handleDragEnd}>
         {/* snap-x so a swipe lands on a stage rather than between two. The
             columns are 280px, so a phone shows one with a peek of the next
             — which is the right mobile kanban, not something to replace
