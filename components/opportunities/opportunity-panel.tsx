@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { OPPORTUNITY_TEXT_MAX, TypeInput, rememberType } from "@/components/opportunities/type-input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { opportunitiesValue, prospectValue, usd } from "@/lib/companies/value";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
@@ -142,6 +143,7 @@ function OpportunityPanel({
   const [stageId, setStageId] = useState("");
   const [ownerId, setOwnerId] = useState(NOBODY);
   const [notes, setNotes] = useState("");
+  const [type, setType] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -161,7 +163,7 @@ function OpportunityPanel({
     void (async () => {
       const { data: opp } = await supabase
         .from("opportunities")
-        .select("id, name, stage_id, owner_id, notes, closed_at, account_id, contacts(id, full_name, title, companies(name, company_size))")
+        .select("id, name, type, stage_id, owner_id, notes, closed_at, account_id, contacts(id, full_name, title, companies(name, company_size))")
         .eq("id", opportunityId)
         .maybeSingle();
       if (!opp) {
@@ -187,6 +189,7 @@ function OpportunityPanel({
       setStageId(opp.stage_id ?? "");
       setOwnerId(opp.owner_id ?? NOBODY);
       setNotes(opp.notes ?? "");
+      setType(opp.type ?? "");
       setLoaded({
         accountId: opp.account_id,
         contact: contactRow ? toOption(contactRow) : null,
@@ -232,6 +235,7 @@ function OpportunityPanel({
         stage_id: stageId || null,
         owner_id: ownerId === NOBODY ? null : ownerId,
         notes: notes.trim() || null,
+        type: type.trim() || null,
         value: pv || null,
         // Won or Lost keeps the day it first closed; reopening clears it.
         closed_at: closing ? (wasClosed && loaded.closedAt ? loaded.closedAt : new Date().toISOString()) : null,
@@ -242,6 +246,7 @@ function OpportunityPanel({
       toast.error(getFriendlyErrorMessage(error));
       return;
     }
+    rememberType(loaded.accountId, type);
     toast.success("Saved.");
     onClose();
     router.refresh();
@@ -298,8 +303,18 @@ function OpportunityPanel({
                 <span className="text-body-sm text-neutral-500">
                   Opportunity name <span className="text-error-600">*</span>
                 </span>
-                <Input value={name} onChange={(e) => setName(e.target.value)} error={canEdit && !name.trim()} />
+                <Input
+                  value={name}
+                  maxLength={OPPORTUNITY_TEXT_MAX}
+                  onChange={(e) => setName(e.target.value)}
+                  error={canEdit && !name.trim()}
+                />
               </label>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-body-sm text-neutral-500">Type</span>
+                <TypeInput accountId={loaded.accountId} value={type} onChange={setType} />
+              </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="flex flex-col gap-1.5">

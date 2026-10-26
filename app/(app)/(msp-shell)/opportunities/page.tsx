@@ -21,6 +21,7 @@ export const metadata: Metadata = { title: "Opportunities — GrowthMission" };
 interface OpportunityQueryRow {
   id: string;
   name: string | null;
+  type: string | null;
   stage_id: string;
   owner_id: string | null;
   closed_at: string | null;
@@ -74,7 +75,7 @@ export default async function OpportunitiesPage({
     supabase
       .from("opportunities")
       .select(
-        "id, name, stage_id, owner_id, closed_at, stage_entered_at, contacts(full_name), companies(name, company_size), users(full_name), opportunity_stages(name, stage_group, win_probability)"
+        "id, name, type, stage_id, owner_id, closed_at, stage_entered_at, contacts(full_name), companies(name, company_size), users(full_name), opportunity_stages(name, stage_group, win_probability)"
       )
       .eq("account_id", user.account_id)
       .order("created_at", { ascending: false }),
@@ -100,6 +101,7 @@ export default async function OpportunitiesPage({
     return {
       id: row.id,
       name: row.name,
+      type: row.type,
       stage_id: row.stage_id,
       stage_name: stage?.name ?? "Unknown",
       stage_group: stage?.stage_group ?? "open",
@@ -134,6 +136,8 @@ export default async function OpportunitiesPage({
     switch (sort) {
       case "contact":
         return direction * (a.name ?? a.contact_name).localeCompare(b.name ?? b.contact_name);
+      case "type":
+        return byText(a.type, b.type);
       case "company":
         return byText(a.company_name, b.company_name);
       case "employees":
@@ -222,6 +226,7 @@ export default async function OpportunitiesPage({
             stages={stages}
             owners={(ownerRows ?? []) as { id: string; full_name: string }[]}
             canEdit={CAN_EDIT_ROLES.includes(user.role)}
+            accountId={user.account_id!}
           />
           <PaginationBar page={page} pageSize={pageSize} totalCount={opportunities.length} />
         </div>

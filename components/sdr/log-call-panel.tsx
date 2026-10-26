@@ -66,7 +66,8 @@ export function LogCallPanel({
   const [note, setNote] = useState("");
   const [callback, setCallback] = useState<Callback>("tomorrow");
   const [pickedDate, setPickedDate] = useState("");
-  const [oppName, setOppName] = useState(`${row.company_name ?? row.full_name} — Managed IT`);
+  // Names are capped at 60 characters (2026-10-26).
+  const [oppName, setOppName] = useState(`${row.company_name ?? row.full_name} — Managed IT`.slice(0, 60));
   const [meetingDate, setMeetingDate] = useState("");
   const [meetingTime, setMeetingTime] = useState("10:00");
   const [salesperson, setSalesperson] = useState(salespeople[0]?.id ?? "");
@@ -265,7 +266,7 @@ export function LogCallPanel({
               )}
               <label className="flex flex-col gap-1.5">
                 <span className={FIELD}>Opportunity</span>
-                <Input value={oppName} onChange={(e) => setOppName(e.target.value)} />
+                <Input value={oppName} maxLength={60} onChange={(e) => setOppName(e.target.value)} />
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <label className="flex flex-col gap-1.5">

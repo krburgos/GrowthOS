@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { toast } from "sonner";
 
 import { OpportunityLink } from "@/components/opportunities/opportunity-panel";
+import { OPPORTUNITY_TEXT_MAX, TypeInput, rememberType } from "@/components/opportunities/type-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 export interface OpportunityListRow {
   id: string;
   name: string | null;
+  type: string | null;
   contact_name: string;
   company_name: string | null;
   employees: number;
@@ -46,30 +48,32 @@ interface StageOption {
 
 interface Draft {
   name: string;
+  type: string;
   stageId: string;
   ownerId: string;
 }
 
 const NOBODY = "__nobody__";
 
-type MovableKey = "company" | "employees" | "stage" | "pv" | "ov" | "win" | "salesperson" | "days";
+type MovableKey = "type" | "company" | "employees" | "stage" | "pv" | "ov" | "win" | "salesperson" | "days";
 type ColumnKey = "opportunity" | MovableKey;
 
 /** Heading, sort field, alignment and default share of the width (approved mockup "List column widths"). */
 const COLUMNS: Record<ColumnKey, { label: string; sort: string; right?: boolean; width: string }> = {
-  opportunity: { label: "Opportunity", sort: "contact", width: "19%" },
-  company: { label: "Company", sort: "company", width: "15%" },
-  employees: { label: "Employees", sort: "employees", right: true, width: "8%" },
-  stage: { label: "Stage", sort: "stage", width: "15%" },
+  opportunity: { label: "Opportunity", sort: "contact", width: "17%" },
+  type: { label: "Type", sort: "type", width: "10%" },
+  company: { label: "Company", sort: "company", width: "13%" },
+  employees: { label: "Employees", sort: "employees", right: true, width: "7%" },
+  stage: { label: "Stage", sort: "stage", width: "13%" },
   pv: { label: "Prospect Value", sort: "value", right: true, width: "10%" },
   ov: { label: "Opportunities Value", sort: "opps_value", right: true, width: "11%" },
-  win: { label: "Win %", sort: "win", width: "9%" },
-  salesperson: { label: "Salesperson", sort: "salesperson", width: "8%" },
-  days: { label: "In stage", sort: "days", right: true, width: "5%" },
+  win: { label: "Win %", sort: "win", width: "8%" },
+  salesperson: { label: "Salesperson", sort: "salesperson", width: "7%" },
+  days: { label: "In stage", sort: "days", right: true, width: "4%" },
 };
 
 /** Every column after Opportunity, which stays first. */
-const DEFAULT_ORDER: MovableKey[] = ["company", "employees", "stage", "pv", "ov", "win", "salesperson", "days"];
+const DEFAULT_ORDER: MovableKey[] = ["type", "company", "employees", "stage", "pv", "ov", "win", "salesperson", "days"];
 
 const MIN_WIDTH = 80;
 const MAX_WIDTH = 600;
@@ -162,11 +166,14 @@ export function OpportunityListTable({
   stages,
   owners,
   canEdit,
+  accountId,
 }: {
   opportunities: OpportunityListRow[];
   stages: StageOption[];
   owners: { id: string; full_name: string }[];
   canEdit: boolean;
+  /** For the Type box's suggestions. */
+  accountId: string;
 }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -183,7 +190,7 @@ export function OpportunityListTable({
   const startEdit = (o: OpportunityListRow) => {
     if (!canEdit || editingId) return; // finish or cancel the row already being edited first
     setEditingId(o.id);
-    setDraft({ name: o.name ?? "", stageId: o.stage_id, ownerId: o.owner_id ?? NOBODY });
+    setDraft({ name: o.name ?? "", type: o.type ?? "", stageId: o.stage_id, ownerId: o.owner_id ?? NOBODY });
   };
 
   const cancelEdit = () => {
@@ -200,7 +207,10 @@ export function OpportunityListTable({
       return;
     }
     const unchanged =
-      draft.name.trim() === (row.name ?? "") && draft.stageId === row.stage_id && draft.ownerId === (row.owner_id ?? NOBODY);
+      draft.name.trim() === (row.name ?? "") &&
+      draft.type.trim() === (row.type ?? "") &&
+      draft.stageId === row.stage_id &&
+      draft.ownerId === (row.owner_id ?? NOBODY);
     if (unchanged) return cancelEdit();
 
     const group = stages.find((s) => s.id === draft.stageId)?.stage_group;
@@ -211,6 +221,7 @@ export function OpportunityListTable({
       .from("opportunities")
       .update({
         name: draft.name.trim(),
+        type: draft.type.trim() || null,
         stage_id: draft.stageId,
         owner_id: draft.ownerId === NOBODY ? null : draft.ownerId,
         // Won or Lost keeps the day it first closed; reopening clears it (as in the panel).
@@ -222,6 +233,7 @@ export function OpportunityListTable({
       toast.error(getFriendlyErrorMessage(error));
       return;
     }
+    rememberType(accountId, draft.type);
     toast.success("Opportunity updated.");
     flash(editingId);
     cancelEdit();
@@ -272,6 +284,7 @@ export function OpportunityListTable({
                   autoFocus
                   aria-label="Opportunity name"
                   value={draft.name}
+                  maxLength={OPPORTUNITY_TEXT_MAX}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                   error={!draft.name.trim()}
                   className="h-8 min-w-0 flex-1"
@@ -304,6 +317,21 @@ export function OpportunityListTable({
                   {o.contact_name}
                 </span>
               </>
+            )}
+          </TableCell>
+        );
+      case "type":
+        return (
+          <TableCell key={key} label="Type" className={editing ? undefined : "lg:truncate"} title={editing ? undefined : (o.type ?? undefined)}>
+            {editing && draft ? (
+              <TypeInput
+                accountId={accountId}
+                value={draft.type}
+                onChange={(v) => setDraft({ ...draft, type: v })}
+                className="h-8"
+              />
+            ) : (
+              o.type ?? <span className="text-neutral-400">—</span>
             )}
           </TableCell>
         );

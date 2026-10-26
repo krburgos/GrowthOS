@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { OPPORTUNITY_TEXT_MAX, TypeInput, rememberType } from "@/components/opportunities/type-input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -104,9 +105,10 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
   const [nameTouched, setNameTouched] = useState(false);
   const pick = (c: ContactOption | null) => {
     setContact(c);
-    if (c && !nameTouched) setName(c.companyName ?? c.full_name);
+    if (c && !nameTouched) setName((c.companyName ?? c.full_name).slice(0, OPPORTUNITY_TEXT_MAX));
   };
   const [notes, setNotes] = useState("");
+  const [type, setType] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -135,7 +137,7 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
       if (preset.data) {
         const c = toOption(preset.data as ContactRow);
         setContact(c);
-        setName(c.companyName ?? c.full_name);
+        setName((c.companyName ?? c.full_name).slice(0, OPPORTUNITY_TEXT_MAX));
       }
     })();
   }, [accountId, contactId]);
@@ -162,6 +164,7 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
         value: pv || null,
         stage_id: stageId || null,
         notes: notes.trim() || null,
+        type: type.trim() || null,
       })
       .select("id")
       .single();
@@ -170,6 +173,7 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
       toast.error(getFriendlyErrorMessage(error));
       return;
     }
+    rememberType(accountId, type);
     toast.success("Opportunity created.");
     // Opens the new opportunity in its panel, on this page (Edit Opportunity, 2026-10-26).
     const next = new URLSearchParams(params.toString());
@@ -246,8 +250,14 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
                 setName(e.target.value);
               }}
               placeholder="Name this opportunity"
+              maxLength={OPPORTUNITY_TEXT_MAX}
             />
           </label>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-body-sm text-neutral-500">Type</span>
+            <TypeInput accountId={accountId} value={type} onChange={setType} />
+          </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
