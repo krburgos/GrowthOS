@@ -46,17 +46,20 @@ export function useOpportunityHref() {
 export function OpportunityLink({
   id,
   className,
+  title,
   children,
   onClick,
 }: {
   id: string;
   className?: string;
+  /** The full name on hover, where the link is cut short. */
+  title?: string;
   children: React.ReactNode;
   onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const href = useOpportunityHref();
   return (
-    <Link href={href(id)} scroll={false} className={className} onClick={onClick}>
+    <Link href={href(id)} scroll={false} className={className} title={title} onClick={onClick}>
       {children}
     </Link>
   );

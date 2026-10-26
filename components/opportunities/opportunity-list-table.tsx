@@ -49,6 +49,9 @@ interface Draft {
 
 const NOBODY = "__nobody__";
 
+/** Opportunity, Company, Employees, Stage, Prospect Value, Opportunities Value, Win %, Salesperson, In stage. */
+const COLUMN_WIDTHS = ["19%", "15%", "8%", "15%", "10%", "11%", "9%", "8%", "5%"];
+
 /**
  * App Flow §4.5, E2 — Opportunity List, the Board's alternate view.
  *
@@ -161,7 +164,15 @@ export function OpportunityListTable({
   };
 
   return (
-    <Table stacked>
+    <Table stacked className="lg:table-fixed">
+      {/* Fixed shares of the width (client-confirmed, 2026-10-26, approved mockup
+          "List column widths"), so a wide screen doesn't hand the spare room to
+          one column. Long text ends in an ellipsis, with the full text on hover. */}
+      <colgroup>
+        {COLUMN_WIDTHS.map((w, i) => (
+          <col key={i} style={{ width: w }} />
+        ))}
+      </colgroup>
       <TableHeader variant="solid">
         <TableRow className="border-b-0 hover:bg-transparent">
           <TableHead variant="solid"><SortableHeader variant="solid" field="contact" label="Opportunity" /></TableHead>
@@ -200,7 +211,7 @@ export function OpportunityListTable({
               <TableCell label="Opportunity" className="relative font-medium text-neutral-800">
                 {editing && <span aria-hidden="true" className="absolute left-0 top-1/2 h-8 w-[3px] -translate-y-1/2 bg-secondary-500" />}
                 {editing ? (
-                  <div className="flex min-w-[220px] items-center gap-2">
+                  <div className="flex items-center gap-2">
                     <Input
                       autoFocus
                       aria-label="Opportunity name"
@@ -230,19 +241,23 @@ export function OpportunityListTable({
                   </div>
                 ) : (
                   <>
-                    <OpportunityLink id={o.id} className="hover:underline">
+                    <OpportunityLink id={o.id} className="block truncate hover:underline" title={o.name?.trim() || o.contact_name}>
                       {o.name?.trim() || o.contact_name}
                     </OpportunityLink>
-                    <span className="block text-caption font-normal text-neutral-500">{o.contact_name}</span>
+                    <span className="block truncate text-caption font-normal text-neutral-500" title={o.contact_name}>
+                      {o.contact_name}
+                    </span>
                   </>
                 )}
               </TableCell>
-              <TableCell label="Company">{o.company_name ?? "—"}</TableCell>
+              <TableCell label="Company" className="lg:truncate" title={o.company_name ?? undefined}>
+                {o.company_name ?? "—"}
+              </TableCell>
               <TableCell label="Employees" className="text-right tabular-nums">{o.employees || "—"}</TableCell>
               <TableCell label="Stage">
                 {editing ? (
                   <Select value={draft.stageId} onValueChange={(v) => v && setDraft({ ...draft, stageId: v })}>
-                    <SelectTrigger aria-label="Stage" className="h-8 min-w-[180px]">
+                    <SelectTrigger aria-label="Stage" className="h-8 w-full">
                       <SelectValue>
                         <span className="block truncate">{stages.find((s) => s.id === draft.stageId)?.name}</span>
                       </SelectValue>
@@ -276,10 +291,10 @@ export function OpportunityListTable({
                   <span className="inline-block min-w-[2.6em] text-right">{winProbability}%</span>
                 </span>
               </TableCell>
-              <TableCell label="Salesperson">
+              <TableCell label="Salesperson" className="lg:truncate" title={editing ? undefined : (o.owner_name ?? undefined)}>
                 {editing ? (
                   <Select value={draft.ownerId} onValueChange={(v) => v && setDraft({ ...draft, ownerId: v })}>
-                    <SelectTrigger aria-label="Salesperson" className="h-8 min-w-[150px]">
+                    <SelectTrigger aria-label="Salesperson" className="h-8 w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
