@@ -46,6 +46,8 @@ export function SortableHeader({
   return (
     <Link
       href={`${pathname}?${params.toString()}`}
+      // A heading that can be dragged to move its column must drag the column, not this link's address.
+      draggable={false}
       className={cn(
         "flex items-center gap-1",
         align === "right" && "justify-end",
