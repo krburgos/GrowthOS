@@ -74,8 +74,8 @@ export function AssignListDialog({
 
         {people.length === 0 ? (
           <p className="text-body-sm text-neutral-600">
-            There&apos;s nobody to assign to yet. SDRs are this account&apos;s Marketing users and the Partners granted
-            to it; invite one first.
+            There&apos;s nobody to assign to yet. SDRs are this account&apos;s Marketing users, the Partners granted
+            to it, and Company Profile roster people connected to a login.
           </p>
         ) : lists.length === 0 ? (
           <p className="text-body-sm text-neutral-600">This account has no lists yet. Build one on the Lists page first.</p>
@@ -131,12 +131,12 @@ export function AssignListDialog({
                   {people.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.full_name}
-                      {p.role === "partner" ? " (Partner)" : ""}
+                      {p.role === "partner" ? " (Partner)" : p.role.startsWith("cro_") ? " (Outsourced)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <span className="text-caption text-neutral-500">SDRs are this account&apos;s Marketing users and its Partners.</span>
+              <span className="text-caption text-neutral-500">SDRs are this account&apos;s Marketing users, its Partners, and Company Profile roster people connected to a login.</span>
             </div>
 
             {holder && holder.sdr_user_id !== sdrId && (

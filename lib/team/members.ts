@@ -36,7 +36,17 @@ export interface TeamMember {
   title: string | null;
   weekly_hours: number;
   sort_order: number;
+  /** The GrowthMission login this person is connected to, if any (client-confirmed, 2026-10-27). */
+  user_id: string | null;
   assignments: TeamAssignment[];
+}
+
+/** A login that can be connected to a roster row — roster_login_candidates(). */
+export interface RosterLogin {
+  id: string;
+  full_name: string;
+  role: string;
+  kind: TeamKind;
 }
 
 export const TEAM_KIND_LABEL: Record<TeamKind, string> = {

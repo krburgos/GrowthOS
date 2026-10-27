@@ -126,3 +126,23 @@ export function lastTouch(row: QueueRow, now = new Date()): string {
   const when = days <= 0 ? "today" : `${days}d ago`;
   return `${label} · ${when}`;
 }
+
+/**
+ * The two numbers an SDR can dial (client-confirmed, 2026-10-27): the
+ * contact's direct line and their company's main line, labelled, either one
+ * possibly missing. They used to be one number, direct falling back to
+ * company.
+ */
+export function phoneLines(row: Pick<QueueRow, "phone" | "company_phone">): { label: string; number: string | null }[] {
+  return [
+    { label: "Direct", number: row.phone?.trim() || null },
+    { label: "Company", number: row.company_phone?.trim() || null },
+  ];
+}
+
+/** A tel: link the OS hands to its calling app; "x" or "ext" becomes a pause. */
+export function telHref(number: string): string {
+  const [main, ext] = number.split(/\s*(?:x|ext\.?)\s*/i);
+  const dial = main.replace(/[^\d+]/g, "");
+  return `tel:${dial}${ext ? `,${ext.replace(/\D/g, "")}` : ""}`;
+}

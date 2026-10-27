@@ -1241,6 +1241,11 @@ Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream 
 - **`sdr_candidates(p_account_id)`** (security definer) — the account's Marketing users, its granted partners, and anyone holding a list, so the Assign dialog and scoreboard can name partners, whom MSP users cannot read in `users`. The caller must be able to see the account.
 - **`sdr_call_queue(p_account_id, p_sdr_user_id)`** (security invoker, so RLS applies) — every live contact on the SDR's assigned lists, once, with its lists, company, status, attempt count and latest call by anyone (outcome, time, follow-up date).
 
+**Client-confirmed amendment (2026-10-27, approved mockup "SDR Login and Dialing")** — migration `20261027000002_roster_logins_and_sdr_candidates.sql`. This widens the 2026-10-22 rule that an outsourced SDR is a Partner: anyone on a client's Company Profile roster connected to a login can be given that client's lists, including CRO Leader staff on its Outsourced roster.
+- **`account_team_members.user_id`** (§6.6e) is now written, from the Edit person dialog. One row per login per account (partial unique index `account_team_members_one_row_per_login`). A guard trigger (`guard_account_team_member_login`, error 23514) accepts only what `roster_login_allowed(account, kind, user)` allows: for `in_house`, an active user of the account; for `outsourced`, an active CRO Admin or CRO Advisor, or a Partner granted the account. CRO Service Team is excluded because it cannot insert activities, so it could not log calls.
+- **`roster_login_candidates(p_account_id)`** (security definer, same caller check as `sdr_candidates`) — the picker's list, with the roster kind each login fits.
+- **`sdr_candidates`** now also returns anyone a live roster row of the account connects to a login.
+
 ### 6.6n icp_approvals and lists.built_from_icp — the ICP and List Building cards
 
 **Client-confirmed (2026-10-23, approved mockup "ICP & List Building Cards")**, migration `20261023000001_icp_approvals.sql`, for App Flow §4.3f.

@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreVertical, Plus, X } from "lucide-react";
+import { Link2, MoreVertical, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -13,8 +13,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ROLE_LABELS } from "@/lib/auth/role-labels";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { SHORT_TITLE, roundUpToQuarterHour } from "@/lib/growth-mission/hours";
 import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
@@ -22,20 +24,24 @@ import { createClient } from "@/lib/supabase/client";
 import type { StepTaskTally } from "@/lib/growth-mission/queries";
 import { CAPACITY_CLASS, capacityFor, capacityLabel, formatCapacityHours } from "@/lib/team/capacity";
 import { involvementFor, type Involvement } from "@/lib/team/involvement";
-import { initialsOf, type TeamKind, type TeamMember } from "@/lib/team/members";
+import { initialsOf, type RosterLogin, type TeamKind, type TeamMember } from "@/lib/team/members";
+import type { UserRole } from "@/lib/auth/get-current-user";
 
 const stepLabel = (slug: string) => SHORT_TITLE[slug] ?? slug;
+
+const NO_LOGIN = "none";
 
 interface Draft {
   id: string | null;
   name: string;
   title: string;
   weekly_hours: string;
+  user_id: string | null;
   /** The disciplines this person covers. They carry no hours (client-confirmed, 2026-10-16). */
   assignments: string[];
 }
 
-const emptyDraft = (): Draft => ({ id: null, name: "", title: "", weekly_hours: "", assignments: [] });
+const emptyDraft = (): Draft => ({ id: null, name: "", title: "", weekly_hours: "", user_id: null, assignments: [] });
 
 /**
  * The Company Profile's two rosters (client-confirmed, 2026-09-24),
@@ -66,6 +72,7 @@ export function TeamRoster({
   members,
   memberLoad,
   stepTasks,
+  logins,
   canEdit,
 }: {
   accountId: string;
@@ -74,6 +81,8 @@ export function TeamRoster({
   memberLoad: Record<string, number>;
   /** Which workstreams each person actually has tasks in. */
   stepTasks: Record<string, Record<string, StepTaskTally>>;
+  /** Logins each roster can connect to (client-confirmed, 2026-10-27). */
+  logins: RosterLogin[];
   canEdit: boolean;
 }) {
   const covered = new Set(members.flatMap((m) => m.assignments.map((a) => a.step_slug))).size;
@@ -106,6 +115,7 @@ export function TeamRoster({
         heading="Sales & Marketing"
         hint="Your own staff"
         members={members.filter((m) => m.kind === "in_house")}
+        logins={logins.filter((l) => l.kind === "in_house")}
         memberLoad={memberLoad}
         stepTasks={stepTasks}
         canEdit={canEdit}
@@ -116,6 +126,7 @@ export function TeamRoster({
         heading="Outsourced"
         hint="Third parties delivering a discipline"
         members={members.filter((m) => m.kind === "outsourced")}
+        logins={logins.filter((l) => l.kind === "outsourced")}
         memberLoad={memberLoad}
         stepTasks={stepTasks}
         canEdit={canEdit}
@@ -131,6 +142,7 @@ function RosterTable({
   heading,
   hint,
   members,
+  logins,
   memberLoad,
   stepTasks,
   canEdit,
@@ -143,6 +155,7 @@ function RosterTable({
   memberLoad: Record<string, number>;
   stepTasks: Record<string, Record<string, StepTaskTally>>;
   members: TeamMember[];
+  logins: RosterLogin[];
   canEdit: boolean;
   divided?: boolean;
 }) {
@@ -155,6 +168,7 @@ function RosterTable({
       name: m.name,
       title: m.title ?? "",
       weekly_hours: m.weekly_hours ? String(m.weekly_hours) : "",
+      user_id: m.user_id,
       assignments: m.assignments.map((a) => a.step_slug),
     });
 
@@ -202,7 +216,10 @@ function RosterTable({
                     {initialsOf(m.name)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-body font-semibold leading-snug text-neutral-800">{m.name}</h3>
+                    <h3 className="flex items-center gap-1.5 text-body font-semibold leading-snug text-neutral-800">
+                      {m.name}
+                      {m.user_id && <LoginMark />}
+                    </h3>
                     {m.title && <p className="text-caption text-neutral-500">{m.title}</p>}
                   </div>
                   {canEdit && <MemberMenu accountId={accountId} member={m} onEdit={() => openEdit(m)} />}
@@ -285,7 +302,10 @@ function RosterTable({
                         >
                           {initialsOf(m.name)}
                         </span>
-                        <span className="text-body-sm font-semibold text-neutral-800">{m.name}</span>
+                        <span className="flex items-center gap-1.5 text-body-sm font-semibold text-neutral-800">
+                          {m.name}
+                          {m.user_id && <LoginMark />}
+                        </span>
                       </div>
                     </td>
                     <td className="px-5 py-3 text-body-sm text-neutral-600">{m.title || "—"}</td>
@@ -347,10 +367,21 @@ function RosterTable({
           heading={heading}
           draft={draft}
           setDraft={setDraft}
+          logins={logins}
+          taken={new Set(members.filter((m) => m.user_id && m.id !== draft.id).map((m) => m.user_id!))}
           onClose={() => setDraft(null)}
         />
       )}
     </div>
+  );
+}
+
+/** Marks a roster row connected to a GrowthMission login. */
+function LoginMark() {
+  return (
+    <span title="Connected to a GrowthMission login" className="inline-flex shrink-0">
+      <Link2 className="size-3.5 text-secondary-700" aria-label="Connected to a GrowthMission login" />
+    </span>
   );
 }
 
@@ -441,6 +472,8 @@ function MemberDialog({
   heading,
   draft,
   setDraft,
+  logins,
+  taken,
   onClose,
 }: {
   accountId: string;
@@ -448,6 +481,10 @@ function MemberDialog({
   heading: string;
   draft: Draft;
   setDraft: (d: Draft) => void;
+  /** Logins this roster may connect to. */
+  logins: RosterLogin[];
+  /** Logins already connected to another row of this roster. */
+  taken: Set<string>;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -470,6 +507,7 @@ function MemberDialog({
       name: draft.name.trim(),
       title: draft.title.trim() || null,
       weekly_hours: roundUpToQuarterHour(draft.weekly_hours),
+      user_id: draft.user_id,
     };
 
     let memberId = draft.id;
@@ -543,6 +581,36 @@ function MemberDialog({
               placeholder={kind === "outsourced" ? "Agency, Event Producer…" : "Marketing Manager, SDR…"}
             />
           </Field>
+
+          {/* Client-confirmed (2026-10-27): a connected person can be given
+              SDR lists for this client. The picker lists only logins the
+              guard on account_team_members accepts for this roster. */}
+          <div className="flex flex-col gap-1.5">
+            <span className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wide text-neutral-400">
+              GrowthMission login
+              <InfoTip
+                label="About GrowthMission login"
+                text="Connect this person to their GrowthMission login so they can be given SDR lists and log calls for this client. Leave it as No login for people who don't use GrowthMission."
+              />
+            </span>
+            <Select
+              value={draft.user_id ?? NO_LOGIN}
+              onValueChange={(v) => setDraft({ ...draft, user_id: v === NO_LOGIN ? null : v })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_LOGIN}>No login</SelectItem>
+                {logins.map((l) => (
+                  <SelectItem key={l.id} value={l.id} disabled={taken.has(l.id)}>
+                    {l.full_name} · {ROLE_LABELS[l.role as UserRole] ?? l.role}
+                    {taken.has(l.id) ? " (already on this roster)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div>
             <div className="mb-2">

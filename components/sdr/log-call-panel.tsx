@@ -12,7 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { prospectValue } from "@/lib/companies/value";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
-import { OUTCOMES, addBusinessDays, dateKey, lastTouch, type CallOutcome, type QueueRow } from "@/lib/sdr/desk";
+import {
+  OUTCOMES,
+  addBusinessDays,
+  dateKey,
+  lastTouch,
+  phoneLines,
+  telHref,
+  type CallOutcome,
+  type QueueRow,
+} from "@/lib/sdr/desk";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -73,15 +82,14 @@ export function LogCallPanel({
   const [salesperson, setSalesperson] = useState(salespeople[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
 
-  const phone = row.phone ?? row.company_phone;
+  const lines = phoneLines(row).filter((l): l is { label: string; number: string } => !!l.number);
   const hint = OUTCOMES.find((o) => o.value === outcome)?.hint;
   const ready =
     !!outcome &&
     (outcome !== "meeting_booked" || (!!meetingDate && !!meetingStageId)) &&
     (outcome !== "connected" || callback !== "date" || !!pickedDate);
 
-  const copyPhone = async () => {
-    if (!phone) return;
+  const copyPhone = async (phone: string) => {
     try {
       await navigator.clipboard.writeText(phone);
       toast.success("Number copied.");
@@ -174,24 +182,39 @@ export function LogCallPanel({
         </div>
 
         <div className={cn("flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5", slideIn && "animate-slide-in")}>
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3.5 py-3">
-            <Phone className="size-4 text-secondary-700" aria-hidden="true" />
-            {phone ? (
-              <span className="select-all text-h4 tabular-nums text-primary-900">{phone}</span>
-            ) : (
-              <span className="text-body-sm text-neutral-500">No phone number on this contact or company</span>
+          {/* Direct and Company, each dialable (client-confirmed, 2026-10-27). */}
+          <div className="flex flex-col gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3.5 py-3">
+            {lines.length === 0 && (
+              <span className="flex items-center gap-2 text-body-sm text-neutral-500">
+                <Phone className="size-4 text-secondary-700" aria-hidden="true" />
+                No phone number on this contact or company
+              </span>
             )}
-            {phone && (
-              <button
-                type="button"
-                onClick={copyPhone}
-                className="ml-auto inline-flex h-7 items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-2.5 text-body-sm text-primary-700 hover:border-primary-700"
-              >
-                <Copy className="size-3.5" />
-                Copy
-              </button>
-            )}
-            <p className="basis-full text-caption text-primary-700">
+            {lines.map(({ label, number }) => (
+              <div key={label} className="flex flex-wrap items-center gap-2">
+                <span className="w-[60px] shrink-0 text-[10px] font-bold uppercase tracking-wide text-primary-700">{label}</span>
+                <span className="min-w-0 select-all text-h4 tabular-nums text-primary-900">{number}</span>
+                <span className="ml-auto flex gap-1.5">
+                  <a
+                    href={telHref(number)}
+                    className="inline-flex h-7 items-center gap-1.5 rounded-md bg-secondary-700 px-2.5 text-body-sm font-semibold text-white hover:bg-secondary-800"
+                  >
+                    <Phone className="size-3.5" />
+                    Call
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => void copyPhone(number)}
+                    aria-label={`Copy ${label.toLowerCase()} number`}
+                    className="inline-flex h-7 items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-2.5 text-body-sm text-primary-700 hover:border-primary-700"
+                  >
+                    <Copy className="size-3.5" />
+                    Copy
+                  </button>
+                </span>
+              </div>
+            ))}
+            <p className="text-caption text-primary-700">
               Attempt {row.attempts + 1} · last: {lastTouch(row)}
             </p>
           </div>

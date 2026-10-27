@@ -30,6 +30,8 @@ import {
   type QueueRow,
   type RecentCall,
   type SdrPerson,
+  phoneLines,
+  telHref,
 } from "@/lib/sdr/desk";
 import { createClient } from "@/lib/supabase/client";
 import { useFlash } from "@/lib/use-flash";
@@ -37,7 +39,7 @@ import { cn } from "@/lib/utils";
 
 type Show = "today" | "new" | "tomorrow" | "all";
 
-const QUEUE_COLS = "grid grid-cols-[minmax(220px,1.5fr)_minmax(160px,1fr)_150px_130px_minmax(150px,1fr)_80px_120px] items-center gap-x-4";
+const QUEUE_COLS = "grid grid-cols-[minmax(220px,1.5fr)_minmax(160px,1fr)_170px_130px_minmax(150px,1fr)_80px_120px] items-center gap-x-4";
 const BOARD_COLS = "grid grid-cols-[minmax(160px,1fr)_minmax(180px,2fr)_90px_100px_110px] items-center gap-x-4";
 const HEAD = "text-caption font-bold uppercase tracking-wide text-primary-700";
 const LABEL = "text-[11px] font-bold uppercase leading-none tracking-wide text-primary-700";
@@ -565,7 +567,6 @@ export function CallDesk({
                       <span className="text-right">{canLog ? "Action" : ""}</span>
                     </div>
                     {shown.map(({ row }) => {
-                      const phone = row.phone ?? row.company_phone;
                       return (
                         <div
                           key={row.contact_id}
@@ -594,16 +595,7 @@ export function CallDesk({
                           <span className="truncate text-body-sm font-medium text-neutral-800" title={row.company_name ?? undefined}>
                             {row.company_name ?? "—"}
                           </span>
-                          <span className="flex min-w-0 items-center gap-1.5 text-body-sm tabular-nums text-neutral-700">
-                            {phone ? (
-                              <>
-                                <Phone className="size-3.5 shrink-0 text-neutral-400" aria-hidden="true" />
-                                <span className="truncate select-all">{phone}</span>
-                              </>
-                            ) : (
-                              <span className="text-neutral-400">—</span>
-                            )}
-                          </span>
+                          <PhoneLines row={row} />
                           <span>{row.status_name ? <StatusPill name={row.status_name} color={row.status_color} /> : "—"}</span>
                           <span className={cn("truncate text-body-sm", row.last_call_at ? "text-neutral-600" : "text-neutral-400")}>
                             {lastTouch(row, now)}
@@ -683,8 +675,36 @@ export function CallDesk({
   );
 }
 
+/**
+ * Direct and Company, each a tel: link the computer's or phone's calling app
+ * picks up (client-confirmed, 2026-10-27). A missing number shows a dash so
+ * the two lines stay aligned row to row.
+ */
+function PhoneLines({ row, className }: { row: QueueRow; className?: string }) {
+  return (
+    <span className={cn("flex min-w-0 flex-col gap-0.5 text-body-sm tabular-nums", className)}>
+      {phoneLines(row).map(({ label, number }) =>
+        number ? (
+          <a
+            key={label}
+            href={telHref(number)}
+            title={`Call ${label === "Direct" ? `${row.full_name}'s direct line` : `${row.company_name ?? "the company"}'s main line`}`}
+            className="flex min-h-[22px] min-w-0 items-center gap-1.5 text-secondary-700 hover:underline"
+          >
+            <span className="w-[52px] shrink-0 text-[10px] font-bold uppercase tracking-wide text-neutral-400">{label}</span>
+            <span className="truncate">{number}</span>
+          </a>
+        ) : (
+          <span key={label} className="flex min-h-[22px] items-center gap-1.5 text-neutral-400">
+            <span className="w-[52px] shrink-0 text-[10px] font-bold uppercase tracking-wide">{label}</span>—
+          </span>
+        )
+      )}
+    </span>
+  );
+}
+
 function QueueCard({ row, due, canLog, onLog }: { row: QueueRow; due: Due; canLog: boolean; onLog: () => void }) {
-  const phone = row.phone ?? row.company_phone;
   return (
     <article className="rounded-xl border border-neutral-200 bg-white p-3.5">
       <div className="flex items-start justify-between gap-3">
@@ -696,12 +716,7 @@ function QueueCard({ row, due, canLog, onLog }: { row: QueueRow; due: Due; canLo
         </div>
         {row.status_name && <StatusPill name={row.status_name} color={row.status_color} className="shrink-0" />}
       </div>
-      {phone && (
-        <a href={`tel:${phone}`} className="mt-2 flex min-h-[32px] items-center gap-1.5 text-body-sm tabular-nums text-secondary-700 hover:underline">
-          <Phone className="size-3.5" />
-          {phone}
-        </a>
-      )}
+      {(row.phone || row.company_phone) && <PhoneLines row={row} className="mt-2" />}
       <div className="mt-2 flex items-center justify-between gap-3 border-t border-neutral-100 pt-2">
         <span className="text-caption text-neutral-500">
           {due === "new" ? "Never called" : lastTouch(row)} · {row.attempts} {row.attempts === 1 ? "attempt" : "attempts"}

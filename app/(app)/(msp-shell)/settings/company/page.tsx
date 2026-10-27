@@ -13,6 +13,7 @@ import {
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 import { getMemberStepTasks, getMemberTaskLoad } from "@/lib/growth-mission/queries";
+import type { RosterLogin } from "@/lib/team/members";
 import { getTeamMembers } from "@/lib/team/queries";
 
 export const metadata: Metadata = { title: "Company Profile — GrowthMission" };
@@ -47,11 +48,15 @@ export default async function CompanyProfilePage() {
   const canEdit = ["msp_owner", "msp_admin", "cro_admin", "cro_advisor"].includes(user.role);
 
   const supabase = await createClient();
-  const [accountResult, teamMembers, memberLoad, stepTasks] = await Promise.all([
+  const [accountResult, teamMembers, memberLoad, stepTasks, { data: logins }] = await Promise.all([
     supabase.from("accounts").select(COMPANY_PROFILE_COLUMNS).eq("id", user.account_id).single(),
     getTeamMembers(user.account_id!),
     getMemberTaskLoad(user.account_id!),
     getMemberStepTasks(user.account_id!),
+    // Only editors see the Login picker, so only they need the list.
+    canEdit
+      ? supabase.rpc("roster_login_candidates", { p_account_id: user.account_id })
+      : Promise.resolve({ data: [] }),
   ]);
   const account = accountResult.data as CompanyProfile | null;
 
@@ -153,6 +158,7 @@ export default async function CompanyProfilePage() {
         members={teamMembers}
         memberLoad={memberLoad}
         stepTasks={stepTasks}
+        logins={(logins ?? []) as RosterLogin[]}
         canEdit={canEdit}
       />
     </main>

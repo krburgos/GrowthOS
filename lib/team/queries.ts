@@ -8,6 +8,7 @@ interface MemberRow {
   title: string | null;
   weekly_hours: number | string;
   sort_order: number;
+  user_id: string | null;
   account_team_assignments: { step_slug: string; weekly_hours: number | string }[] | null;
 }
 
@@ -24,7 +25,7 @@ export async function getTeamMembers(accountId: string): Promise<TeamMember[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("account_team_members")
-    .select("id, kind, name, title, weekly_hours, sort_order, account_team_assignments(step_slug, weekly_hours)")
+    .select("id, kind, name, title, weekly_hours, sort_order, user_id, account_team_assignments(step_slug, weekly_hours)")
     .eq("account_id", accountId)
     .is("archived_at", null)
     .order("sort_order");
@@ -36,6 +37,7 @@ export async function getTeamMembers(accountId: string): Promise<TeamMember[]> {
     title: row.title,
     weekly_hours: Number(row.weekly_hours),
     sort_order: row.sort_order,
+    user_id: row.user_id,
     assignments: (row.account_team_assignments ?? []).map((a) => ({
       step_slug: a.step_slug,
       weekly_hours: Number(a.weekly_hours),
