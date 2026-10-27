@@ -41,7 +41,7 @@ export function StatePill({ state }: { state: TaskState }) {
 }
 
 /** "Must 2" for an open order; the tier alone for a completed one. */
-export function PriorityChip({ task, rank }: { task: Task; rank?: number }) {
+export function PriorityChip({ task, rank }: { task: Pick<Task, "state" | "priority">; rank?: number }) {
   const done = task.state === "complete";
   return (
     <span

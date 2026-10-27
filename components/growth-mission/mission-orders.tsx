@@ -52,10 +52,10 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import type { TeamMember } from "@/lib/team/members";
 
-type Due = "" | "late" | "week" | "month" | "quarter";
+export type Due = "" | "late" | "week" | "month" | "quarter";
 const ANY = "__any__";
 
-const DUE_OPTIONS: { value: Due; label: string }[] = [
+export const DUE_OPTIONS: { value: Due; label: string }[] = [
   { value: "", label: "Any due date" },
   { value: "late", label: "Overdue" },
   { value: "week", label: "Due in 7 days" },
@@ -68,7 +68,7 @@ function isoDay(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function matchesDue(task: Task, due: Due): boolean {
+export function matchesDue(task: Pick<Task, "due_date" | "state">, due: Due): boolean {
   if (!due) return true;
   if (due === "late") return isOverdue(task);
   if (!task.due_date) return false;

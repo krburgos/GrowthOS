@@ -139,8 +139,8 @@ export function canToggleComplete(task: Pick<Task, "delegated">, perms: { canEdi
  * rather than stored, so it can never duplicate or skip. Completed orders
  * get no number.
  */
-export function rankOrders(tasks: Task[]): Map<string, number> {
-  const groups = new Map<string, Task[]>();
+export function rankOrders<T extends RankFields>(tasks: T[]): Map<string, number> {
+  const groups = new Map<string, T[]>();
   for (const t of tasks) {
     if (t.state === "complete") continue;
     const key = `${t.step_slug}|${t.priority}`;
@@ -155,8 +155,10 @@ export function rankOrders(tasks: Task[]): Map<string, number> {
   return rank;
 }
 
+type RankFields = Pick<Task, "id" | "step_slug" | "priority" | "state" | "sort_order" | "created_at">;
+
 /** Position order within one discipline and tier. */
-export function byPosition(a: Task, b: Task) {
+export function byPosition(a: RankFields, b: RankFields) {
   return a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id);
 }
 

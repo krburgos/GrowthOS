@@ -56,5 +56,11 @@ export async function POST(request: NextRequest) {
     path: "/",
   });
 
-  return NextResponse.redirect(new URL("/headquarters", request.url), { status: 303 });
+  // Optional landing page inside the account, e.g. an order on its Mission
+  // Card from the dashboard's GrowthMission Orders (2026-10-27). Same-site
+  // paths only, so this can't be turned into an open redirect.
+  const next = formData.get("next");
+  const landing = typeof next === "string" && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/headquarters";
+
+  return NextResponse.redirect(new URL(landing, request.url), { status: 303 });
 }

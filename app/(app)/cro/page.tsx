@@ -6,12 +6,14 @@ import { CreateAccountDialog } from "@/components/cro/create-account-dialog";
 import { PartnerAccessPanel, type PartnerRow } from "@/components/cro/partner-access-panel";
 import { CroPortfolioSummary } from "@/components/cro/portfolio-summary";
 import { AllUsersPanel } from "@/components/cro/all-users-panel";
+import { GrowthMissionOrdersPanel, type CroOrderRow } from "@/components/cro/growthmission-orders-panel";
 import type { PersonRow } from "@/components/cro/people-bits";
 import { CroTeamPanel } from "@/components/cro/team-panel";
 import { FocusButton, SectionPane, SectionSwitcher } from "@/components/growth-mission/section-switcher";
 import { getCurrentUser, needsAccountSelection, type UserRole } from "@/lib/auth/get-current-user";
 import { CRO_LEADER_ROLES, MSP_ROLES } from "@/lib/auth/roles";
 import { currentQuarter } from "@/lib/growth-mission/hours";
+import { rankOrders, type TaskPriority, type TaskState } from "@/lib/growth-mission/tasks";
 import { createClient } from "@/lib/supabase/server";
 
 /** No activity in over two weeks marks an account as idle on the list and in the "Needs attention" filter. */
@@ -24,6 +26,22 @@ interface PortfolioRow {
   committed_hours: number | string;
   achieved_hours: number | string;
   last_activity_at: string | null;
+}
+
+interface OrderQueryRow {
+  id: string;
+  account_id: string;
+  step_slug: string;
+  title: string;
+  detail: string | null;
+  priority: TaskPriority;
+  state: TaskState;
+  hours: number | string;
+  due_date: string | null;
+  sort_order: number;
+  created_at: string;
+  delegated: boolean;
+  cro_owner_id: string | null;
 }
 
 export const metadata: Metadata = { title: "CRO Leader Dashboard — GrowthMission" };
@@ -62,6 +80,7 @@ export default async function CroDashboardPage() {
   const quarter = currentQuarter();
   const supabase = await createClient();
   const isCroAdmin = user.role === "cro_admin";
+  const isPartner = user.role === "partner";
 
   let baseAccounts: { id: string; name: string; website: string | null }[];
   if (user.role === "partner") {
@@ -143,6 +162,62 @@ export default async function CroDashboardPage() {
     clientUsers = rows.filter((r) => MSP_ROLES.includes(r.role)).sort(byStatus);
   }
 
+  // GrowthMission Orders (client-confirmed, 2026-10-27, approved mockup "CRO
+  // GrowthMission Orders"): every order clients have delegated to
+  // GrowthMission, for the whole CRO Leader team, never partners. Each
+  // client's open orders are all read, not only delegated ones, because
+  // the number in "Must 2" counts every open order on that Mission Card.
+  const gmOrders: CroOrderRow[] = [];
+  let croTeam: { id: string; name: string }[] = [];
+  const croOwnerNames: Record<string, string> = {};
+  if (!isPartner) {
+    const [{ data: orderRows }, { data: croPeople }] = await Promise.all([
+      supabase
+        .from("growth_mission_tasks")
+        .select("id, account_id, step_slug, title, detail, priority, state, hours, due_date, sort_order, created_at, delegated, cro_owner_id")
+        .is("archived_at", null)
+        .or("delegated.eq.true,state.neq.complete"),
+      supabase
+        .from("users")
+        .select("id, full_name, archived_at")
+        .in("role", CRO_LEADER_ROLES)
+        .is("removed_at", null)
+        .order("full_name"),
+    ]);
+    for (const p of croPeople ?? []) croOwnerNames[p.id] = p.full_name;
+    croTeam = (croPeople ?? []).filter((p) => !p.archived_at).map((p) => ({ id: p.id, name: p.full_name }));
+
+    const accountName = new Map(accounts.map((a) => [a.id, a.name] as const));
+    const byAccount = new Map<string, OrderQueryRow[]>();
+    for (const row of (orderRows ?? []) as OrderQueryRow[]) {
+      if (!accountName.has(row.account_id)) continue; // archived account
+      const list = byAccount.get(row.account_id) ?? [];
+      list.push(row);
+      byAccount.set(row.account_id, list);
+    }
+    for (const [accountId, rows] of byAccount) {
+      const rank = rankOrders(rows);
+      for (const r of rows) {
+        if (!r.delegated) continue;
+        gmOrders.push({
+          id: r.id,
+          accountId,
+          accountName: accountName.get(accountId)!,
+          step_slug: r.step_slug,
+          title: r.title,
+          detail: r.detail,
+          priority: r.priority,
+          state: r.state,
+          hours: Number(r.hours),
+          due_date: r.due_date,
+          rank: rank.get(r.id),
+          croOwnerId: r.cro_owner_id,
+        });
+      }
+    }
+  }
+  const openGmOrders = gmOrders.filter((o) => o.state !== "complete").length;
+
   let partners: PartnerRow[] = [];
   if (isCroAdmin) {
     const [{ data: partnerUsers }, { data: grantRows }] = await Promise.all([
@@ -193,36 +268,58 @@ export default async function CroDashboardPage() {
       />
 
       {/* Client-confirmed (2026-10-22): the Command Center's switcher, for
-          the dashboard's sections. Advisors, Service Team and partners only
-          have Clients, so they get no switcher. */}
-      {isCroAdmin ? (
+          the dashboard's sections. Since GrowthMission Orders (2026-10-27)
+          every CRO Leader role has at least two sections; only partners,
+          who have Clients alone, go without one. */}
+      {!isPartner ? (
         <SectionSwitcher
           label="CRO Leader dashboard sections"
           sections={[
             { view: "clients", label: "Clients", hash: "#clients", count: accounts.length },
-            { view: "team", label: "CRO Leader Team", hash: "#team", count: team.filter((t) => !t.archived_at).length },
-            { view: "users", label: "All Users", hash: "#users", count: clientUsers.filter((u) => !u.archived_at).length },
-            { view: "partners", label: "Partners", hash: "#partners", count: partners.length },
+            { view: "orders", label: "GrowthMission Orders", hash: "#orders", count: openGmOrders },
+            ...(isCroAdmin
+              ? [
+                  { view: "team", label: "CRO Leader Team", hash: "#team", count: team.filter((t) => !t.archived_at).length },
+                  { view: "users", label: "All Users", hash: "#users", count: clientUsers.filter((u) => !u.archived_at).length },
+                  { view: "partners", label: "Partners", hash: "#partners", count: partners.length },
+                ]
+              : []),
           ]}
         >
           <SectionPane view="clients">{clientsSection(true)}</SectionPane>
-          <SectionPane view="team">
-            <CroTeamPanel members={team} currentUserId={user.id} focusSlot={<FocusButton view="team" label="CRO Leader Team" />} />
-          </SectionPane>
-          <SectionPane view="users">
-            <AllUsersPanel
-              users={clientUsers}
-              clients={accounts.map((a) => ({ id: a.id, name: a.name }))}
-              focusSlot={<FocusButton view="users" label="All Users" />}
+          <SectionPane view="orders">
+            <GrowthMissionOrdersPanel
+              orders={gmOrders}
+              team={croTeam}
+              ownerNames={croOwnerNames}
+              currentUserId={user.id}
+              canEdit={isCroAdmin || user.role === "cro_advisor"}
+              focusSlot={<FocusButton view="orders" label="GrowthMission Orders" />}
             />
           </SectionPane>
-          <SectionPane view="partners">
-            <PartnerAccessPanel
-              partners={partners}
-              allAccounts={accounts}
-              focusSlot={<FocusButton view="partners" label="Partners" tone="light" />}
-            />
-          </SectionPane>
+          {isCroAdmin && (
+            <SectionPane view="team">
+              <CroTeamPanel members={team} currentUserId={user.id} focusSlot={<FocusButton view="team" label="CRO Leader Team" />} />
+            </SectionPane>
+          )}
+          {isCroAdmin && (
+            <SectionPane view="users">
+              <AllUsersPanel
+                users={clientUsers}
+                clients={accounts.map((a) => ({ id: a.id, name: a.name }))}
+                focusSlot={<FocusButton view="users" label="All Users" />}
+              />
+            </SectionPane>
+          )}
+          {isCroAdmin && (
+            <SectionPane view="partners">
+              <PartnerAccessPanel
+                partners={partners}
+                allAccounts={accounts}
+                focusSlot={<FocusButton view="partners" label="Partners" tone="light" />}
+              />
+            </SectionPane>
+          )}
         </SectionSwitcher>
       ) : (
         clientsSection(false)

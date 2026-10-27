@@ -1203,6 +1203,12 @@ Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream 
 - **Credits read `delegated`** (§6.6i amendment). `sync_task_achieved_hours()` is unchanged, because a type change moves no hours.
 - **Data migration.** The CRO Leader account's "CRO Leader Team" outsourced roster member was how GrowthMission work was recorded before this column existed. Its 17 live orders (4 complete) become `delegated` with no assignee, and the member is archived. It had no discipline assignments.
 
+**Client-confirmed amendment (2026-10-27, approved mockup "CRO GrowthMission Orders", App Flow §4.10)** — a CRO owner on GrowthMission orders. Migration `20261027000001_growthmission_order_cro_owner.sql`.
+
+- **`cro_owner_id uuid references users(id) on delete set null`**: who on the CRO Leader team works a delegated order. It is separate from `assignee_id`, which points at the client's roster and stays null on a delegated order. `check (cro_owner_id is null or delegated)`, plus a partial index. Clients are not shown it.
+- **`guard_growthmission_orders()`** gains three rules: the CRO owner clears when an order is taken back from GrowthMission; a newly set owner must be an active (not deactivated, not removed) CRO Admin, Advisor or Service Team member (`23514`); and only CRO Admin/Advisor (or the service role) may set or change it (`42501`). The completion rules are unchanged.
+- **No new policies.** CRO Admin/Advisor already update any order; Service Team reads only, so it sees the dashboard section without editing it.
+
 
 ### 6.6g growth_mission_reports
 
@@ -1710,7 +1716,7 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | POST /api/users/invite | Session (Owner/Admin/CRO Admin) | Calls auth.admin.inviteUserByEmail() with account_id/role metadata (§3) |
 | POST /api/users/[id]/deactivate | Session (Owner/Admin/CRO Admin) | Sets archived_at and revokes the target user's active sessions via the Auth Admin API |
 | POST /api/accounts | Session (CRO Admin only) | Creates a new MSP accounts row and invites its initial Owner in one multi-step call |
-| POST /api/cro/enter | Session (CRO Leader or partner) | Client-confirmed addition (2026-09-08) — sets the `growthmission_viewing_account_id` cookie (§2) after verifying a partner actually has a grant for that account; RLS still independently authorizes every subsequent query regardless |
+| POST /api/cro/enter | Session (CRO Leader or partner) | Client-confirmed addition (2026-09-08) — sets the `growthmission_viewing_account_id` cookie (§2) after verifying a partner actually has a grant for that account; RLS still independently authorizes every subsequent query regardless. Optional `next` (2026-10-27): a same-site path to land on instead of `/headquarters`, used by the dashboard's GrowthMission Orders to open an order on its Mission Card |
 | POST /api/cro/exit | Session (CRO Leader or partner) | Clears the viewing-as cookie, returns to /cro — what the CroLeaderBanner's "Exit to My Dashboard" actually calls |
 | POST /api/cro/partner-grants | Session (CRO Admin only) | Adds a partner_account_grants row |
 | DELETE /api/cro/partner-grants | Session (CRO Admin only) | Removes a partner_account_grants row |
