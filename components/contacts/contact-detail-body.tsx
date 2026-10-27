@@ -1,6 +1,6 @@
 "use client";
 
-import { Briefcase, Building2, Globe, Link2, Mail, MapPin, Pencil, Phone } from "lucide-react";
+import { Briefcase, Building2, ChevronDown, Globe, Link2, Mail, MapPin, Pencil, Phone } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -21,11 +21,13 @@ import { OpportunityLink } from "@/components/opportunities/opportunity-panel";
 import { HERO_ACTION_CLASS, HeroBand } from "@/components/shell/hero-band";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ActivityType } from "@/lib/activities/type-icon";
 import { daysSince, opportunitiesValue as oppValueOf, prospectValue as prospectValueOf } from "@/lib/companies/value";
 import { STAGE_GROUP_BADGE_VARIANT, type StageGroup } from "@/lib/opportunities/stages";
+import { phoneLines, telHref } from "@/lib/sdr/desk";
 import { cn } from "@/lib/utils";
 
 interface OpportunityRow {
@@ -155,6 +157,7 @@ export function ContactDetailBody({
   avatarUrl,
   email,
   phone,
+  companyPhone,
   ownerName,
   statusName,
   statusColor,
@@ -187,6 +190,8 @@ export function ContactDetailBody({
   avatarUrl: string | null;
   email: string;
   phone: string | null;
+  /** The company's main line, dialable beside the direct one (client-confirmed, 2026-10-27). */
+  companyPhone: string | null;
   ownerName: string | undefined;
   statusName: string | undefined;
   statusColor: string | undefined;
@@ -217,6 +222,9 @@ export function ContactDetailBody({
   const lastActivityLabel = activities.length > 0 ? dayLabel(activities[0].occurred_at) : "No activity yet";
 
   const contactLine = [title, company?.name].filter(Boolean).join(" · ");
+  const numbers = phoneLines({ phone, company_phone: companyPhone }).filter(
+    (l): l is { label: string; number: string } => !!l.number
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-6 md:p-8">
@@ -257,11 +265,36 @@ export function ContactDetailBody({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {phone && (
-              <a href={`tel:${phone}`} className={HERO_ACTION_CLASS}>
+            {/* One number dials at once; two open a Direct / Company choice
+                (client-confirmed, 2026-10-27). */}
+            {numbers.length === 1 && (
+              <a href={telHref(numbers[0].number)} className={HERO_ACTION_CLASS}>
                 <Phone className="size-4" />
                 Call
               </a>
+            )}
+            {numbers.length > 1 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className={HERO_ACTION_CLASS}>
+                    <Phone className="size-4" />
+                    Call
+                    <ChevronDown className="size-3.5 text-white/70" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[250px]">
+                  {numbers.map(({ label, number }) => (
+                    <DropdownMenuItem key={label} asChild>
+                      <a href={telHref(number)} className="flex items-center gap-2">
+                        <span className="w-[60px] shrink-0 text-[10px] font-bold uppercase tracking-wide text-neutral-400">
+                          {label}
+                        </span>
+                        <span className="tabular-nums font-semibold text-primary-900">{number}</span>
+                      </a>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             <SendEmailDialog
               contactId={contactId}
@@ -417,7 +450,14 @@ export function ContactDetailBody({
             </div>
             <div className="flex flex-col gap-2.5 px-4 py-3.5">
               <Fact icon={Mail}>{email}</Fact>
-              {phone && <Fact icon={Phone}>{phone}</Fact>}
+              {numbers.map(({ label, number }) => (
+                <Fact key={label} icon={Phone}>
+                  <a href={telHref(number)} className="tabular-nums text-secondary-700 hover:underline">
+                    {number}
+                  </a>
+                  <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-neutral-400">{label}</span>
+                </Fact>
+              ))}
               {title && <Fact icon={Briefcase}>{title}</Fact>}
               {company?.name && <Fact icon={Building2}>{company.name}</Fact>}
               {company?.company_size && <Fact icon={MapPin}>{company.company_size} employees</Fact>}

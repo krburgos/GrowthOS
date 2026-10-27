@@ -164,6 +164,7 @@ export default async function ContactDetailPage({
       avatarUrl={contact.avatar_url}
       email={contact.email}
       phone={contact.phone}
+      companyPhone={company?.phone ?? null}
       ownerName={ownerName}
       statusName={status?.name}
       statusColor={status?.color}
