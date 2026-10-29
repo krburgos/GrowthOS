@@ -17,6 +17,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { ImportField, ImportMapping } from "@/lib/import/fields";
 import type { RepeatMode, RepeatedEmail } from "@/lib/import/repeats";
+import type { NoEmailRow } from "@/lib/import/validate";
 import { cn } from "@/lib/utils";
 
 /** Rows per commit request. Small enough that progress moves and no request nears a timeout. */
@@ -69,6 +70,8 @@ interface ValidateResponse {
   /** With no errors: how many rows are imported, one per email. */
   validRowCount: number;
   repeats: RepeatedEmail[];
+  /** Rows skipped for having no email (client-confirmed, 2026-10-29). */
+  noEmail: NoEmailRow[];
   errors: ImportError[];
   preview: Record<string, string>[];
   rawSamples: Record<string, string>[];
@@ -89,6 +92,9 @@ type Step = "upload" | "map" | "validate" | "confirm";
  * repeated emails no longer block the file. Validate asks once whether
  * to overwrite with the file or keep the current data, and Confirm sends
  * the file in batches so it can show progress and the time left.
+ *
+ * Client-confirmed (2026-10-29, approved mockup "Import Missing Emails"):
+ * rows with no email are skipped, listed on Validate and again on Done.
  */
 export function ImportWizard({ targetListId, listName }: { targetListId?: string; listName?: string } = {}) {
   const router = useRouter();
@@ -101,6 +107,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<RepeatMode>("overwrite");
   const [showRepeats, setShowRepeats] = useState(false);
+  const [showNoEmail, setShowNoEmail] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
   const importing = !!progress && !progress.finished && !progress.failed;
 
@@ -266,6 +273,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
     setProgress(null);
     setMode("overwrite");
     setShowRepeats(false);
+    setShowNoEmail(false);
     setStep("upload");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -297,6 +305,17 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
                 repeated {skipped.length === 1 ? "row" : "rows"} skipped
                 <span className="block text-body-sm text-neutral-500">
                   {skipped.length === 1 ? "Row" : "Rows"} {skipped.join(", ")}
+                </span>
+              </span>
+            </li>
+          )}
+          {result.noEmail.length > 0 && (
+            <li className="flex items-baseline gap-2.5 text-body text-neutral-800">
+              <b className="min-w-[4ch] text-right font-bold tabular-nums text-primary-900">{result.noEmail.length}</b>
+              <span className="min-w-0">
+                {result.noEmail.length === 1 ? "row" : "rows"} with no email skipped
+                <span className="block text-body-sm text-neutral-500">
+                  {result.noEmail.length === 1 ? "Row" : "Rows"} {result.noEmail.map((r) => r.row).join(", ")}
                 </span>
               </span>
             </li>
@@ -573,6 +592,9 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
                 {result.totalRows !== result.validRowCount && `${result.totalRows} rows in the file · `}
                 {result.validRowCount} contact{result.validRowCount === 1 ? "" : "s"} will be imported or updated.
               </p>
+              {result.noEmail.length > 0 && (
+                <NoEmailPanel rows={result.noEmail} open={showNoEmail} onToggle={() => setShowNoEmail((o) => !o)} />
+              )}
               {result.repeats.length > 0 && (
                 <RepeatsPanel
                   repeats={result.repeats}
@@ -616,7 +638,65 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
   );
 }
 
-const MODE_OPTIONS: { value: RepeatMode; title: string; points: string[] }[] = [
+/**
+ * Rows with no email on Validate (client-confirmed, 2026-10-29, approved
+ * mockup "Import Missing Emails"): they're skipped rather than blocking
+ * the file. Styled like the RepeatsPanel below it.
+ */
+function NoEmailPanel({ rows, open, onToggle }: { rows: NoEmailRow[]; open: boolean; onToggle: () => void }) {
+  const one = rows.length === 1;
+  return (
+    <div className="overflow-hidden rounded-xl border border-warning-300 bg-warning-50">
+      <div className="flex flex-col gap-1 px-4 pb-3 pt-3.5">
+        <p className="flex items-center gap-2 text-body-sm font-semibold text-warning-800">
+          <AlertTriangle className="size-4 shrink-0" />
+          {rows.length} {one ? "row has" : "rows have"} no email and will be skipped
+        </p>
+        <p className="text-body-sm text-neutral-700">
+          Every contact needs an email. To bring {one ? "this row" : "these rows"} in, add {one ? "its email" : "their emails"} in
+          the file and upload it again.
+        </p>
+      </div>
+      <div className="border-t border-warning-300 bg-white">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-body-sm font-semibold text-primary-700 hover:bg-primary-50"
+        >
+          {open
+            ? `Hide the ${one ? "row" : "rows"} with no email`
+            : `Show the ${one ? "row" : "rows"} with no email (${rows.length})`}
+          <ChevronDown className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")} />
+        </button>
+        {open && (
+          <div className="max-h-72 overflow-auto border-t border-neutral-100">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-24 text-right">Row</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Company</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.row}>
+                    <TableCell className="text-right tabular-nums">{r.row}</TableCell>
+                    <TableCell>{r.name || "—"}</TableCell>
+                    <TableCell>{r.company || "—"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const MODE_OPTIONS:{ value: RepeatMode; title: string; points: string[] }[] = [
   {
     value: "overwrite",
     title: "Overwrite with the file",

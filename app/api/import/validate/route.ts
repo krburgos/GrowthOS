@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { guessMapping, IMPORT_FIELDS, type ImportMapping } from "@/lib/import/fields";
 import { parseImportFile } from "@/lib/import/parse";
 import { existingContactsByEmail, findRepeats, winningRows, type RepeatedEmail } from "@/lib/import/repeats";
-import { applyMapping, validateRows } from "@/lib/import/validate";
+import { applyMapping, noEmailRows, validateRows } from "@/lib/import/validate";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
 
@@ -48,11 +48,13 @@ export async function POST(request: NextRequest) {
 
   const mappedRows = applyMapping(parsed.rows, mapping);
   const errors = await validateRows(mappedRows, supabase, profile.account_id);
+  // Skipped, not blocking (client-confirmed, 2026-10-29).
+  const noEmail = noEmailRows(mappedRows);
 
   // Repeated emails, for the overwrite / keep choice (client-confirmed,
   // 2026-10-18). Only worked out once the file is otherwise valid.
   let repeats: RepeatedEmail[] = [];
-  let validRowCount = mappedRows.length - new Set(errors.map((e) => e.row)).size;
+  let validRowCount = mappedRows.length - noEmail.length - new Set(errors.map((e) => e.row)).size;
   if (errors.length === 0) {
     let existing: Map<string, string>;
     try {
@@ -76,8 +78,9 @@ export async function POST(request: NextRequest) {
     totalRows: mappedRows.length,
     validRowCount,
     repeats,
+    noEmail,
     errors,
-    preview: mappedRows.slice(0, 10),
+    preview: mappedRows.filter((r) => r.email).slice(0, 10),
     // Raw, per-original-header sample values (client-confirmed Map
     // Columns redesign) — lets the mapping step show real file content
     // next to each column instead of just its header name.

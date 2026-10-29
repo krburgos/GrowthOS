@@ -65,6 +65,11 @@ export function applyMapping(rows: Record<string, string>[], mapping: Record<str
  * App Flow §4.4, D4 + §6 — any validation failure blocks the entire
  * import: missing required fields and invalid formats.
  *
+ * Client-confirmed (2026-10-29, approved mockup "Import Missing Emails"):
+ * a row with no email is skipped rather than blocking the file, and is
+ * listed on Validate and Done (noEmailRows). It isn't checked otherwise,
+ * since it isn't imported. A file where no row has an email still blocks.
+ *
  * Client-confirmed change: an email matching an existing contact is no
  * longer a validation error anywhere (plain Import Contacts or list
  * uploads). A second client-confirmed change (2026-10-18): an email
@@ -79,13 +84,16 @@ export async function validateRows(
 ): Promise<ImportError[]> {
   const errors: ImportError[] = [];
 
+  if (mappedRows.length > 0 && mappedRows.every((row) => !row.email)) {
+    return [{ row: mappedRows[0].rowNumber, message: "No row in this file has an email. Check that the Email column is mapped." }];
+  }
+
   for (const row of mappedRows) {
+    if (!row.email) continue;
     if (!row.first_name) {
       errors.push({ row: row.rowNumber, message: "Missing required field: First Name." });
     }
-    if (!row.email) {
-      errors.push({ row: row.rowNumber, message: "Missing required field: Email." });
-    } else if (!EMAIL_RE.test(row.email)) {
+    if (!EMAIL_RE.test(row.email)) {
       errors.push({ row: row.rowNumber, message: `Invalid email address: ${row.email}` });
     }
     if (row.score && !/^-?\d+$/.test(row.score)) {
@@ -97,4 +105,17 @@ export async function validateRows(
   }
 
   return errors.sort((a, b) => a.row - b.row);
+}
+
+export interface NoEmailRow {
+  row: number;
+  name: string;
+  company: string;
+}
+
+/** The rows skipped for having no email, as Validate and Done list them. */
+export function noEmailRows(mappedRows: MappedRow[]): NoEmailRow[] {
+  return mappedRows
+    .filter((r) => !r.email)
+    .map((r) => ({ row: r.rowNumber, name: [r.first_name, r.last_name].filter(Boolean).join(" "), company: r.company_name }));
 }
