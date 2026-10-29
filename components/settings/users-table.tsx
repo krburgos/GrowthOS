@@ -5,7 +5,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
+import { InvitedBadge, ResendInviteButton } from "@/components/users/resend-invite";
+import { inviteExpiresAt } from "@/lib/auth/invite-link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -44,6 +46,8 @@ export interface UserRow {
   role: UserRole;
   archived_at: string | null;
   last_sign_in_at: string | null;
+  invite_sent_at: string | null;
+  email_confirmed_at: string | null;
 }
 
 export function UsersTable({
@@ -145,6 +149,8 @@ export function UsersTable({
               <TableCell label="Status">
                 {u.archived_at ? (
                   <Badge variant="neutral">Deactivated</Badge>
+                ) : inviteExpiresAt(u) && u.invite_sent_at ? (
+                  <InvitedBadge sentAt={new Date(u.invite_sent_at)} className={badgeVariants()} />
                 ) : (
                   <Badge variant="success">Active</Badge>
                 )}
@@ -153,12 +159,23 @@ export function UsersTable({
                 <TableCell>
                   {/* Deactivate / Reactivate / Remove (client-confirmed, 2026-10-22). */}
                   {u.id !== currentUserId && (
-                    <UserAccessActions
-                      userId={u.id}
-                      name={u.full_name}
-                      deactivated={!!u.archived_at}
-                      onDone={() => router.refresh()}
-                    />
+                    <div className="flex items-center justify-end gap-2">
+                      {/* Resend invite (client-confirmed, 2026-10-29). */}
+                      {!u.archived_at && inviteExpiresAt(u) && (
+                        <ResendInviteButton
+                          userId={u.id}
+                          email={u.email}
+                          expiresAt={inviteExpiresAt(u)!}
+                          onDone={() => router.refresh()}
+                        />
+                      )}
+                      <UserAccessActions
+                        userId={u.id}
+                        name={u.full_name}
+                        deactivated={!!u.archived_at}
+                        onDone={() => router.refresh()}
+                      />
+                    </div>
                   )}
                 </TableCell>
               )}

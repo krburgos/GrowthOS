@@ -1441,6 +1441,8 @@ end;
 $$;
 ```
 
+**Client-confirmed (2026-10-29), migration `20261029000001_users_invite_status.sql`:** the function also returns `invite_sent_at` (the later of `auth.users.invited_at` and `confirmation_sent_at`) and `email_confirmed_at`, same caller rules. The user lists use them to show **Invited** for someone who never accepted, and to open Resend invite once the link has expired.
+
 
 ### 7.3 Company matching: normalize_company_domain, match_or_create_company, merge_companies
 
@@ -1720,6 +1722,7 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | --- | --- | --- |
 | POST /api/users/invite | Session (Owner/Admin/CRO Admin) | Calls auth.admin.inviteUserByEmail() with account_id/role metadata (§3) |
 | POST /api/users/[id]/deactivate | Session (Owner/Admin/CRO Admin) | Sets archived_at and revokes the target user's active sessions via the Auth Admin API |
+| POST /api/users/[id]/resend-invite | Session (Owner/Admin/CRO Admin, same rule as deactivate) | Client-confirmed 2026-10-29. Sends a new invite email to an active user who never accepted, only once the previous link has expired (`INVITE_LINK_HOURS`, `lib/auth/invite-link.ts`, kept equal to Supabase's Email OTP Expiration) |
 | POST /api/accounts | Session (CRO Admin only) | Creates a new MSP accounts row and invites its initial Owner in one multi-step call |
 | POST /api/cro/enter | Session (CRO Leader or partner) | Client-confirmed addition (2026-09-08) — sets the `growthmission_viewing_account_id` cookie (§2) after verifying a partner actually has a grant for that account; RLS still independently authorizes every subsequent query regardless. Optional `next` (2026-10-27): a same-site path to land on instead of `/headquarters`, used by the dashboard's GrowthMission Orders to open an order on its Mission Card |
 | POST /api/cro/exit | Session (CRO Leader or partner) | Clears the viewing-as cookie, returns to /cro — what the CroLeaderBanner's "Exit to My Dashboard" actually calls |

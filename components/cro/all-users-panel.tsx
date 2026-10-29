@@ -6,6 +6,7 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import {
   InvitePersonDialog,
+  PersonActions,
   PersonCell,
   RoleSelect,
   StatusBadge,
@@ -13,7 +14,6 @@ import {
   type PersonRow,
 } from "@/components/cro/people-bits";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
-import { UserAccessActions } from "@/components/users/user-access-actions";
 import { useFlash } from "@/lib/use-flash";
 import { Button } from "@/components/ui/button";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
@@ -191,10 +191,10 @@ export function AllUsersPanel({
                       </td>
                       <td className="px-3 py-2.5 text-body-sm text-neutral-600">{lastLoginLabel(u.last_sign_in_at)}</td>
                       <td className="px-3 py-2.5">
-                        <StatusBadge deactivated={off} />
+                        <StatusBadge person={u} />
                       </td>
                       <td className="px-3 py-2.5">
-                        <UserAccessActions userId={u.id} name={u.full_name} deactivated={off} onDone={() => router.refresh()} />
+                        <PersonActions person={u} onDone={() => router.refresh()} />
                       </td>
                     </tr>
                   );

@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { InvitedBadge, ResendInviteButton } from "@/components/users/resend-invite";
+import { UserAccessActions } from "@/components/users/user-access-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { UserRole } from "@/lib/auth/get-current-user";
+import { inviteExpiresAt } from "@/lib/auth/invite-link";
 import { ROLE_LABELS } from "@/lib/auth/role-labels";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/client";
@@ -29,6 +32,8 @@ export interface PersonRow {
   role: UserRole;
   archived_at: string | null;
   last_sign_in_at: string | null;
+  invite_sent_at: string | null;
+  email_confirmed_at: string | null;
   account_id: string | null;
   account_name: string | null;
 }
@@ -68,16 +73,29 @@ export function lastLoginLabel(iso: string | null): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function StatusBadge({ deactivated }: { deactivated: boolean }) {
+const STATUS_PILL = "inline-flex rounded-full px-2.5 py-0.5 text-caption font-semibold";
+
+/** Deactivated wins over Invited: someone deactivated can't accept anyway. */
+export function StatusBadge({ person }: { person: PersonRow }) {
+  if (!person.archived_at && inviteExpiresAt(person) && person.invite_sent_at) {
+    return <InvitedBadge sentAt={new Date(person.invite_sent_at)} className={STATUS_PILL} />;
+  }
+  const deactivated = !!person.archived_at;
   return (
-    <span
-      className={cn(
-        "inline-flex rounded-full px-2.5 py-0.5 text-caption font-semibold",
-        deactivated ? "bg-neutral-200 text-neutral-700" : "bg-success-100 text-success-800"
-      )}
-    >
+    <span className={cn(STATUS_PILL, deactivated ? "bg-neutral-200 text-neutral-700" : "bg-success-100 text-success-800")}>
       {deactivated ? "Deactivated" : "Active"}
     </span>
+  );
+}
+
+/** Resend invite beside the ⋯ menu, only for an active person whose invite is pending. */
+export function PersonActions({ person, onDone }: { person: PersonRow; onDone: () => void }) {
+  const expiresAt = person.archived_at ? null : inviteExpiresAt(person);
+  return (
+    <div className="flex items-center justify-end gap-2">
+      {expiresAt && <ResendInviteButton userId={person.id} email={person.email} expiresAt={expiresAt} onDone={onDone} />}
+      <UserAccessActions userId={person.id} name={person.full_name} deactivated={!!person.archived_at} onDone={onDone} />
+    </div>
   );
 }
 

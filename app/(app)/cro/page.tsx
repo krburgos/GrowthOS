@@ -140,9 +140,8 @@ export default async function CroDashboardPage() {
         .order("full_name"),
       supabase.rpc("get_users_with_last_login", { p_account_id: null }),
     ]);
-    const lastLogin = new Map(
-      ((logins ?? []) as { user_id: string; last_sign_in_at: string | null }[]).map((r) => [r.user_id, r.last_sign_in_at])
-    );
+    type Login = { user_id: string; last_sign_in_at: string | null; invite_sent_at: string | null; email_confirmed_at: string | null };
+    const loginById = new Map(((logins ?? []) as Login[]).map((r) => [r.user_id, r]));
     const rows: PersonRow[] = (people ?? []).map((p) => {
       const account = Array.isArray(p.accounts) ? p.accounts[0] : p.accounts;
       return {
@@ -153,7 +152,9 @@ export default async function CroDashboardPage() {
         archived_at: p.archived_at,
         account_id: p.account_id,
         account_name: (account as { name: string } | null)?.name ?? null,
-        last_sign_in_at: lastLogin.get(p.id) ?? null,
+        last_sign_in_at: loginById.get(p.id)?.last_sign_in_at ?? null,
+        invite_sent_at: loginById.get(p.id)?.invite_sent_at ?? null,
+        email_confirmed_at: loginById.get(p.id)?.email_confirmed_at ?? null,
       };
     });
     // Active people first, then the deactivated, each A–Z.

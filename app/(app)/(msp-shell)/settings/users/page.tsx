@@ -59,16 +59,18 @@ export default async function UsersRolesPage({
     supabase.rpc("get_users_with_last_login", { p_account_id: user.account_id }),
   ]);
 
-  const lastLoginById = new Map(
-    (lastLogins as { user_id: string; last_sign_in_at: string | null }[] | null ?? []).map(
-      (r) => [r.user_id, r.last_sign_in_at]
-    )
-  );
+  type Login = { user_id: string; last_sign_in_at: string | null; invite_sent_at: string | null; email_confirmed_at: string | null };
+  const loginById = new Map(((lastLogins as Login[] | null) ?? []).map((r) => [r.user_id, r]));
 
-  const users: UserRow[] = (rows ?? []).map((r) => ({
-    ...r,
-    last_sign_in_at: lastLoginById.get(r.id) ?? null,
-  }));
+  const users: UserRow[] = (rows ?? []).map((r) => {
+    const login = loginById.get(r.id);
+    return {
+      ...r,
+      last_sign_in_at: login?.last_sign_in_at ?? null,
+      invite_sent_at: login?.invite_sent_at ?? null,
+      email_confirmed_at: login?.email_confirmed_at ?? null,
+    };
+  });
 
   return (
     <main className="w-full max-w-[1800px] flex-1 p-6 md:p-8">
