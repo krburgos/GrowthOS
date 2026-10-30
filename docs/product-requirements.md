@@ -126,6 +126,7 @@ SMS is explicitly **not** in scope (no A2P 10DLC/TCPA burden to take on). Direct
 - No role-specific dashboards for Phase 1 — one reporting view is sufficient
 - Weekly and monthly sales/marketing KPI summaries (leads, opportunities, campaign performance) are a Phase 1 nice-to-have
 - Reports export to Excel/spreadsheet; no BI platform integration yet
+- **Client-confirmed scope change (2026-10-30, approved mockup "SniperLeads Reports Mockup") — SniperLeads monthly reports.** CRO Leader prepares a monthly SniperLeads report for each SniperLeads client on the CRO Leader Dashboard (CRO Admin and CRO Advisor). GrowthMission fills in its own counts (target pool, flagged, SniperLead opportunities, meetings, proposals, won); CRO Leader types in the outreach numbers (emails, replies, calls, ad audience, LinkedIn, website visits) and exports the report by Copy for Outlook or PDF. GrowthMission does not send it. The report never shows prospect value or any dollar figure, an industry breakdown, or a ranked list of companies (client direction). The client noted Phase 1 is effectively complete apart from email campaigns; this is recorded as a scope addition rather than a general reporting layer (App Flow §4.10, Backend Schema §6.6o).
 
 ### 6.8 CRO Leader Admin Dashboard & MSP Portal
 

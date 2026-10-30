@@ -8,12 +8,15 @@ import { CroPortfolioSummary } from "@/components/cro/portfolio-summary";
 import { AllUsersPanel } from "@/components/cro/all-users-panel";
 import { GrowthMissionOrdersPanel, type CroOrderRow } from "@/components/cro/growthmission-orders-panel";
 import type { PersonRow } from "@/components/cro/people-bits";
+import { SniperLeadsReportsPanel, type SniperLeadsClient } from "@/components/cro/sniperleads-reports-panel";
+import type { SniperLeadsSetting } from "@/components/cro/sniperleads-setting";
 import { CroTeamPanel } from "@/components/cro/team-panel";
 import { FocusButton, SectionPane, SectionSwitcher } from "@/components/growth-mission/section-switcher";
 import { getCurrentUser, needsAccountSelection, type UserRole } from "@/lib/auth/get-current-user";
 import { CRO_LEADER_ROLES, MSP_ROLES } from "@/lib/auth/roles";
 import { currentQuarter } from "@/lib/growth-mission/hours";
 import { rankOrders, type TaskPriority, type TaskState } from "@/lib/growth-mission/tasks";
+import { monthKey, type GmNumbers, type ReportRow } from "@/lib/sniperleads/report";
 import { createClient } from "@/lib/supabase/server";
 
 /** No activity in over two weeks marks an account as idle on the list and in the "Needs attention" filter. */
@@ -219,6 +222,43 @@ export default async function CroDashboardPage() {
   }
   const openGmOrders = gmOrders.filter((o) => o.state !== "complete").length;
 
+  // SniperLeads Reports (client-confirmed, 2026-10-30, approved mockup
+  // "SniperLeads Reports Mockup"): CRO Admin and CRO Advisor only. The GM
+  // numbers are counted per client by sniperleads_numbers().
+  const canReport = isCroAdmin || user.role === "cro_advisor";
+  const currentMonth = monthKey();
+  const slSettings: Record<string, SniperLeadsSetting> = {};
+  let slClients: SniperLeadsClient[] = [];
+  let slReports: ReportRow[] = [];
+  if (canReport) {
+    const [{ data: settingRows }, { data: reportRows }, { data: ownerRows }] = await Promise.all([
+      supabase.from("sniperleads_clients").select("account_id, start_month, active"),
+      supabase
+        .from("sniperleads_reports")
+        .select(
+          "id, account_id, month, emails_sent, real_replies, auto_replies, calls, ad_audience, linkedin_started, linkedin_invites, linkedin_messages, website_started, website_visits, intro, closing, signer_id, gm_numbers, exported_at"
+        ),
+      supabase.from("users").select("account_id, full_name").eq("role", "msp_owner").is("archived_at", null).order("created_at"),
+    ]);
+    for (const r of settingRows ?? []) slSettings[r.account_id] = { startMonth: r.start_month, active: r.active };
+    slReports = (reportRows ?? []) as ReportRow[];
+    const ownerByAccount = new Map<string, string>();
+    for (const o of ownerRows ?? []) if (o.account_id && !ownerByAccount.has(o.account_id)) ownerByAccount.set(o.account_id, o.full_name);
+
+    const live = accounts.filter((a) => slSettings[a.id]?.active);
+    const numbers = await Promise.all(live.map((a) => supabase.rpc("sniperleads_numbers", { p_account_id: a.id })));
+    slClients = live.map((a, i) => ({
+      accountId: a.id,
+      name: a.name,
+      startMonth: slSettings[a.id].startMonth,
+      ownerName: ownerByAccount.get(a.id) ?? null,
+      gm: { pool: 0, flagged: 0, opportunities: 0, meetings: 0, proposals: 0, won: 0, ...((numbers[i].data ?? {}) as Partial<GmNumbers>) },
+    }));
+  }
+  const reportsToFinish = slClients.filter(
+    (c) => c.startMonth <= currentMonth && !slReports.some((r) => r.account_id === c.accountId && r.month === currentMonth && r.exported_at)
+  ).length;
+
   let partners: PartnerRow[] = [];
   if (isCroAdmin) {
     const [{ data: partnerUsers }, { data: grantRows }] = await Promise.all([
@@ -255,7 +295,11 @@ export default async function CroDashboardPage() {
           {isCroAdmin && <CreateAccountDialog />}
         </div>
       </div>
-      <AccountsList accounts={accounts} quarter={quarter} />
+      <AccountsList
+        accounts={accounts}
+        quarter={quarter}
+        sniperleads={isCroAdmin ? { settings: slSettings, currentUserId: user.id } : undefined}
+      />
     </section>
   );
 
@@ -278,6 +322,7 @@ export default async function CroDashboardPage() {
           sections={[
             { view: "clients", label: "Clients", hash: "#clients", count: accounts.length },
             { view: "orders", label: "GrowthMission Orders", hash: "#orders", count: openGmOrders },
+            ...(canReport ? [{ view: "sniperleads", label: "SniperLeads Reports", hash: "#sniperleads", count: reportsToFinish }] : []),
             ...(isCroAdmin
               ? [
                   { view: "team", label: "CRO Leader Team", hash: "#team", count: team.filter((t) => !t.archived_at).length },
@@ -298,6 +343,18 @@ export default async function CroDashboardPage() {
               focusSlot={<FocusButton view="orders" label="GrowthMission Orders" />}
             />
           </SectionPane>
+          {canReport && (
+            <SectionPane view="sniperleads">
+              <SniperLeadsReportsPanel
+                clients={slClients}
+                reports={slReports}
+                signers={croTeam}
+                currentUserId={user.id}
+                currentMonth={currentMonth}
+                focusSlot={<FocusButton view="sniperleads" label="SniperLeads Reports" />}
+              />
+            </SectionPane>
+          )}
           {isCroAdmin && (
             <SectionPane view="team">
               <CroTeamPanel members={team} currentUserId={user.id} focusSlot={<FocusButton view="team" label="CRO Leader Team" />} />

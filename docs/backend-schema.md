@@ -1254,6 +1254,15 @@ Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream 
 - **`lists.built_from_icp`** (boolean, default false) — set by Build ICP list; drives the ICP chip and the card's steps.
 - **Contacts filter fields Industry and Job title** (`lib/contacts/filters.ts`): "is any of" / "contains any of" over `companies.industry` and `contacts.title` (case-insensitive, several values). Decision makers also match their spelled-out titles (e.g. CEO ↔ "Chief Executive").
 
+### 6.6o sniperleads_clients, sniperleads_reports, sniperleads_numbers()
+
+**Client-confirmed (2026-10-30, approved mockup "SniperLeads Reports Mockup")**, migration `20261030000001_sniperleads_reports.sql`. The monthly SniperLeads report CRO Leader prepares for each SniperLeads client (App Flow §4.10).
+
+- **sniperleads_clients:** `account_id` (PK), `start_month` (first of a month), `active`, `updated_by`. CRO Leader's own record: select CRO Admin/Advisor, insert/update CRO Admin. Seeded with the 11 current SniperLeads clients and their start months from CRO Leader's roster.
+- **sniperleads_reports:** one row per `(account_id, month)`: the outreach numbers (all nullable integers ≥ 0, plus `linkedin_started` / `website_started`), `intro`, `closing`, `signer_id`, `gm_numbers` (jsonb snapshot taken at the first export), `exported_at`/`exported_by`. Select/insert/update CRO Admin and CRO Advisor. No delete policy (soft delete rule); clients never read it.
+- **sniperleads_numbers(p_account_id) → jsonb:** security invoker. `pool` (distinct contacts in the client's active lists), `flagged` (contacts with the SNIPER status), `opportunities` (Type "SniperLead", not archived), `meetings` / `proposals` (SniperLead opportunities at or after the client's own "FME Scheduled" / "Proposal Emailed" stage, not lost), `won`.
+- **Writes** are direct browser-to-Supabase under RLS (§11). The PDF is `GET /api/sniperleads/reports/[id]/pdf` (session client, pdfkit, §10).
+
 ### 6.6k growth_mission_files — the Arsenal
 
 **Client-confirmed (2026-10-20, approved mockup "The Arsenal")**, migration `20261020000001_arsenal_files.sql`. A file library on each Mission Card; a file belongs to the card in general (`task_id` null) or to one of its Mission Orders. The eighth file exception, and the first general one (§12).
@@ -1722,6 +1731,7 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | --- | --- | --- |
 | POST /api/users/invite | Session (Owner/Admin/CRO Admin) | Calls auth.admin.inviteUserByEmail() with account_id/role metadata (§3) |
 | POST /api/users/[id]/deactivate | Session (Owner/Admin/CRO Admin) | Sets archived_at and revokes the target user's active sessions via the Auth Admin API |
+| GET /api/sniperleads/reports/[id]/pdf | Session (CRO Admin/Advisor; RLS on sniperleads_reports) | Client-confirmed 2026-10-30. One client's SniperLeads monthly report as a PDF, from the saved row (GM numbers from its export snapshot, else live `sniperleads_numbers()`) (§6.6o) |
 | POST /api/users/[id]/resend-invite | Session (Owner/Admin/CRO Admin, same rule as deactivate) | Client-confirmed 2026-10-29. Sends a new invite email to an active user who never accepted, only once the previous link has expired (`INVITE_LINK_HOURS`, `lib/auth/invite-link.ts`, kept equal to Supabase's Email OTP Expiration) |
 | POST /api/accounts | Session (CRO Admin only) | Creates a new MSP accounts row and invites its initial Owner in one multi-step call |
 | POST /api/cro/enter | Session (CRO Leader or partner) | Client-confirmed addition (2026-09-08) — sets the `growthmission_viewing_account_id` cookie (§2) after verifying a partner actually has a grant for that account; RLS still independently authorizes every subsequent query regardless. Optional `next` (2026-10-27): a same-site path to land on instead of `/headquarters`, used by the dashboard's GrowthMission Orders to open an order on its Mission Card |

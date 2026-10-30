@@ -3,6 +3,7 @@
 import { Check, Minus } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { SniperLeadsSettingButton, type SniperLeadsSetting } from "@/components/cro/sniperleads-setting";
 import { Input } from "@/components/ui/input";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -73,7 +74,16 @@ function lastActivityLabel(iso: string | null) {
  * attention" narrows to accounts missing a document, behind the quarter's
  * pace, or idle for over 14 days.
  */
-export function AccountsList({ accounts, quarter }: { accounts: CroAccountRow[]; quarter: QuarterInfo }) {
+export function AccountsList({
+  accounts,
+  quarter,
+  sniperleads,
+}: {
+  accounts: CroAccountRow[];
+  quarter: QuarterInfo;
+  /** CRO Admin only: each client's SniperLeads setting, edited from its row (2026-10-30). */
+  sniperleads?: { settings: Record<string, SniperLeadsSetting>; currentUserId: string };
+}) {
   const [query, setQuery] = useState("");
   const [attentionOnly, setAttentionOnly] = useState(false);
   const [page, setPage] = useState(1);
@@ -194,15 +204,25 @@ export function AccountsList({ accounts, quarter }: { accounts: CroAccountRow[];
                       </span>
                     </TableCell>
                     <TableCell>
-                      <form action="/api/cro/enter" method="post" className="flex justify-end">
-                        <input type="hidden" name="accountId" value={a.id} />
-                        <button
-                          type="submit"
-                          className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-caption font-semibold text-primary-700 transition-colors hover:border-primary-700"
-                        >
-                          Enter →
-                        </button>
-                      </form>
+                      <div className="flex items-center justify-end gap-2">
+                        {sniperleads && (
+                          <SniperLeadsSettingButton
+                            accountId={a.id}
+                            accountName={a.name}
+                            setting={sniperleads.settings[a.id] ?? null}
+                            currentUserId={sniperleads.currentUserId}
+                          />
+                        )}
+                        <form action="/api/cro/enter" method="post">
+                          <input type="hidden" name="accountId" value={a.id} />
+                          <button
+                            type="submit"
+                            className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-caption font-semibold text-primary-700 transition-colors hover:border-primary-700"
+                          >
+                            Enter →
+                          </button>
+                        </form>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
