@@ -47,7 +47,7 @@ export async function parseImportFile(file: File): Promise<ParsedFile> {
     const headerRow = worksheet.getRow(1);
     const headers: string[] = [];
     headerRow.eachCell((cell, colNumber) => {
-      headers[colNumber - 1] = String(cell.value ?? "").trim();
+      headers[colNumber - 1] = cell.text.trim();
     });
 
     const rows: Record<string, string>[] = [];
@@ -55,8 +55,11 @@ export async function parseImportFile(file: File): Promise<ParsedFile> {
       if (rowNumber === 1) return;
       const record: Record<string, string> = {};
       headers.forEach((header, index) => {
+        // cell.text, not cell.value: a hyperlink or rich-text cell's value is
+        // an object, which imported as "[object Object]" (bug fix, 2026-10-30:
+        // every Top7 / ProTech contact landed on one company that way).
         const cell = row.getCell(index + 1);
-        record[header] = cell.value != null ? cellText(cell.value) : "";
+        record[header] = cell.value != null ? cellText(cell.text) : "";
       });
       if (Object.values(record).some((v) => v !== "")) {
         rows.push(record);
