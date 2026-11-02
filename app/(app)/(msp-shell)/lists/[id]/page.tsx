@@ -94,8 +94,9 @@ export default async function ListDetailPage({
   if (contacts.length > 0) {
     const { data: listRows } = await supabase
       .from("list_members")
-      .select("contact_id, lists(id, name)")
-      .in("contact_id", contacts.map((c) => c.id));
+      .select("contact_id, lists!inner(id, name)")
+      .in("contact_id", contacts.map((c) => c.id))
+      .is("lists.archived_at", null);
 
     const listsByContact = new Map<string, { id: string; name: string }[]>();
     for (const row of (listRows ?? []) as unknown as {

@@ -83,7 +83,7 @@ export default async function ContactDetailPage({
       .select("id, name, created_at, stage_entered_at, users(full_name), opportunity_stages(name, stage_group, win_probability)")
       .eq("contact_id", id)
       .order("created_at", { ascending: false }),
-    supabase.from("list_members").select("list_id, lists(name)").eq("contact_id", id),
+    supabase.from("list_members").select("list_id, lists!inner(name)").eq("contact_id", id).is("lists.archived_at", null),
     supabase
       .from("email_connections")
       .select("id, provider, email_address, users(full_name)")

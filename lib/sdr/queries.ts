@@ -67,9 +67,10 @@ export async function getSdrDesk(accountId: string): Promise<SdrDesk> {
     supabase.rpc("sdr_candidates", { p_account_id: accountId }),
     supabase
       .from("sdr_list_assignments")
-      .select("id, list_id, sdr_user_id, lists(name)")
+      .select("id, list_id, sdr_user_id, lists!inner(name)")
       .eq("account_id", accountId)
-      .is("archived_at", null),
+      .is("archived_at", null)
+      .is("lists.archived_at", null),
     supabase
       .from("lists")
       .select("id, name")

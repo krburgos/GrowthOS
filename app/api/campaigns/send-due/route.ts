@@ -46,12 +46,20 @@ export async function POST(request: NextRequest) {
 
   const { data: campaign } = await supabase
     .from("campaigns")
-    .select("id, account_id, list_id, subject, body, send_from_connection_id, created_by, users!created_by(full_name, email)")
+    .select("id, account_id, list_id, subject, body, send_from_connection_id, created_by, archived_at, lists(archived_at), users!created_by(full_name, email)")
     .eq("id", campaignId)
     .single();
 
   if (!campaign) {
     return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+  }
+
+  // A deleted campaign, or one whose list was deleted, never sends
+  // (2026-11-02): the scheduler picks campaigns by status alone.
+  const list = Array.isArray(campaign.lists) ? campaign.lists[0] : campaign.lists;
+  if (campaign.archived_at || !list || list.archived_at) {
+    await supabase.from("campaigns").update({ status: "cancelled" }).eq("id", campaignId);
+    return NextResponse.json({ skipped: true, reason: campaign.archived_at ? "campaign deleted" : "list deleted" });
   }
 
   try {

@@ -176,8 +176,9 @@ export default async function ContactsListPage({
         .order("occurred_at", { ascending: false }),
       supabase
         .from("list_members")
-        .select("contact_id, lists(id, name)")
-        .in("contact_id", contacts.map((c) => c.id)),
+        .select("contact_id, lists!inner(id, name)")
+        .in("contact_id", contacts.map((c) => c.id))
+        .is("lists.archived_at", null),
     ]);
 
     const lastActivityByContact = new Map<string, string>();
