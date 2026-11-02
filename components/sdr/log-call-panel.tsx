@@ -30,7 +30,7 @@ type Callback = "tomorrow" | "two" | "week" | "date";
 
 const FIELD = "text-[11px] font-bold uppercase tracking-wide text-neutral-500";
 
-const WHICH_LABEL: Record<BadWhich, string> = { direct: "Direct", company: "Company", both: "Both" };
+const WHICH_LABEL: Record<BadWhich, string> = { direct: "Direct", company: "Company", both: "Both", none: "No number" };
 
 function followUpFor(outcome: CallOutcome, callback: Callback, pickedDate: string): string | null {
   const now = new Date();
@@ -89,13 +89,19 @@ export function LogCallPanel({
   // Bad number (2026-11-02): only numbers that exist and aren't tagged yet can be picked.
   const directOk = !!row.phone?.trim() && !row.phone_bad;
   const companyOk = !!row.company_phone?.trim() && !row.company_phone_bad;
-  const whichOptions: BadWhich[] = [
-    ...(directOk ? (["direct"] as const) : []),
-    ...(companyOk ? (["company"] as const) : []),
-    ...(directOk && companyOk ? (["both"] as const) : []),
-  ];
+  // With no number at all, the one choice is "No number" (client-confirmed,
+  // 2026-11-02, approved mockup "No Number Scrub"): Bad number sends the
+  // contact to the Scrub List so someone can find one.
+  const noNumber = lines.length === 0;
+  const whichOptions: BadWhich[] = noNumber
+    ? ["none"]
+    : [
+        ...(directOk ? (["direct"] as const) : []),
+        ...(companyOk ? (["company"] as const) : []),
+        ...(directOk && companyOk ? (["both"] as const) : []),
+      ];
   const [which, setWhich] = useState<BadWhich | null>(whichOptions.length === 1 ? whichOptions[0] : null);
-  const scrubs = which === "both" || (which === "direct" && !companyOk) || (which === "company" && !directOk);
+  const scrubs = which === "none" || which === "both" || (which === "direct" && !companyOk) || (which === "company" && !directOk);
   const hint = OUTCOMES.find((o) => o.value === outcome)?.hint;
   const ready =
     !!outcome &&
@@ -331,7 +337,11 @@ export function LogCallPanel({
               </div>
               {which && (
                 <p className="text-body-sm text-neutral-800">
-                  {scrubs ? (
+                  {which === "none" ? (
+                    <>
+                      <b>No number to call.</b> {row.full_name} leaves every list and goes to the <b>Scrub List</b>, so someone can find a number.
+                    </>
+                  ) : scrubs ? (
                     <>
                       <b>No good number left.</b> {row.full_name} leaves every list and goes to the <b>Scrub List</b>.
                     </>

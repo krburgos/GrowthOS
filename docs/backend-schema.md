@@ -1258,6 +1258,8 @@ Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream 
 
 ### 6.6p Bad numbers and the Scrub List
 
+**Client-confirmed (2026-11-02, approved mockup "No Number Scrub"), migration `20261102000006_bad_number_no_number.sql`:** `mark_bad_number` also takes `p_which = 'none'` for a contact whose own and company phone are both blank. It tags nothing and moves the contact to the Scrub List; it is refused while either number exists. `scrub_entries.which` allows `'none'`.
+
 **Client-confirmed (2026-11-02, approved mockup "Call Logs and Scrub List Mockup")**, migration `20261102000001_call_logs_scrub_list.sql` (App Flow §4.3e).
 
 - **`sdr_call_outcome` gains `bad_number`.** The call's subject records which number: "Call · Bad number · Direct|Company|Both".

@@ -44,7 +44,8 @@ export const OUTCOMES: { value: CallOutcome; label: string; hint: string }[] = [
 ];
 
 /** Which number a Bad number call was about. */
-export type BadWhich = "direct" | "company" | "both";
+/** "none" (2026-11-02, approved mockup "No Number Scrub"): neither the contact nor its company has a number. */
+export type BadWhich = "direct" | "company" | "both" | "none";
 
 export const OUTCOME_LABEL = Object.fromEntries(OUTCOMES.map((o) => [o.value, o.label])) as Record<CallOutcome, string>;
 
