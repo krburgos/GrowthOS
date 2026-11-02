@@ -137,7 +137,7 @@ export default async function CroDashboardPage() {
     const [{ data: people }, { data: logins }] = await Promise.all([
       supabase
         .from("users")
-        .select("id, full_name, email, role, archived_at, account_id, accounts(name)")
+        .select("id, full_name, email, role, archived_at, account_id, welcome_sent_at, accounts(name)")
         .neq("role", "partner")
         .is("removed_at", null)
         .order("full_name"),
@@ -158,6 +158,7 @@ export default async function CroDashboardPage() {
         last_sign_in_at: loginById.get(p.id)?.last_sign_in_at ?? null,
         invite_sent_at: loginById.get(p.id)?.invite_sent_at ?? null,
         email_confirmed_at: loginById.get(p.id)?.email_confirmed_at ?? null,
+        welcome_sent_at: p.welcome_sent_at,
       };
     });
     // Active people first, then the deactivated, each A–Z.

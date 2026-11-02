@@ -1464,6 +1464,10 @@ $$;
 
 **Client-confirmed (2026-10-29), migration `20261029000001_users_invite_status.sql`:** the function also returns `invite_sent_at` (the later of `auth.users.invited_at` and `confirmation_sent_at`) and `email_confirmed_at`, same caller rules. The user lists use them to show **Invited** for someone who never accepted, and to open Resend invite once the link has expired.
 
+**Client-confirmed (2026-11-02, approved mockup "Welcome Email CC"), migration `20261102000003_users_welcome_sent.sql`:** `users.welcome_sent_at timestamptz`, the last welcome email sent to that user. Written only by `POST /api/users/[id]/welcome` with the service role; All Users reads it for "Welcome sent" and its Login filter.
+
+**Client-confirmed (2026-11-02), data script `20261102000002_sniperleads_stage.sql`:** on every account that has the "Email Interest" stage, a **SniperLeads** stage (open, 3%) goes right after it, and SniperLead opportunities still in Email Interest move there. No schema change.
+
 
 ### 7.3 Company matching: normalize_company_domain, match_or_create_company, merge_companies
 
@@ -1744,6 +1748,7 @@ Only operations that need a secret, cross-user privilege, or multi-step server l
 | POST /api/users/invite | Session (Owner/Admin/CRO Admin) | Calls auth.admin.inviteUserByEmail() with account_id/role metadata (§3) |
 | POST /api/users/[id]/deactivate | Session (Owner/Admin/CRO Admin) | Sets archived_at and revokes the target user's active sessions via the Auth Admin API |
 | GET /api/sniperleads/reports/[id]/pdf | Session (CRO Admin/Advisor; RLS on sniperleads_reports) | Client-confirmed 2026-10-30. One client's SniperLeads monthly report as a PDF, from the saved row (GM numbers from its export snapshot, else live `sniperleads_numbers()`) (§6.6o) |
+| POST /api/users/[id]/welcome | Session (CRO Admin; the target must be a client user) | Client-confirmed 2026-11-02. Body `{ cc: string[] }`. Emails an active client user who has accepted their invite (or never had one) but never logged in: a welcome with a Set your password link (a Supabase recovery `token_hash` sent to `/auth/confirm?type=recovery&next=/reset-password`, 1 hour, works once), through Resend from `EMAIL_FROM_ADDRESS`, with Cc. No password in the email. Sets `users.welcome_sent_at` |
 | POST /api/users/[id]/resend-invite | Session (Owner/Admin/CRO Admin, same rule as deactivate) | Client-confirmed 2026-10-29. Sends a new invite email to an active user who never accepted, only once the previous link has expired (`INVITE_LINK_HOURS`, `lib/auth/invite-link.ts`, kept equal to Supabase's Email OTP Expiration) |
 | POST /api/accounts | Session (CRO Admin only) | Creates a new MSP accounts row and invites its initial Owner in one multi-step call |
 | POST /api/cro/enter | Session (CRO Leader or partner) | Client-confirmed addition (2026-09-08) — sets the `growthmission_viewing_account_id` cookie (§2) after verifying a partner actually has a grant for that account; RLS still independently authorizes every subsequent query regardless. Optional `next` (2026-10-27): a same-site path to land on instead of `/headquarters`, used by the dashboard's GrowthMission Orders to open an order on its Mission Card |

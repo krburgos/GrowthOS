@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { InvitedBadge, ResendInviteButton } from "@/components/users/resend-invite";
+import { SendWelcomeButton } from "@/components/users/send-welcome";
 import { UserAccessActions } from "@/components/users/user-access-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -34,6 +35,8 @@ export interface PersonRow {
   last_sign_in_at: string | null;
   invite_sent_at: string | null;
   email_confirmed_at: string | null;
+  /** Last welcome email (2026-11-02); All Users only. */
+  welcome_sent_at: string | null;
   account_id: string | null;
   account_name: string | null;
 }
@@ -81,19 +84,45 @@ export function StatusBadge({ person }: { person: PersonRow }) {
     return <InvitedBadge sentAt={new Date(person.invite_sent_at)} className={STATUS_PILL} />;
   }
   const deactivated = !!person.archived_at;
+  const welcomed = !deactivated && !person.last_sign_in_at && person.welcome_sent_at;
   return (
-    <span className={cn(STATUS_PILL, deactivated ? "bg-neutral-200 text-neutral-700" : "bg-success-100 text-success-800")}>
-      {deactivated ? "Deactivated" : "Active"}
-    </span>
+    <>
+      <span className={cn(STATUS_PILL, deactivated ? "bg-neutral-200 text-neutral-700" : "bg-success-100 text-success-800")}>
+        {deactivated ? "Deactivated" : "Active"}
+      </span>
+      {welcomed && (
+        <span className="mt-1 block text-caption text-neutral-500">
+          Welcome sent {new Date(welcomed).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+        </span>
+      )}
+    </>
   );
 }
 
-/** Resend invite beside the ⋯ menu, only for an active person whose invite is pending. */
-export function PersonActions({ person, onDone }: { person: PersonRow; onDone: () => void }) {
+/** Send welcome (2026-11-02): an active person past their invite who has never logged in. */
+export function canWelcome(person: PersonRow): boolean {
+  return !person.archived_at && !person.last_sign_in_at && !inviteExpiresAt(person);
+}
+
+/**
+ * Resend invite beside the ⋯ menu, only for an active person whose invite is
+ * pending; with `welcome` (All Users), Send welcome for someone who never logged in.
+ */
+export function PersonActions({ person, onDone, welcome }: { person: PersonRow; onDone: () => void; welcome?: boolean }) {
   const expiresAt = person.archived_at ? null : inviteExpiresAt(person);
   return (
     <div className="flex items-center justify-end gap-2">
       {expiresAt && <ResendInviteButton userId={person.id} email={person.email} expiresAt={expiresAt} onDone={onDone} />}
+      {welcome && canWelcome(person) && (
+        <SendWelcomeButton
+          userId={person.id}
+          name={person.full_name}
+          email={person.email}
+          accountName={person.account_name}
+          sentBefore={!!person.welcome_sent_at}
+          onDone={onDone}
+        />
+      )}
       <UserAccessActions userId={person.id} name={person.full_name} deactivated={!!person.archived_at} onDone={onDone} />
     </div>
   );

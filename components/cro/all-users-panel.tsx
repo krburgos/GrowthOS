@@ -10,6 +10,7 @@ import {
   PersonCell,
   RoleSelect,
   StatusBadge,
+  canWelcome,
   lastLoginLabel,
   type PersonRow,
 } from "@/components/cro/people-bits";
@@ -46,6 +47,7 @@ export function AllUsersPanel({
   const { flashId, flash } = useFlash();
   const [client, setClient] = useState("all");
   const [role, setRole] = useState("all");
+  const [login, setLogin] = useState("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -57,9 +59,12 @@ export function AllUsersPanel({
       (u) =>
         (client === "all" || u.account_id === client) &&
         (role === "all" || u.role === role) &&
+        (login === "all" ||
+          (login === "never" && !u.archived_at && !u.last_sign_in_at) ||
+          (login === "sent" && canWelcome(u) && !!u.welcome_sent_at)) &&
         (!q || u.full_name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
     );
-  }, [users, client, role, query]);
+  }, [users, client, role, login, query]);
   const shown = rows.slice((page - 1) * pageSize, page * pageSize);
   const activeCount = users.filter((u) => !u.archived_at).length;
   const on = (v: string) => (v !== "all" ? "border-primary-700 bg-primary-50 font-semibold text-primary-900" : "bg-white");
@@ -131,6 +136,25 @@ export function AllUsersPanel({
             </SelectContent>
           </Select>
         </div>
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className={LABEL}>Login</span>
+          <Select
+            value={login}
+            onValueChange={(v) => {
+              setLogin(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className={cn("h-8 w-48 text-body-sm", on(login))} aria-label="Login">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Anyone</SelectItem>
+              <SelectItem value="never">Never logged in</SelectItem>
+              <SelectItem value="sent">Welcome sent, not in yet</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <label className="flex min-w-0 flex-col gap-1">
           <span className={LABEL}>Search</span>
           <span className="flex h-8 min-w-[200px] items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 focus-within:border-secondary-500 focus-within:ring-2 focus-within:ring-secondary-500/40">
@@ -194,7 +218,7 @@ export function AllUsersPanel({
                         <StatusBadge person={u} />
                       </td>
                       <td className="px-3 py-2.5">
-                        <PersonActions person={u} onDone={() => router.refresh()} />
+                        <PersonActions person={u} welcome onDone={() => router.refresh()} />
                       </td>
                     </tr>
                   );
