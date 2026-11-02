@@ -55,6 +55,8 @@ export default async function ListDetailPage({
   if (!list) notFound();
 
   const canEdit = EDIT_ROLES.includes(user.role);
+  // A deleted (archived) contact keeps its list rows, so restoring it puts
+  // it back on its lists, but no list shows it or counts it (2026-11-02).
   let contacts: ContactListRow[] = [];
 
   const [{ data }, { count: totalCount }] = await Promise.all([
@@ -63,17 +65,23 @@ export default async function ListDetailPage({
           supabase
             .from("contacts")
             .select(`${CONTACT_SELECT}, member:list_members!inner(list_id)` as string)
-            .eq("member.list_id", id),
+            .eq("member.list_id", id)
+            .is("archived_at", null),
           sp.sort,
           sp.dir
         ).range(from, to)
       : supabase
           .from("list_members")
-          .select(`contacts(${CONTACT_SELECT})` as string)
+          .select(`contacts!inner(${CONTACT_SELECT})` as string)
           .eq("list_id", id)
+          .is("contacts.archived_at", null)
           .order("added_at")
           .range(from, to),
-    supabase.from("list_members").select("*", { count: "exact", head: true }).eq("list_id", id),
+    supabase
+      .from("list_members")
+      .select("contact_id, contacts!inner(id)", { count: "exact", head: true })
+      .eq("list_id", id)
+      .is("contacts.archived_at", null),
   ]);
   contacts = ((data ?? []) as unknown as ({ contacts?: unknown } & Record<string, unknown>)[])
     .map((row) => {

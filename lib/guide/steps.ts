@@ -199,6 +199,7 @@ export async function getGuideSteps(supabase: SupabaseClient, accountId: string,
       .from("list_members")
       .select("contact_id, contacts!inner(id)", { count: "exact", head: true })
       .in("list_id", listIds)
+      .is("contacts.archived_at", null)
       .or("email_opt_out.eq.true,email_bounced_at.not.is.null", { referencedTable: "contacts" }),
     supabase.from("sdr_list_assignments").select("list_id").in("list_id", listIds).is("archived_at", null),
     supabase.from("campaigns").select("list_id").in("list_id", listIds).is("archived_at", null),

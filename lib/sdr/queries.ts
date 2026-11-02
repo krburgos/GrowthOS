@@ -41,8 +41,9 @@ async function listSizes(listIds: string[]): Promise<Map<string, number>> {
   for (let lo = 0; ; lo += 1000) {
     const { data } = await supabase
       .from("list_members")
-      .select("list_id")
+      .select("list_id, contacts!inner(id)")
       .in("list_id", listIds)
+      .is("contacts.archived_at", null)
       .order("list_id")
       .range(lo, lo + 999);
     for (const r of data ?? [])

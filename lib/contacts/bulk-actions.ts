@@ -53,7 +53,11 @@ export async function resolveContactIds(
     return ((data ?? []) as unknown as { id: string }[]).map((r) => r.id);
   }
 
-  const { data } = await supabase.from("list_members").select("contact_id").eq("list_id", scope.listId);
+  const { data } = await supabase
+    .from("list_members")
+    .select("contact_id, contacts!inner(id)")
+    .eq("list_id", scope.listId)
+    .is("contacts.archived_at", null);
   return (data ?? []).map((r) => r.contact_id);
 }
 

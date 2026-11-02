@@ -13,7 +13,8 @@ import { prospectValue } from "@/lib/companies/value";
  * bounced (campaign_recipients.bounced_at) or the contact is stamped
  * bounced. Unsubscribed is contacts.email_opt_out. Active is everyone else.
  * Three reads for the whole account (lists, members with their contacts and
- * companies, and bounces), joined here.
+ * companies, and bounces), joined here. Deleted (archived) contacts keep
+ * their list rows but aren't counted (2026-11-02).
  */
 export async function getListRows(
   supabase: SupabaseClient,
@@ -44,8 +45,9 @@ export async function getListRows(
       ? await readAll<MemberRow>((lo, hi) =>
           supabase
             .from("list_members")
-            .select("list_id, contact_id, contacts(email_opt_out, email_bounced_at, companies(id, company_size))")
+            .select("list_id, contact_id, contacts!inner(email_opt_out, email_bounced_at, companies(id, company_size))")
             .in("list_id", listIds)
+            .is("contacts.archived_at", null)
             .order("contact_id")
             .range(lo, hi)
         )
