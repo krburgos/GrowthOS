@@ -196,11 +196,17 @@ export function CallDesk({
     // Glow the row just called, if it's still in view (Design System §Motion).
     if (current) flash(current.contact_id);
     if (next && current) {
-      // The next one down the queue as it's sorted on screen.
-      const nextRow = sorted.find((r) => r.due === "today" && r.row.contact_id !== current.contact_id);
+      // The next one down the view being worked, as it's sorted and filtered
+      // on screen, whichever tab that is (fix, 2026-11-02: it used to look
+      // only at contacts due today, so New contacts never chained). It only
+      // moves forward, so nobody already called comes round again.
+      const at = sorted.findIndex((r) => r.row.contact_id === current.contact_id);
+      const nextRow = at >= 0 ? sorted[at + 1] : sorted.find((r) => r.row.contact_id !== current.contact_id);
       if (nextRow) {
         setChained(true);
         setLogging(nextRow.row);
+      } else {
+        toast.success("That was the last call in this view.");
       }
     }
     router.refresh();
