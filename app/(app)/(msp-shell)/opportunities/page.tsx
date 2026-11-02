@@ -39,6 +39,8 @@ const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? nu
 
 /** Who may edit in the List view: the opportunities_update policy's roles. */
 const CAN_EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
+/** Bulk Delete (2026-11-02): the same roles archive_opportunities() allows. */
+const CAN_DELETE_ROLES = ["msp_owner", "msp_admin", "cro_admin"];
 
 /**
  * App Flow §4.5, E1/E2 — Opportunity Board (default) with a List view
@@ -226,6 +228,8 @@ export default async function OpportunitiesPage({
             stages={stages}
             owners={(ownerRows ?? []) as { id: string; full_name: string }[]}
             canEdit={CAN_EDIT_ROLES.includes(user.role)}
+            canDelete={CAN_DELETE_ROLES.includes(user.role)}
+            allRows={listRows.map((o) => ({ id: o.id, stage_group: o.stage_group }))}
             accountId={user.account_id!}
           />
           <PaginationBar page={page} pageSize={pageSize} totalCount={opportunities.length} />

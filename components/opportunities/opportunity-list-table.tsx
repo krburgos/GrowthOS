@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
+import { OpportunityBulkBar } from "@/components/opportunities/opportunity-bulk-bar";
 import { OpportunityLink } from "@/components/opportunities/opportunity-panel";
 import { OPPORTUNITY_TEXT_MAX, TypeInput, rememberType } from "@/components/opportunities/type-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -160,15 +162,26 @@ function useColumnLayout() {
  * Columns"): columns resize from a heading's right edge and move by
  * dragging the heading, Opportunity staying first; Columns › Reset puts
  * either back. Both persist per browser.
+ *
+ * Client-confirmed (2026-11-02, approved mockup "Opportunity Bulk
+ * Actions"): for roles that can edit, a tickbox per row and in the header
+ * (this page); the bulk bar offers Select all {n} across every page, then
+ * Change stage, Salesperson, Type and (Owner, Admin, CRO Admin) Delete.
  */
 export function OpportunityListTable({
   opportunities,
   stages,
   owners,
   canEdit,
+  canDelete,
+  allRows,
   accountId,
 }: {
   opportunities: OpportunityListRow[];
+  /** Delete on the bulk bar: Owner, Admin and CRO Admin (archive_opportunities). */
+  canDelete: boolean;
+  /** Every opportunity in the list's current order, for Select all and the Won count. */
+  allRows: { id: string; stage_group: StageGroup }[];
   stages: StageOption[];
   owners: { id: string; full_name: string }[];
   canEdit: boolean;
@@ -186,6 +199,40 @@ export function OpportunityListTable({
   const [dropAt, setDropAt] = useState<{ key: ColumnKey; after: boolean } | null>(null);
   // A press that starts on the resize edge resizes; it must not also drag.
   const fromResizeEdge = useRef(false);
+  // Bulk selection: ticked ids, or every opportunity after "Select all".
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [allMatching, setAllMatching] = useState(false);
+  const [glow, setGlow] = useState<Set<string>>(new Set());
+  const groupById = useMemo(() => new Map(allRows.map((r) => [r.id, r.stage_group])), [allRows]);
+  const selectedIds = allMatching ? allRows.map((r) => r.id) : [...picked].filter((id) => groupById.has(id));
+  const isPicked = (id: string) => allMatching || picked.has(id);
+  const pageAllPicked = opportunities.length > 0 && opportunities.every((o) => isPicked(o.id));
+  const togglePage = (on: boolean) => {
+    setAllMatching(false);
+    const next = new Set(allMatching ? allRows.map((r) => r.id) : picked);
+    for (const o of opportunities) {
+      if (on) next.add(o.id);
+      else next.delete(o.id);
+    }
+    setPicked(next);
+  };
+  const toggleOne = (id: string, on: boolean) => {
+    const next = new Set(allMatching ? allRows.map((r) => r.id) : picked);
+    if (on) next.add(id);
+    else next.delete(id);
+    setAllMatching(false);
+    setPicked(next);
+  };
+  const clearSelection = () => {
+    setAllMatching(false);
+    setPicked(new Set());
+  };
+  const afterBulk = (ids: string[]) => {
+    clearSelection();
+    setGlow(new Set(ids));
+    setTimeout(() => setGlow(new Set()), 1050);
+    router.refresh();
+  };
 
   const startEdit = (o: OpportunityListRow) => {
     if (!canEdit || editingId) return; // finish or cancel the row already being edited first
@@ -458,12 +505,23 @@ export function OpportunityListTable({
             approved mockup "List column widths"); a column someone resized keeps
             its own width in pixels. Long text ends in an ellipsis. */}
         <colgroup>
+          {canEdit && <col style={{ width: "44px" }} />}
           {columns.map((key) => (
             <col key={key} style={{ width: layout.widths[key] ? `${layout.widths[key]}px` : COLUMNS[key].width }} />
           ))}
         </colgroup>
         <TableHeader variant="solid">
           <TableRow className="border-b-0 hover:bg-transparent">
+            {canEdit && (
+              <TableHead variant="solid" className="w-11">
+                <Checkbox
+                  checked={pageAllPicked}
+                  onCheckedChange={(c) => togglePage(!!c)}
+                  aria-label="Select all on this page"
+                  className="border-white/50 data-[state=checked]:border-secondary-400 data-[state=checked]:bg-secondary-400"
+                />
+              </TableHead>
+            )}
             {columns.map((key) => {
               const col = COLUMNS[key];
               const movable = key !== "opportunity";
@@ -547,18 +605,46 @@ export function OpportunityListTable({
               <TableRow
                 key={o.id}
                 data-editing={editing ? "true" : undefined}
-                data-flash={flashId === o.id ? "true" : undefined}
+                data-flash={flashId === o.id || glow.has(o.id) ? "true" : undefined}
+                selected={isPicked(o.id)}
                 onDoubleClick={() => startEdit(o)}
                 onKeyDown={editing ? onKeyDown : undefined}
                 title={canEdit && !editingId ? "Double-click to edit" : undefined}
                 className="data-[editing=true]:bg-secondary-50 data-[flash=true]:animate-saved"
               >
+                {canEdit && (
+                  <TableCell onDoubleClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={isPicked(o.id)}
+                      onCheckedChange={(c) => toggleOne(o.id, !!c)}
+                      aria-label={`Select ${o.name?.trim() || o.contact_name}`}
+                    />
+                  </TableCell>
+                )}
                 {columns.map((key) => cell(key, o, editing))}
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
+      {selectedIds.length > 0 && (
+        <>
+          <div aria-hidden="true" className="h-28 lg:h-16" />
+          <OpportunityBulkBar
+            ids={selectedIds}
+            groupOf={(id) => groupById.get(id)}
+            totalCount={allRows.length}
+            allMatching={allMatching}
+            onSelectAllMatching={() => setAllMatching(true)}
+            onClear={clearSelection}
+            onDone={afterBulk}
+            stages={stages}
+            owners={owners}
+            accountId={accountId}
+            canDelete={canDelete}
+          />
+        </>
+      )}
     </div>
   );
 }
