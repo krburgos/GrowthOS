@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Archive, GripVertical, MoreVertical, Pencil, Plus } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -108,6 +109,8 @@ export function StagesManager({
   const [newGroup, setNewGroup] = useState<StageGroup>("open");
   const [newProbability, setNewProbability] = useState("0");
   const [retireTarget, setRetireTarget] = useState<StageRow | null>(null);
+  // Opportunities still in the stage being retired; null while counting.
+  const [retireCount, setRetireCount] = useState<number | null>(null);
 
   const sorted = [...stages].sort((a, b) => a.sort_order - b.sort_order);
 
@@ -188,6 +191,28 @@ export function StagesManager({
     router.refresh();
   };
 
+  /**
+   * Retire only an empty stage (client-confirmed, 2026-11-02, approved
+   * mockup "Retire Stage Guard"): the board draws live stages only, so an
+   * opportunity left in a retired stage, Won and Lost included, would drop
+   * off it. The trigger trg_opportunity_stages_guard_retire holds the same rule.
+   */
+  const openRetire = async (stage: StageRow) => {
+    setRetireCount(null);
+    setRetireTarget(stage);
+    const { count, error } = await createClient()
+      .from("opportunities")
+      .select("id", { count: "exact", head: true })
+      .eq("stage_id", stage.id)
+      .is("archived_at", null);
+    if (error) {
+      toast.error(getFriendlyErrorMessage(error));
+      setRetireTarget(null);
+      return;
+    }
+    setRetireCount(count ?? 0);
+  };
+
   const handleRetire = async () => {
     if (!retireTarget) return;
     setPendingId(retireTarget.id);
@@ -231,7 +256,7 @@ export function StagesManager({
                   setEditGroup(stage.stage_group);
                   setEditProbability(String(stage.win_probability));
                 }}
-                onRetire={() => setRetireTarget(stage)}
+                onRetire={() => void openRetire(stage)}
               />
             ))}
           </ul>
@@ -362,27 +387,47 @@ export function StagesManager({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!retireTarget} onOpenChange={(o) => !o && setRetireTarget(null)}>
+      <Dialog open={!!retireTarget && retireCount !== null} onOpenChange={(o) => !o && setRetireTarget(null)}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Retire stage</DialogTitle>
-          </DialogHeader>
-          <p className="text-body text-neutral-600">
-            {retireTarget?.name} will no longer be available to assign to opportunities. Existing
-            opportunities keep this stage until changed.
-          </p>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setRetireTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRetire}
-              disabled={pendingId === retireTarget?.id}
-            >
-              Retire
-            </Button>
-          </DialogFooter>
+          {retireCount ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Can&apos;t retire {retireTarget?.name} yet</DialogTitle>
+              </DialogHeader>
+              <p className="text-body text-neutral-600">
+                <span className="font-semibold text-neutral-800">
+                  {retireCount} {retireCount === 1 ? "opportunity" : "opportunities"}
+                </span>{" "}
+                {retireCount === 1 ? "is" : "are"} still in {retireTarget?.name}. Move them to another stage first, then
+                retire it.
+              </p>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setRetireTarget(null)}>
+                  Close
+                </Button>
+                <Button asChild>
+                  <Link href="/opportunities?view=list&sort=stage">View opportunities</Link>
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Retire stage</DialogTitle>
+              </DialogHeader>
+              <p className="text-body text-neutral-600">
+                {retireTarget?.name} has no opportunities. Retiring removes it from the board and the stage picker.
+              </p>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setRetireTarget(null)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleRetire} disabled={pendingId === retireTarget?.id}>
+                  Retire
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
