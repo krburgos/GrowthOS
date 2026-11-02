@@ -2,6 +2,7 @@ import { prospectValue } from "@/lib/companies/value";
 import { isCompletedThisQuarter, missionCapacity, type CapacityTask, type CreditAllotment } from "@/lib/growth-mission/capacity";
 import { currentQuarter, previousQuarter, quarterKey, type QuarterInfo } from "@/lib/growth-mission/hours";
 import type { StageGroup } from "@/lib/opportunities/stages";
+import { CONNECTED_OUTCOMES, type CallOutcome } from "@/lib/sdr/desk";
 import { createClient } from "@/lib/supabase/server";
 import { getTeamMembers } from "@/lib/team/queries";
 
@@ -64,6 +65,17 @@ export interface QuarterReport {
   dealsWon: number;
   mission: MissionFigures | null;
   campaigns: CampaignRow[];
+  /** Calls logged from the SDR card (client-confirmed, 2026-11-02). */
+  calling: CallingFigures;
+}
+
+export interface CallingFigures {
+  calls: number;
+  /** Reached a person: Connected, Not interested or Meeting booked. */
+  connects: number;
+  meetings: number;
+  /** Thirteen weeks, each a count per outcome. */
+  weekly: Partial<Record<CallOutcome, number>>[];
 }
 
 export interface StageCount {
@@ -172,6 +184,23 @@ export async function getReportsData(accountId: string, selected: QuarterInfo): 
     getTeamMembers(accountId),
   ]);
 
+  // Calls across both quarters, paged past PostgREST's 1,000-row cap.
+  const calls: { occurred_at: string; call_outcome: CallOutcome | null }[] = [];
+  for (let lo = 0; ; lo += 1000) {
+    const { data } = await supabase
+      .from("activities")
+      .select("occurred_at, call_outcome")
+      .eq("account_id", accountId)
+      .eq("type", "call")
+      .is("archived_at", null)
+      .gte("occurred_at", from)
+      .lt("occurred_at", sel.nextStart)
+      .order("occurred_at")
+      .range(lo, lo + 999);
+    calls.push(...((data ?? []) as typeof calls));
+    if (!data || data.length < 1000) break;
+  }
+
   // ---- Mission: locked quarters, plus the current one live ----
   const snapshots = new Map<string, MissionFigures>(
     ((snapshotRows ?? []) as Record<string, number | string | null>[]).map((r) => [
@@ -237,6 +266,23 @@ export async function getReportsData(accountId: string, selected: QuarterInfo): 
       revenueMonthly[new Date(o.closed_at!).getUTCMonth() - months[0].getUTCMonth()] += prospectValue(co?.company_size);
     }
 
+    const calling: CallingFigures = {
+      calls: 0,
+      connects: 0,
+      meetings: 0,
+      weekly: Array.from({ length: WEEKS_PER_REPORT_QUARTER }, () => ({})),
+    };
+    for (const c of calls) {
+      if (!inQ(c.occurred_at)) continue;
+      calling.calls += 1;
+      if (c.call_outcome && CONNECTED_OUTCOMES.includes(c.call_outcome)) calling.connects += 1;
+      if (c.call_outcome === "meeting_booked") calling.meetings += 1;
+      if (c.call_outcome) {
+        const w = calling.weekly[week(c.occurred_at)];
+        w[c.call_outcome] = (w[c.call_outcome] ?? 0) + 1;
+      }
+    }
+
     const elapsedDays = Math.floor((Date.now() - qStart) / DAY_MS);
     return {
       key: quarterKey(q),
@@ -254,6 +300,7 @@ export async function getReportsData(accountId: string, selected: QuarterInfo): 
       dealsWon,
       mission: missionFor(q),
       campaigns: [],
+      calling,
     };
   };
 

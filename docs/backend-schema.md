@@ -1254,6 +1254,18 @@ Verified end to end in a rolled-back transaction as a `cro_admin`: a workstream 
 - **`lists.built_from_icp`** (boolean, default false) — set by Build ICP list; drives the ICP chip and the card's steps.
 - **Contacts filter fields Industry and Job title** (`lib/contacts/filters.ts`): "is any of" / "contains any of" over `companies.industry` and `contacts.title` (case-insensitive, several values). Decision makers also match their spelled-out titles (e.g. CEO ↔ "Chief Executive").
 
+### 6.6p Bad numbers and the Scrub List
+
+**Client-confirmed (2026-11-02, approved mockup "Call Logs and Scrub List Mockup")**, migration `20261102000001_call_logs_scrub_list.sql` (App Flow §4.3e).
+
+- **`sdr_call_outcome` gains `bad_number`.** The call's subject records which number: "Call · Bad number · Direct|Company|Both".
+- **`contacts.phone_bad_at`, `companies.phone_bad_at`:** the tag. A `before update` trigger clears it whenever that row's `phone` changes.
+- **`lists.is_scrub`:** at most one live Scrub List per account (partial unique index); a trigger refuses renaming or archiving it.
+- **`scrub_entries`:** `contact_id`, `which`, `from_list_ids uuid[]`, `scrubbed_by/at`, `resolution` (`sent_back` | `unverified`), `resolved_by/at`. Select like lists; written only by the two functions below. No delete.
+- **`mark_bad_number(contact, which) → boolean`** and **`resolve_scrub(contact, send_back)`:** security definer, guarded by `can_work_account(account)` (Owner/Admin/Marketing on their own account, CRO Admin/Advisor, granted partner: the same roles as `contacts_update` and `list_members_delete`). Scrubbing removes the contact's `list_members` rows (as Lists' own remove does) and adds it to the Scrub List, creating that list on first use; sending back re-adds it to the recorded lists that are still live. Can't find it adds a note activity.
+- **`sdr_call_queue`** also returns `phone_bad`, `company_phone_bad`, `on_scrub`, `email`, `company_id`. **`sdr_candidates`** also returns the account's MSP Owner and Admin.
+- **Intel's Calling card and Call Logs** read `activities` (`type = 'call'`) directly under RLS; `GET /api/reports/export?section=calling` adds a calls sheet.
+
 ### 6.6o sniperleads_clients, sniperleads_reports, sniperleads_numbers()
 
 **Client-confirmed (2026-10-30, approved mockup "SniperLeads Reports Mockup")**, migration `20261030000001_sniperleads_reports.sql`. The monthly SniperLeads report CRO Leader prepares for each SniperLeads client (App Flow §4.10).

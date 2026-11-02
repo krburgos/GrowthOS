@@ -27,15 +27,24 @@ export interface DailyTarget {
   meetings: number;
 }
 
-export type CallOutcome = "no_answer" | "voicemail" | "connected" | "not_interested" | "meeting_booked";
+export type CallOutcome = "no_answer" | "voicemail" | "connected" | "not_interested" | "bad_number" | "meeting_booked";
 
+/**
+ * In the Log a call grid's order, two per row. Bad number (client-confirmed,
+ * 2026-11-02, approved mockup "Call Logs and Scrub List Mockup") sits beside
+ * Meeting booked.
+ */
 export const OUTCOMES: { value: CallOutcome; label: string; hint: string }[] = [
   { value: "no_answer", label: "No answer", hint: "Next try in 2 business days" },
   { value: "voicemail", label: "Voicemail", hint: "Next try in 2 business days" },
   { value: "connected", label: "Connected", hint: "Pick when to call back" },
   { value: "not_interested", label: "Not interested", hint: "Leaves the queue" },
+  { value: "bad_number", label: "Bad number", hint: "Tags the number that didn't work" },
   { value: "meeting_booked", label: "Meeting booked", hint: "Creates an opportunity at FME Scheduled" },
 ];
+
+/** Which number a Bad number call was about. */
+export type BadWhich = "direct" | "company" | "both";
 
 export const OUTCOME_LABEL = Object.fromEntries(OUTCOMES.map((o) => [o.value, o.label])) as Record<CallOutcome, string>;
 
@@ -60,6 +69,13 @@ export interface QueueRow {
   last_outcome: CallOutcome | null;
   last_call_at: string | null;
   follow_up_on: string | null;
+  /** Tagged by a Bad number call; cleared when the number changes. */
+  phone_bad: boolean;
+  company_phone_bad: boolean;
+  /** On the account's Scrub List: fix the details rather than call. */
+  on_scrub: boolean;
+  email: string | null;
+  company_id: string | null;
 }
 
 export interface SdrPerson {
@@ -133,10 +149,12 @@ export function lastTouch(row: QueueRow, now = new Date()): string {
  * possibly missing. They used to be one number, direct falling back to
  * company.
  */
-export function phoneLines(row: Pick<QueueRow, "phone" | "company_phone">): { label: string; number: string | null }[] {
+export function phoneLines(
+  row: Pick<QueueRow, "phone" | "company_phone"> & Partial<Pick<QueueRow, "phone_bad" | "company_phone_bad">>
+): { label: string; number: string | null; bad: boolean }[] {
   return [
-    { label: "Direct", number: row.phone?.trim() || null },
-    { label: "Company", number: row.company_phone?.trim() || null },
+    { label: "Direct", number: row.phone?.trim() || null, bad: !!row.phone_bad },
+    { label: "Company", number: row.company_phone?.trim() || null, bad: !!row.company_phone_bad },
   ];
 }
 

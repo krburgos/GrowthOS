@@ -31,6 +31,7 @@ import { getTeamMembers } from "@/lib/team/queries";
 import { PLAYBOOK_STEPS } from "@/lib/growth-mission/playbook";
 import { CampaignsWorkspace } from "@/components/campaigns/campaigns-workspace";
 import { CallDesk } from "@/components/sdr/call-desk";
+import { CallLogs } from "@/components/sdr/call-logs";
 import { CAMPAIGN_EDIT_ROLES, EMAIL_CAMPAIGNING_SLUG, getCampaignRows } from "@/lib/campaigns/queries";
 import { ASSIGN_LIST_ROLES, SDR_OUTREACH_SLUG, TARGET_EDIT_ROLES, VIEW_ANY_QUEUE_ROLES } from "@/lib/sdr/desk";
 import { getSdrDesk } from "@/lib/sdr/queries";
@@ -164,6 +165,7 @@ export default async function GrowthMissionStepPage({
           ? [
               { view: "desk", label: "Call Desk", hash: "#call-desk" },
               { view: "queue", label: "Call Queue", hash: "#call-queue" },
+              { view: "logs", label: "Call Logs", hash: "#call-logs", count: sdrDesk.callsThisMonth },
             ]
           : []),
         { view: "arsenal", label: "The Arsenal", hash: "#arsenal", count: files.length },
@@ -291,6 +293,18 @@ export default async function GrowthMissionStepPage({
               salespeople={sdrDesk.salespeople}
               scriptName={files.find((f) => /script/i.test(f.file_name))?.file_name ?? null}
             />
+          )}
+          {sdrDesk && (
+            <SectionPane view="logs">
+              <CallLogs
+                accountId={user.account_id}
+                viewerId={user.id}
+                canViewAny={VIEW_ANY_QUEUE_ROLES.includes(user.role)}
+                people={sdrDesk.people}
+                lists={sdrDesk.lists}
+                focusSlot={<FocusButton view="logs" label="Call Logs" />}
+              />
+            </SectionPane>
           )}
 
           {/* Client-confirmed (2026-10-20, approved mockup "The Arsenal"):

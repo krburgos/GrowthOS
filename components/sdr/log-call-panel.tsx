@@ -19,6 +19,7 @@ import {
   lastTouch,
   phoneLines,
   telHref,
+  type BadWhich,
   type CallOutcome,
   type QueueRow,
 } from "@/lib/sdr/desk";
@@ -29,9 +30,11 @@ type Callback = "tomorrow" | "two" | "week" | "date";
 
 const FIELD = "text-[11px] font-bold uppercase tracking-wide text-neutral-500";
 
+const WHICH_LABEL: Record<BadWhich, string> = { direct: "Direct", company: "Company", both: "Both" };
+
 function followUpFor(outcome: CallOutcome, callback: Callback, pickedDate: string): string | null {
   const now = new Date();
-  if (outcome === "no_answer" || outcome === "voicemail") return dateKey(addBusinessDays(now, 2));
+  if (outcome === "no_answer" || outcome === "voicemail" || outcome === "bad_number") return dateKey(addBusinessDays(now, 2));
   if (outcome !== "connected") return null;
   if (callback === "date") return pickedDate || null;
   if (callback === "two") return dateKey(addBusinessDays(now, 2));
@@ -82,10 +85,21 @@ export function LogCallPanel({
   const [salesperson, setSalesperson] = useState(salespeople[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
 
-  const lines = phoneLines(row).filter((l): l is { label: string; number: string } => !!l.number);
+  const lines = phoneLines(row).filter((l): l is { label: string; number: string; bad: boolean } => !!l.number);
+  // Bad number (2026-11-02): only numbers that exist and aren't tagged yet can be picked.
+  const directOk = !!row.phone?.trim() && !row.phone_bad;
+  const companyOk = !!row.company_phone?.trim() && !row.company_phone_bad;
+  const whichOptions: BadWhich[] = [
+    ...(directOk ? (["direct"] as const) : []),
+    ...(companyOk ? (["company"] as const) : []),
+    ...(directOk && companyOk ? (["both"] as const) : []),
+  ];
+  const [which, setWhich] = useState<BadWhich | null>(whichOptions.length === 1 ? whichOptions[0] : null);
+  const scrubs = which === "both" || (which === "direct" && !companyOk) || (which === "company" && !directOk);
   const hint = OUTCOMES.find((o) => o.value === outcome)?.hint;
   const ready =
     !!outcome &&
+    (outcome !== "bad_number" || !!which) &&
     (outcome !== "meeting_booked" || (!!meetingDate && !!meetingStageId)) &&
     (outcome !== "connected" || callback !== "date" || !!pickedDate);
 
@@ -111,6 +125,19 @@ export function LogCallPanel({
       data: { user },
     } = await supabase.auth.getUser();
     const label = OUTCOMES.find((o) => o.value === outcome)!.label;
+
+    // Tag the number first: if that leaves no good number the contact moves
+    // to the Scrub List, and its call needs no follow-up date.
+    let scrubbed = false;
+    if (outcome === "bad_number" && which) {
+      const { data, error } = await supabase.rpc("mark_bad_number", { p_contact_id: row.contact_id, p_which: which });
+      if (error) {
+        setSaving(false);
+        toast.error(getFriendlyErrorMessage(error));
+        return;
+      }
+      scrubbed = data === true;
+    }
 
     let opportunityId: string | null = null;
     if (outcome === "meeting_booked") {
@@ -140,10 +167,10 @@ export function LogCallPanel({
       opportunity_id: opportunityId,
       user_id: user!.id,
       type: "call",
-      subject: `Call · ${label}`,
+      subject: outcome === "bad_number" && which ? `Call · ${label} · ${WHICH_LABEL[which]}` : `Call · ${label}`,
       body: note.trim() || null,
       call_outcome: outcome,
-      follow_up_on: followUpFor(outcome, callback, pickedDate),
+      follow_up_on: scrubbed ? null : followUpFor(outcome, callback, pickedDate),
     });
     if (error) {
       setSaving(false);
@@ -166,7 +193,13 @@ export function LogCallPanel({
     }
 
     setSaving(false);
-    toast.success(opportunityId ? `Meeting booked · opportunity created for ${row.company_name ?? row.full_name}.` : `Call logged · ${label}.`);
+    toast.success(
+      opportunityId
+        ? `Meeting booked · opportunity created for ${row.company_name ?? row.full_name}.`
+        : scrubbed
+          ? `${row.full_name} moved to the Scrub List.`
+          : `Call logged · ${label}.`
+    );
     onSaved(next);
   };
 
@@ -190,10 +223,17 @@ export function LogCallPanel({
                 No phone number on this contact or company
               </span>
             )}
-            {lines.map(({ label, number }) => (
+            {lines.map(({ label, number, bad }) => (
               <div key={label} className="flex flex-wrap items-center gap-2">
                 <span className="w-[60px] shrink-0 text-[10px] font-bold uppercase tracking-wide text-primary-700">{label}</span>
-                <span className="min-w-0 select-all text-h4 tabular-nums text-primary-900">{number}</span>
+                <span className={cn("min-w-0 select-all text-h4 tabular-nums", bad ? "text-neutral-400 line-through" : "text-primary-900")}>
+                  {number}
+                </span>
+                {bad ? (
+                  <span className="ml-auto rounded-full bg-warning-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning-800">
+                    Bad number
+                  </span>
+                ) : (
                 <span className="ml-auto flex gap-1.5">
                   <a
                     href={telHref(number)}
@@ -212,6 +252,7 @@ export function LogCallPanel({
                     Copy
                   </button>
                 </span>
+                )}
               </div>
             ))}
             <p className="text-caption text-primary-700">
@@ -236,19 +277,25 @@ export function LogCallPanel({
               {OUTCOMES.map((o) => {
                 const on = o.value === outcome;
                 const meeting = o.value === "meeting_booked";
+                const bad = o.value === "bad_number";
+                // No number left to call this time means nothing to tag.
+                const disabled = bad && whichOptions.length === 0;
                 return (
                   <button
                     key={o.value}
                     type="button"
                     aria-pressed={on}
+                    disabled={disabled}
+                    title={disabled ? "Every number on this contact is already tagged bad." : undefined}
                     onClick={() => setOutcome(o.value)}
                     className={cn(
-                      "flex h-10 items-center gap-1.5 rounded-md border px-3 text-left text-body-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40",
-                      meeting && "col-span-2",
+                      "flex h-10 items-center gap-1.5 rounded-md border px-3 text-left text-body-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 disabled:cursor-not-allowed disabled:opacity-40",
                       on
                         ? meeting
                           ? "border-success-600 bg-success-100 text-success-800"
-                          : "border-primary-700 bg-primary-50 text-primary-900"
+                          : bad
+                            ? "border-warning-800 bg-warning-100 text-warning-800"
+                            : "border-primary-700 bg-primary-50 text-primary-900"
                         : "border-neutral-300 bg-white text-neutral-700 hover:border-primary-700"
                     )}
                   >
@@ -260,6 +307,44 @@ export function LogCallPanel({
             </div>
             {hint && <p className="text-caption text-neutral-500">{hint}</p>}
           </fieldset>
+
+          {outcome === "bad_number" && (
+            <div className="flex flex-col gap-2.5 rounded-lg border border-warning-200 bg-warning-50 p-3.5">
+              <span className={FIELD}>Which number was bad?</span>
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Which number was bad">
+                {whichOptions.map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    role="radio"
+                    aria-checked={which === w}
+                    onClick={() => setWhich(w)}
+                    className={cn(
+                      "inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-body-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40",
+                      which === w ? "border-warning-800 bg-white text-warning-800" : "border-neutral-300 bg-white text-neutral-600 hover:border-primary-700"
+                    )}
+                  >
+                    {which === w && <Check className="size-3.5" />}
+                    {WHICH_LABEL[w]}
+                  </button>
+                ))}
+              </div>
+              {which && (
+                <p className="text-body-sm text-neutral-800">
+                  {scrubs ? (
+                    <>
+                      <b>No good number left.</b> {row.full_name} leaves every list and goes to the <b>Scrub List</b>.
+                    </>
+                  ) : (
+                    <>
+                      {WHICH_LABEL[which]} gets a <b>Bad number</b> tag. {row.full_name} stays on the list and is due in 2 business days on the{" "}
+                      <b>{which === "direct" ? "Company" : "Direct"}</b> number.
+                    </>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
 
           {outcome === "connected" && (
             <div className="flex flex-col gap-1.5">

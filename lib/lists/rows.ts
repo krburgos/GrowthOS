@@ -22,7 +22,7 @@ export async function getListRows(
 
   const { data: lists } = await supabase
     .from("lists")
-    .select("id, name, created_at, built_from_icp")
+    .select("id, name, created_at, built_from_icp, is_scrub")
     .eq("account_id", accountId)
     .is("archived_at", null);
 

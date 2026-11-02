@@ -23,6 +23,8 @@ export interface ListRow {
   prospectValue: number;
   /** Made with Build ICP list (client-confirmed, 2026-10-23). */
   built_from_icp: boolean;
+  /** The account's automatic Scrub List (2026-11-02): no rename, no delete. */
+  is_scrub: boolean;
 }
 
 const VIEW_KEY = "growthmission.lists.view";
@@ -133,8 +135,9 @@ export function ListsBoard({ lists, canEdit }: { lists: ListRow[]; canEdit: bool
             {filtered.map((l) => (
               <TableRow key={l.id}>
                 <TableCell label="List" className="font-medium text-neutral-800">
-                  <Link href={`/lists/${l.id}`} className="block hover:underline">
+                  <Link href={`/lists/${l.id}`} className="inline-flex items-center gap-1.5 hover:underline">
                     {l.name}
+                    {l.is_scrub && <ScrubChip />}
                   </Link>
                 </TableCell>
                 <TableCell label="Contacts" className="text-right font-semibold tabular-nums">{l.memberCount}</TableCell>
@@ -156,7 +159,7 @@ export function ListsBoard({ lists, canEdit }: { lists: ListRow[]; canEdit: bool
                 </TableCell>
                 {canEdit && (
                   <TableCell className="text-center">
-                    <ListActionsMenu listId={l.id} listName={l.name} />
+                    {!l.is_scrub && <ListActionsMenu listId={l.id} listName={l.name} />}
                   </TableCell>
                 )}
               </TableRow>
@@ -202,11 +205,12 @@ function ListCard({ list: l, canEdit }: { list: ListRow; canEdit: boolean }) {
           >
             {l.name}
           </Link>
+          {l.is_scrub && <ScrubChip />}
           <p className="text-caption text-neutral-500">
             Added {new Date(l.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
           </p>
         </div>
-        {canEdit && (
+        {canEdit && !l.is_scrub && (
           <div className="relative z-10">
             <ListActionsMenu listId={l.id} listName={l.name} />
           </div>
@@ -239,6 +243,18 @@ function Legend({ tone, n, label }: { tone: string; n: number; label: string }) 
     <span className="inline-flex items-center gap-1.5">
       <span aria-hidden="true" className={cn("size-2 rounded-sm", tone)} />
       {n} {label}
+    </span>
+  );
+}
+
+/** The automatic Scrub List (client-confirmed, 2026-11-02): contacts with no working number. */
+function ScrubChip() {
+  return (
+    <span
+      title="Made automatically for contacts with no working number. It can't be renamed or deleted."
+      className="inline-flex shrink-0 items-center rounded-full bg-warning-100 px-2 py-px text-[11px] font-bold text-warning-800"
+    >
+      Auto
     </span>
   );
 }

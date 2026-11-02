@@ -29,6 +29,8 @@ export interface SdrDesk {
   meetingStageId: string | null;
   /** Account users a booked meeting can be with. */
   salespeople: { id: string; full_name: string }[];
+  /** Calls logged on the account since the 1st of this month (UTC), for the Call Logs tab. */
+  callsThisMonth: number;
 }
 
 async function listSizes(listIds: string[]): Promise<Map<string, number>> {
@@ -106,9 +108,11 @@ export async function getSdrDesk(accountId: string): Promise<SdrDesk> {
   });
 
   const sdrIds = [...new Set(assignments.map((a) => a.sdr_user_id))];
-  const since = new Date(Date.now() - 2 * 86_400_000).toISOString();
+  const now = new Date();
+  const since = new Date(now.getTime() - 2 * 86_400_000).toISOString();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 
-  const [queueResults, { data: calls }] = await Promise.all([
+  const [queueResults, { data: calls }, { count: callsThisMonth }] = await Promise.all([
     Promise.all(
       sdrIds.map((id) =>
         supabase.rpc("sdr_call_queue", {
@@ -127,6 +131,13 @@ export async function getSdrDesk(accountId: string): Promise<SdrDesk> {
           .in("user_id", sdrIds)
           .gte("occurred_at", since)
       : Promise.resolve({ data: [] as RecentCall[] }),
+    supabase
+      .from("activities")
+      .select("id", { count: "exact", head: true })
+      .eq("account_id", accountId)
+      .eq("type", "call")
+      .is("archived_at", null)
+      .gte("occurred_at", monthStart),
   ]);
 
   const queues: Record<string, QueueRow[]> = {};
@@ -158,5 +169,6 @@ export async function getSdrDesk(accountId: string): Promise<SdrDesk> {
     })),
     meetingStageId: meetingStage?.id ?? null,
     salespeople: salespeople ?? [],
+    callsThisMonth: callsThisMonth ?? 0,
   };
 }

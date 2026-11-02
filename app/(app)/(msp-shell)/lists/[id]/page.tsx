@@ -47,7 +47,7 @@ export default async function ListDetailPage({
 
   const { data: list } = await supabase
     .from("lists")
-    .select("id, name")
+    .select("id, name, is_scrub")
     .eq("id", id)
     .is("archived_at", null)
     .single();
@@ -124,7 +124,7 @@ export default async function ListDetailPage({
     <main className="mx-auto w-full max-w-[1800px] flex-1 p-6 md:p-8">
       <div className="mb-2 flex items-center justify-between">
         <h1 className="text-h1 text-primary-900">{list.name}</h1>
-        {canEdit && <ListActionsMenu listId={list.id} listName={list.name} redirectOnDelete="/lists" />}
+        {canEdit && !list.is_scrub && <ListActionsMenu listId={list.id} listName={list.name} redirectOnDelete="/lists" />}
       </div>
       <div className="mb-6 flex items-center justify-between">
         <p className="text-body text-neutral-500">

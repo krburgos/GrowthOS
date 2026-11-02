@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 import type { CampaignRow, MissionFigures, QuarterReport, ReportsData, StageCount } from "@/lib/reports/data";
+import { CALL_OUTCOME_STYLE, OUTCOME_ORDER } from "@/lib/sdr/call-style";
+import { OUTCOME_LABEL, type CallOutcome } from "@/lib/sdr/desk";
 
 /**
  * The Reports page (client-confirmed, 2026-10-14, approved mockup "Reports
@@ -131,6 +133,7 @@ export function ReportsBoard({ data }: { data: ReportsData }) {
           ["pipeline", "Pipeline"],
           ["campaigns", "Campaigns"],
           ["revenue", "Revenue"],
+          ["calling", "Calling"],
         ].map(([id, label]) => (
           <a
             key={id}
@@ -235,6 +238,51 @@ export function ReportsBoard({ data }: { data: ReportsData }) {
           </div>
         </Card>
       </div>
+
+      {/* Client-confirmed (2026-11-02, approved mockup "Call Logs and Scrub
+          List Mockup"): calls logged from the SDR card, full width after
+          the 2×2 grid. */}
+      <Card id="calling" title="Calling" subtitle="Calls logged from the SDR card, weekly across the quarter" exportHref={exportHref("calling")}>
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(320px,2fr)_5fr]">
+          <div className="grid grid-cols-2 content-start gap-2.5 px-5 pb-5 pt-3">
+            {[
+              { label: "Calls", cur: q.calling.calls, prev: p ? p.calling.calls : null, show: fmt, rate: false },
+              { label: "Connects", cur: q.calling.connects, prev: p ? p.calling.connects : null, show: fmt, rate: false },
+              {
+                label: "Connect rate",
+                cur: q.calling.calls ? (q.calling.connects / q.calling.calls) * 100 : 0,
+                prev: p && p.calling.calls ? (p.calling.connects / p.calling.calls) * 100 : null,
+                show: (n: number) => `${Math.round(n)}%`,
+                rate: true,
+              },
+              { label: "Meetings booked", cur: q.calling.meetings, prev: p ? p.calling.meetings : null, show: fmt, rate: false },
+            ].map((k) => (
+              <div key={k.label} className="flex min-w-0 flex-col gap-0.5 rounded-lg border border-neutral-200 px-3.5 py-3">
+                <span className="text-caption font-medium text-neutral-500">
+                  {k.label}
+                  {q.isCurrent && !k.rate ? " · so far" : ""}
+                </span>
+                <span className={`text-h2 font-bold tabular-nums ${k.rate ? "text-secondary-700" : "text-primary-900"}`}>
+                  {k.rate && !q.calling.calls ? "—" : k.show(k.cur)}
+                </span>
+                {k.rate && p && !p.calling.calls ? (
+                  <span className="text-caption text-neutral-500">No calls in {p.label} to compare</span>
+                ) : (
+                  <Delta cur={k.cur} prev={k.prev} against={p?.label} />
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-neutral-100 px-5 pb-4 pt-3 xl:border-l xl:border-t-0">
+            <Headline
+              value={`${fmt(q.calling.calls)} ${q.calling.calls === 1 ? "call" : "calls"}`}
+              text={`in ${q.label}${q.isCurrent ? " so far" : ""}${busiestWeek(q)}`}
+            />
+            <CallsChart q={q} onTip={tipAt} onLeave={hideTip} />
+            <Legend items={OUTCOME_ORDER.map((o) => ({ swatch: CALL_OUTCOME_STYLE[o].bar, label: OUTCOME_LABEL[o] }))} />
+          </div>
+        </div>
+      </Card>
 
       {tip && (
         <div
@@ -546,6 +594,86 @@ function LeadsChart({ q, p, onTip, onLeave }: { q: QuarterReport; p: QuarterRepo
           onMouseLeave={onLeave}
         />
       ))}
+    </svg>
+  );
+}
+
+const weekTotal = (w: Partial<Record<CallOutcome, number>>) => Object.values(w).reduce((s, n) => s + (n ?? 0), 0);
+
+function busiestWeek(q: QuarterReport): string {
+  const totals = q.calling.weekly.map(weekTotal);
+  const top = Math.max(...totals);
+  return top > 0 ? ` · busiest week ${q.weekStarts[totals.indexOf(top)]}` : "";
+}
+
+/** Calls per week, stacked by outcome, best outcome on top (2026-11-02). */
+function CallsChart({ q, onTip, onLeave }: { q: QuarterReport; onTip: TipFn; onLeave: () => void }) {
+  const W = 720;
+  const H = 230;
+  const M: Margin = { t: 16, r: 8, b: 28, l: 34 };
+  const totals = q.calling.weekly.map(weekTotal);
+  const max = niceMax(Math.max(...totals, 1));
+  const ph = H - M.t - M.b;
+  const bw = (W - M.l - M.r) / q.calling.weekly.length;
+  const bottomUp = [...OUTCOME_ORDER].reverse();
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={`Calls per week by outcome, ${q.label}`}>
+      <YGrid W={W} H={H} M={M} max={max} ticks={4} />
+      {q.calling.weekly.map((w, i) => {
+        const x = M.l + bw * i + bw * 0.2;
+        const width = bw * 0.6;
+        let y = H - M.b;
+        const total = totals[i];
+        return (
+          <g key={i}>
+            {bottomUp.map((o) => {
+              const n = w[o] ?? 0;
+              if (!n) return null;
+              const h = (n / max) * ph;
+              y -= h;
+              return <rect key={o} x={x} y={y} width={width} height={h} fill={CALL_OUTCOME_STYLE[o].bar} />;
+            })}
+            {total > 0 && (
+              <text x={x + width / 2} y={y - 5} textAnchor="middle" fontSize={11} fontWeight={600} fill={C.navy}>
+                {total}
+              </text>
+            )}
+            {(i % 2 === 0 || total > 0) && (
+              <text x={x + width / 2} y={H - 9} textAnchor="middle" fontSize={11} fill={total > 0 ? C.navy : C.axis} fontWeight={total > 0 ? 600 : 400}>
+                {q.weekStarts[i]}
+              </text>
+            )}
+            <rect
+              x={M.l + bw * i}
+              y={M.t}
+              width={bw}
+              height={ph}
+              fill="transparent"
+              onMouseMove={(e) =>
+                onTip(
+                  e,
+                  <>
+                    <b>Week of {q.weekStarts[i]}</b>
+                    <br />
+                    {i >= q.weeksElapsed
+                      ? "Not reached yet"
+                      : total === 0
+                        ? "No calls"
+                        : OUTCOME_ORDER.filter((o) => w[o]).map((o) => (
+                            <span key={o} className="block">
+                              {OUTCOME_LABEL[o]} {w[o]}
+                            </span>
+                          ))}
+                  </>
+                )
+              }
+              onMouseLeave={onLeave}
+            />
+          </g>
+        );
+      })}
+      <line x1={M.l} x2={W - M.r} y1={H - M.b} y2={H - M.b} stroke={C.base} />
     </svg>
   );
 }

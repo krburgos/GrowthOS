@@ -4,6 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { currentQuarter, parseQuarterKey } from "@/lib/growth-mission/hours";
 import { getReportsData } from "@/lib/reports/data";
+import { OUTCOME_LABEL, type CallOutcome } from "@/lib/sdr/desk";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Backend Schema §10 — GET /api/reports/export?section=…&q=2026-Q3.
@@ -68,6 +70,53 @@ export async function GET(request: NextRequest) {
         bounced: c.bounced,
         unsub: c.unsubscribed,
       });
+    }
+  } else if (section === "calling") {
+    // Every call in the quarter, the same columns as Call Logs (2026-11-02).
+    const supabase = await createClient();
+    const { data: people } = await supabase.rpc("sdr_candidates", { p_account_id: user.account_id });
+    const nameOf = new Map(((people ?? []) as { id: string; full_name: string }[]).map((p) => [p.id, p.full_name]));
+    const sheet = workbook.addWorksheet(`Calls ${q.label}`);
+    sheet.columns = [
+      { header: "When", key: "when", width: 20 },
+      { header: "SDR", key: "sdr", width: 22 },
+      { header: "Contact", key: "contact", width: 26 },
+      { header: "Title", key: "title", width: 30 },
+      { header: "Company", key: "company", width: 30 },
+      { header: "Outcome", key: "outcome", width: 16 },
+      { header: "Note", key: "note", width: 48 },
+    ];
+    for (let lo = 0; ; lo += 1000) {
+      const { data } = await supabase
+        .from("activities")
+        .select("occurred_at, user_id, call_outcome, subject, body, contacts(full_name, title, companies(name))")
+        .eq("account_id", user.account_id)
+        .eq("type", "call")
+        .is("archived_at", null)
+        .gte("occurred_at", quarter.start)
+        .lt("occurred_at", quarter.nextStart)
+        .order("occurred_at", { ascending: false })
+        .range(lo, lo + 999);
+      for (const c of (data ?? []) as unknown as {
+        occurred_at: string;
+        user_id: string | null;
+        call_outcome: CallOutcome | null;
+        subject: string | null;
+        body: string | null;
+        contacts: { full_name: string; title: string | null; companies: { name: string } | null } | null;
+      }[]) {
+        const which = c.call_outcome === "bad_number" ? c.subject?.split(" · ")[2] : undefined;
+        sheet.addRow({
+          when: new Date(c.occurred_at).toLocaleString("en-US", { timeZone: "America/New_York" }),
+          sdr: nameOf.get(c.user_id ?? "") ?? "CRO Leader",
+          contact: c.contacts?.full_name ?? "",
+          title: c.contacts?.title ?? "",
+          company: c.contacts?.companies?.name ?? "",
+          outcome: c.call_outcome ? OUTCOME_LABEL[c.call_outcome] : "Call",
+          note: [which, c.body?.trim()].filter(Boolean).join(" · "),
+        });
+      }
+      if (!data || data.length < 1000) break;
     }
   } else if (section === "revenue") {
     const sheet = workbook.addWorksheet(`Revenue ${q.label}`);

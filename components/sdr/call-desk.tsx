@@ -1,6 +1,6 @@
 "use client";
 
-import { Filter, Phone, Plus, Search, X } from "lucide-react";
+import { Filter, Phone, Plus, Search, Wrench, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -10,6 +10,7 @@ import { StatusPill } from "@/components/contacts/status-pill";
 import { FocusButton, SectionPane } from "@/components/growth-mission/section-switcher";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { AssignListDialog } from "@/components/sdr/assign-list-dialog";
+import { FixInfoPanel } from "@/components/sdr/fix-info-panel";
 import { LogCallPanel } from "@/components/sdr/log-call-panel";
 import { Button } from "@/components/ui/button";
 import { CountUp } from "@/components/ui/count-up";
@@ -116,6 +117,8 @@ export function CallDesk({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [logging, setLogging] = useState<QueueRow | null>(null);
+  // A Scrub List contact being fixed (2026-11-02).
+  const [fixing, setFixing] = useState<QueueRow | null>(null);
   const [assigning, setAssigning] = useState(false);
   const { flashId, flash } = useFlash();
   // True when the panel moved on with Save & next call: the next contact slides in.
@@ -537,6 +540,10 @@ export function CallDesk({
                 <div className="flex flex-col gap-2.5 px-4 py-4 lg:hidden">
                   {shown.map(({ row, due }) => (
                     <QueueCard key={row.contact_id} row={row} due={due} canLog={canLog} onLog={() => {
+                        if (row.on_scrub) {
+                          setFixing(row);
+                          return;
+                        }
                         setChained(false);
                         setLogging(row);
                       }} />
@@ -602,19 +609,25 @@ export function CallDesk({
                           </span>
                           <span className="text-right text-body-sm tabular-nums text-neutral-700">{row.attempts}</span>
                           <span className="text-right">
-                            {canLog && (
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  setChained(false);
-                                  setLogging(row);
-                                }}
-                                className="gap-1.5"
-                              >
-                                <Phone className="size-3.5" />
-                                Log call
-                              </Button>
-                            )}
+                            {canLog &&
+                              (row.on_scrub ? (
+                                <Button size="sm" variant="secondary" onClick={() => setFixing(row)} className="gap-1.5">
+                                  <Wrench className="size-3.5" />
+                                  Fix info
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    setChained(false);
+                                    setLogging(row);
+                                  }}
+                                  className="gap-1.5"
+                                >
+                                  <Phone className="size-3.5" />
+                                  Log call
+                                </Button>
+                              ))}
                           </span>
                         </div>
                       );
@@ -655,6 +668,18 @@ export function CallDesk({
         />
       )}
 
+      {fixing && (
+        <FixInfoPanel
+          key={fixing.contact_id}
+          row={fixing}
+          onClose={() => setFixing(null)}
+          onDone={() => {
+            setFixing(null);
+            router.refresh();
+          }}
+        />
+      )}
+
       {assigning && (
         <AssignListDialog
           accountId={accountId}
@@ -683,8 +708,14 @@ export function CallDesk({
 function PhoneLines({ row, className }: { row: QueueRow; className?: string }) {
   return (
     <span className={cn("flex min-w-0 flex-col gap-0.5 text-body-sm tabular-nums", className)}>
-      {phoneLines(row).map(({ label, number }) =>
-        number ? (
+      {phoneLines(row).map(({ label, number, bad }) =>
+        number && bad ? (
+          // Tagged by a Bad number call (2026-11-02): shown, never dialed.
+          <span key={label} className="flex min-h-[22px] min-w-0 items-center gap-1.5" title="Tagged as a bad number">
+            <span className="w-[52px] shrink-0 text-[10px] font-bold uppercase tracking-wide text-warning-800">{label} bad</span>
+            <span className="truncate text-neutral-400 line-through">{number}</span>
+          </span>
+        ) : number ? (
           <a
             key={label}
             href={telHref(number)}
@@ -722,8 +753,8 @@ function QueueCard({ row, due, canLog, onLog }: { row: QueueRow; due: Due; canLo
           {due === "new" ? "Never called" : lastTouch(row)} · {row.attempts} {row.attempts === 1 ? "attempt" : "attempts"}
         </span>
         {canLog && (
-          <Button size="sm" onClick={onLog}>
-            Log call
+          <Button size="sm" variant={row.on_scrub ? "secondary" : "primary"} onClick={onLog}>
+            {row.on_scrub ? "Fix info" : "Log call"}
           </Button>
         )}
       </div>

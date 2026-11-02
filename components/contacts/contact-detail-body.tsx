@@ -223,7 +223,7 @@ export function ContactDetailBody({
 
   const contactLine = [title, company?.name].filter(Boolean).join(" · ");
   const numbers = phoneLines({ phone, company_phone: companyPhone }).filter(
-    (l): l is { label: string; number: string } => !!l.number
+    (l): l is { label: string; number: string; bad: boolean } => !!l.number
   );
 
   return (
