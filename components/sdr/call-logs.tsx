@@ -1,10 +1,11 @@
 "use client";
 
-import { Filter, Search } from "lucide-react";
+import { Download, Filter, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
+import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Input } from "@/components/ui/input";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
@@ -183,6 +184,30 @@ export function CallLogs({
   const callers = new Set(shown.map((c) => c.user_id)).size;
   const filtering = !!outcome || !!listId || !!query.trim() || (canViewAny && !!sdr);
 
+  // Export PDF (client-confirmed, 2026-11-08, approved mockup "Call Logs PDF
+  // Export Mockup"): the totals for exactly these filters, counted again on
+  // the server so the PDF is not held to the 2,000 calls loaded here.
+  const exportHref = useMemo(() => {
+    if (!range) return null;
+    const last = new Date(range[1]);
+    last.setDate(last.getDate() - 1);
+    const p = new URLSearchParams({
+      start: range[0].toISOString(),
+      end: range[1].toISOString(),
+      fromDay: dateKey(range[0]),
+      toDay: dateKey(last),
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    if (sdr) p.set("sdr", sdr);
+    if (outcome) p.set("outcome", outcome);
+    if (listId) p.set("list", listId);
+    if (query.trim()) p.set("q", query.trim());
+    return `/api/sdr/call-report?${p.toString()}`;
+    // range is derived from rangeKey.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rangeKey, sdr, outcome, listId, query]);
+  const canExport = !!exportHref && calls !== null && !error && !(listId && !inList) && shown.length > 0;
+
   const reset = () => setPage(1);
   const trigger = (active: boolean) =>
     cn("h-8 w-auto min-w-[150px] text-body-sm", active ? "border-primary-700 bg-primary-50 font-semibold text-primary-900" : "bg-white");
@@ -208,6 +233,19 @@ export function CallLogs({
             }
             className="text-white/45 hover:text-secondary-300"
           />
+          {canExport ? (
+            <Button asChild size="sm" variant="secondary" className="border-transparent hover:border-transparent">
+              <a href={exportHref!} download>
+                <Download className="mr-1.5 size-4" />
+                Export PDF
+              </a>
+            </Button>
+          ) : (
+            <Button size="sm" variant="secondary" className="border-transparent hover:border-transparent" disabled>
+              <Download className="mr-1.5 size-4" />
+              Export PDF
+            </Button>
+          )}
           {focusSlot}
         </div>
       </div>

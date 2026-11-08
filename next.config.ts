@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
     "/api/growth-mission/[slug]/export": ["./lib/pdf/fonts/**/*", "./public/growthmission-logo.png"],
     "/api/advocate-dash/[targetId]/report": ["./lib/pdf/fonts/**/*", "./public/growthmission-logo.png"],
     "/api/sniperleads/reports/[id]/pdf": ["./lib/pdf/fonts/**/*", "./public/growthmission-logo.png"],
+    "/api/sdr/call-report": ["./lib/pdf/fonts/**/*", "./public/growthmission-logo.png"],
   },
 };
 
