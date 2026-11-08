@@ -1363,6 +1363,7 @@ create policy campaign_events_select on campaign_events for select
 
 ## 7. Database Functions & Triggers (SQL)
 
+**Function access (2026-11-08, migration `20261108000001_hardening_before_new_clients.sql`, from Supabase's security and performance advisors).** No SECURITY DEFINER function in `public` is executable by `anon`. Functions only triggers or pg_cron call (the seed functions, `send_due_campaigns`, the trigger functions) are executable by `service_role` only; firing a trigger or running a cron job never checks the caller's EXECUTE. RPCs the app calls when signed in keep `authenticated`. The `auth_*`/`is_*`/`can_work_account` helpers keep their grants because RLS policies call them. Every new SECURITY DEFINER function should end with the matching `revoke ... from public, anon` and `grant`. The same migration pins `search_path` on five older functions, adds indexes for calls by SDR, opportunities by stage and owner, list assignments and roster rows by user, and campaign recipients and scrub entries by contact, and wraps `auth.uid()` as `(select auth.uid())` in six policies (same conditions).
 
 ### 7.1 updated_at maintenance
 
