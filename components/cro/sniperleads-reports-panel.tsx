@@ -349,7 +349,11 @@ function HistoryPanel({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="left-auto right-0 top-0 flex h-dvh max-h-dvh w-full max-w-[480px] translate-x-0 translate-y-0 flex-col gap-0 rounded-none p-0 sm:rounded-l-lg">
+      <DialogContent
+        // Focus would land on the info icon and pop its tooltip open; the panel itself takes it instead.
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="left-auto right-0 top-0 flex h-dvh max-h-dvh w-full max-w-[480px] translate-x-0 translate-y-0 flex-col gap-0 rounded-none p-0 sm:rounded-l-lg"
+      >
         <DialogHeader className="mb-0 flex flex-col gap-2 border-b border-neutral-100 px-6 pb-4 pt-5 pr-12">
           <p className="text-caption font-semibold text-secondary-700">SniperLeads Reports</p>
           <DialogTitle>{client.name}</DialogTitle>
