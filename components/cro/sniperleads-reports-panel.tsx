@@ -1,11 +1,13 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download, RotateCw, TriangleAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FilterField, FilterTitle, filterTriggerClass } from "@/components/ui/filter-bar";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Input } from "@/components/ui/input";
@@ -40,8 +42,8 @@ export interface SniperLeadsClient {
   name: string;
   startMonth: string;
   ownerName: string | null;
-  /** Live, from sniperleads_numbers(). */
-  gm: GmNumbers;
+  /** Live, from sniperleads_numbers(); null when the count failed twice. */
+  gm: GmNumbers | null;
 }
 
 const STATUS_LABEL: Record<ReportStatus, string> = {
@@ -91,6 +93,8 @@ export function SniperLeadsReportsPanel({
   const [month, setMonth] = useState(currentMonth);
   const [status, setStatus] = useState<ReportStatus | "">("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [historyId, setHistoryId] = useState<string | null>(null);
+  const router = useRouter();
 
   const earliest = clients.reduce((min, c) => (c.startMonth < min ? c.startMonth : min), currentMonth);
   const months = monthsBetween(earliest, currentMonth);
@@ -100,17 +104,23 @@ export function SniperLeadsReportsPanel({
     .filter((c) => c.startMonth <= month)
     .map((c) => {
       const report = byKey.get(`${c.accountId}|${month}`) ?? null;
-      return { client: c, report, status: reportStatus(report) };
+      // An exported report keeps the numbers saved with it; otherwise live, or null if the count failed.
+      const gm = report?.gm_numbers ?? c.gm;
+      return { client: c, report, gm, status: reportStatus(report) };
     });
   const shown = rows.filter((r) => !status || r.status === status);
   const exported = rows.filter((r) => r.status === "exported").length;
+  const missing = rows.filter((r) => !r.gm).length;
+  const total = (key: "flagged" | "meetings") => (missing ? "—" : rows.reduce((n, r) => n + (r.gm?.[key] ?? 0), 0).toLocaleString());
+  const historyClient = clients.find((c) => c.accountId === historyId) ?? null;
 
   const open = rows.find((r) => r.client.accountId === openId);
-  if (open) {
+  if (open?.gm) {
     return (
       <ReportEditor
         key={`${open.client.accountId}|${month}`}
         client={open.client}
+        gm={open.gm}
         month={month}
         report={open.report}
         signers={signers}
@@ -177,6 +187,20 @@ export function SniperLeadsReportsPanel({
         </FilterField>
       </div>
 
+      {missing > 0 && (
+        <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-warning-200 bg-warning-100 px-5 py-2.5">
+          <TriangleAlert className="size-4 shrink-0 text-warning-800" aria-hidden="true" />
+          <span className="text-body-sm font-medium text-warning-800">
+            Couldn&apos;t load GrowthMission&apos;s numbers for {missing} {missing === 1 ? "client" : "clients"}.{" "}
+            {missing === 1 ? "Its report" : "Their reports"} can&apos;t be opened until they load.
+          </span>
+          <Button variant="secondary" size="sm" className="ml-auto" onClick={() => router.refresh()}>
+            <RotateCw className="mr-1.5 size-3.5" />
+            Refresh
+          </Button>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <div className="min-w-[1080px]">
           <div className={`${COLS} border-b border-primary-200 bg-primary-50 px-5 py-2 ${HEAD}`}>
@@ -199,21 +223,36 @@ export function SniperLeadsReportsPanel({
             <div className="divide-y divide-neutral-100">
               {shown
                 .sort((a, b) => a.client.name.localeCompare(b.client.name))
-                .map(({ client, report, status: s }) => {
+                .map(({ client, report, gm, status: s }) => {
                   const filled = outreachFilled(report ?? EMPTY_OUTREACH_FOR_LIST);
-                  const gm = report?.gm_numbers ?? client.gm;
+                  const figure = (n: number | undefined) =>
+                    n === undefined ? <span className="text-neutral-400">—</span> : n.toLocaleString();
                   return (
                     <div key={client.accountId} className={`${COLS} px-5 py-2.5 hover:bg-primary-50`}>
-                      <span className="truncate text-body-sm font-semibold text-primary-900" title={client.name}>
-                        {client.name}
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setHistoryId(client.accountId)}
+                          className="truncate rounded text-left text-body-sm font-semibold text-primary-900 hover:text-secondary-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
+                          title={`${client.name}: report history`}
+                        >
+                          {client.name}
+                        </button>
+                        {!gm && (
+                          <InfoTip
+                            tone="warning"
+                            label={`${client.name}: numbers didn't load`}
+                            text="Couldn't count this client's numbers. Refresh the page to try again."
+                          />
+                        )}
                       </span>
                       <span className="text-body-sm tabular-nums text-neutral-600">Month {monthNumber(client.startMonth, month)}</span>
                       <span>
                         <StatusPill status={s} exportedAt={report?.exported_at} />
                       </span>
-                      <span className="text-right text-body-sm tabular-nums text-neutral-700">{gm.flagged.toLocaleString()}</span>
-                      <span className="text-right text-body-sm tabular-nums text-neutral-700">{gm.opportunities.toLocaleString()}</span>
-                      <span className="text-right text-body-sm tabular-nums text-neutral-700">{gm.meetings.toLocaleString()}</span>
+                      <span className="text-right text-body-sm tabular-nums text-neutral-700">{figure(gm?.flagged)}</span>
+                      <span className="text-right text-body-sm tabular-nums text-neutral-700">{figure(gm?.opportunities)}</span>
+                      <span className="text-right text-body-sm tabular-nums text-neutral-700">{figure(gm?.meetings)}</span>
                       <span className="flex items-center gap-2">
                         <span className="h-1.5 w-16 overflow-hidden rounded-full bg-neutral-200">
                           <span
@@ -226,7 +265,13 @@ export function SniperLeadsReportsPanel({
                         </span>
                       </span>
                       <span className="flex justify-end">
-                        <Button variant="secondary" size="sm" onClick={() => setOpenId(client.accountId)}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={!gm}
+                          title={gm ? undefined : "Waiting for this client's numbers"}
+                          onClick={() => setOpenId(client.accountId)}
+                        >
                           {s === "exported" ? "View" : "Open"}
                         </Button>
                       </span>
@@ -241,11 +286,10 @@ export function SniperLeadsReportsPanel({
       {rows.length > 0 && (
         <div className="flex flex-wrap gap-x-5 gap-y-1 border-t border-primary-200 bg-primary-100 px-5 py-2.5 text-caption tabular-nums text-primary-700">
           <span>
-            <b className="font-semibold text-primary-900">{rows.reduce((n, r) => n + (r.report?.gm_numbers ?? r.client.gm).flagged, 0).toLocaleString()}</b>{" "}
-            flagged in total
+            <b className="font-semibold text-primary-900">{total("flagged")}</b> flagged in total
           </span>
           <span>
-            <b className="font-semibold text-primary-900">{rows.reduce((n, r) => n + (r.report?.gm_numbers ?? r.client.gm).meetings, 0).toLocaleString()}</b>{" "}
+            <b className="font-semibold text-primary-900">{total("meetings")}</b>{" "}
             meetings booked
           </span>
           <span>
@@ -256,7 +300,145 @@ export function SniperLeadsReportsPanel({
           </span>
         </div>
       )}
+
+      {historyClient && (
+        <HistoryPanel
+          client={historyClient}
+          reports={reports.filter((r) => r.account_id === historyClient.accountId)}
+          signers={signers}
+          currentMonth={currentMonth}
+          onClose={() => setHistoryId(null)}
+          onOpen={(m) => {
+            setHistoryId(null);
+            setStatus("");
+            setMonth(m);
+            setOpenId(historyClient.accountId);
+          }}
+        />
+      )}
     </section>
+  );
+}
+
+/**
+ * A client's SniperLeads report history (client-confirmed 2026-11-09,
+ * approved mockup "SniperLeads History Mockup"): a side panel, the New
+ * Opportunity panel's pattern, opened from the client's name. Every month
+ * with a saved report, newest first, plus the current month. Months never
+ * started stay out of it; the Month filter still reaches them.
+ */
+function HistoryPanel({
+  client,
+  reports,
+  signers,
+  currentMonth,
+  onClose,
+  onOpen,
+}: {
+  client: SniperLeadsClient;
+  reports: ReportRow[];
+  signers: { id: string; name: string }[];
+  currentMonth: string;
+  onClose: () => void;
+  onOpen: (month: string) => void;
+}) {
+  const byMonth = new Map(reports.map((r) => [r.month, r]));
+  const months = [...new Set([...reports.map((r) => r.month), ...(client.startMonth <= currentMonth ? [currentMonth] : [])])].sort().reverse();
+  const exportedCount = reports.filter((r) => r.exported_at).length;
+  const signerName = (id: string | null) => signers.find((s) => s.id === id)?.name ?? null;
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="left-auto right-0 top-0 flex h-dvh max-h-dvh w-full max-w-[480px] translate-x-0 translate-y-0 flex-col gap-0 rounded-none p-0 sm:rounded-l-lg">
+        <DialogHeader className="mb-0 flex flex-col gap-2 border-b border-neutral-100 px-6 pb-4 pt-5 pr-12">
+          <p className="text-caption font-semibold text-secondary-700">SniperLeads Reports</p>
+          <DialogTitle>{client.name}</DialogTitle>
+          <DialogDescription className="text-body-sm tabular-nums text-neutral-500">
+            Started {monthLabel(client.startMonth)}
+            {client.ownerName ? ` · For ${client.ownerName}` : ""} · {exportedCount} {exportedCount === 1 ? "report" : "reports"} exported
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          <div className="flex items-center gap-1.5 border-b border-primary-200 bg-primary-50 px-6 py-2">
+            <h3 className={HEAD}>Reports</h3>
+            <InfoTip
+              label="About these numbers"
+              text="Exported months show the numbers saved when they were exported. A month not exported yet shows today's live counts."
+            />
+          </div>
+
+          {months.length === 0 ? (
+            <p className="px-6 py-8 text-center text-body-sm text-neutral-500">No reports yet. The first one is due in {monthLabel(client.startMonth)}.</p>
+          ) : (
+            <div className="divide-y divide-neutral-100">
+              {months.map((m) => {
+                const report = byMonth.get(m) ?? null;
+                const s = reportStatus(report);
+                const gm = report?.gm_numbers ?? client.gm;
+                const filled = outreachFilled(report ?? EMPTY_OUTREACH_FOR_LIST);
+                const signer = signerName(report?.signer_id ?? null);
+                const figure = (label: string, n: number | undefined) => (
+                  <div>
+                    <dt className="text-caption text-neutral-500">{label}</dt>
+                    <dd className={cn("text-body-sm font-bold tabular-nums", n === undefined ? "text-neutral-400" : "text-primary-900")}>
+                      {n === undefined ? "—" : n.toLocaleString()}
+                    </dd>
+                  </div>
+                );
+                return (
+                  <article key={m} className="flex flex-col gap-2.5 px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <span className="min-w-0 text-body-sm font-semibold text-primary-900">
+                        {monthLabel(m)} <span className="font-normal text-neutral-500">· Month {monthNumber(client.startMonth, m)}</span>
+                      </span>
+                      <span className="ml-auto">
+                        <StatusPill status={s} exportedAt={report?.exported_at} />
+                      </span>
+                    </div>
+                    <div className="flex items-end gap-3">
+                      <dl className="grid flex-1 grid-cols-3 gap-2">
+                        {figure("Flagged", gm?.flagged)}
+                        {figure("Opportunities", gm?.opportunities)}
+                        {figure("Meetings", gm?.meetings)}
+                      </dl>
+                      {report?.exported_at ? (
+                        <Button asChild variant="secondary" size="sm" className="w-[124px]">
+                          <a href={`/api/sniperleads/reports/${report.id}/pdf`} rel="noopener">
+                            <Download className="mr-1.5 size-3.5" />
+                            Download PDF
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="w-[124px]"
+                          disabled={!gm}
+                          title={gm ? undefined : "Waiting for this client's numbers"}
+                          onClick={() => onOpen(m)}
+                        >
+                          Open
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-caption tabular-nums text-neutral-500">
+                      {report?.exported_at
+                        ? signer
+                          ? `Signed by ${signer}`
+                          : "Exported"
+                        : report
+                          ? `Draft · ${filled} of ${OUTREACH_TOTAL} outreach numbers in`
+                          : "Nothing saved yet"}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -275,6 +457,7 @@ function toNum(s: string): number | null {
 
 function ReportEditor({
   client,
+  gm,
   month,
   report,
   signers,
@@ -283,6 +466,8 @@ function ReportEditor({
   onSaved,
 }: {
   client: SniperLeadsClient;
+  /** The report's saved numbers, else the live count; the editor only opens once one exists. */
+  gm: GmNumbers;
   month: string;
   report: ReportRow | null;
   signers: { id: string; name: string }[];
@@ -290,7 +475,6 @@ function ReportEditor({
   onBack: () => void;
   onSaved: (row: ReportRow) => void;
 }) {
-  const gm = report?.gm_numbers ?? client.gm;
   const [nums, setNums] = useState<Record<NumField, string>>({
     emails_sent: toText(report?.emails_sent),
     real_replies: toText(report?.real_replies),
@@ -359,7 +543,7 @@ function ReportEditor({
             exported_at: new Date().toISOString(),
             exported_by: currentUserId,
             // The first export fixes the GM numbers; exporting again keeps them.
-            gm_numbers: savedRow?.gm_numbers ?? client.gm,
+            gm_numbers: savedRow?.gm_numbers ?? gm,
           }
         : {}),
     };

@@ -247,14 +247,29 @@ export default async function CroDashboardPage() {
     for (const o of ownerRows ?? []) if (o.account_id && !ownerByAccount.has(o.account_id)) ownerByAccount.set(o.account_id, o.full_name);
 
     const live = accounts.filter((a) => slSettings[a.id]?.active);
-    const numbers = await Promise.all(live.map((a) => supabase.rpc("sniperleads_numbers", { p_account_id: a.id })));
-    slClients = live.map((a, i) => ({
-      accountId: a.id,
-      name: a.name,
-      startMonth: slSettings[a.id].startMonth,
-      ownerName: ownerByAccount.get(a.id) ?? null,
-      gm: { pool: 0, flagged: 0, opportunities: 0, meetings: 0, proposals: 0, won: 0, ...((numbers[i].data ?? {}) as Partial<GmNumbers>) },
-    }));
+    // A count that fails (on 2026-11-09 three hit the statement timeout) is
+    // tried once more, then passed on as null: the panel shows "—" and locks
+    // that client's report rather than showing, or exporting, a 0.
+    const count = (id: string) => supabase.rpc("sniperleads_numbers", { p_account_id: id });
+    const numbers = await Promise.all(
+      live.map(async (a) => {
+        const first = await count(a.id);
+        return first.error || !first.data ? count(a.id) : first;
+      })
+    );
+    slClients = live.map((a, i) => {
+      const { data, error } = numbers[i];
+      return {
+        accountId: a.id,
+        name: a.name,
+        startMonth: slSettings[a.id].startMonth,
+        ownerName: ownerByAccount.get(a.id) ?? null,
+        gm:
+          error || !data
+            ? null
+            : { pool: 0, flagged: 0, opportunities: 0, meetings: 0, proposals: 0, won: 0, ...(data as Partial<GmNumbers>) },
+      };
+    });
   }
   const reportsToFinish = slClients.filter(
     (c) => c.startMonth <= currentMonth && !slReports.some((r) => r.account_id === c.accountId && r.month === currentMonth && r.exported_at)
