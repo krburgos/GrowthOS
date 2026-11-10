@@ -128,6 +128,10 @@ export function CallDesk({
   useEffect(() => setNow(new Date()), []);
 
   const isMe = sdrId === viewerId;
+  // Client-confirmed (2026-11-10): Log call only in your own queue, so every
+  // call is credited to whoever made it. Looking at someone else's queue is
+  // read-only for calls; Fix info on Scrub List contacts stays available.
+  const canLogCalls = canLog && isMe;
   const sdrName = holders.find((h) => h.id === sdrId)?.full_name ?? people.find((p) => p.id === sdrId)?.full_name ?? "";
   const myAssignments = assignments.filter((a) => a.sdr_user_id === sdrId).sort((a, b) => a.list_name.localeCompare(b.list_name));
   const queue = (sdrId && queues[sdrId]) || [];
@@ -545,7 +549,7 @@ export function CallDesk({
                 {/* Below lg each contact is a card. */}
                 <div className="flex flex-col gap-2.5 px-4 py-4 lg:hidden">
                   {shown.map(({ row, due }) => (
-                    <QueueCard key={row.contact_id} row={row} due={due} canLog={canLog} onLog={() => {
+                    <QueueCard key={row.contact_id} row={row} due={due} canLog={canLog && (row.on_scrub || canLogCalls)} onLog={() => {
                         if (row.on_scrub) {
                           setFixing(row);
                           return;
@@ -621,7 +625,7 @@ export function CallDesk({
                                   <Wrench className="size-3.5" />
                                   Fix info
                                 </Button>
-                              ) : (
+                              ) : canLogCalls ? (
                                 <Button
                                   size="sm"
                                   onClick={() => {
@@ -633,7 +637,7 @@ export function CallDesk({
                                   <Phone className="size-3.5" />
                                   Log call
                                 </Button>
-                              ))}
+                              ) : null)}
                           </span>
                         </div>
                       );
