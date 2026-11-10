@@ -1,6 +1,8 @@
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
 
+import { fixMojibake } from "@/lib/import/mojibake";
+
 export interface ParsedFile {
   headers: string[];
   rows: Record<string, string>[];
@@ -13,9 +15,13 @@ export interface ParsedFile {
  * were importing as "'+1 603-598-4526").
  */
 function cellText(v: unknown): string {
-  return String(v ?? "")
-    .trim()
-    .replace(/^'(?=\S)/, "");
+  // Garbled characters from earlier mis-saves ("Ã‚Â®" for "®") are
+  // repaired here, for CSV and Excel alike (2026-11-10).
+  return fixMojibake(
+    String(v ?? "")
+      .trim()
+      .replace(/^'(?=\S)/, "")
+  );
 }
 
 /**
@@ -26,7 +32,12 @@ export async function parseImportFile(file: File): Promise<ParsedFile> {
   const name = file.name.toLowerCase();
 
   if (name.endsWith(".csv")) {
-    const text = await file.text();
+    // UTF-8 first. A CSV saved by Excel as "CSV (Comma delimited)" is
+    // Windows-1252, which decodes to replacement characters, so it's read
+    // again that way (2026-11-10).
+    const bytes = await file.arrayBuffer();
+    let text = new TextDecoder("utf-8").decode(bytes);
+    if (text.includes("�")) text = new TextDecoder("windows-1252").decode(bytes);
     const result = Papa.parse<Record<string, string>>(text, {
       header: true,
       skipEmptyLines: true,

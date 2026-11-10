@@ -120,6 +120,21 @@ export async function getReportsData(accountId: string, selected: QuarterInfo): 
   const prevInfo = quarterIndex(sel) > quarterIndex(first) ? previousQuarter(sel) : null;
   const from = (prevInfo ?? sel).start;
 
+  // Every row, 1,000 at a time: PostgREST returns at most 1,000 per request,
+  // which held Leads added at 1,000 for bigger accounts (fixed 2026-11-10).
+  // Ordered by id so pages never overlap or skip a row.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const everyRow = async (query: () => any): Promise<{ data: any[] }> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const out: any[] = [];
+    for (let lo = 0; ; lo += 1000) {
+      const { data } = await query().order("id").range(lo, lo + 999);
+      out.push(...(data ?? []));
+      if (!data || data.length < 1000) break;
+    }
+    return { data: out };
+  };
+
   const [
     { data: contacts },
     { data: opportunities },
@@ -132,33 +147,39 @@ export async function getReportsData(accountId: string, selected: QuarterInfo): 
     { data: allotmentRows },
     team,
   ] = await Promise.all([
-    supabase
-      .from("contacts")
-      .select("created_at")
-      .eq("account_id", accountId)
-      .is("archived_at", null)
-      .gte("created_at", from)
-      .lt("created_at", sel.nextStart),
-    supabase
-      .from("opportunities")
-      .select("created_at")
-      .eq("account_id", accountId)
-      .gte("created_at", from)
-      .lt("created_at", sel.nextStart),
-    supabase
-      .from("opportunities")
-      .select("closed_at, companies(company_size), opportunity_stages!inner(stage_group)")
-      .eq("account_id", accountId)
-      .eq("opportunity_stages.stage_group", "won")
-      .gte("closed_at", from)
-      .lt("closed_at", sel.nextStart),
+    everyRow(() =>
+      supabase
+        .from("contacts")
+        .select("created_at")
+        .eq("account_id", accountId)
+        .is("archived_at", null)
+        .gte("created_at", from)
+        .lt("created_at", sel.nextStart)
+    ),
+    everyRow(() =>
+      supabase
+        .from("opportunities")
+        .select("created_at")
+        .eq("account_id", accountId)
+        .gte("created_at", from)
+        .lt("created_at", sel.nextStart)
+    ),
+    everyRow(() =>
+      supabase
+        .from("opportunities")
+        .select("closed_at, companies(company_size), opportunity_stages!inner(stage_group)")
+        .eq("account_id", accountId)
+        .eq("opportunity_stages.stage_group", "won")
+        .gte("closed_at", from)
+        .lt("closed_at", sel.nextStart)
+    ),
     supabase
       .from("opportunity_stages")
       .select("id, name, stage_group, sort_order")
       .eq("account_id", accountId)
       .is("archived_at", null)
       .order("sort_order"),
-    supabase.from("opportunities").select("stage_id").eq("account_id", accountId),
+    everyRow(() => supabase.from("opportunities").select("stage_id").eq("account_id", accountId)),
     supabase
       .from("campaigns")
       .select("id, name")
