@@ -121,17 +121,21 @@ export default async function ContactsListPage({
     countOf("mine"),
     countOf("new"),
     countOf("hot"),
-    // Every company's size, for the summary line: each company counted
-    // once, however many contacts it has. Its state too, for the State
-    // filter's choices. Paged, past PostgREST's 1,000 cap.
+    // The size of every company that still has a contact, for the summary
+    // line: each company counted once, however many contacts it has, and
+    // a company whose contacts were all deleted drops out (it stays on
+    // Companies). Its state too, for the State filter's choices. Paged,
+    // past PostgREST's 1,000 cap.
     (async () => {
       const out: { size: string | null; state: string | null }[] = [];
       for (let lo = 0; ; lo += 1000) {
         const { data } = await supabase
           .from("companies")
-          .select("company_size, state")
+          .select("company_size, state, contacts!inner(id)")
           .eq("account_id", user.account_id)
           .is("archived_at", null)
+          .is("contacts.archived_at", null)
+          .limit(1, { referencedTable: "contacts" })
           .order("id")
           .range(lo, lo + 999);
         out.push(...(data ?? []).map((c) => ({ size: c.company_size as string | null, state: c.state as string | null })));
