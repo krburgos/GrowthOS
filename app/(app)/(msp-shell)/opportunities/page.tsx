@@ -5,6 +5,7 @@ import Link from "next/link";
 import { KanbanBoard, type BoardOpportunity } from "@/components/opportunities/kanban-board";
 import { NewOpportunityButton } from "@/components/opportunities/new-opportunity-panel";
 import { OpportunityListTable, type OpportunityListRow } from "@/components/opportunities/opportunity-list-table";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InfoTip } from "@/components/ui/info-tip";
 import { PaginationBar } from "@/components/ui/pagination-bar";
@@ -223,7 +224,15 @@ export default async function OpportunitiesPage({
       )}
 
       {opportunities.length === 0 ? (
-        <EmptyState icon={Target} />
+        <EmptyState
+          icon={Target}
+          message="No opportunities yet. One is created when a meeting is booked from the Call Desk, or add one with New Opportunity."
+          action={
+            <Button asChild size="sm" variant="secondary">
+              <Link href="/growth-mission/sdr-outreach">Open the Call Desk</Link>
+            </Button>
+          }
+        />
       ) : isListView ? (
         <div>
           <OpportunityListTable

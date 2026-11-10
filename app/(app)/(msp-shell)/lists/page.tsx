@@ -98,7 +98,10 @@ export default async function ListsIndexPage({
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState icon={ListChecks} />
+        <EmptyState
+          icon={ListChecks}
+          message="No lists yet. A list is a group of contacts to call, email or assign to an SDR. Create one or upload a file."
+        />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

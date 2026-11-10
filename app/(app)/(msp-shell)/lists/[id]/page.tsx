@@ -155,6 +155,7 @@ export default async function ListDetailPage({
       {contacts.length === 0 ? (
         <EmptyState
           icon={Users}
+          message="This list is empty. Upload a file, or add contacts from Contacts with Add to list."
           action={
             canEdit ? (
               <Button asChild size="sm">

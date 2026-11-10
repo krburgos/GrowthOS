@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { CompaniesTable, type CompanyRow } from "@/components/companies/companies-table";
 import { CompaniesToolbar } from "@/components/companies/companies-toolbar";
 import { NewCompanyButton } from "@/components/companies/new-company-panel";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InfoTip } from "@/components/ui/info-tip";
 import { PaginationBar } from "@/components/ui/pagination-bar";
@@ -186,7 +188,17 @@ export default async function CompaniesListPage({
       </div>
 
       {all.length === 0 ? (
-        <EmptyState icon={Building2} />
+        <EmptyState
+          icon={Building2}
+          message="No companies yet. They're added automatically when you import or add contacts."
+          action={
+            CAN_CREATE_ROLES.includes(user.role) ? (
+              <Button asChild size="sm" variant="secondary">
+                <Link href="/contacts/import">Import Contacts</Link>
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

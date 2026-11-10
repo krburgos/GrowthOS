@@ -725,7 +725,7 @@ Log In (A1) → Dashboard (C1) · User menu → "Log Out" → A1 · A1 → "Forg
 Rather than repeating these on every screen in §4, they're defined once here and apply everywhere they're relevant.
 | **Pattern** | **Behavior** |
 | --- | --- |
-| Empty state (any list: Contacts, Opportunities, Lists, Campaigns) | Plain "No records yet" message — no onboarding prompts or sample data |
+| Empty state (any list: Contacts, Opportunities, Lists, Campaigns) | ~~Plain "No records yet" message — no onboarding prompts or sample data~~ **Client-confirmed (2026-11-10, UX audit item 5):** one sentence saying what fills the page, plus one button where it helps (Contacts: Import Contacts; Companies: Import Contacts; Opportunities: Open the Call Desk; a list: Upload Contacts). Still no sample data. |
 | Empty state — Dashboard, brand-new account | "No activity yet" — same plain treatment |
 | Empty state — Campaigns, no email account connected | Message directs the user to connect an email account first, before anything about creating a campaign |
 | Loading state | Spinner (not skeleton screens) |

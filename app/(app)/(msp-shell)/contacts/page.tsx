@@ -257,8 +257,16 @@ export default async function ContactsListPage({
       <ImportSummaryBanner importHref="/contacts/import" />
 
       {(allCount ?? 0) === 0 ? (
-        // An empty account has nothing to filter.
-        <EmptyState icon={Users} />
+        // An empty account has nothing to filter. Says what fills it (2026-11-10).
+        <EmptyState
+          icon={Users}
+          message="No contacts yet. Import a spreadsheet or add one by hand: every list, call and campaign starts here."
+          action={
+            <Button asChild size="sm">
+              <Link href="/contacts/import">Import Contacts</Link>
+            </Button>
+          }
+        />
       ) : contacts.length === 0 ? (
         <>
           <ContactsDataTable
