@@ -22,6 +22,8 @@ import { cn } from "@/lib/utils";
 
 /** Rows per commit request. Small enough that progress moves and no request nears a timeout. */
 const BATCH_SIZE = 50;
+/** How long one batch may take before it's stopped and Try again is offered. */
+const BATCH_TIMEOUT_MS = 120_000;
 
 interface Progress {
   /** Rows imported so far, out of `total` (one per email). */
@@ -30,6 +32,8 @@ interface Progress {
   imported: number;
   updated: number;
   kept: number;
+  /** Matched contacts the file wouldn't change, e.g. a re-upload after a stop (2026-11-10). */
+  unchanged: number;
   /** Deleted companies brought back by this import (2026-11-10). */
   restoredCompanies: number;
   addedToList: number;
@@ -205,11 +209,23 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
       let ok = false;
       let body: Record<string, unknown> = {};
       try {
-        const res = await fetch("/api/import/commit", { method: "POST", body: formData });
+        // A batch that hangs stops after 2 minutes instead of waiting on the
+        // server (2026-11-10). Try again resends it, which is safe: rows the
+        // server did save match by email.
+        const res = await fetch("/api/import/commit", {
+          method: "POST",
+          body: formData,
+          signal: AbortSignal.timeout(BATCH_TIMEOUT_MS),
+        });
         ok = res.ok;
         body = await res.json();
-      } catch {
-        body = { error: "The connection dropped." };
+      } catch (err) {
+        body = {
+          error:
+            err instanceof DOMException && err.name === "TimeoutError"
+              ? "A batch took more than 2 minutes, so it was stopped."
+              : "The connection dropped.",
+        };
       }
       const n = (key: string) => (typeof body[key] === "number" ? (body[key] as number) : 0);
 
@@ -220,6 +236,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
           imported: p.imported + n("imported"),
           updated: p.updated + n("updated"),
           kept: p.kept + n("kept"),
+          unchanged: p.unchanged + n("unchanged"),
           restoredCompanies: p.restoredCompanies + n("restoredCompanies"),
           elapsedMs: Date.now() - startedAt,
           failed: typeof body.error === "string" ? body.error : "Import failed.",
@@ -234,6 +251,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
         imported: p.imported + n("imported"),
         updated: p.updated + n("updated"),
         kept: p.kept + n("kept"),
+        unchanged: p.unchanged + n("unchanged"),
         restoredCompanies: p.restoredCompanies + n("restoredCompanies"),
         addedToList: p.addedToList + n("addedToList"),
         nextFrom: n("to") > p.nextFrom ? n("to") : p.nextFrom + BATCH_SIZE,
@@ -261,6 +279,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
       imported: 0,
       updated: 0,
       kept: 0,
+      unchanged: 0,
       restoredCompanies: 0,
       addedToList: 0,
       nextFrom: 0,
@@ -292,6 +311,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
       [progress.imported, "contacts imported"],
       [progress.updated, "existing contacts updated"]
     );
+    if (progress.unchanged > 0) lines.push([progress.unchanged, "already imported, nothing new to update"]);
     if (progress.kept > 0) lines.push([progress.kept, "existing contacts left unchanged"]);
     if (progress.restoredCompanies > 0) {
       lines.push([
@@ -531,6 +551,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
           <div className="flex flex-wrap justify-between gap-3 text-body-sm tabular-nums text-neutral-600">
             <span>
               {progress.imported} imported · {progress.updated} updated
+              {progress.unchanged > 0 && ` · ${progress.unchanged} already imported`}
               {progress.kept > 0 && ` · ${progress.kept} left unchanged`} so far
             </span>
             <span>{progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%</span>

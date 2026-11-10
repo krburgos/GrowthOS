@@ -131,12 +131,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }
 
+  // The matched contacts as they are now, so a row that would change
+  // nothing (a re-upload of a file that was already imported) is counted as
+  // up to date rather than updated (2026-11-10).
+  const matchedIds = [...new Set(batch.map((r) => existingByEmail.get(emailKey(r.email))).filter((id): id is string => !!id))];
+  const currentById = new Map<string, Record<string, unknown>>();
+  if (matchedIds.length > 0) {
+    const { data: currentRows } = await supabase
+      .from("contacts")
+      .select("id, first_name, last_name, title, phone, score, temperature, linkedin_url, company_id, notes, status_id")
+      .in("id", matchedIds);
+    for (const c of currentRows ?? []) currentById.set(c.id as string, c as Record<string, unknown>);
+  }
+
   let created = 0;
   let updated = 0;
   let kept = 0;
+  let unchanged = 0;
   const listContactIds: string[] = [];
   let restoredCompanies = 0;
-  const counts = () => ({ processed: batch.length, imported: created, updated, kept, restoredCompanies });
+  const counts = () => ({ processed: batch.length, imported: created, updated, kept, unchanged, restoredCompanies });
 
   for (const row of batch) {
     const matchedContactId = existingByEmail.get(emailKey(row.email));
@@ -182,23 +196,25 @@ export async function POST(request: NextRequest) {
     const temperature = row.temperature ? (row.temperature.toLowerCase() as "hot" | "cold") : null;
 
     if (matchedContactId) {
-      const { error: updateError } = await supabase
-        .from("contacts")
-        .update(
-          filled({
-            first_name: row.first_name,
-            last_name: row.last_name,
-            title: row.title,
-            phone: row.phone,
-            score,
-            temperature,
-            linkedin_url: row.linkedin_url,
-            company_id: companyId,
-            notes: row.notes,
-            status_id: statusId,
-          })
-        )
-        .eq("id", matchedContactId);
+      const patch = filled({
+        first_name: row.first_name,
+        last_name: row.last_name,
+        title: row.title,
+        phone: row.phone,
+        score,
+        temperature,
+        linkedin_url: row.linkedin_url,
+        company_id: companyId,
+        notes: row.notes,
+        status_id: statusId,
+      });
+      const current = currentById.get(matchedContactId);
+      if (current && Object.entries(patch).every(([k, v]) => String(current[k] ?? "") === String(v))) {
+        unchanged += 1;
+        listContactIds.push(matchedContactId);
+        continue;
+      }
+      const { error: updateError } = await supabase.from("contacts").update(patch).eq("id", matchedContactId);
 
       if (updateError) {
         return NextResponse.json(
