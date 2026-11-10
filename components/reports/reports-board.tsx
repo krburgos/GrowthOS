@@ -157,7 +157,7 @@ export function ReportsBoard({ data }: { data: ReportsData }) {
                 {q.isCurrent ? " · so far" : ""}
               </span>
               <span className="text-h2 font-bold tabular-nums text-primary-900">{k.show(k.cur)}</span>
-              <Delta cur={k.cur} prev={k.prev} against={p?.label} />
+              <Delta cur={k.cur} prev={k.prev} against={p?.label} soFar={q.isCurrent} show={k.show} />
             </div>
           ))}
         </div>
@@ -268,7 +268,7 @@ export function ReportsBoard({ data }: { data: ReportsData }) {
                 {k.rate && p && !p.calling.calls ? (
                   <span className="text-caption text-neutral-500">No calls in {p.label} to compare</span>
                 ) : (
-                  <Delta cur={k.cur} prev={k.prev} against={p?.label} />
+                  <Delta cur={k.cur} prev={k.prev} against={p?.label} soFar={q.isCurrent && !k.rate} show={k.show} />
                 )}
               </div>
             ))}
@@ -340,8 +340,34 @@ function Headline({ value, text }: { value: string; text: string }) {
   );
 }
 
-function Delta({ cur, prev, against }: { cur: number; prev: number | null; against?: string }) {
+/**
+ * UX audit (2026-11-10): a running total for the quarter in progress is
+ * never shown as a red drop against a whole closed quarter; it reads "Too
+ * early to compare" with last quarter's figure instead. Rises, rates and
+ * closed quarters compare as before.
+ */
+function Delta({
+  cur,
+  prev,
+  against,
+  soFar = false,
+  show = (n: number) => n.toLocaleString(),
+}: {
+  cur: number;
+  prev: number | null;
+  against?: string;
+  /** A running total for the quarter in progress. */
+  soFar?: boolean;
+  show?: (n: number) => string;
+}) {
   if (prev === null || !against) return <span className="text-caption text-neutral-400">First quarter on record</span>;
+  if (soFar && prev > 0 && cur < prev) {
+    return (
+      <span className="text-caption text-neutral-500">
+        Too early to compare · {against} had <span className="tabular-nums">{show(prev)}</span>
+      </span>
+    );
+  }
   if (prev === 0) {
     return <span className="text-caption text-neutral-500">{cur > 0 ? `New this quarter · none in ${against}` : `None in ${against} either`}</span>;
   }
