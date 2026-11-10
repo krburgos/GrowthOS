@@ -74,19 +74,24 @@ export function HoursCard({
        the old hover-border-cyan cue is invisible without one. Depth and the
        hover cue both come from shadow instead. */
     <div className="relative flex flex-col gap-3.5 rounded-lg bg-white p-4 shadow-raised transition-all hover:-translate-y-0.5 hover:shadow-xl motion-reduce:transition-none motion-reduce:hover:translate-y-0">
-      <div className="flex items-center gap-2.5">
+      {/* Client-confirmed (2026-11-10): the status pill sits under the title.
+          Side by side, four cards to a row left long titles ("Website
+          Optimization") about 50px and they ran under the pill. */}
+      <div className="flex items-start gap-2.5">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-100 text-primary-700">
           <Icon className="size-[18px]" />
         </span>
-        <h3 className="min-w-0 flex-1 text-body font-semibold leading-snug text-primary-900">
-          <Link
-            href={`/growth-mission/${step.slug}`}
-            className="after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-secondary-500"
-          >
-            {title}
-          </Link>
-        </h3>
-        <StatusBadge status={step.status} />
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+          <h3 className="text-body font-semibold leading-snug text-primary-900 [overflow-wrap:anywhere]">
+            <Link
+              href={`/growth-mission/${step.slug}`}
+              className="after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-secondary-500"
+            >
+              {title}
+            </Link>
+          </h3>
+          <StatusBadge status={step.status} />
+        </div>
       </div>
 
       <div className="grid grid-cols-3 overflow-hidden rounded-md border border-neutral-100">
