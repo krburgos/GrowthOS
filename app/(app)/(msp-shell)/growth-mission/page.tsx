@@ -135,7 +135,7 @@ export default async function GrowthMissionPage() {
           plain header, so this panel is the page's one navy field. */}
       <SectionPane view="cards">
       <section className="mt-2 flex flex-col gap-3 rounded-xl p-4 shadow-lift md:p-5 bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]">
-        <SectionHeading title="Mission Cards" tone="dark">
+        <SectionHeading title="Mission Cards" tone="dark" hint="Workstreams: one card per discipline">
           {/* The removed hero sentence was the only thing telling anyone the
               cards open. Said here instead, where someone about to click is
               actually looking. */}

@@ -193,7 +193,7 @@ export function Arsenal({
             <ChevronDown className={cn("size-4 transition-transform motion-reduce:transition-none", collapsed && "-rotate-90")} />
           </span>
           <span className="min-w-0">
-            <span className="block text-h4 text-white">The Arsenal</span>
+            <span className="block text-h4 text-white" title="Content library">The Arsenal</span>
             <span className="mt-0.5 block text-body-sm tabular-nums text-secondary-300">
               {files.length === 0
                 ? "No files yet"

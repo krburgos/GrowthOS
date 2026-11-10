@@ -111,7 +111,7 @@ export function MissionProgress({
 
   return (
     <section className="flex flex-col gap-3 rounded-xl p-4 shadow-lift md:p-5 bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))]">
-      <SectionHeading title="Mission Progress" tone="dark">
+      <SectionHeading title="Mission Progress" tone="dark" hint="Prospects and opportunities">
         <span className="inline-flex items-center gap-1 text-caption text-white/55">
           <Radio className="size-3.5" />
           Live from the CRM

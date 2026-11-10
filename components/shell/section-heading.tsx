@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { InfoTip } from "@/components/ui/info-tip";
+
 /**
  * A heading that divides one band of a page from the next (client-confirmed,
  * 2026-09-22, to separate the Command Center's KPI band from its cards).
@@ -19,6 +21,7 @@ export function SectionHeading({
   title,
   children,
   tone = "light",
+  hint,
 }: {
   title: string;
   children?: ReactNode;
@@ -29,6 +32,8 @@ export function SectionHeading({
    * outright would have inverted that one.
    */
   tone?: "light" | "dark";
+  /** The plain word for a themed title, as a tooltip (2026-11-10, UX audit item 9). */
+  hint?: string;
 }) {
   const onDark = tone === "dark";
   return (
@@ -41,6 +46,13 @@ export function SectionHeading({
           className={`h-[1.1em] w-[3px] shrink-0 rounded-full ${onDark ? "bg-secondary-400" : "bg-secondary-500"}`}
         />
         {title}
+        {hint && (
+          <InfoTip
+            text={hint}
+            label={`About ${title}`}
+            className={onDark ? "text-white/45 hover:text-secondary-300" : undefined}
+          />
+        )}
       </h2>
       <span aria-hidden="true" className={`h-px min-w-6 flex-1 ${onDark ? "bg-white/20" : "bg-neutral-200"}`} />
       {children ? <div className="flex shrink-0 items-center gap-3">{children}</div> : null}

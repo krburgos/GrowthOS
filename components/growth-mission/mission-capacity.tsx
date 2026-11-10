@@ -182,7 +182,7 @@ export function MissionCapacity({
        its Mission Progress label matches. */
     <Wrapper variant={variant}>
       {variant === "band" ? (
-        <SectionHeading title="Mission Capacity" tone="dark">
+        <SectionHeading title="Mission Capacity" tone="dark" hint="Hours and credits">
           <span className="inline-flex items-center gap-1 text-caption text-white/55">
             <CalendarRange className="size-3.5" />
             {quarter.label} · {quarter.range}

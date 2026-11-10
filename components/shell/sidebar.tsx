@@ -41,17 +41,22 @@ export interface NavItem {
    * duplicates one already there.
    */
   mobileOnly?: boolean;
+  /**
+   * The plain word for a themed name, shown as a tooltip (client-confirmed,
+   * 2026-11-10, UX audit item 9). The label itself is unchanged.
+   */
+  hint?: string;
 }
 
 /** Exported so the command palette (§8.10) can reuse the exact same
  * destination list rather than maintaining a second, drift-prone copy. */
 export const NAV_ITEMS: NavItem[] = [
-  { section: "dashboard", label: "Headquarters", href: "/headquarters", icon: Landmark, group: "mission" },
-  { section: "growthMission", label: "Command Center", href: "/growth-mission", icon: LayoutGrid, group: "mission" },
+  { section: "dashboard", label: "Headquarters", href: "/headquarters", icon: Landmark, group: "mission", hint: "Home: what needs you today" },
+  { section: "growthMission", label: "Command Center", href: "/growth-mission", icon: LayoutGrid, group: "mission", hint: "Plans and assignments" },
   // Reports, renamed Intel and moved under Mission (client-confirmed,
   // 2026-10-22). The Outreach section is gone: Campaigns moved onto the
   // Email Campaigning Mission Card, leaving Reports on its own there.
-  { section: "reports", label: "Intel", href: "/reports", icon: BarChart3, group: "mission" },
+  { section: "reports", label: "Intel", href: "/reports", icon: BarChart3, group: "mission", hint: "Reports" },
   {
     section: "myVisits",
     label: "My Visits",
@@ -59,6 +64,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: MapPin,
     group: "mission",
     mobileOnly: true,
+    hint: "Drop-by visits",
   },
   { section: "contacts", label: "Contacts", href: "/contacts", icon: Users, group: "crm" },
   { section: "companies", label: "Companies", href: "/companies", icon: Building2, group: "crm" },
@@ -368,7 +374,7 @@ function NavList({
           </Link>
         );
 
-        if (!withTooltips || !collapsed) {
+        if (!withTooltips || (!collapsed && !item.hint)) {
           return (
             <Fragment key={item.section}>
               {heading}
@@ -383,7 +389,8 @@ function NavList({
             <Tooltip>
               <TooltipTrigger asChild>{link}</TooltipTrigger>
               <TooltipContent side="right">
-                {item.label}
+                {collapsed ? item.label : item.hint}
+                {collapsed && item.hint && ` · ${item.hint}`}
                 {badge > 0 && ` · ${badge} overdue`}
               </TooltipContent>
             </Tooltip>
