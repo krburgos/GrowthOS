@@ -8,18 +8,16 @@ import { ReadinessCheck } from "@/components/growth-mission/readiness-check";
 import { FocusButton, SectionPane, SectionSwitcher } from "@/components/growth-mission/section-switcher";
 import { SectionHeading } from "@/components/shell/section-heading";
 import { getTargets } from "@/lib/advocate-dash/queries";
-import { ADVOCATE_DASH_SLUG, advocatesForCard, targetSummary } from "@/lib/advocate-dash/targets";
+import { ADVOCATE_DASH_SLUG, targetSummary } from "@/lib/advocate-dash/targets";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/growth-mission/hours";
 import {
   getKpiBand,
-  getMemberStepTasks,
   getMissionData,
   getReadiness,
   getStepOverviews,
   getTasks,
 } from "@/lib/growth-mission/queries";
-import { membersForStep } from "@/lib/team/members";
 import { getTeamMembers } from "@/lib/team/queries";
 
 export const metadata: Metadata = { title: "Command Center — GrowthMission" };
@@ -48,16 +46,13 @@ export default async function GrowthMissionPage() {
   if (!user || !user.account_id) return null;
 
   const quarter = currentQuarter();
-  const [steps, mission, kpiSources, readiness, teamMembers, tasks, stepTasks, targets] = await Promise.all([
+  const [steps, mission, kpiSources, readiness, teamMembers, tasks, targets] = await Promise.all([
     getStepOverviews(user.account_id),
     getMissionData(user.account_id, quarter),
     getKpiBand(user.account_id),
     getReadiness(user.account_id),
     getTeamMembers(user.account_id),
     getTasks(user.account_id),
-    // Who holds tasks where, so a card can name people nobody declared
-    // against the workstream in the Company Profile.
-    getMemberStepTasks(user.account_id),
     // AdvocateDash is measured in drop-bys, so its card reads targets
     // rather than hours and tasks (client-confirmed, 2026-10-05).
     getTargets(user.account_id),
@@ -153,13 +148,9 @@ export default async function GrowthMissionPage() {
                 key={step.slug}
                 step={step}
                 hours={mission.stepHours[step.slug]}
-                assignees={
-                  isAdvocateDash
-                    ? advocatesForCard(teamMembers, targets)
-                    : membersForStep(teamMembers, step.slug, stepTasks)
-                }
                 tasks={tasksByStep.get(step.slug) ?? []}
                 dropbys={isAdvocateDash ? dropbys : undefined}
+                elapsedPct={quarter.elapsedPct}
               />
             );
           })}

@@ -193,6 +193,8 @@ Leaving mid-wizard is always safe: progress saves after each step. Logging back 
 
 ### 4.3 Dashboard (C1)
 
+**Proposed, awaiting approval (2026-11-10, UX audit; branch `ux/headquarters-today`, not on main).** Reverses parts of the 2026-09-24, 2026-10-13 and 2026-10-14 layouts below, so it ships only once approved. Headquarters becomes a "Today" page: one navy band with the **next step** while any of the three foundations (Company Profile, Solution Questionnaire, Vision Board) is unfinished, plus three figures (Prospects, Open opportunities, Mission hours done of required); a **From prospect to won** strip (MQCs → MQLs → Interested → In progress → Quoted → Won, each a link); and the **Mission Orders due soonest** (the person's own when they hold any, else the account's; 5 rows, link to all on Command Center). Mission Capacity, Mission Progress, Opportunities by Stage and the full Mission Orders table with its archive are no longer repeated here. On Command Center each Mission Card shows only its title, a status, "N of M h done" with a bar, and one flag (overdue, else unassigned, else open count); the status is worked out from hours done against the quarter elapsed (115%+ Ahead, 75%+ On Track, else Needs Attention; the typed status is used in the first tenth of a quarter or with no target).
+
 The landing screen after login, in priority order:
 - **Tasks/follow-ups due** — top of page, most actionable
 - **Recent activity feed** — recent calls, emails, status changes across the account

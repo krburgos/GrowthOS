@@ -5,75 +5,53 @@ import Link from "next/link";
 
 import { PLAYBOOK_ICON } from "@/components/growth-mission/icon-map";
 import { StatusBadge } from "@/components/growth-mission/status-badge";
+import { autoStatus } from "@/lib/growth-mission/auto-status";
 import { SHORT_TITLE, formatWhole, type StepHours } from "@/lib/growth-mission/hours";
 import type { StepOverview } from "@/lib/growth-mission/queries";
 import { taskSummary, type Task } from "@/lib/growth-mission/tasks";
-import { initialsOf, type TeamMember } from "@/lib/team/members";
 
 /**
- * Client-confirmed (2026-09-17), "B — Ledger": short title + status pill,
- * then three hours figures side by side. The quarter bar and Log hours
- * left on 2026-10-05 (client-confirmed). The whole card links to the
- * discipline page through a stretched link.
+ * A Mission Card on the Command Center.
  *
- * Client-confirmed (2026-10-13): the figures are Required · Committed ·
- * Completed, all derived (lib/growth-mission/capacity.ts) now that hours
- * are no longer logged by hand, and the tasks section is headed "Mission
- * Orders".
+ * History: "B — Ledger" (2026-09-17), Required · Committed · Completed
+ * (2026-10-13), kept as small as possible (2026-10-13).
+ *
+ * Proposal (2026-11-10, UX audit, branch ux/headquarters-today — awaiting
+ * approval, not on main): compact. Title and status, one figure ("12 of
+ * 34 h done") with its bar, and the one thing that needs somebody: overdue
+ * orders, else unassigned ones, else how many are open. The status is
+ * worked out from hours done against the quarter elapsed (auto-status.ts).
+ * Committed hours and the people stay on the card's own page.
  */
 export function HoursCard({
   step,
   hours,
-  assignees,
   tasks,
   dropbys,
+  elapsedPct,
 }: {
   step: StepOverview;
   hours: StepHours;
-  /**
-   * Who is on this workstream: people declared against it in the Company
-   * Profile, plus anyone simply holding tasks in it (client-confirmed fix,
-   * 2026-09-25 — reading only the declared list made every card say
-   * "Nobody assigned" while the tasks all had owners).
-   */
-  assignees: { member: TeamMember; hours: number; declared: boolean }[];
   /** This workstream's tasks, summarised on the card. */
   tasks: Task[];
-  /**
-   * AdvocateDash only (client-confirmed, 2026-10-05). That workstream is
-   * measured in drop-bys rather than hours, so when this is present the
-   * card counts targets instead of showing the hours triad and the task
-   * progress. Absent on the other fifteen, which are unchanged.
-   */
+  /** AdvocateDash only (2026-10-05): measured in drop-bys rather than hours. */
   dropbys?: { targets: number; scheduled: number; completed: number; awaitingReport: number };
+  /** Share of the current quarter gone, for the automatic status. */
+  elapsedPct: number;
 }) {
   const title = SHORT_TITLE[step.slug] ?? step.title;
   const Icon = PLAYBOOK_ICON[step.icon];
-
   const t = taskSummary(tasks);
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = tasks.filter((x) => x.state !== "complete" && x.due_date !== null && x.due_date < today).length;
 
-  // The progress line counts whichever unit this workstream runs on.
-  const total = dropbys ? dropbys.targets : t.total;
-  const done = dropbys ? dropbys.completed : t.done;
-
-  const cells = dropbys
-    ? [
-        { key: "Targets", value: dropbys.targets, highlight: false },
-        { key: "Scheduled", value: dropbys.scheduled, highlight: false },
-        { key: "Completed", value: dropbys.completed, highlight: true },
-      ]
-    : [
-        { key: "Required", value: hours.required, highlight: false },
-        { key: "Committed", value: hours.committed, highlight: false },
-        { key: "Completed", value: hours.completed, highlight: true },
-      ];
+  const target = dropbys ? dropbys.targets : hours.required;
+  const done = dropbys ? dropbys.completed : hours.completed;
+  const status = autoStatus(target, done, elapsedPct, step.status);
+  const pct = target > 0 ? Math.min(100, Math.round((done / target) * 100)) : 0;
 
   return (
-    /* Client-confirmed (2026-10-01): the card now sits on a navy panel, so
-       it drops its border — white against navy is already a hard edge, and
-       the old hover-border-cyan cue is invisible without one. Depth and the
-       hover cue both come from shadow instead. */
-    <div className="relative flex flex-col gap-3.5 rounded-lg bg-white p-4 shadow-raised transition-all hover:-translate-y-0.5 hover:shadow-xl motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+    <div className="relative flex flex-col gap-3 rounded-lg bg-white p-4 shadow-raised transition-all hover:-translate-y-0.5 hover:shadow-xl motion-reduce:transition-none motion-reduce:hover:translate-y-0">
       <div className="flex items-center gap-2.5">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-100 text-primary-700">
           <Icon className="size-[18px]" />
@@ -86,110 +64,56 @@ export function HoursCard({
             {title}
           </Link>
         </h3>
-        <StatusBadge status={step.status} />
+        <StatusBadge status={status} />
       </div>
 
-      <div className="grid grid-cols-3 overflow-hidden rounded-md border border-neutral-100">
-        {cells.map((c, i) => (
+      <div className="flex flex-col gap-1.5">
+        <p className="text-body-sm text-neutral-600">
+          <b className="font-bold tabular-nums text-primary-900">
+            {dropbys ? done : formatWhole(done)} of {dropbys ? target : `${formatWhole(target)} h`}
+          </b>{" "}
+          {dropbys ? "drop-bys done" : "done"}
+        </p>
+        <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100">
           <div
-            key={c.key}
-            className={`flex flex-col items-center px-2.5 py-2 text-center ${i > 0 ? "border-l border-neutral-100" : ""} ${c.highlight ? "bg-secondary-50" : ""}`}
-          >
-            <span className="text-[10.5px] font-semibold uppercase tracking-wide text-neutral-400">{c.key}</span>
-            <span className="text-h4 font-bold tabular-nums text-primary-900">
-              {dropbys ? c.value : formatWhole(c.value)}
-              {/* No unit on a count of visits — "12h" would be a lie. */}
-              {!dropbys && <span className="ml-px text-caption font-medium text-neutral-400">h</span>}
-            </span>
-          </div>
-        ))}
+            className="h-full rounded-full bg-secondary-600 transition-[width] duration-500 motion-reduce:transition-none"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
       </div>
 
-      {/* Client-confirmed (2026-09-25): the card stays a summary. It answers
-          "is anything happening on this workstream, and who has it" - the
-          tasks themselves live on the step page, one click away. */}
-      <div className="border-t border-neutral-100 pt-3">
-        <div className="mb-2 flex items-baseline justify-between gap-2">
-          <p className="text-caption font-bold uppercase tracking-wide text-neutral-400">
-            {dropbys ? "Drop-bys" : "Mission Orders"}
-          </p>
-          {total > 0 && (
-            <p className="text-caption font-semibold tabular-nums text-primary-900">
-              {done} of {total} done
-            </p>
-          )}
-        </div>
-
-        {total === 0 ? (
-          <p className="text-caption text-neutral-400">{dropbys ? "No targets yet" : "No mission orders yet"}</p>
+      <div className="flex min-h-6 items-center">
+        {dropbys ? (
+          dropbys.awaitingReport > 0 ? (
+            <Flag tone="amber">{dropbys.awaitingReport} awaiting a report</Flag>
+          ) : (
+            <span className="text-caption text-neutral-500">{dropbys.scheduled} scheduled</span>
+          )
+        ) : overdue > 0 ? (
+          <Flag tone="red">{overdue} overdue</Flag>
+        ) : t.unassigned > 0 ? (
+          <Flag tone="amber">{t.unassigned} unassigned</Flag>
+        ) : t.total === 0 ? (
+          <span className="text-caption text-neutral-400">No mission orders yet</span>
         ) : (
-          <div className="flex flex-col gap-2">
-            <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100">
-              <div
-                className="h-full rounded-full bg-secondary-600 transition-[width] duration-500 motion-reduce:transition-none"
-                style={{ width: `${Math.round((done / total) * 100)}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              {assignees.length === 0 ? (
-                <span className="text-caption text-neutral-400">Nobody assigned</span>
-              ) : (
-                <div className="flex items-center">
-                  {assignees.slice(0, 4).map(({ member, declared }, i) => (
-                    <span
-                      key={member.id}
-                      title={
-                        declared
-                          ? member.name
-                          : `${member.name} — has ${dropbys ? "drop-bys" : "tasks"} here, not assigned in the Company Profile`
-                      }
-                      className={`flex size-6 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white ${
-                        member.kind === "outsourced"
-                          ? "bg-gradient-to-br from-neutral-500 to-neutral-400"
-                          : "bg-gradient-to-br from-primary-700 to-secondary-700"
-                      } ${i > 0 ? "-ml-1.5" : ""}`}
-                    >
-                      {initialsOf(member.name)}
-                    </span>
-                  ))}
-                  {assignees.length > 4 && (
-                    <span className="-ml-1.5 flex size-6 items-center justify-center rounded-full border-2 border-white bg-neutral-200 text-[9px] font-bold text-neutral-600">
-                      +{assignees.length - 4}
-                    </span>
-                  )}
-                </div>
-              )}
-              {/* The one thing on the card that needs somebody to act. For
-                  AdvocateDash that is a visit made but never written up —
-                  the report is the deliverable, so an unfiled one is the
-                  gap worth flagging, not an estimate of hours left. */}
-              {dropbys ? (
-                dropbys.awaitingReport > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-warning-100 px-2 py-0.5 text-caption font-semibold text-warning-800">
-                    <CircleAlert className="size-3" />
-                    {dropbys.awaitingReport} awaiting a report
-                  </span>
-                )
-              ) : t.unassigned > 0 ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-warning-100 px-2 py-0.5 text-caption font-semibold text-warning-800">
-                  <CircleAlert className="size-3" />
-                  {t.unassigned} unassigned
-                </span>
-              ) : (
-                t.open > 0 && (
-                  <span className="text-caption tabular-nums text-neutral-500">
-                    {formatWhole(t.hours)}h of work
-                  </span>
-                )
-              )}
-            </div>
-          </div>
+          <span className="text-caption tabular-nums text-neutral-500">
+            {t.open} open · {t.done} of {t.total} done
+          </span>
         )}
       </div>
-
-      {/* Client-confirmed (2026-10-13): the cards are kept as small as
-          possible, so the budget note and the Outsourced chip are gone
-          from here. Both stay on the discipline page. */}
     </div>
+  );
+}
+
+function Flag({ tone, children }: { tone: "red" | "amber"; children: React.ReactNode }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-semibold ${
+        tone === "red" ? "bg-error-100 text-error-700" : "bg-warning-100 text-warning-800"
+      }`}
+    >
+      <CircleAlert className="size-3" />
+      {children}
+    </span>
   );
 }
