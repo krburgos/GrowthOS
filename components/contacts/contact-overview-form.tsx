@@ -263,6 +263,22 @@ export function ContactOverviewForm({
             Contact
           </h2>
           <div className="flex flex-col divide-y divide-neutral-100">
+            {/* The name was saved by this form but had no fields, so it
+                couldn't be changed here (fix, 2026-11-10). Editing only:
+                the header already shows it. */}
+            {editing && (
+              <>
+                <Row icon={User} label="First Name" fieldId="first_name">
+                  <>
+                    <Input id="first_name" error={!!errors.first_name} {...register("first_name")} className="flex-1" />
+                    {errors.first_name && <p className="mt-1 text-body-sm text-error-600">{errors.first_name.message}</p>}
+                  </>
+                </Row>
+                <Row icon={User} label="Last Name" fieldId="last_name">
+                  <Input id="last_name" {...register("last_name")} className="flex-1" />
+                </Row>
+              </>
+            )}
             <Row icon={Mail} label="Email" fieldId="email">
               {editing ? (
                 <>
