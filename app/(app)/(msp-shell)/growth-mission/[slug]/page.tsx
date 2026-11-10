@@ -180,6 +180,7 @@ export default async function GrowthMissionStepPage({
           <EditOverviewPanel
             accountId={user.account_id}
             stepSlug={step.slug}
+            stepTitle={step.title}
             initialStatus={step.status}
             initialHeadline={step.headline}
             canEdit={canEdit}
