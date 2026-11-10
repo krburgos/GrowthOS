@@ -6,6 +6,7 @@ import { AddContactsButton } from "@/components/lists/add-contacts-button";
 import { ContactsDataTable } from "@/components/contacts/contacts-data-table";
 import { ListActionsMenu } from "@/components/lists/list-actions-menu";
 import { Button } from "@/components/ui/button";
+import { ImportSummaryBanner } from "@/components/contacts/import-summary-banner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Users } from "lucide-react";
@@ -148,6 +149,8 @@ export default async function ListDetailPage({
           </div>
         )}
       </div>
+
+      <ImportSummaryBanner listName={list.name} importHref={`/lists/${list.id}/upload`} />
 
       {contacts.length === 0 ? (
         <EmptyState

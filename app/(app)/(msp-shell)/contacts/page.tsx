@@ -10,6 +10,7 @@ import { CONTACT_SELECT, orderContacts } from "@/lib/contacts/sort";
 import { ContactsToolbar, type ContactView } from "@/components/contacts/contacts-toolbar";
 import { prospectValue, usdShort } from "@/lib/companies/value";
 import { Button } from "@/components/ui/button";
+import { ImportSummaryBanner } from "@/components/contacts/import-summary-banner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
@@ -248,6 +249,8 @@ export default async function ContactsListPage({
           <AddContactButton key={openNew ? "new" : "list"} accountId={user.account_id!} defaultOpen={openNew === "1"} />
         </div>
       </div>
+
+      <ImportSummaryBanner importHref="/contacts/import" />
 
       {(allCount ?? 0) === 0 ? (
         // An empty account has nothing to filter.

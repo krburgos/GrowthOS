@@ -17,6 +17,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { ImportField, ImportMapping } from "@/lib/import/fields";
 import type { RepeatMode, RepeatedEmail } from "@/lib/import/repeats";
+import { importSummaryParams } from "@/lib/import/summary";
 import type { NoEmailRow } from "@/lib/import/validate";
 import { cn } from "@/lib/utils";
 
@@ -261,14 +262,23 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
     }
 
     setProgress({ ...p, done: p.total, finished: true });
-    router.refresh();
-    if (targetListId) {
-      toast.success(`${p.addedToList} contact${p.addedToList === 1 ? "" : "s"} added to ${listName ?? "the list"}.`);
-    } else {
-      toast.success(
-        `${p.imported} contact${p.imported === 1 ? "" : "s"} imported${p.updated ? `, ${p.updated} updated` : ""}.`
-      );
-    }
+    // Client-confirmed (2026-11-10, approved mockup "Import Finish Mockup"):
+    // finishing opens the list (or Contacts) with the summary as a banner.
+    // The summary rides in the address, so a reload or a site update
+    // between batches can no longer wipe it (it used to live only in this
+    // page's memory).
+    const summary = importSummaryParams({
+      file: file.name,
+      addedToList: targetListId ? p.addedToList : undefined,
+      imported: p.imported,
+      updated: p.updated,
+      unchanged: p.unchanged,
+      kept: p.kept,
+      restoredCompanies: p.restoredCompanies,
+      noEmailRows: result.noEmail.map((r) => r.row),
+      repeatRows: skippedRows(result.repeats, mode),
+    });
+    router.push(`${targetListId ? `/lists/${targetListId}` : "/contacts"}?${summary}`);
   };
 
   const handleConfirm = () => {
