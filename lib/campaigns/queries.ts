@@ -1,4 +1,5 @@
 import type { CampaignRow } from "@/components/campaigns/campaigns-table";
+import { everyRow } from "@/lib/supabase/every-row";
 import { createClient } from "@/lib/supabase/server";
 
 export const CAMPAIGN_EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
@@ -25,7 +26,10 @@ export async function getCampaignRows(): Promise<CampaignRow[]> {
   const campaignIds = (campaignRows ?? []).map((c) => c.id);
   const { data: recipientRows } =
     campaignIds.length > 0
-      ? await supabase.from("campaign_recipients").select("campaign_id, status, open_count, click_count").in("campaign_id", campaignIds)
+      ? // Every recipient, past PostgREST's 1,000 cap (2026-11-10).
+        await everyRow<{ campaign_id: string; status: string; open_count: number; click_count: number }>(() =>
+          supabase.from("campaign_recipients").select("campaign_id, status, open_count, click_count").in("campaign_id", campaignIds)
+        )
       : { data: [] as { campaign_id: string; status: string; open_count: number; click_count: number }[] };
 
   const statsByCampaign = new Map<string, { total: number; sent: number; opened: number; clicked: number }>();

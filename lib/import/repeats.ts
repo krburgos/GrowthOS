@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { everyRow } from "@/lib/supabase/every-row";
 
 import type { MappedRow } from "@/lib/import/validate";
 
@@ -64,10 +65,10 @@ export async function existingContactsByEmail(
   emails: string[]
 ): Promise<Map<string, string>> {
   if (emails.length === 0) return new Map();
-  const { data, error } = await supabase.rpc("find_contacts_by_email", {
-    p_account_id: accountId,
-    p_emails: emails,
-  });
+  // Every match, past PostgREST's 1,000 cap: /validate sends the whole file (2026-11-10).
+  const { data, error } = await everyRow<{ id: string; email_key: string }>(() =>
+    supabase.rpc("find_contacts_by_email", { p_account_id: accountId, p_emails: emails })
+  );
   if (error) throw error;
-  return new Map(((data ?? []) as { id: string; email_key: string }[]).map((r) => [r.email_key, r.id]));
+  return new Map(data.map((r) => [r.email_key, r.id]));
 }

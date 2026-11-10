@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { buildCampaignHtml, buildCampaignText, campaignUnsubscribeUrl } from "@/lib/email/build-campaign-html";
 import { sendWithFallback } from "@/lib/email/resend-send";
+import { everyRow } from "@/lib/supabase/every-row";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
@@ -88,35 +89,50 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { data: memberRows } = await supabase
-      .from("list_members")
-      .select("contact_id, contacts!inner(id, email, full_name, email_opt_out, archived_at)")
-      .eq("list_id", campaign.list_id);
+    // Every member and recipient, past PostgREST's 1,000 cap (2026-11-10):
+    // a list over 1,000 used to be sent to its first 1,000 only.
+    const { data: memberRows } = await everyRow<{
+      contact_id: string;
+      contacts: { id: string; email: string; full_name: string; email_opt_out: boolean; archived_at: string | null } | { id: string; email: string; full_name: string; email_opt_out: boolean; archived_at: string | null }[] | null;
+    }>(
+      () =>
+        supabase
+          .from("list_members")
+          .select("contact_id, contacts!inner(id, email, full_name, email_opt_out, archived_at)")
+          .eq("list_id", campaign.list_id),
+      "contact_id"
+    );
 
     const eligibleContacts = (memberRows ?? [])
       .map((row) => (Array.isArray(row.contacts) ? row.contacts[0] : row.contacts))
       .filter((c): c is { id: string; email: string; full_name: string; email_opt_out: boolean; archived_at: string | null } => !!c)
       .filter((c) => !c.archived_at && !c.email_opt_out);
 
-    const { data: existingRecipients } = await supabase
-      .from("campaign_recipients")
-      .select("id, contact_id, tracking_token, status")
-      .eq("campaign_id", campaignId);
+    const { data: existingRecipients } = await everyRow<{ id: string; contact_id: string; tracking_token: string; status: string }>(() =>
+      supabase.from("campaign_recipients").select("id, contact_id, tracking_token, status").eq("campaign_id", campaignId)
+    );
 
     const existingByContact = new Map((existingRecipients ?? []).map((r) => [r.contact_id, r]));
     const toInsert = eligibleContacts
       .filter((c) => !existingByContact.has(c.id))
       .map((c) => ({ campaign_id: campaignId, contact_id: c.id }));
 
-    if (toInsert.length > 0) {
-      await supabase.from("campaign_recipients").insert(toInsert);
+    for (let i = 0; i < toInsert.length; i += 500) {
+      await supabase.from("campaign_recipients").insert(toInsert.slice(i, i + 500));
     }
 
-    const { data: allRecipients } = await supabase
-      .from("campaign_recipients")
-      .select("id, tracking_token, status, contacts(email)")
-      .eq("campaign_id", campaignId)
-      .eq("status", "pending");
+    const { data: allRecipients } = await everyRow<{
+      id: string;
+      tracking_token: string;
+      status: string;
+      contacts: { email: string } | { email: string }[] | null;
+    }>(() =>
+      supabase
+        .from("campaign_recipients")
+        .select("id, tracking_token, status, contacts(email)")
+        .eq("campaign_id", campaignId)
+        .eq("status", "pending")
+    );
 
     const appUrl = process.env.APP_URL ?? "";
 

@@ -20,9 +20,11 @@ export default async function NewCampaignPage() {
 
   const supabase = await createClient();
 
-  const [{ data: listRows }, { data: memberRows }, { data: connectionRows }] = await Promise.all([
-    supabase.from("lists").select("id, name").is("archived_at", null).order("name"),
-    supabase.from("list_members").select("list_id"),
+  // Only this account's lists (CRO Leader roles can read every account's),
+  // each sized by a count, not by reading its members: that read stopped at
+  // 1,000 rows across all lists (2026-11-10).
+  const [{ data: listRows }, { data: connectionRows }] = await Promise.all([
+    supabase.from("lists").select("id, name").eq("account_id", user.account_id).is("archived_at", null).order("name"),
     supabase
       .from("email_connections")
       .select("id, provider, email_address, users(full_name)")
@@ -31,12 +33,16 @@ export default async function NewCampaignPage() {
       .neq("user_id", user.id),
   ]);
 
-  const memberCounts = new Map<string, number>();
-  for (const row of memberRows ?? []) {
-    memberCounts.set(row.list_id, (memberCounts.get(row.list_id) ?? 0) + 1);
-  }
-
-  const lists = (listRows ?? []).map((l) => ({ id: l.id, name: l.name, count: memberCounts.get(l.id) ?? 0 }));
+  const counts = await Promise.all(
+    (listRows ?? []).map((l) =>
+      supabase
+        .from("list_members")
+        .select("contact_id, contacts!inner(id)", { count: "exact", head: true })
+        .eq("list_id", l.id)
+        .is("contacts.archived_at", null)
+    )
+  );
+  const lists = (listRows ?? []).map((l, i) => ({ id: l.id, name: l.name, count: counts[i].count ?? 0 }));
 
   const fromOptions = (connectionRows ?? []).map((c) => {
     const owner = Array.isArray(c.users) ? c.users[0] : c.users;

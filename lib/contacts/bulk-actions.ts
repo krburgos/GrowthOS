@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { applyRules, ruleEmbeds, type ContactRule } from "@/lib/contacts/filters";
+import { everyRow } from "@/lib/supabase/every-row";
 
 /**
  * Client-confirmed "select all N items" is a true cross-query selection
@@ -36,33 +37,41 @@ export async function resolveContactIds(
 ): Promise<string[]> {
   if (!selection.selectAllMatching) return selection.selectedIds;
 
+  // Every matching contact, past PostgREST's 1,000 cap (2026-11-10: "Select
+  // all" reached only the first 1,000; the old .limit(5000) never applied).
   if (scope.mode === "all-contacts") {
     const f = scope.filter;
     const rules = f?.rules ?? [];
-    let query = supabase
-      .from("contacts")
-      .select(`id${ruleEmbeds(rules)}`)
-      .eq("account_id", scope.accountId)
-      .is("archived_at", null);
-    if (f?.ownerId) query = query.eq("owner_id", f.ownerId);
-    if (f?.createdSince) query = query.gte("created_at", f.createdSince);
-    if (f?.hot) query = query.eq("temperature", "hot");
-    if (f?.term) query = query.or(`full_name.ilike.%${f.term}%,email.ilike.%${f.term}%`);
-    query = applyRules(query, rules);
-    const { data } = await query.limit(5000);
-    return ((data ?? []) as unknown as { id: string }[]).map((r) => r.id);
+    const build = () => {
+      let query = supabase
+        .from("contacts")
+        .select(`id${ruleEmbeds(rules)}`)
+        .eq("account_id", scope.accountId)
+        .is("archived_at", null);
+      if (f?.ownerId) query = query.eq("owner_id", f.ownerId);
+      if (f?.createdSince) query = query.gte("created_at", f.createdSince);
+      if (f?.hot) query = query.eq("temperature", "hot");
+      if (f?.term) query = query.or(`full_name.ilike.%${f.term}%,email.ilike.%${f.term}%`);
+      return applyRules(query, rules);
+    };
+    const { data } = await everyRow<{ id: string }>(build);
+    return data.map((r) => r.id);
   }
 
-  const { data } = await supabase
-    .from("list_members")
-    .select("contact_id, contacts!inner(id)")
-    .eq("list_id", scope.listId)
-    .is("contacts.archived_at", null);
-  return (data ?? []).map((r) => r.contact_id);
+  const { data } = await everyRow<{ contact_id: string }>(
+    () =>
+      supabase
+        .from("list_members")
+        .select("contact_id, contacts!inner(id)")
+        .eq("list_id", scope.listId)
+        .is("contacts.archived_at", null),
+    "contact_id"
+  );
+  return data.map((r) => r.contact_id);
 }
 
 /** Supabase's .in() has a practical URL-length limit — chunk large id
- * arrays so a "select all 5,000" bulk action doesn't fail outright. */
+ * arrays so a "select all" bulk action over thousands doesn't fail outright. */
 export function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let i = 0; i < items.length; i += size) {

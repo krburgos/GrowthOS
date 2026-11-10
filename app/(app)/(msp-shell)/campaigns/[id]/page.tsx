@@ -9,6 +9,7 @@ import { CampaignsPausedNotice } from "@/components/campaigns/campaigns-paused-n
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { CAMPAIGNS_PAUSED } from "@/lib/campaigns/paused";
 import { CAMPAIGNS_HOME } from "@/lib/campaigns/queries";
+import { everyRow } from "@/lib/supabase/every-row";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Campaign — GrowthMission" };
@@ -43,11 +44,21 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
 
   if (!campaign) notFound();
 
-  const { data: recipientRows } = await supabase
-    .from("campaign_recipients")
-    .select("id, status, sent_at, first_opened_at, first_clicked_at, contacts(full_name, email)")
-    .eq("campaign_id", id)
-    .order("sent_at", { ascending: true, nullsFirst: false });
+  // Every recipient, past PostgREST's 1,000 cap (2026-11-10), then in send order.
+  const { data: recipientRows } = await everyRow<{
+    id: string;
+    status: RecipientRow["status"];
+    sent_at: string | null;
+    first_opened_at: string | null;
+    first_clicked_at: string | null;
+    contacts: { full_name: string; email: string } | { full_name: string; email: string }[] | null;
+  }>(() =>
+    supabase
+      .from("campaign_recipients")
+      .select("id, status, sent_at, first_opened_at, first_clicked_at, contacts(full_name, email)")
+      .eq("campaign_id", id)
+  );
+  recipientRows.sort((a, b) => (a.sent_at === b.sent_at ? 0 : a.sent_at === null ? 1 : b.sent_at === null ? -1 : a.sent_at.localeCompare(b.sent_at)));
 
   const recipients: RecipientRow[] = (recipientRows ?? []).map((r) => {
     const contact = Array.isArray(r.contacts) ? r.contacts[0] : r.contacts;

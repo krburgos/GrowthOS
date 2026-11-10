@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
 import { Button } from "@/components/ui/button";
-import { resolveContactIds, type ContactSelectionScope } from "@/lib/contacts/bulk-actions";
+import { chunk, resolveContactIds, type ContactSelectionScope } from "@/lib/contacts/bulk-actions";
 import { createClient } from "@/lib/supabase/client";
 
 interface ExportRow {
@@ -75,12 +75,23 @@ export function ExportContactsButton({
       return;
     }
 
-    const { data, error } = await supabase
-      .from("contacts")
-      .select(
-        "full_name, email, title, phone, score, temperature, linkedin_url, contact_statuses(name), companies(name, phone, address_line1, city, state, company_size, linkedin_url)"
-      )
-      .in("id", ids);
+    // In batches: a single .in() over thousands of ids is too long a URL,
+    // and one read stops at 1,000 rows (2026-11-10).
+    const data: unknown[] = [];
+    let error: { message: string } | null = null;
+    for (const batch of chunk(ids, 150)) {
+      const r = await supabase
+        .from("contacts")
+        .select(
+          "full_name, email, title, phone, score, temperature, linkedin_url, contact_statuses(name), companies(name, phone, address_line1, city, state, company_size, linkedin_url)"
+        )
+        .in("id", batch);
+      if (r.error) {
+        error = r.error;
+        break;
+      }
+      data.push(...(r.data ?? []));
+    }
 
     setExporting(false);
 

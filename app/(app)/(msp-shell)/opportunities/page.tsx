@@ -13,6 +13,7 @@ import { employeesOf, prospectValue, usdShort } from "@/lib/companies/value";
 import { currentQuarter } from "@/lib/growth-mission/hours";
 import type { OpportunityStageRow, StageGroup } from "@/lib/opportunities/stages";
 import { parsePagination } from "@/lib/pagination";
+import { everyRow } from "@/lib/supabase/every-row";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -74,13 +75,15 @@ export default async function OpportunitiesPage({
 
   const supabase = await createClient();
   const [{ data: rows }, { data: stageRows }, { data: ownerRows }] = await Promise.all([
-    supabase
-      .from("opportunities")
-      .select(
-        "id, name, type, stage_id, owner_id, closed_at, stage_entered_at, contacts(full_name), companies(name, company_size), users(full_name), opportunity_stages(name, stage_group, win_probability)"
-      )
-      .eq("account_id", user.account_id)
-      .order("created_at", { ascending: false }),
+    // Every opportunity, past PostgREST's 1,000 cap (2026-11-10), newest first.
+    everyRow<{ created_at: string }>(() =>
+      supabase
+        .from("opportunities")
+        .select(
+          "id, name, type, stage_id, owner_id, closed_at, stage_entered_at, created_at, contacts(full_name), companies(name, company_size), users(full_name), opportunity_stages(name, stage_group, win_probability)"
+        )
+        .eq("account_id", user.account_id)
+    ).then((r) => ({ ...r, data: r.data.sort((a, b) => b.created_at.localeCompare(a.created_at)) })),
     supabase
       .from("opportunity_stages")
       .select("id, name, stage_group, sort_order, win_probability")

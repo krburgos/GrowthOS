@@ -16,6 +16,7 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import type { ContactListRow } from "@/lib/contacts/types";
 import { parsePagination } from "@/lib/pagination";
+import { everyRow } from "@/lib/supabase/every-row";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Contacts — GrowthMission" };
@@ -174,11 +175,13 @@ export default async function ContactsListPage({
       // Last Activity Date (App Flow §4.4, D1): not sorted on yet — no
       // real data until Milestone 8's activity logging, folded in here
       // as a follow-up aggregate query since it isn't a plain column.
-      supabase
-        .from("activities")
-        .select("contact_id, occurred_at")
-        .in("contact_id", contacts.map((c) => c.id))
-        .order("occurred_at", { ascending: false }),
+      // Every activity of these contacts, past PostgREST's 1,000 cap (2026-11-10).
+      everyRow<{ contact_id: string | null; occurred_at: string }>(() =>
+        supabase
+          .from("activities")
+          .select("contact_id, occurred_at")
+          .in("contact_id", contacts.map((c) => c.id))
+      ),
       supabase
         .from("list_members")
         .select("contact_id, lists!inner(id, name)")
@@ -188,7 +191,8 @@ export default async function ContactsListPage({
 
     const lastActivityByContact = new Map<string, string>();
     for (const row of activityRows ?? []) {
-      if (row.contact_id && !lastActivityByContact.has(row.contact_id)) {
+      const seen = row.contact_id ? lastActivityByContact.get(row.contact_id) : undefined;
+      if (row.contact_id && (!seen || row.occurred_at > seen)) {
         lastActivityByContact.set(row.contact_id, row.occurred_at);
       }
     }

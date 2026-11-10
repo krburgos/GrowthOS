@@ -331,7 +331,10 @@ export async function getReportsData(accountId: string, selected: QuarterInfo): 
   const ids = (campaignRows ?? []).map((c) => c.id);
   const { data: recipients } =
     ids.length > 0
-      ? await supabase.from("campaign_recipients").select("campaign_id, status, open_count, click_count").in("campaign_id", ids)
+      ? // Every recipient, past PostgREST's 1,000 cap (2026-11-10).
+        await everyRow(() =>
+          supabase.from("campaign_recipients").select("campaign_id, status, open_count, click_count").in("campaign_id", ids)
+        )
       : { data: [] as { campaign_id: string; status: string; open_count: number; click_count: number }[] };
   const stats = new Map<string, { total: number; sent: number; opened: number; clicked: number; bounced: number; unsub: number }>();
   for (const r of recipients ?? []) {

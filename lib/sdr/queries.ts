@@ -13,6 +13,7 @@ import type {
   RecentCall,
   SdrPerson,
 } from "@/lib/sdr/desk";
+import { everyRow } from "@/lib/supabase/every-row";
 import { createClient } from "@/lib/supabase/server";
 
 export interface SdrDesk {
@@ -115,23 +116,30 @@ export async function getSdrDesk(accountId: string): Promise<SdrDesk> {
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 
   const [queueResults, { data: calls }, { count: callsThisMonth }] = await Promise.all([
+    // Every row, past PostgREST's 1,000 cap (2026-11-10: a 1,912-contact
+    // Nerm Dial List showed 1,000). Paged by contact id, then put back in
+    // the function's own name order.
     Promise.all(
-      sdrIds.map((id) =>
-        supabase.rpc("sdr_call_queue", {
-          p_account_id: accountId,
-          p_sdr_user_id: id,
-        }),
-      ),
+      sdrIds.map(async (id) => {
+        const r = await everyRow<QueueRow>(
+          () => supabase.rpc("sdr_call_queue", { p_account_id: accountId, p_sdr_user_id: id }),
+          "contact_id"
+        );
+        r.data.sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? ""));
+        return r;
+      }),
     ),
     sdrIds.length > 0
-      ? supabase
-          .from("activities")
-          .select("user_id, call_outcome, occurred_at")
-          .eq("account_id", accountId)
-          .eq("type", "call")
-          .is("archived_at", null)
-          .in("user_id", sdrIds)
-          .gte("occurred_at", since)
+      ? everyRow<RecentCall>(() =>
+          supabase
+            .from("activities")
+            .select("user_id, call_outcome, occurred_at")
+            .eq("account_id", accountId)
+            .eq("type", "call")
+            .is("archived_at", null)
+            .in("user_id", sdrIds)
+            .gte("occurred_at", since)
+        )
       : Promise.resolve({ data: [] as RecentCall[] }),
     supabase
       .from("activities")

@@ -11,6 +11,7 @@ import { MissionOrdersArchive } from "@/components/growth-mission/mission-orders
 import { HOURS_EDIT_ROLES, currentQuarter } from "@/lib/growth-mission/hours";
 import { getKpiBand, getMissionData, getTasks } from "@/lib/growth-mission/queries";
 import { TOTAL_QUESTION_COUNT, countAnswered } from "@/lib/questionnaire/questions";
+import { everyRow } from "@/lib/supabase/every-row";
 import { createClient } from "@/lib/supabase/server";
 import { getTeamMembers } from "@/lib/team/queries";
 import {
@@ -86,7 +87,10 @@ export default async function HeadquartersPage() {
       .eq("account_id", user.account_id)
       .is("archived_at", null)
       .order("sort_order"),
-    supabase.from("opportunities").select("id, stage_id, created_at").eq("account_id", user.account_id),
+    // Every opportunity, past PostgREST's 1,000 cap (2026-11-10).
+    everyRow<{ id: string; stage_id: string; created_at: string }>(() =>
+      supabase.from("opportunities").select("id, stage_id, created_at").eq("account_id", user.account_id)
+    ),
     supabase.from("growth_questionnaire_responses").select("answers, completed_at").eq("account_id", user.account_id).maybeSingle(),
     supabase.from("vision_board_responses").select("answers, completed_at").eq("account_id", user.account_id).maybeSingle(),
     supabase.from("accounts").select(COMPANY_PROFILE_COLUMNS).eq("id", user.account_id).maybeSingle(),
