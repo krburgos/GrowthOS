@@ -66,24 +66,52 @@ export default async function CompaniesListPage({
   const { page, pageSize, from, to } = parsePagination(pageParams);
 
   const supabase = await createClient();
-  const [{ data: companies }, { data: contactRows }, { data: oppRows }] = await Promise.all([
-    supabase
-      .from("companies")
-      .select("id, name, website, industry, company_size, city, state, created_at")
-      .eq("account_id", user.account_id)
-      .is("archived_at", null),
-    supabase
-      .from("contacts")
-      .select("company_id")
-      .eq("account_id", user.account_id)
-      .is("archived_at", null)
-      .not("company_id", "is", null),
-    supabase
-      .from("opportunities")
-      .select("company_id, opportunity_stages!inner(stage_group)")
-      .eq("account_id", user.account_id)
-      .eq("opportunity_stages.stage_group", "open")
-      .not("company_id", "is", null),
+  // Every row, a page of 1,000 at a time: PostgREST returns at most 1,000
+  // per request, which cut accounts like Iron Wolf (1,659 companies) short.
+  // Ordered by id so the pages never overlap or skip a row.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const everyRow = async <T,>(query: () => any): Promise<T[]> => {
+    const out: T[] = [];
+    for (let lo = 0; ; lo += 1000) {
+      const { data } = await query().order("id").range(lo, lo + 999);
+      out.push(...((data ?? []) as T[]));
+      if (!data || data.length < 1000) break;
+    }
+    return out;
+  };
+  const [companies, contactRows, oppRows] = await Promise.all([
+    everyRow<{
+      id: string;
+      name: string;
+      website: string | null;
+      industry: string | null;
+      company_size: string | null;
+      city: string | null;
+      state: string | null;
+      created_at: string;
+    }>(() =>
+      supabase
+        .from("companies")
+        .select("id, name, website, industry, company_size, city, state, created_at")
+        .eq("account_id", user.account_id)
+        .is("archived_at", null)
+    ),
+    everyRow<{ company_id: string | null }>(() =>
+      supabase
+        .from("contacts")
+        .select("company_id")
+        .eq("account_id", user.account_id)
+        .is("archived_at", null)
+        .not("company_id", "is", null)
+    ),
+    everyRow<{ company_id: string | null }>(() =>
+      supabase
+        .from("opportunities")
+        .select("company_id, opportunity_stages!inner(stage_group)")
+        .eq("account_id", user.account_id)
+        .eq("opportunity_stages.stage_group", "open")
+        .not("company_id", "is", null)
+    ),
   ]);
 
   const tally = (list: { company_id: string | null }[] | null) => {
