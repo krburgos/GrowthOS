@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { matchOrCreateCompany } from "@/lib/companies/match";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/client";
 
@@ -161,17 +162,33 @@ export function ContactOverviewForm({
     }
 
     let nextCompanyId = companyId;
+    let restoredCompany = "";
     if (formValues.company_name) {
       if (!nextCompanyId) {
-        const { data: matchedCompanyId, error: matchError } = await supabase.rpc(
-          "match_or_create_company",
-          { p_account_id: accountId, p_name: formValues.company_name, p_domain: formValues.company_website || null }
+        // A deleted company comes back with its earlier details, updated
+        // from what was typed (2026-11-10).
+        const { data: matched, error: matchError } = await matchOrCreateCompany(
+          supabase,
+          accountId,
+          formValues.company_name,
+          formValues.company_website || null,
+          {
+            website: formValues.company_website,
+            linkedin_url: formValues.company_linkedin_url,
+            industry: formValues.company_industry,
+            company_size: formValues.company_size,
+            phone: formValues.company_phone,
+            address_line1: formValues.company_address_line1,
+            city: formValues.company_city,
+            state: formValues.company_state,
+          }
         );
-        if (matchError) {
+        if (matchError || !matched) {
           setFormError(getFriendlyErrorMessage(matchError));
           return;
         }
-        nextCompanyId = matchedCompanyId;
+        nextCompanyId = matched.id;
+        if (matched.status === "restored") restoredCompany = formValues.company_name;
       } else {
         await supabase
           .from("companies")
@@ -214,7 +231,7 @@ export function ContactOverviewForm({
       return;
     }
 
-    toast.success("Saved.");
+    toast.success(restoredCompany ? `Saved. ${restoredCompany} was restored with its earlier details.` : "Saved.");
     setEditing(false);
     router.refresh();
   };

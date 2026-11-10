@@ -17,6 +17,9 @@ export const metadata: Metadata = { title: "Companies — GrowthMission" };
 /** The roles companies_insert lets add a company. */
 const CAN_CREATE_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
 
+/** Deleting companies (2026-11-10): the same people as deleting an opportunity. */
+const CAN_DELETE_ROLES = ["msp_owner", "msp_admin", "cro_admin"];
+
 /** Lower bounds for the Employees filter. */
 const EMPLOYEE_BANDS = ["1", "10", "50", "100", "250"];
 
@@ -176,7 +179,13 @@ export default async function CompaniesListPage({
           <CompaniesToolbar industries={industries} states={states} bands={EMPLOYEE_BANDS} shown={rows.length} total={all.length} />
 
           <div>
-            <CompaniesTable companies={rows.slice(from, to + 1)} maxValue={Math.max(1, ...rows.map((r) => r.prospectValue))} />
+            <CompaniesTable
+              key={JSON.stringify({ q, industry, state, min, open })}
+              companies={rows.slice(from, to + 1)}
+              maxValue={Math.max(1, ...rows.map((r) => r.prospectValue))}
+              canDelete={CAN_DELETE_ROLES.includes(user.role)}
+              matching={rows.map(({ id, contactCount, openOpps }) => ({ id, contactCount, openOpps }))}
+            />
             <PaginationBar page={page} pageSize={pageSize} totalCount={rows.length} />
           </div>
         </>

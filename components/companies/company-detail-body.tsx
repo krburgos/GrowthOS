@@ -66,6 +66,7 @@ export function CompanyDetailBody({
   companyId,
   accountId,
   canEdit,
+  canDelete = false,
   company,
   logoUrl,
   contacts,
@@ -75,6 +76,8 @@ export function CompanyDetailBody({
   companyId: string;
   accountId: string;
   canEdit: boolean;
+  /** Owner, Admin, CRO Admin (2026-11-10): Delete in the Overview's edit footer. */
+  canDelete?: boolean;
   company: CompanyOverviewValues;
   logoUrl: string | null;
   contacts: CompanyContactRow[];
@@ -191,6 +194,9 @@ export function CompanyDetailBody({
                 defaults={company}
                 editing={editing}
                 onEditingChange={setEditing}
+                canDelete={canDelete}
+                contactCount={contacts.length}
+                opportunityCount={opportunities.length}
               />
             </TabsContent>
 

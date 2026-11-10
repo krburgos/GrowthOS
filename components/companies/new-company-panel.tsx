@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { normalizeDomain } from "@/lib/companies/domain";
+import { matchOrCreateCompany } from "@/lib/companies/match";
 import { opportunitiesValue, prospectValue, usd } from "@/lib/companies/value";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/client";
@@ -199,17 +200,22 @@ function NewCompanyPanel({ accountId, onClose }: { accountId: string; onClose: (
       return;
     }
     setSaving(true);
-    const { data, error } = await createClient()
-      .from("companies")
-      .insert({ account_id: accountId, ...companyColumns(draft) })
-      .select("id")
-      .single();
+    // A deleted company with this website or name comes back with its
+    // earlier details, updated from what was typed (2026-11-10).
+    const columns = companyColumns(draft);
+    const { data, error } = await matchOrCreateCompany(createClient(), accountId, columns.name, columns.website, columns);
     setSaving(false);
     if (error || !data) {
       toast.error(getFriendlyErrorMessage(error));
       return;
     }
-    toast.success(`${draft.name.trim()} added.`);
+    toast.success(
+      data.status === "restored"
+        ? `${columns.name} was restored with its earlier details.`
+        : data.status === "matched"
+          ? `${columns.name} already exists. Opening it.`
+          : `${columns.name} added.`
+    );
     router.push(`/companies/${data.id}`);
   };
 

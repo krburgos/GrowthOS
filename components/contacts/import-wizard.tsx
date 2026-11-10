@@ -30,6 +30,8 @@ interface Progress {
   imported: number;
   updated: number;
   kept: number;
+  /** Deleted companies brought back by this import (2026-11-10). */
+  restoredCompanies: number;
   addedToList: number;
   /** The file row index the next batch starts at. */
   nextFrom: number;
@@ -218,6 +220,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
           imported: p.imported + n("imported"),
           updated: p.updated + n("updated"),
           kept: p.kept + n("kept"),
+          restoredCompanies: p.restoredCompanies + n("restoredCompanies"),
           elapsedMs: Date.now() - startedAt,
           failed: typeof body.error === "string" ? body.error : "Import failed.",
         };
@@ -231,6 +234,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
         imported: p.imported + n("imported"),
         updated: p.updated + n("updated"),
         kept: p.kept + n("kept"),
+        restoredCompanies: p.restoredCompanies + n("restoredCompanies"),
         addedToList: p.addedToList + n("addedToList"),
         nextFrom: n("to") > p.nextFrom ? n("to") : p.nextFrom + BATCH_SIZE,
         elapsedMs: Date.now() - startedAt,
@@ -257,6 +261,7 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
       imported: 0,
       updated: 0,
       kept: 0,
+      restoredCompanies: 0,
       addedToList: 0,
       nextFrom: 0,
       elapsedMs: 0,
@@ -288,6 +293,12 @@ export function ImportWizard({ targetListId, listName }: { targetListId?: string
       [progress.updated, "existing contacts updated"]
     );
     if (progress.kept > 0) lines.push([progress.kept, "existing contacts left unchanged"]);
+    if (progress.restoredCompanies > 0) {
+      lines.push([
+        progress.restoredCompanies,
+        `deleted ${progress.restoredCompanies === 1 ? "company" : "companies"} restored and updated from the file`,
+      ]);
+    }
 
     return (
       <div className="flex flex-col gap-4">

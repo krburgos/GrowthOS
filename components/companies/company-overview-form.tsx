@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Building2, GitMerge, Globe, Link2, MapPin, Phone, Tag, Users } from "lucide-react";
+import { Building2, GitMerge, Globe, Link2, MapPin, Phone, Tag, Trash2, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
@@ -10,9 +10,12 @@ import { z } from "zod";
 
 import { MergeCompanyDialog } from "@/components/contacts/merge-company-dialog";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 const schema = z.object({
   name: z.string().min(1, "Enter a company name."),
@@ -38,6 +41,12 @@ export type CompanyOverviewValues = z.infer<typeof schema>;
  *
  * Previously "Concept B — Gradient hero, single scroll" (2026-09-08),
  * which carried the logo and name in this form's own gradient header.
+ *
+ * Client-confirmed (2026-11-10, approved mockup "Delete Company Mockup"):
+ * Owner, Admin and CRO Admin get a red Delete at the far left of the edit
+ * footer. A company that still has contacts or opportunities can't be
+ * deleted (greyed out; hovering says why). Delete archives it through
+ * archive_companies(); it comes back if a contact from it is added again.
  */
 export function CompanyOverviewForm({
   companyId,
@@ -46,6 +55,9 @@ export function CompanyOverviewForm({
   defaults,
   editing,
   onEditingChange,
+  canDelete = false,
+  contactCount = 0,
+  opportunityCount = 0,
 }: {
   companyId: string;
   accountId: string;
@@ -53,9 +65,32 @@ export function CompanyOverviewForm({
   defaults: CompanyOverviewValues;
   editing: boolean;
   onEditingChange: (editing: boolean) => void;
+  canDelete?: boolean;
+  contactCount?: number;
+  opportunityCount?: number;
 }) {
   const router = useRouter();
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const remove = async () => {
+    setDeleting(true);
+    const { data, error } = await createClient().rpc("archive_companies", { p_ids: [companyId] });
+    setDeleting(false);
+    if (error) {
+      toast.error(getFriendlyErrorMessage(error));
+      return;
+    }
+    if ((data as { deleted: number } | null)?.deleted !== 1) {
+      toast.error("This company still has contacts or opportunities, so it wasn't deleted.");
+      setConfirmingDelete(false);
+      router.refresh();
+      return;
+    }
+    toast.success(`${defaults.name} deleted.`);
+    router.push("/companies");
+  };
   const {
     register,
     handleSubmit,
@@ -196,7 +231,16 @@ export function CompanyOverviewForm({
       </div>
 
       {editing && (
-        <div className="flex justify-end gap-3 rounded-b-lg border-t border-neutral-100 bg-neutral-50 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-3 rounded-b-lg border-t border-neutral-100 bg-neutral-50 px-4 py-3">
+          {canDelete && (
+            <DeleteButton
+              contacts={contactCount}
+              opportunities={opportunityCount}
+              disabled={isSubmitting}
+              onClick={() => setConfirmingDelete(true)}
+            />
+          )}
+          <span className="flex-1" />
           <Button type="button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
             Cancel
           </Button>
@@ -204,6 +248,29 @@ export function CompanyOverviewForm({
             {isSubmitting ? "Saving…" : "Save Changes"}
           </Button>
         </div>
+      )}
+
+      {confirmingDelete && (
+        <Dialog open onOpenChange={(o) => !o && !deleting && setConfirmingDelete(false)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete this company?</DialogTitle>
+              <DialogDescription className="text-body text-neutral-700">
+                <b className="font-semibold">{defaults.name}</b> will be removed from Companies, search and every total.
+                It&apos;s kept on record: if a contact from this company is added or imported later, the company comes back
+                with its earlier details.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="justify-end gap-3">
+              <Button variant="secondary" onClick={() => setConfirmingDelete(false)} disabled={deleting}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={() => void remove()} disabled={deleting}>
+                {deleting ? "Deleting…" : "Delete company"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       <MergeCompanyDialog
@@ -214,6 +281,49 @@ export function CompanyOverviewForm({
         accountId={accountId}
       />
     </form>
+  );
+}
+
+/** Red, at the far left of the edit footer, away from Save. Greyed out while the company has contacts or opportunities; hovering says why. */
+function DeleteButton({
+  contacts,
+  opportunities,
+  disabled,
+  onClick,
+}: {
+  contacts: number;
+  opportunities: number;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const blocked = contacts > 0 || opportunities > 0;
+  const button = (
+    <button
+      type="button"
+      onClick={blocked ? undefined : onClick}
+      disabled={disabled}
+      aria-disabled={blocked || undefined}
+      className={cn(
+        "inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-button text-error-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40",
+        blocked ? "cursor-not-allowed opacity-40" : "hover:bg-error-50 disabled:opacity-40"
+      )}
+    >
+      <Trash2 className="size-4" />
+      Delete
+    </button>
+  );
+  if (!blocked) return button;
+  const parts = [
+    contacts > 0 ? `${contacts} ${contacts === 1 ? "contact" : "contacts"}` : "",
+    opportunities > 0 ? `${opportunities} ${opportunities === 1 ? "opportunity" : "opportunities"}` : "",
+  ].filter(Boolean);
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipContent className="max-w-64 font-medium">
+        Delete or move its {parts.join(" and ")} first. Then this company can be deleted.
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { matchOrCreateCompany } from "@/lib/companies/match";
 import { employeesOf } from "@/lib/companies/value";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { createClient } from "@/lib/supabase/client";
@@ -139,17 +140,18 @@ export function AddContactPanel({ accountId, companyId, onClose }: { accountId: 
     const supabase = createClient();
 
     let linkedCompanyId: string | null = company?.id ?? null;
+    // A deleted company with this website or name comes back with its
+    // earlier details, updated from what was typed (2026-11-10).
+    let restoredNote = "";
     if (draft) {
-      const { data, error } = await supabase
-        .from("companies")
-        .insert({ account_id: accountId, ...companyColumns(draft) })
-        .select("id")
-        .single();
+      const columns = companyColumns(draft);
+      const { data, error } = await matchOrCreateCompany(supabase, accountId, columns.name, columns.website, columns);
       if (error || !data) {
         toast.error(getFriendlyErrorMessage(error));
         return;
       }
       linkedCompanyId = data.id;
+      if (data.status === "restored") restoredNote = ` ${columns.name} was restored with its earlier details.`;
     }
 
     const fields = {
@@ -184,7 +186,7 @@ export function AddContactPanel({ accountId, companyId, onClose }: { accountId: 
         toast.error(getFriendlyErrorMessage(error));
         return;
       }
-      toast.success(`${fields.first_name} updated (existing contact with this email).`);
+      toast.success(`${fields.first_name} updated (existing contact with this email).${restoredNote}`);
       router.push(`/contacts/${existing.id}`);
       return;
     }
@@ -198,7 +200,7 @@ export function AddContactPanel({ accountId, companyId, onClose }: { accountId: 
       toast.error(getFriendlyErrorMessage(error));
       return;
     }
-    toast.success(`${fields.first_name} added.`);
+    toast.success(restoredNote ? `Contact added.${restoredNote}` : `${fields.first_name} added.`);
     router.push(`/contacts/${inserted.id}`);
   };
 

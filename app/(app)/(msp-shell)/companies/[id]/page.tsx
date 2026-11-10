@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 export const metadata: Metadata = { title: "Company — GrowthMission" };
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
+const DELETE_ROLES = ["msp_owner", "msp_admin", "cro_admin"];
 
 function one<T>(field: unknown): T | undefined {
   return (Array.isArray(field) ? field[0] : field) ?? undefined;
@@ -49,6 +50,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
   if (!company) notFound();
 
   const canEdit = EDIT_ROLES.includes(user.role);
+  // Deleting a company: the same people as deleting an opportunity (2026-11-10).
+  const canDelete = DELETE_ROLES.includes(user.role);
 
   const [{ data: contactRows }, { data: opportunityRows }] = await Promise.all([
     supabase
@@ -117,6 +120,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
       companyId={companyId}
       accountId={user.account_id!}
       canEdit={canEdit}
+      canDelete={canDelete}
       company={{
         name: fields.name,
         website: fields.website ?? undefined,

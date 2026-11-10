@@ -5,6 +5,7 @@ import { parseImportFile } from "@/lib/import/parse";
 import { emailKey, existingContactsByEmail, winningRows, type RepeatMode } from "@/lib/import/repeats";
 import { applyMapping, validateRows, type MappedRow } from "@/lib/import/validate";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { matchOrCreateCompany } from "@/lib/companies/match";
 import { createClient } from "@/lib/supabase/server";
 
 const EDIT_ROLES = ["msp_owner", "msp_admin", "msp_marketing", "cro_admin", "cro_advisor"];
@@ -134,7 +135,8 @@ export async function POST(request: NextRequest) {
   let updated = 0;
   let kept = 0;
   const listContactIds: string[] = [];
-  const counts = () => ({ processed: batch.length, imported: created, updated, kept });
+  let restoredCompanies = 0;
+  const counts = () => ({ processed: batch.length, imported: created, updated, kept, restoredCompanies });
 
   for (const row of batch) {
     const matchedContactId = existingByEmail.get(emailKey(row.email));
@@ -148,13 +150,17 @@ export async function POST(request: NextRequest) {
 
     let companyId: string | null = null;
     if (row.company_name) {
-      const { data: matchedCompanyId, error: matchError } = await supabase.rpc("match_or_create_company", {
-        p_account_id: accountId,
-        p_name: row.company_name,
-        p_domain: row.company_website || null,
-      });
-      if (!matchError && matchedCompanyId) {
-        companyId = matchedCompanyId;
+      // A deleted company comes back with its earlier details; the patch
+      // below then writes this row's filled-in values over them (2026-11-10).
+      const { data: matched, error: matchError } = await matchOrCreateCompany(
+        supabase,
+        accountId,
+        row.company_name,
+        row.company_website || null
+      );
+      if (!matchError && matched) {
+        companyId = matched.id;
+        if (matched.status === "restored") restoredCompanies += 1;
         const companyPatch = filled({
           website: row.company_website,
           linkedin_url: row.company_linkedin_url,
