@@ -119,6 +119,11 @@ export default async function MspShellLayout({ children }: { children: React.Rea
               profileComplete={profile?.complete ?? true}
             />
             {children}
+            {/* Room under every page for the Mission Control figure (fixed
+                bottom-right, 64–72px plus its offset), so the last thing on a
+                page — a table's Next page button — can scroll clear of it
+                (2026-11-12). */}
+            <div aria-hidden="true" className="h-24 shrink-0 sm:h-28" />
             {/* Edit Opportunity (2026-10-26): ?opportunity=<id> opens its panel over any page. */}
             <Suspense fallback={null}>
               <OpportunityPanelHost role={user.role} />
