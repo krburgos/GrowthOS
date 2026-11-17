@@ -111,7 +111,7 @@ This set covers the screens in the App Flow Document — tabs (contact detail), 
 | --- | --- | --- |
 | papaparse | **5.6.0** | CSV import (§6.1 of the PRD) and CSV report export |
 | @types/papaparse | **5.5.2** | Type definitions for papaparse |
-| exceljs | **4.4.0** | XLSX import and export — chosen over the xlsx/SheetJS npm package, whose npm-published build lags its official releases and carries known licensing friction; ExcelJS is MIT-licensed and cleanly distributed |
+| exceljs | **4.4.0** | XLSX import and export — chosen over the xlsx/SheetJS npm package, whose npm-published build lags its official releases and carries known licensing friction; ExcelJS is MIT-licensed and cleanly distributed. Its own dependency `uuid` is pinned to **11.1.1** through an npm `overrides` entry in package.json (2026-11-17): exceljs 4.4.0 is the latest release and still depends on uuid 8.3.2, flagged by GHSA-w5hq-g745-h8pq (moderate, missing buffer bounds check in v3/v5/v6; exceljs only calls v4, so not reachable). npm audit's suggested fix, downgrading exceljs to 3.4.0, is wrong and must not be applied. Drop the override once exceljs ships with uuid ≥ 11.1.1. |
 | pdfkit | **0.20.2** | Server-side PDF generation — the Growth Solution Questionnaire's completed-answers export (2026-09-15), and the GrowthMission Vision Board export (2026-09-17, same library, no new dependency). Client-confirmed (2026-09-17): every PDF export embeds Poppins for branding, never pdfkit's built-in Helvetica — Regular/Medium/SemiBold/Bold TTFs in `lib/pdf/fonts` (SIL Open Font License), registered via `lib/pdf/poppins.ts`, and bundled with each export route via `outputFileTracingIncludes` in `next.config.ts`. A static font asset, not an npm dependency. Chosen over `@react-pdf/renderer` for this specific document: the export is a plain, single-column list of question/answer pairs with no layout complex enough to need React's component model, and pdfkit's direct low-level drawing API (text, moveDown, addPage) is the smaller dependency for that shape of document. |
 | @types/pdfkit | **0.17.6** | Type definitions for pdfkit |
 
@@ -195,6 +195,11 @@ Ready to drop into a fresh create-next-app scaffold — Claude Code should recon
     "eslint": "10.9.1",
     "eslint-config-next": "16.4.6",
     "prettier": "3.9.6"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
   }
 }
 ```
