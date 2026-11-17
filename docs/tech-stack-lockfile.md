@@ -26,7 +26,7 @@ This document is a **build input for Claude Code** — not a narrative pitch. Ev
 
 | **Package** | **Version** | **Notes** |
 | --- | --- | --- |
-| next | **16.4.3** | App Router. Security bump from 16.3.3 (2026-10-26) — Next.js advisories of 2026-10-14 (GHSA-2464-fhr4-w9xw SVG image RCE, GHSA-673q-mjm6-r5xr `use cache` RCE, GHSA-p3m5-59mp-jv5r Server Actions DoS, plus eight lower-severity advisories); also pulls in sharp 0.35.5 (CVE-2026-96889) |
+| next | **16.4.6** | App Router. Security bump from 16.4.3 (2026-11-17) — GHSA-mfr8-8qww-v76h (moderate: information disclosure across root params when a `use cache` function is called through `unstable_cache()`; GrowthMission uses neither, upgraded to clear it). Earlier: security bump from 16.3.3 (2026-10-26) — Next.js advisories of 2026-10-14 (GHSA-2464-fhr4-w9xw SVG image RCE, GHSA-673q-mjm6-r5xr `use cache` RCE, GHSA-p3m5-59mp-jv5r Server Actions DoS, plus eight lower-severity advisories); also pulls in sharp 0.35.5 (CVE-2026-96889) |
 | react | **19.2.8** |  |
 | react-dom | **19.2.8** | Matches the react version exactly |
 | typescript | **5.9.3** | Not the npm latest tag — see §5.1 for why |
@@ -129,7 +129,7 @@ This set covers the screens in the App Flow Document — tabs (contact detail), 
 | **Package** | **Version** | **Notes** |
 | --- | --- | --- |
 | eslint | **10.9.1** | Linting |
-| eslint-config-next | **16.4.3** | Matches the Next.js version exactly |
+| eslint-config-next | **16.4.6** | Matches the Next.js version exactly |
 | prettier | **3.9.6** | Formatting |
 
 No testing framework is pinned in this pass, per your call to stay scoped to what ships Phase 1 within the timeline. Add one (Vitest is the natural fit alongside this stack) whenever that changes.
@@ -143,7 +143,7 @@ Ready to drop into a fresh create-next-app scaffold — Claude Code should recon
     "node": "24.x"
   },
   "dependencies": {
-    "next": "16.4.3",
+    "next": "16.4.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "@supabase/supabase-js": "2.107.0",
@@ -193,7 +193,7 @@ Ready to drop into a fresh create-next-app scaffold — Claude Code should recon
     "tailwindcss": "4.3.3",
     "@tailwindcss/postcss": "4.3.3",
     "eslint": "10.9.1",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.6",
     "prettier": "3.9.6"
   }
 }
