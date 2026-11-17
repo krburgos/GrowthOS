@@ -128,7 +128,7 @@ This set covers the screens in the App Flow Document — tabs (contact detail), 
 
 | **Package** | **Version** | **Notes** |
 | --- | --- | --- |
-| eslint | **10.9.1** | Linting |
+| eslint | **10.15.0** | Linting. Security bump from 10.9.1 (2026-11-17) for GHSA-g3hv-75wg-m249 (moderate, minimatch denial of service; development tool only, never shipped). The same fix moved the transitive typescript-eslint, pulled in by eslint-config-next, from 8.69.0 to 8.73.0 in package-lock.json. |
 | eslint-config-next | **16.4.6** | Matches the Next.js version exactly |
 | prettier | **3.9.6** | Formatting |
 
@@ -192,7 +192,7 @@ Ready to drop into a fresh create-next-app scaffold — Claude Code should recon
     "@types/pdfkit": "0.17.6",
     "tailwindcss": "4.3.3",
     "@tailwindcss/postcss": "4.3.3",
-    "eslint": "10.9.1",
+    "eslint": "10.15.0",
     "eslint-config-next": "16.4.6",
     "prettier": "3.9.6"
   },
