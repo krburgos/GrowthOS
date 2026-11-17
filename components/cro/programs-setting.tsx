@@ -130,7 +130,7 @@ export function ProgramsSettingButton({
                   {PROGRAM_LABEL[p]}
                 </label>
                 <Select value={draft[p].start} onValueChange={(v) => setDraft((d) => ({ ...d, [p]: { ...d[p], start: v } }))} disabled={!draft[p].on}>
-                  <SelectTrigger aria-label={`${PROGRAM_LABEL[p]} since`} className="h-9 w-40">
+                  <SelectTrigger aria-label={`${PROGRAM_LABEL[p]} since`} className="h-9 w-48 whitespace-nowrap">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

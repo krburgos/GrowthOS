@@ -36,7 +36,7 @@ export function IntelTabs({ programs, active }: { programs: Program[]; active: "
           key={t.key}
           href={t.href}
           aria-current={active === t.key ? "page" : undefined}
-          className={`-mb-px border-b-2 px-3.5 py-2 text-body-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 ${
+          className={`-mb-px border-b-2 px-2.5 py-2 text-body-sm sm:px-3.5 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 ${
             active === t.key ? "border-secondary-600 text-primary-900" : "border-transparent text-neutral-500 hover:text-primary-700"
           }`}
         >
@@ -176,7 +176,7 @@ export function ProgramBoard({ data, selected, tabs }: { data: ProgramBoardData;
         aria-label="Headline figures"
         className="rounded-xl bg-[linear-gradient(135deg,var(--color-primary-900),var(--color-primary-700)_60%,var(--color-secondary-800))] p-4 shadow-lift"
       >
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
           {data.headline.map((h) => (
             <div key={h.key} className="flex min-w-0 flex-col gap-0.5 rounded-lg bg-white px-3.5 py-3">
               <span className="flex items-center gap-1 text-caption font-medium text-neutral-500">
@@ -286,16 +286,26 @@ export function ProgramBoard({ data, selected, tabs }: { data: ProgramBoardData;
       )}
 
       <Card title="Month by Month" subtitle="Every number for every published month">
-        <div className="overflow-x-auto px-5 pb-5 pt-2">
-          <table className="w-full border-collapse text-body-sm" style={{ minWidth: 220 + windowMonths.length * 84 }}>
+        <div data-month-scroll className="overflow-x-auto px-5 pb-5 pt-2">
+          <table className="w-full border-collapse text-body-sm" style={{ minWidth: 150 + windowMonths.length * 64 }}>
             <thead>
               <tr className="border-b border-neutral-200 text-neutral-500">
-                <th scope="col" className="px-3 py-2.5 text-left text-caption font-semibold">
+                <th scope="col" className="sticky left-0 z-[1] border-r border-neutral-100 bg-white px-3 py-2.5 text-left text-caption font-semibold">
                   Deliverable
                 </th>
                 {windowMonths.map((m) => (
                   <th
                     key={m.month}
+                    // On a narrow screen the table scrolls sideways; open it on
+                    // the month being viewed rather than the oldest one.
+                    ref={
+                      m.month === cur.month
+                        ? (el) => {
+                            const box = el?.closest<HTMLElement>("[data-month-scroll]");
+                            if (el && box) box.scrollLeft = Math.max(0, el.offsetLeft + el.offsetWidth - box.clientWidth + 20);
+                          }
+                        : undefined
+                    }
                     scope="col"
                     className={`px-3 py-2.5 text-right text-caption font-semibold ${m.month === cur.month ? "bg-secondary-50 text-primary-900" : ""}`}
                   >
@@ -327,7 +337,7 @@ function GroupRows({ title, rows, months, selected }: { title: string; rows: Boa
       </tr>
       {rows.map((r) => (
         <tr key={r.key} className="border-b border-neutral-100">
-          <td className="px-3 py-2 text-neutral-700">
+          <td className="sticky left-0 z-[1] border-r border-neutral-100 bg-white px-3 py-2 text-neutral-700">
             <span className="inline-flex items-center gap-1">
               {r.label}
               {r.tip && <InfoTip label={`About ${r.label}`} text={r.tip} />}
@@ -381,28 +391,38 @@ function Legend({ items }: { items: [string, string][] }) {
   );
 }
 
-function niceMax(v: number) {
-  if (v <= 0) return 4;
-  const p = Math.pow(10, Math.floor(Math.log10(v)));
-  const n = Math.ceil(v / p);
-  return (n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+/**
+ * An axis that ends on a round number with round steps (1, 2 or 5 times a
+ * power of ten), at most five steps: 45 → 0/10/…/50, 296 → 0/100/200/300.
+ */
+function niceScale(v: number) {
+  const top = Math.max(v, 1);
+  let p = 1;
+  for (;;) {
+    for (const s of [1, 2, 5]) {
+      const step = s * p;
+      const n = Math.ceil(top / step);
+      if (n <= 5) return { max: n * step, steps: n };
+    }
+    p *= 10;
+  }
 }
 
 const W = 460;
 const H = 190;
 const M = { t: 16, r: 10, b: 26, l: 40 };
 
-function Grid({ max, fmtTick }: { max: number; fmtTick: (n: number) => string }) {
+function Grid({ max, steps, fmtTick }: { max: number; steps: number; fmtTick: (n: number) => string }) {
   const ph = H - M.t - M.b;
   return (
     <g>
-      {[0, 1, 2, 3, 4].map((i) => {
-        const y = M.t + ph * (1 - i / 4);
+      {Array.from({ length: steps + 1 }, (_, i) => {
+        const y = M.t + ph * (1 - i / steps);
         return (
           <g key={i}>
             <line x1={M.l} x2={W - M.r} y1={y} y2={y} stroke="var(--color-neutral-100)" />
             <text x={M.l - 8} y={y + 4} textAnchor="end" fontSize={11} fill="var(--color-neutral-500)">
-              {fmtTick((max / 4) * i)}
+              {fmtTick((max / steps) * i)}
             </text>
           </g>
         );
@@ -413,12 +433,12 @@ function Grid({ max, fmtTick }: { max: number; fmtTick: (n: number) => string })
 
 function Bars({ months, k, selected }: { months: BoardMonth[]; k: string; selected: string }) {
   const vals = months.map((m) => m.figures[k] ?? 0);
-  const max = niceMax(Math.max(...vals, 1));
+  const { max, steps } = niceScale(Math.max(...vals, 1));
   const ph = H - M.t - M.b;
   const bw = (W - M.l - M.r) / Math.max(months.length, 1);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label="By month">
-      <Grid max={max} fmtTick={(n) => Math.round(n).toLocaleString()} />
+      <Grid max={max} steps={steps} fmtTick={(n) => Math.round(n).toLocaleString()} />
       {months.map((m, i) => {
         const on = m.month === selected;
         const val = m.figures[k];
@@ -446,14 +466,14 @@ function Bars({ months, k, selected }: { months: BoardMonth[]; k: string; select
 
 function RateLine({ months, k, selected }: { months: BoardMonth[]; k: string; selected: string }) {
   const vals = months.map((m) => m.figures[k] ?? null);
-  const max = niceMax(Math.max(...vals.map((x) => x ?? 0), 10));
+  const { max, steps } = niceScale(Math.min(100, Math.max(...vals.map((x) => x ?? 0), 10)));
   const ph = H - M.t - M.b;
   const step = months.length > 1 ? (W - M.l - M.r - 20) / (months.length - 1) : 0;
   const pts = vals.map((x, i) => (x === null ? null : ([M.l + 10 + step * i, M.t + ph * (1 - x / max)] as const)));
   const drawn = pts.filter((p): p is readonly [number, number] => p !== null);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label="Open rate by month">
-      <Grid max={max} fmtTick={(n) => `${Math.round(n)}%`} />
+      <Grid max={max} steps={steps} fmtTick={(n) => `${Math.round(n)}%`} />
       {months.map((m, i) => (
         <text key={m.month} x={M.l + 10 + step * i} y={H - 8} textAnchor="middle" fontSize={11} fill="var(--color-neutral-500)">
           {shortMonth(m.month)}

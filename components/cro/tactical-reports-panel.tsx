@@ -70,7 +70,7 @@ export function TacticalReportsPanel({
   const router = useRouter();
   const [rows, setRows] = useState(reports);
   const earliest = clients.reduce((m, c) => (c.startMonth < m ? c.startMonth : m), currentMonth);
-  const months = useMemo(() => monthsBetween(earliest, currentMonth).reverse(), [earliest, currentMonth]);
+  const months = useMemo(() => monthsBetween(earliest, currentMonth), [earliest, currentMonth]);
   const [month, setMonth] = useState(currentMonth);
   const due = clients.filter((c) => c.startMonth <= month).sort((a, b) => a.name.localeCompare(b.name));
   const [selectedId, setSelectedId] = useState<string | null>(due[0]?.accountId ?? null);
