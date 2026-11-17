@@ -40,6 +40,8 @@ export interface ReportRow extends OutreachNumbers {
   signer_id: string | null;
   gm_numbers: GmNumbers | null;
   exported_at: string | null;
+  /** Published to the client's Intel (Program Reports, 2026-11-16); null when not. */
+  published_at?: string | null;
 }
 
 export interface ReportModel {

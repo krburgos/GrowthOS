@@ -3,7 +3,8 @@
 import { Check, Minus } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { SniperLeadsSettingButton, type SniperLeadsSetting } from "@/components/cro/sniperleads-setting";
+import { ProgramsSettingButton } from "@/components/cro/programs-setting";
+import type { ProgramSetting } from "@/lib/programs/programs";
 import { Input } from "@/components/ui/input";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -77,12 +78,12 @@ function lastActivityLabel(iso: string | null) {
 export function AccountsList({
   accounts,
   quarter,
-  sniperleads,
+  programs,
 }: {
   accounts: CroAccountRow[];
   quarter: QuarterInfo;
-  /** CRO Admin only: each client's SniperLeads setting, edited from its row (2026-10-30). */
-  sniperleads?: { settings: Record<string, SniperLeadsSetting>; currentUserId: string };
+  /** CRO Admin only: each client's programs, edited from its row (2026-11-16; was the SniperLeads setting, 2026-10-30). */
+  programs?: { settings: Record<string, ProgramSetting[]>; currentUserId: string };
 }) {
   const [query, setQuery] = useState("");
   const [attentionOnly, setAttentionOnly] = useState(false);
@@ -205,12 +206,12 @@ export function AccountsList({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-2">
-                        {sniperleads && (
-                          <SniperLeadsSettingButton
+                        {programs && (
+                          <ProgramsSettingButton
                             accountId={a.id}
                             accountName={a.name}
-                            setting={sniperleads.settings[a.id] ?? null}
-                            currentUserId={sniperleads.currentUserId}
+                            settings={programs.settings[a.id] ?? []}
+                            currentUserId={programs.currentUserId}
                           />
                         )}
                         <form action="/api/cro/enter" method="post">

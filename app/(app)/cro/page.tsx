@@ -9,13 +9,15 @@ import { AllUsersPanel } from "@/components/cro/all-users-panel";
 import { GrowthMissionOrdersPanel, type CroOrderRow } from "@/components/cro/growthmission-orders-panel";
 import type { PersonRow } from "@/components/cro/people-bits";
 import { SniperLeadsReportsPanel, type SniperLeadsClient } from "@/components/cro/sniperleads-reports-panel";
-import type { SniperLeadsSetting } from "@/components/cro/sniperleads-setting";
+import { TacticalReportsPanel, type TacticalClient } from "@/components/cro/tactical-reports-panel";
 import { CroTeamPanel } from "@/components/cro/team-panel";
 import { FocusButton, SectionPane, SectionSwitcher } from "@/components/growth-mission/section-switcher";
 import { getCurrentUser, needsAccountSelection, type UserRole } from "@/lib/auth/get-current-user";
 import { CRO_LEADER_ROLES, MSP_ROLES } from "@/lib/auth/roles";
 import { currentQuarter } from "@/lib/growth-mission/hours";
 import { rankOrders, type TaskPriority, type TaskState } from "@/lib/growth-mission/tasks";
+import { PROGRAMS, type Program, type ProgramSetting } from "@/lib/programs/programs";
+import { TACTICAL_COLUMNS, type TacticalRow } from "@/lib/programs/tactical";
 import { monthKey, type GmNumbers, type ReportRow } from "@/lib/sniperleads/report";
 import { createClient } from "@/lib/supabase/server";
 
@@ -228,20 +230,36 @@ export default async function CroDashboardPage() {
   // numbers are counted per client by sniperleads_numbers().
   const canReport = isCroAdmin || user.role === "cro_advisor";
   const currentMonth = monthKey();
-  const slSettings: Record<string, SniperLeadsSetting> = {};
+  // Programs (client-confirmed 2026-11-16, approved mockup "Program Reports
+  // Mockup"): account_programs replaces sniperleads_clients as the record of
+  // which programs each client has.
+  const programSettings: Record<string, ProgramSetting[]> = {};
+  const slSettings: Record<string, { startMonth: string; active: boolean }> = {};
   let slClients: SniperLeadsClient[] = [];
   let slReports: ReportRow[] = [];
+  let tlClients: TacticalClient[] = [];
+  let tlReports: TacticalRow[] = [];
   if (canReport) {
-    const [{ data: settingRows }, { data: reportRows }, { data: ownerRows }] = await Promise.all([
-      supabase.from("sniperleads_clients").select("account_id, start_month, active"),
+    const [{ data: settingRows }, { data: reportRows }, { data: ownerRows }, { data: tacticalRows }] = await Promise.all([
+      supabase.from("account_programs").select("account_id, program, start_month, active"),
       supabase
         .from("sniperleads_reports")
         .select(
-          "id, account_id, month, emails_sent, real_replies, auto_replies, calls, ad_audience, linkedin_started, linkedin_invites, linkedin_messages, website_started, website_visits, intro, closing, signer_id, gm_numbers, exported_at"
+          "id, account_id, month, emails_sent, real_replies, auto_replies, calls, ad_audience, linkedin_started, linkedin_invites, linkedin_messages, website_started, website_visits, intro, closing, signer_id, gm_numbers, exported_at, published_at"
         ),
       supabase.from("users").select("account_id, full_name").eq("role", "msp_owner").is("archived_at", null).order("created_at"),
+      supabase.from("tactical_reports").select(TACTICAL_COLUMNS),
     ]);
-    for (const r of settingRows ?? []) slSettings[r.account_id] = { startMonth: r.start_month, active: r.active };
+    for (const r of settingRows ?? []) {
+      if (!(PROGRAMS as readonly string[]).includes(r.program)) continue;
+      (programSettings[r.account_id] ??= []).push({ program: r.program as Program, startMonth: r.start_month, active: r.active });
+      if (r.program === "sniper_leads") slSettings[r.account_id] = { startMonth: r.start_month, active: r.active };
+    }
+    tlReports = (tacticalRows ?? []) as unknown as TacticalRow[];
+    tlClients = accounts.flatMap((a) => {
+      const t = programSettings[a.id]?.find((p) => p.program === "tactical_leads" && p.active);
+      return t ? [{ accountId: a.id, name: a.name, startMonth: t.startMonth }] : [];
+    });
     slReports = (reportRows ?? []) as ReportRow[];
     const ownerByAccount = new Map<string, string>();
     for (const o of ownerRows ?? []) if (o.account_id && !ownerByAccount.has(o.account_id)) ownerByAccount.set(o.account_id, o.full_name);
@@ -273,6 +291,9 @@ export default async function CroDashboardPage() {
   }
   const reportsToFinish = slClients.filter(
     (c) => c.startMonth <= currentMonth && !slReports.some((r) => r.account_id === c.accountId && r.month === currentMonth && r.exported_at)
+  ).length;
+  const tacticalToPublish = tlClients.filter(
+    (c) => c.startMonth <= currentMonth && !tlReports.some((r) => r.account_id === c.accountId && r.month === currentMonth && r.published_at)
   ).length;
 
   let partners: PartnerRow[] = [];
@@ -314,7 +335,7 @@ export default async function CroDashboardPage() {
       <AccountsList
         accounts={accounts}
         quarter={quarter}
-        sniperleads={isCroAdmin ? { settings: slSettings, currentUserId: user.id } : undefined}
+        programs={isCroAdmin ? { settings: programSettings, currentUserId: user.id } : undefined}
       />
     </section>
   );
@@ -338,7 +359,12 @@ export default async function CroDashboardPage() {
           sections={[
             { view: "clients", label: "Clients", hash: "#clients", count: accounts.length },
             { view: "orders", label: "GrowthMission Orders", hash: "#orders", count: openGmOrders },
-            ...(canReport ? [{ view: "sniperleads", label: "SniperLeads Reports", hash: "#sniperleads", count: reportsToFinish }] : []),
+            ...(canReport
+              ? [
+                  { view: "sniperleads", label: "SniperLeads Reports", hash: "#sniperleads", count: reportsToFinish },
+                  { view: "tactical", label: "TacticalLeads Reports", hash: "#tactical", count: tacticalToPublish },
+                ]
+              : []),
             ...(isCroAdmin
               ? [
                   { view: "team", label: "CRO Leader Team", hash: "#team", count: team.filter((t) => !t.archived_at).length },
@@ -368,6 +394,17 @@ export default async function CroDashboardPage() {
                 currentUserId={user.id}
                 currentMonth={currentMonth}
                 focusSlot={<FocusButton view="sniperleads" label="SniperLeads Reports" />}
+              />
+            </SectionPane>
+          )}
+          {canReport && (
+            <SectionPane view="tactical">
+              <TacticalReportsPanel
+                clients={tlClients}
+                reports={tlReports}
+                currentUserId={user.id}
+                currentMonth={currentMonth}
+                focusSlot={<FocusButton view="tactical" label="TacticalLeads Reports" tone="light" />}
               />
             </SectionPane>
           )}

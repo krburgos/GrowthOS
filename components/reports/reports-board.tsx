@@ -54,7 +54,7 @@ interface Tip {
   lines: ReactNode;
 }
 
-export function ReportsBoard({ data }: { data: ReportsData }) {
+export function ReportsBoard({ data, tabs }: { data: ReportsData; tabs?: ReactNode }) {
   const router = useRouter();
   const [compare, setCompare] = useState(true);
   const [tip, setTip] = useState<Tip | null>(null);
@@ -125,6 +125,10 @@ export function ReportsBoard({ data }: { data: ReportsData }) {
           )}
         </div>
       </div>
+
+      {/* Program Reports (client-confirmed 2026-11-16): one tab per program
+          the account subscribes to, under the header. */}
+      {tabs}
 
       <nav aria-label="Report sections" className="flex flex-wrap gap-1.5">
         {[

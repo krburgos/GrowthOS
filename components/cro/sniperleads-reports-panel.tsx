@@ -495,7 +495,7 @@ function ReportEditor({
   const [closing, setClosing] = useState(report?.closing ?? defaultClosing());
   const defaultSigner = signers.some((s) => s.id === currentUserId) ? currentUserId : (signers[0]?.id ?? "");
   const [signerId, setSignerId] = useState(report?.signer_id ?? defaultSigner);
-  const [busy, setBusy] = useState<"" | "save" | "copy" | "pdf">("");
+  const [busy, setBusy] = useState<"" | "save" | "copy" | "pdf" | "publish" | "unpublish">("");
   const [savedRow, setSavedRow] = useState(report);
 
   const outreach: OutreachNumbers = {
@@ -528,7 +528,8 @@ function ReportEditor({
   const html = reportHtml(model);
   const status = reportStatus({ exported_at: savedRow?.exported_at ?? null, ...outreach });
 
-  async function save(markExported: boolean): Promise<ReportRow | null> {
+  /** publish: true puts the month in the client's Intel, false takes it out (Program Reports, 2026-11-16). */
+  async function save(markExported: boolean, publish?: boolean): Promise<ReportRow | null> {
     if (invalid.length > 0) {
       toast.error("Outreach numbers must be whole numbers, 0 or more.");
       return null;
@@ -550,12 +551,22 @@ function ReportEditor({
             gm_numbers: savedRow?.gm_numbers ?? gm,
           }
         : {}),
+      ...(publish === true
+        ? {
+            published_at: new Date().toISOString(),
+            published_by: currentUserId,
+            // Publishing fixes the GM numbers the same way the first export does.
+            gm_numbers: savedRow?.gm_numbers ?? gm,
+          }
+        : publish === false
+          ? { published_at: null, published_by: null }
+          : {}),
     };
     const { data, error } = await supabase
       .from("sniperleads_reports")
       .upsert(payload, { onConflict: "account_id,month" })
       .select(
-        "id, account_id, month, emails_sent, real_replies, auto_replies, calls, ad_audience, linkedin_started, linkedin_invites, linkedin_messages, website_started, website_visits, intro, closing, signer_id, gm_numbers, exported_at"
+        "id, account_id, month, emails_sent, real_replies, auto_replies, calls, ad_audience, linkedin_started, linkedin_invites, linkedin_messages, website_started, website_visits, intro, closing, signer_id, gm_numbers, exported_at, published_at"
       )
       .single();
     if (error || !data) {
@@ -573,6 +584,13 @@ function ReportEditor({
     const row = await save(false);
     setBusy("");
     if (row) toast.success("Draft saved.");
+  }
+
+  async function handlePublish(publish: boolean) {
+    setBusy(publish ? "publish" : "unpublish");
+    const row = await save(false, publish);
+    setBusy("");
+    if (row) toast.success(publish ? `Published. ${client.name} can see ${monthLabel(month)} in Intel.` : `Unpublished. ${client.name} no longer sees ${monthLabel(month)} in Intel.`);
   }
 
   async function handleCopy() {
@@ -671,7 +689,10 @@ function ReportEditor({
               {client.ownerName ? ` · For ${client.ownerName}` : ""}
             </p>
           </div>
-          <span className="ml-auto">
+          <span className="ml-auto flex items-center gap-2">
+            {savedRow?.published_at && (
+              <span className="inline-flex items-center rounded-full bg-success-100 px-2 py-0.5 text-caption font-semibold text-success-800">In Intel</span>
+            )}
             <StatusPill status={status} exportedAt={savedRow?.exported_at} />
           </span>
         </div>
@@ -790,6 +811,14 @@ function ReportEditor({
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <Button variant="secondary" onClick={handleSave} disabled={busy !== ""}>
               {busy === "save" ? "Saving…" : "Save draft"}
+            </Button>
+            {savedRow?.published_at && (
+              <Button variant="ghost" onClick={() => handlePublish(false)} disabled={busy !== ""}>
+                {busy === "unpublish" ? "Unpublishing…" : "Unpublish"}
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => handlePublish(true)} disabled={busy !== ""}>
+              {busy === "publish" ? "Publishing…" : savedRow?.published_at ? "Update Intel" : "Publish to Intel"}
             </Button>
             <Button variant="secondary" onClick={handlePdf} disabled={busy !== ""}>
               {busy === "pdf" ? "Preparing…" : "Download PDF"}

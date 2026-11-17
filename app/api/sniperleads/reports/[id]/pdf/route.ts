@@ -17,12 +17,15 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/sniperleads/reports/[id]/pdf — one client's SniperLeads monthly
- * report as a PDF (client-confirmed, 2026-10-30). CRO Admin and CRO Advisor.
+ * report as a PDF (client-confirmed, 2026-10-30). CRO Admin and CRO Advisor,
+ * and since 2026-11-16 (Program Reports) the account's own users for a
+ * month that has been published to Intel.
  *
- * The session client under RLS is enough: sniperleads_reports is readable
- * only by those two roles, so a report anyone else asks for is simply not
- * found. The editor saves (and marks exported) before it opens this, so the
- * row always holds what the preview showed.
+ * The session client under RLS is enough: CRO Admin and CRO Advisor read
+ * every report, anyone else only published reports of an account they can
+ * see (sniperleads_reports_select_published), so any other report is simply
+ * not found. The editor saves (and marks exported) before it opens this, so
+ * the row always holds what the preview showed.
  *
  * Poppins and the logo are read from disk, so this route is listed under
  * `outputFileTracingIncludes` in next.config.ts.
@@ -30,7 +33,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getCurrentUser();
-  if (!user || !["cro_admin", "cro_advisor"].includes(user.role)) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -38,7 +41,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { data: report } = await supabase
     .from("sniperleads_reports")
     .select(
-      "id, account_id, month, emails_sent, real_replies, auto_replies, calls, ad_audience, linkedin_started, linkedin_invites, linkedin_messages, website_started, website_visits, intro, closing, signer_id, gm_numbers, exported_at"
+      "id, account_id, month, emails_sent, real_replies, auto_replies, calls, ad_audience, linkedin_started, linkedin_invites, linkedin_messages, website_started, website_visits, intro, closing, signer_id, gm_numbers, exported_at, published_at"
     )
     .eq("id", id)
     .maybeSingle();
@@ -49,7 +52,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const [{ data: account }, { data: setting }, { data: owner }, { data: signer }, live] = await Promise.all([
     supabase.from("accounts").select("name").eq("id", row.account_id).maybeSingle(),
-    supabase.from("sniperleads_clients").select("start_month").eq("account_id", row.account_id).maybeSingle(),
+    supabase.from("account_programs").select("start_month").eq("account_id", row.account_id).eq("program", "sniper_leads").maybeSingle(),
     supabase
       .from("users")
       .select("full_name")

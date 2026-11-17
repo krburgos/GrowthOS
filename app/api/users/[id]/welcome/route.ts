@@ -82,9 +82,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const account = Array.isArray(person.accounts) ? person.accounts[0] : person.accounts;
   const { data: sniper } = await admin
-    .from("sniperleads_clients")
+    .from("account_programs")
     .select("active")
     .eq("account_id", person.account_id ?? "")
+    .eq("program", "sniper_leads")
     .maybeSingle();
   const email = {
     firstName: person.full_name.trim().split(/\s+/)[0] || person.full_name,
