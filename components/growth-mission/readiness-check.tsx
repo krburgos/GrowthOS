@@ -2,9 +2,8 @@
 
 import { Check, ChevronDown, ChevronUp, Minus, OctagonAlert, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-
 import type { DocReadiness, Readiness } from "@/lib/growth-mission/queries";
+import { useStoredValue } from "@/lib/use-stored-value";
 
 /**
  * The Playbook doc's "Before You Begin — STOP".
@@ -37,28 +36,11 @@ interface Item {
 }
 
 export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
-  const [hidden, setHidden] = useState(false);
+  const [stored, store] = useStoredValue(STORAGE_KEY);
+  const hidden = stored === "1";
   const { ready } = readiness;
 
-  useEffect(() => {
-    try {
-      setHidden(window.localStorage.getItem(STORAGE_KEY) === "1");
-    } catch {
-      // Blocked storage just means the strip stays visible.
-    }
-  }, []);
-
-  const toggle = () => {
-    setHidden((prev) => {
-      const next = !prev;
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        // Ignore — the toggle still works for this page view.
-      }
-      return next;
-    });
-  };
+  const toggle = () => store(hidden ? "0" : "1");
 
   const items: Item[] = [
     { label: "Company Profile", href: "/settings/company", action: "Complete it", doc: readiness.profile },
@@ -78,7 +60,7 @@ export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
 
   const outstanding = items.filter((i) => !i.doc.complete);
 
-  const ToggleButton = () => (
+  const toggleButton = (
     <button
       type="button"
       onClick={toggle}
@@ -110,7 +92,7 @@ export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
             Before You Begin — {outstanding.length} of 3 foundations still to complete
           </span>
         )}
-        <ToggleButton />
+        {toggleButton}
       </div>
     );
   }
@@ -127,7 +109,7 @@ export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
             {item.label}
           </CheckItem>
         ))}
-        <ToggleButton />
+        {toggleButton}
       </div>
     );
   }
@@ -138,7 +120,7 @@ export function ReadinessCheck({ readiness }: { readiness: Readiness }) {
         <OctagonAlert className="size-4" />
         Before You Begin
       </span>
-      <ToggleButton />
+      {toggleButton}
       <p className="basis-full text-body-sm leading-relaxed text-neutral-600">
         Nothing in the GrowthMission Strategy &amp; Assignments will work until all three foundations are complete: your
         Company Profile, your Solution Questionnaire and your Vision Board.

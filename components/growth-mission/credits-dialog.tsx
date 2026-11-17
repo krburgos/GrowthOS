@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -36,9 +36,15 @@ export function CreditsDialog({
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (open) setValue(capacity.credits.monthly != null ? String(capacity.credits.monthly) : "");
-  }, [open, capacity.credits.monthly]);
+  // Opening the dialog (or the saved figure changing while open) starts the
+  // field from the saved monthly credits. Adjusted while rendering, React's
+  // pattern for resetting state when its inputs change.
+  const seed = open ? (capacity.credits.monthly != null ? String(capacity.credits.monthly) : "") : null;
+  const [seededFrom, setSeededFrom] = useState<string | null>(null);
+  if (seed !== seededFrom) {
+    setSeededFrom(seed);
+    if (seed !== null) setValue(seed);
+  }
 
   const save = async () => {
     const monthly = Math.max(0, Math.round(Number(value) || 0));

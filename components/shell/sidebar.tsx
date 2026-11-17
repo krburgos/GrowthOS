@@ -20,6 +20,7 @@ import { Fragment, useEffect, useState, type ComponentType } from "react";
 import { useMobileNav } from "@/components/shell/mobile-nav";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { NavAccess, NavSection } from "@/lib/auth/nav-permissions";
+import { useStoredValue } from "@/lib/use-stored-value";
 import { cn } from "@/lib/utils";
 
 export interface NavItem {
@@ -134,13 +135,9 @@ export function Sidebar({
   /** Open mission orders past due, shown on Command Center. Nothing overdue, no badge. */
   overdueOrders?: number;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [storedCollapsed, storeCollapsed] = useStoredValue(SIDEBAR_COLLAPSED_KEY);
+  const collapsed = storedCollapsed === "true";
   const { open, close } = useMobileNav();
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
-    if (stored === "true") setCollapsed(true);
-  }, []);
 
   // How much of the CRO Leader banner is still on screen. The banner scrolls
   // away with the page, so the rail is shorter only while it shows: a fixed
@@ -156,13 +153,7 @@ export function Sidebar({
     return () => window.removeEventListener("scroll", update);
   }, [withBanner]);
 
-  const toggle = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
-      return next;
-    });
-  };
+  const toggle = () => storeCollapsed(String(!collapsed));
 
   const surface =
     "flex flex-col bg-gradient-to-b from-primary-800 to-primary-950 py-4 shadow-[1px_0_0_rgba(255,255,255,0.06)]";

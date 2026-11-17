@@ -61,16 +61,26 @@ export function BuildIcpListDialog({
   const [rules, setRules] = useState<ContactRule[]>([]);
   const [leaveOut, setLeaveOut] = useState(true);
   const [options, setOptions] = useState<RuleOptions>(NO_OPTIONS);
-  const [count, setCount] = useState<number | null>(null);
-  const [noTitle, setNoTitle] = useState(0);
+  // The last finished count. It stays shown while the next one runs.
+  const [counted, setCounted] = useState<{ count: number; noTitle: number } | null>(null);
   const [pending, setPending] = useState(false);
 
-  // Each opening starts again from the ICP.
+  // Each opening starts again from the ICP. Adjusted while rendering,
+  // React's pattern for resetting state when an input changes.
+  const [seededFrom, setSeededFrom] = useState<IcpAnswers | null>(null);
+  const seed = open ? icp : null;
+  if (seed !== seededFrom) {
+    setSeededFrom(seed);
+    if (seed) {
+      setName(icpDefaultListName(seed));
+      setRules(icpRules(seed));
+      setLeaveOut(true);
+    }
+  }
+
+  // The filter options for the rows, loaded on each opening.
   useEffect(() => {
     if (!open) return;
-    setName(icpDefaultListName(icp));
-    setRules(icpRules(icp));
-    setLeaveOut(true);
     const supabase = createClient();
     Promise.all([
       supabase.from("contact_statuses").select("id, name").eq("account_id", accountId).is("archived_at", null).order("sort_order"),
@@ -92,13 +102,11 @@ export function BuildIcpListDialog({
   const key = applied.map(encodeRule).join("&");
 
   // The live count waits for a pause in typing, like the Contacts filters.
+  // No rows switched on means no count at all.
+  const count = active.length === 0 ? null : (counted?.count ?? null);
+  const noTitle = active.length === 0 ? 0 : (counted?.noTitle ?? 0);
   useEffect(() => {
-    if (!open) return;
-    if (active.length === 0) {
-      setCount(null);
-      setNoTitle(0);
-      return;
-    }
+    if (!open || active.length === 0) return;
     const supabase = createClient();
     const countOf = (rs: ContactRule[], blankTitle = false) => {
       let q = supabase
@@ -113,8 +121,7 @@ export function BuildIcpListDialog({
     const hasTitle = active.some((r) => r.field === "title");
     const timer = setTimeout(async () => {
       const [n, m] = await Promise.all([countOf(applied), hasTitle ? countOf(withoutTitle, true) : Promise.resolve(0)]);
-      setCount(n);
-      setNoTitle(m);
+      setCounted({ count: n, noTitle: m });
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps

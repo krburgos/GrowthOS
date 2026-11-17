@@ -321,18 +321,19 @@ function NewOpportunityPanel({ accountId, contactId, onClose }: { accountId: str
 /** Type part of a name, email or company; each result says who and where they are. */
 function ContactSearch({ accountId, onPick }: { accountId: string; onPick: (c: ContactOption) => void }) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<ContactOption[]>([]);
-  const [searching, setSearching] = useState(false);
+  // Characters that mean something to the filter syntax are dropped, not escaped.
+  const term = query.trim().replace(/[%,()*\\]/g, "");
+  // The last finished search and the term it was for. The previous results
+  // stay listed while the next search runs; it is "Searching…" until the
+  // results for this exact term are in.
+  const [found, setFound] = useState<{ term: string; results: ContactOption[] } | null>(null);
+  const results = found?.results ?? [];
+  const searching = term.length >= 2 && found?.term !== term;
 
   useEffect(() => {
-    // Characters that mean something to the filter syntax are dropped, not escaped.
-    const q = query.trim().replace(/[%,()*\\]/g, "");
-    if (q.length < 2) {
-      setResults([]);
-      return;
-    }
+    const q = term;
+    if (q.length < 2) return;
     let cancelled = false;
-    setSearching(true);
     const t = setTimeout(async () => {
       const supabase = createClient();
       const SELECT = "id, full_name, title, companies(name, company_size)";
@@ -356,14 +357,13 @@ function ContactSearch({ accountId, onPick }: { accountId: string; onPick: (c: C
         .filter((r) => !seen.has(r.id) && seen.add(r.id))
         .slice(0, 8)
         .map(toOption);
-      setResults(merged);
-      setSearching(false);
+      setFound({ term: q, results: merged });
     }, 200);
     return () => {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [query, accountId]);
+  }, [term, accountId]);
 
   const q = query.trim();
   return (

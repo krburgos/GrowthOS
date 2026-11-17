@@ -43,23 +43,24 @@ export function RecordsDialog({
   sources: KpiSource[];
   onClose: () => void;
 }) {
-  const [rows, setRows] = useState<RecordRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
   const mapped = box ? sourcesInBox(sources, box.key) : [];
   const total = box ? boxTotal(sources, box.key) : 0;
   const isContacts = mapped.length > 0 && mapped[0].kind === "contact_status";
   const idsKey = mapped.map((s) => s.id).join(",");
 
+  // Each load is tagged with what it was for; anything else showing is still
+  // loading, so opening another box never flashes the last box's records.
+  const requestKey = box ? `${box.key}|${idsKey}` : null;
+  const [result, setResult] = useState<{ key: string; rows: RecordRow[] | null; error: string | null } | null>(null);
+  const current = result && result.key === requestKey ? result : null;
+  const rows: RecordRow[] | null = box && !idsKey ? [] : (current?.rows ?? null);
+  const error = current?.error ?? null;
+
   useEffect(() => {
-    if (!box) return;
-    setRows(null);
-    setError(null);
-    const ids = idsKey ? idsKey.split(",") : [];
-    if (ids.length === 0) {
-      setRows([]);
-      return;
-    }
+    if (!box || !requestKey || !idsKey) return;
+    const ids = idsKey.split(",");
+    const setRows = (r: RecordRow[]) => setResult({ key: requestKey, rows: r, error: null });
+    const setError = (e: string) => setResult({ key: requestKey, rows: null, error: e });
     const supabase = createClient();
     const load = async () => {
       if (isContacts) {
@@ -107,7 +108,7 @@ export function RecordsDialog({
       }
     };
     void load();
-  }, [box, idsKey, isContacts, accountId]);
+  }, [box, requestKey, idsKey, isContacts, accountId]);
 
   if (!box) return null;
   const listHref = isContacts ? "/contacts" : "/opportunities";

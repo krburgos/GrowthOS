@@ -69,16 +69,16 @@ export function CreateAccountDialog() {
           </div>
           <div>
             <Label htmlFor="owner-full-name" required>
-              Owner's Full Name
+              Owner&apos;s Full Name
             </Label>
             <Input id="owner-full-name" value={ownerFullName} onChange={(e) => setOwnerFullName(e.target.value)} />
           </div>
           <div>
             <Label htmlFor="owner-email" required>
-              Owner's Email
+              Owner&apos;s Email
             </Label>
             <Input id="owner-email" type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} />
-            <p className="mt-1 text-caption text-neutral-500">They'll get an invite email to set their password and log in.</p>
+            <p className="mt-1 text-caption text-neutral-500">They&apos;ll get an invite email to set their password and log in.</p>
           </div>
         </div>
 

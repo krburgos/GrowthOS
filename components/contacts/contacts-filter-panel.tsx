@@ -2,7 +2,7 @@
 
 import { ChevronDown, Filter, Plus, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { FilterField } from "@/components/ui/filter-bar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -34,8 +34,10 @@ function useAddressRules() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const encoded = params.getAll("f");
-  const rules = useMemo(() => decodeRules(encoded), [encoded.join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Keyed on the encoded rules as text, so a new params object with the same
+  // filters keeps the same rules (and doesn't re-run anything keyed on them).
+  const encodedKey = JSON.stringify(params.getAll("f"));
+  const rules = useMemo(() => decodeRules(JSON.parse(encodedKey) as string[]), [encodedKey]);
 
   const write = (next: ContactRule[]) => {
     const p = new URLSearchParams(params.toString());
@@ -63,10 +65,13 @@ export function ContactsFilterButton({ options }: { options: RuleOptions }) {
   const [draft, setDraft] = useState<ContactRule[]>(rules);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // A chip removed outside the panel, or Back: follow the address.
-  useEffect(() => {
-    setDraft((d) => (sameRules(d, rules) ? d : rules));
-  }, [rules]);
+  // A chip removed outside the panel, or Back: follow the address. Adjusted
+  // while rendering, React's pattern for following a changed input.
+  const [followed, setFollowed] = useState(rules);
+  if (followed !== rules) {
+    setFollowed(rules);
+    if (!sameRules(draft, rules)) setDraft(rules);
+  }
 
   const commit = (next: ContactRule[], wait = 0) => {
     setDraft(next);

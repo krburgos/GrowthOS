@@ -24,6 +24,11 @@ import { createClient } from "@/lib/supabase/server";
 /** No activity in over two weeks marks an account as idle on the list and in the "Needs attention" filter. */
 const IDLE_DAYS = 14;
 
+/** The idle cutoff for this request. Read once per server render, so the clock read lives outside the component body. */
+function idleCutoff() {
+  return Date.now() - IDLE_DAYS * 86400000;
+}
+
 interface PortfolioRow {
   account_id: string;
   questionnaire_complete: boolean;
@@ -110,7 +115,7 @@ export default async function CroDashboardPage() {
   const statsById = new Map<string, PortfolioRow>(
     ((portfolioRows ?? []) as PortfolioRow[]).map((r) => [r.account_id, r] as const)
   );
-  const idleBefore = Date.now() - IDLE_DAYS * 86400000;
+  const idleBefore = idleCutoff();
 
   const accounts: CroAccountRow[] = pinnedFirst(
     baseAccounts.map((a) => {

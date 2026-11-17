@@ -13,8 +13,8 @@ const OTP_TYPES: EmailOtpType[] = ["invite", "recovery", "signup", "magiclink", 
 
 type State =
   | { kind: "working" }
-  | { kind: "ready"; tokenHash: string; type: EmailOtpType }
-  | { kind: "expired" };
+  | { kind: "ready"; tokenHash: string; type: EmailOtpType; next: string }
+  | { kind: "expired"; next: string };
 
 /**
  * Where invite and password-reset email links land (client-confirmed fix,
@@ -41,19 +41,18 @@ type State =
 export function LinkConfirm() {
   const router = useRouter();
   const [state, setState] = useState<State>({ kind: "working" });
-  const [next, setNext] = useState("/headquarters");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
     const query = new URLSearchParams(window.location.search);
     const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    // Where to land afterwards travels with the state it is shown in.
     const target = safeNext(query.get("next"));
-    setNext(target);
 
     const expire = async () => {
       await supabase.auth.signOut({ scope: "local" });
-      setState({ kind: "expired" });
+      setState({ kind: "expired", next: target });
     };
     const go = () => {
       router.replace(target);
@@ -69,7 +68,7 @@ export function LinkConfirm() {
       const tokenHash = query.get("token_hash");
       const type = query.get("type") as EmailOtpType | null;
       if (tokenHash && type && OTP_TYPES.includes(type)) {
-        setState({ kind: "ready", tokenHash, type });
+        setState({ kind: "ready", tokenHash, type, next: target });
         return;
       }
 
@@ -105,14 +104,14 @@ export function LinkConfirm() {
     const { error } = await supabase.auth.verifyOtp({ token_hash: state.tokenHash, type: state.type });
     if (error) {
       setSubmitting(false);
-      setState({ kind: "expired" });
+      setState({ kind: "expired", next: state.next });
       return;
     }
-    router.replace(next);
+    router.replace(state.next);
     router.refresh();
   };
 
-  const isReset = next.startsWith("/reset-password");
+  const isReset = state.kind !== "working" && state.next.startsWith("/reset-password");
 
   if (state.kind === "working") {
     return <p className="text-center text-body text-neutral-600">Signing you in…</p>;

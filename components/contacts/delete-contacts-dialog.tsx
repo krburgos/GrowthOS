@@ -72,7 +72,7 @@ export function DeleteContactsDialog({
         </DialogHeader>
         <p className="text-body text-neutral-600">
           These contacts will no longer appear anywhere in GrowthMission. This can be undone by GrowthMission
-          support if needed, but there's no undo in the app itself.
+          support if needed, but there&apos;s no undo in the app itself.
         </p>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>

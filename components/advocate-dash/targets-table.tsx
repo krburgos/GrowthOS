@@ -13,7 +13,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import { Check, ChevronUp, ClipboardList, GripVertical, MapPin, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { LetterCell } from "@/components/advocate-dash/letter-cell";
@@ -105,7 +105,12 @@ export function TargetsTable({
   // A local copy, so an inline change lands on click rather than after a
   // server round trip. Re-seeded from props whenever the server refreshes.
   const [rows, setRows] = useState(targets);
-  useEffect(() => setRows(targets), [targets]);
+  const [seededFrom, setSeededFrom] = useState(targets);
+  if (seededFrom !== targets) {
+    // Adjusting state while rendering, React's pattern for "reset when a prop changes".
+    setSeededFrom(targets);
+    setRows(targets);
+  }
   const [draft, setDraft] = useState<Draft | null>(null);
   const [reportFor, setReportFor] = useState<AdvocateTarget | null>(null);
   // Opens on the planned round (client-confirmed, 2026-10-06) so this sheet
@@ -291,6 +296,7 @@ export function TargetsTable({
             report. Everything else edits through the pencil, which opens
             the same dialog the desktop sheet uses. */}
         <DndContext
+          id="advocate-target-cards"
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={(event) => void reorder(cardOrder, event)}
@@ -343,6 +349,7 @@ export function TargetsTable({
             </div>
 
             <DndContext
+              id="advocate-target-table"
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={(event) => void reorder(sorted, event)}

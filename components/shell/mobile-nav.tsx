@@ -29,21 +29,20 @@ interface MobileNavState {
 const MobileNavContext = createContext<MobileNavState | null>(null);
 
 export function MobileNavProvider({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const close = useCallback(() => setOpen(false), []);
-
   // Navigating is the drawer's whole purpose, so arriving somewhere closes
-  // it. Keyed on the path rather than on the link's own click so it also
-  // closes on a back/forward navigation.
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+  // it: the drawer remembers the path it was opened on and counts as open
+  // only while that is still the path. Keyed on the path rather than on the
+  // link's own click so it also closes on a back/forward navigation.
+  const [openOn, setOpenOn] = useState<string | null>(null);
+  const open = openOn !== null && openOn === pathname;
+  const setOpen = useCallback((next: boolean) => setOpenOn(next ? pathname : null), [pathname]);
+  const close = useCallback(() => setOpenOn(null), []);
 
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") close();
     };
     window.addEventListener("keydown", onKeyDown);
     // Stop the page behind the drawer scrolling under it.
@@ -53,7 +52,7 @@ export function MobileNavProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [open]);
+  }, [open, close]);
 
   return (
     <MobileNavContext.Provider value={{ open, setOpen, close }}>{children}</MobileNavContext.Provider>

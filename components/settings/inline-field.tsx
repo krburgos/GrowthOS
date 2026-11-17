@@ -46,11 +46,6 @@ export function InlineField({
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // A save elsewhere (or a router.refresh) should win over a stale draft.
-  useEffect(() => {
-    if (!editing) setDraft(value);
-  }, [value, editing]);
-
   useEffect(() => {
     if (editing) inputRef.current?.focus();
   }, [editing]);
@@ -147,7 +142,12 @@ export function InlineField({
       ) : (
         <button
           type="button"
-          onClick={() => setEditing(true)}
+          onClick={() => {
+            // Each edit starts from the current value, so a save elsewhere
+            // (or a router.refresh) wins over a stale draft.
+            setDraft(value);
+            setEditing(true);
+          }}
           className="group flex min-h-8 w-full items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
         >
           {value ? (

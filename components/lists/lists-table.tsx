@@ -2,13 +2,14 @@
 
 import { LayoutGrid, ListChecks, Rows3, Search } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { ListActionsMenu } from "@/components/lists/list-actions-menu";
 import { Input } from "@/components/ui/input";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { usd, usdShort } from "@/lib/companies/value";
+import { useStoredValue } from "@/lib/use-stored-value";
 import { cn } from "@/lib/utils";
 
 export interface ListRow {
@@ -42,23 +43,10 @@ const VIEW_KEY = "growthmission.lists.view";
  */
 export function ListsBoard({ lists, canEdit }: { lists: ListRow[]; canEdit: boolean }) {
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<"cards" | "table">("cards");
+  const [storedView, storeView] = useStoredValue(VIEW_KEY);
+  const view: "cards" | "table" = storedView === "table" ? "table" : "cards";
 
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(VIEW_KEY) === "table") setView("table");
-    } catch {
-      /* storage unavailable: stay on cards */
-    }
-  }, []);
-  const choose = (v: "cards" | "table") => {
-    setView(v);
-    try {
-      window.localStorage.setItem(VIEW_KEY, v);
-    } catch {
-      /* ignore */
-    }
-  };
+  const choose = (v: "cards" | "table") => storeView(v);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

@@ -36,6 +36,7 @@ import {
 } from "@/lib/sdr/desk";
 import { createClient } from "@/lib/supabase/client";
 import { useFlash } from "@/lib/use-flash";
+import { useNow } from "@/lib/use-now";
 import { cn } from "@/lib/utils";
 
 type Show = "today" | "new" | "tomorrow" | "all";
@@ -124,8 +125,7 @@ export function CallDesk({
   // True when the panel moved on with Save & next call: the next contact slides in.
   const [chained, setChained] = useState(false);
   // Due-ness depends on the viewer's clock, so it is worked out after mount.
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => setNow(new Date()), []);
+  const now = useNow();
 
   const isMe = sdrId === viewerId;
   // Client-confirmed (2026-11-10): Log call only in your own queue, so every
@@ -134,14 +134,16 @@ export function CallDesk({
   const canLogCalls = canLog && isMe;
   const sdrName = holders.find((h) => h.id === sdrId)?.full_name ?? people.find((p) => p.id === sdrId)?.full_name ?? "";
   const myAssignments = assignments.filter((a) => a.sdr_user_id === sdrId).sort((a, b) => a.list_name.localeCompare(b.list_name));
-  const queue = (sdrId && queues[sdrId]) || [];
+  const queue = useMemo(() => (sdrId && queues[sdrId]) || [], [sdrId, queues]);
 
   const withDue = useMemo(
     () => (now ? queue.map((r) => ({ row: r, due: dueOf(r, now) })) : []),
     [queue, now]
   );
-  const inList = withDue.filter((r) => listFilter === "all" || r.row.lists.includes(listFilter));
-  const live = inList.filter((r) => r.due !== "done");
+  const live = useMemo(
+    () => withDue.filter((r) => (listFilter === "all" || r.row.lists.includes(listFilter)) && r.due !== "done"),
+    [withDue, listFilter]
+  );
   const count = (s: Show) => (s === "all" ? live.length : live.filter((r) => r.due === s).length);
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();

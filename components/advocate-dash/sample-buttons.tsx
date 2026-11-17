@@ -151,7 +151,7 @@ function SampleReportDialog({ onClose }: { onClose: () => void }) {
           ))}
 
           <p className="border-t border-neutral-100 px-5 py-4 text-caption text-neutral-400">
-            A worked example, taken from a real VictoryVisit. Every account's own reports are filed
+            A worked example, taken from a real VictoryVisit. Every account&apos;s own reports are filed
             against their targets in the table below.
           </p>
         </div>

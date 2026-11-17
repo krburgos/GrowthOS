@@ -2,7 +2,7 @@
 
 import { ChevronDown, Filter, MoreHorizontal, Search, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { FileViewer, KindChip, downloadFile, fileMeta } from "@/components/growth-mission/mission-file-bits";
@@ -24,6 +24,7 @@ import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { ACCEPT, canPreview, uploadMissionFile, type MissionFile } from "@/lib/growth-mission/files";
 import { formatFileSize, formatReportDate } from "@/lib/growth-mission/reports";
 import { createClient } from "@/lib/supabase/client";
+import { useStoredValue } from "@/lib/use-stored-value";
 import { cn } from "@/lib/utils";
 
 type Show = "all" | "general" | "orders";
@@ -62,7 +63,8 @@ export function Arsenal({
 }) {
   const router = useRouter();
   const storageKey = `growthmission.arsenal.collapsed.${slug}`;
-  const [collapsed, setCollapsed] = useState(false);
+  const [storedCollapsed, storeCollapsed] = useStoredValue(storageKey);
+  const collapsed = storedCollapsed === "1";
   // Focusing the Arsenal always shows its files, whatever its own collapse says.
   const focused = useSectionView() === "arsenal";
   const [show, setShow] = useState<Show>("all");
@@ -73,22 +75,7 @@ export function Arsenal({
   const [moving, setMoving] = useState<MissionFile | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    try {
-      setCollapsed(window.localStorage.getItem(storageKey) === "1");
-    } catch {
-      // Storage blocked: open.
-    }
-  }, [storageKey]);
-
-  const toggle = (next = !collapsed) => {
-    setCollapsed(next);
-    try {
-      window.localStorage.setItem(storageKey, next ? "1" : "0");
-    } catch {
-      // Storage blocked: this visit only.
-    }
-  };
+  const toggle = (next = !collapsed) => storeCollapsed(next ? "1" : "0");
 
   const upload = async (list: FileList | File[]) => {
     const picked = Array.from(list);

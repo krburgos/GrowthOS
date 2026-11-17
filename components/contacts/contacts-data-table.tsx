@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Children, isValidElement, useEffect, useRef, useState, type ReactNode } from "react";
+import { Children, isValidElement, useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 
@@ -52,6 +52,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { ContactListRow } from "@/lib/contacts/types";
 import { employeesOf, opportunitiesValue, prospectValue, usd } from "@/lib/companies/value";
 import { useFlash } from "@/lib/use-flash";
+import { useStoredValue } from "@/lib/use-stored-value";
 import { cn } from "@/lib/utils";
 
 /**
@@ -167,9 +168,8 @@ const WIDTHS_STORAGE_KEY = "growthmission.contacts.columnWidths";
 
 const clampWidth = (w: number) => Math.round(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, w)));
 
-function loadWidths(): Partial<Record<WidthKey, number>> {
+function parseWidths(raw: string | null): Partial<Record<WidthKey, number>> {
   try {
-    const raw = window.localStorage.getItem(WIDTHS_STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const out: Partial<Record<WidthKey, number>> = {};
@@ -216,9 +216,8 @@ type OrderKey = ColumnKey | "email";
 const DEFAULT_ORDER: OrderKey[] = ["linkedin", "email", ...BODY_ORDER];
 const ORDER_STORAGE_KEY = "growthmission.contacts.columnOrder";
 
-function loadOrder(): OrderKey[] {
+function parseOrder(raw: string | null): OrderKey[] {
   try {
-    const raw = window.localStorage.getItem(ORDER_STORAGE_KEY);
     if (!raw) return DEFAULT_ORDER;
     const saved = (JSON.parse(raw) as string[]).filter((k): k is OrderKey => (DEFAULT_ORDER as string[]).includes(k));
     // Columns added since this order was saved go at the end.
@@ -321,21 +320,35 @@ const ADDED_COLUMNS: { key: string; columns: ColumnKey[] }[] = [
   { key: "growthmission.contacts.addedValueColumns", columns: ["pv", "ov"] },
 ];
 
-function loadVisibleColumns(): Set<ColumnKey> {
-  if (typeof window === "undefined") return new Set(ALL_COLUMN_KEYS);
+function parseColumns(raw: string | null): Set<ColumnKey> {
   try {
-    const raw = window.localStorage.getItem(COLUMNS_STORAGE_KEY);
     if (!raw) return new Set(ALL_COLUMN_KEYS);
     const parsed = JSON.parse(raw) as string[];
-    const valid = new Set(parsed.filter((k): k is ColumnKey => (ALL_COLUMN_KEYS as string[]).includes(k)));
+    return new Set(parsed.filter((k): k is ColumnKey => (ALL_COLUMN_KEYS as string[]).includes(k)));
+  } catch {
+    return new Set(ALL_COLUMN_KEYS);
+  }
+}
+
+/**
+ * A saved column choice predates the columns in ADDED_COLUMNS: show each
+ * group once, then remember that it was shown, so hiding it later sticks.
+ * Returns the upgraded list, or null when nothing changed.
+ */
+function upgradeColumns(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const valid = parseColumns(raw);
+    let changed = false;
     for (const added of ADDED_COLUMNS) {
       if (window.localStorage.getItem(added.key)) continue;
       added.columns.forEach((c) => valid.add(c));
       window.localStorage.setItem(added.key, "1");
+      changed = true;
     }
-    return valid;
+    return changed ? JSON.stringify([...valid]) : null;
   } catch {
-    return new Set(ALL_COLUMN_KEYS);
+    return null;
   }
 }
 
@@ -404,35 +417,23 @@ export function ContactsDataTable({
     selectedIds: new Set(),
     selectAllMatching: false,
   });
-  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(() => new Set(ALL_COLUMN_KEYS));
-  const [columnsHydrated, setColumnsHydrated] = useState(false);
-
+  // The column choice, widths and order are remembered per browser
+  // (useStoredValue: the server renders the defaults, the browser's own
+  // layout follows on hydration).
+  const [rawColumns, storeColumns] = useStoredValue(COLUMNS_STORAGE_KEY);
+  const visibleColumns = useMemo(() => parseColumns(rawColumns), [rawColumns]);
+  const setVisibleColumns = (next: Set<ColumnKey> | ((prev: Set<ColumnKey>) => Set<ColumnKey>)) =>
+    storeColumns(JSON.stringify([...(typeof next === "function" ? next(visibleColumns) : next)]));
   useEffect(() => {
-    setVisibleColumns(loadVisibleColumns());
-    setColumnsHydrated(true);
-  }, []);
+    const upgraded = upgradeColumns(rawColumns);
+    if (upgraded) storeColumns(upgraded);
+  }, [rawColumns, storeColumns]);
 
-  useEffect(() => {
-    if (!columnsHydrated) return;
-    window.localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify([...visibleColumns]));
-  }, [visibleColumns, columnsHydrated]);
-
-  const [widths, setWidths] = useState<Partial<Record<WidthKey, number>>>({});
-  const [widthsHydrated, setWidthsHydrated] = useState(false);
-
-  useEffect(() => {
-    setWidths(loadWidths());
-    setWidthsHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!widthsHydrated) return;
-    try {
-      window.localStorage.setItem(WIDTHS_STORAGE_KEY, JSON.stringify(widths));
-    } catch {
-      // Storage blocked: widths still apply for this visit.
-    }
-  }, [widths, widthsHydrated]);
+  const [rawWidths, storeWidths] = useStoredValue(WIDTHS_STORAGE_KEY);
+  const widths = useMemo(() => parseWidths(rawWidths), [rawWidths]);
+  type Widths = Partial<Record<WidthKey, number>>;
+  const setWidths = (next: Widths | ((prev: Widths) => Widths)) =>
+    storeWidths(JSON.stringify(typeof next === "function" ? next(widths) : next));
 
   const widthOf = (key: WidthKey) => widths[key] ?? DEFAULT_WIDTHS[key];
   const resizeFor = (key: WidthKey, label: string): ResizeProps => ({
@@ -447,20 +448,10 @@ export function ContactsDataTable({
       }),
   });
 
-  const [order, setOrder] = useState<OrderKey[]>(DEFAULT_ORDER);
-  const [orderHydrated, setOrderHydrated] = useState(false);
-  useEffect(() => {
-    setOrder(loadOrder());
-    setOrderHydrated(true);
-  }, []);
-  useEffect(() => {
-    if (!orderHydrated) return;
-    try {
-      window.localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(order));
-    } catch {
-      // Storage blocked: the order still applies for this visit.
-    }
-  }, [order, orderHydrated]);
+  const [rawOrder, storeOrder] = useStoredValue(ORDER_STORAGE_KEY);
+  const order = useMemo(() => parseOrder(rawOrder), [rawOrder]);
+  const setOrder = (next: OrderKey[] | ((prev: OrderKey[]) => OrderKey[])) =>
+    storeOrder(JSON.stringify(typeof next === "function" ? next(order) : next));
   const orderChanged = order.some((k, i) => k !== DEFAULT_ORDER[i]);
 
   // Which heading is being dragged, and where it would land.
@@ -594,7 +585,7 @@ export function ContactsDataTable({
             href={`/contacts/${c.id}`}
             className="font-semibold text-secondary-700 hover:underline"
             // Leaving for Contact Detail keeps whatever was typed in the row.
-            onClick={() => void saveRef.current()}
+            onClick={() => void saveEdit()}
             onDoubleClick={(e) => e.stopPropagation()}
           >
             Add one
@@ -710,8 +701,7 @@ export function ContactsDataTable({
   // edited saves it, as well as Enter and the ✓. Clicks inside the row, or
   // in a dropdown it opened (Status, Temp), don't count as outside. A ref
   // keeps the listener on the latest draft without re-binding per keystroke.
-  const saveRef = useRef(saveEdit);
-  saveRef.current = saveEdit;
+  const saveOutside = useEffectEvent(() => void saveEdit());
   useEffect(() => {
     if (!editingId) return;
     const onPointerDown = (e: PointerEvent) => {
@@ -719,7 +709,7 @@ export function ContactsDataTable({
       if (!target?.closest) return;
       if (target.closest('tr[data-editing="true"]')) return;
       if (target.closest("[data-radix-popper-content-wrapper], [role='listbox'], [role='dialog'], [role='menu']")) return;
-      void saveRef.current();
+      saveOutside();
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);

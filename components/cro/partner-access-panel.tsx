@@ -148,7 +148,7 @@ export function PartnerAccessPanel({
                 </Label>
                 <Input id="partner-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
                 <p className="mt-1 text-caption text-neutral-500">
-                  They'll get an invite email, then you can grant them access to specific accounts below.
+                  They&apos;ll get an invite email, then you can grant them access to specific accounts below.
                 </p>
               </div>
             </div>

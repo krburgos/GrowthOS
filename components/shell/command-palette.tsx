@@ -3,7 +3,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Loader2, Plus, Search, User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentType } from "react";
 
 import { NAV_ITEMS } from "@/components/shell/sidebar";
 import type { NavAccess, NavSection } from "@/lib/auth/nav-permissions";
@@ -62,6 +62,11 @@ const ACTIONS: { key: string; label: string; href: string; icon: ComponentType<{
  *   field stays where it was and the results drop down beneath. Phones,
  *   where the trigger is only an icon, keep the centred panel.
  */
+/** For values that never change after load (the platform): nothing to subscribe to. */
+function noSubscription() {
+  return () => {};
+}
+
 export function CommandPalette({
   access,
   accountId,
@@ -72,9 +77,24 @@ export function CommandPalette({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [contacts, setContacts] = useState<ContactHit[]>([]);
-  const [loading, setLoading] = useState(false);
+  // The last finished contact lookup and the query it was for. The previous
+  // hits stay listed while the next lookup runs; it is loading until the
+  // hits for this exact query are in.
+  const [found, setFound] = useState<{ query: string; contacts: ContactHit[] } | null>(null);
+  const loading = open && found?.query !== query;
   const [activeIndex, setActiveIndex] = useState(0);
+
+  // Closing clears the search, so it opens fresh next time. Adjusted while
+  // rendering, React's pattern for resetting state when an input changes.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (!open) {
+      setQuery("");
+      setFound(null);
+      setActiveIndex(0);
+    }
+  }
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -95,8 +115,11 @@ export function CommandPalette({
     return () => window.removeEventListener("resize", place);
   }, [open]);
   // Decided after mount, so the server render and the first client render match.
-  const [isMac, setIsMac] = useState(true);
-  useEffect(() => setIsMac(/mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent)), []);
+  const isMac = useSyncExternalStore(
+    noSubscription,
+    () => /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent),
+    () => true
+  );
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -110,14 +133,8 @@ export function CommandPalette({
   }, []);
 
   useEffect(() => {
-    if (!open) {
-      setQuery("");
-      setContacts([]);
-      setActiveIndex(0);
-      return;
-    }
+    if (!open) return;
     const supabase = createClient();
-    setLoading(true);
     const timeout = setTimeout(async () => {
       const request = supabase
         .from("contacts")
@@ -131,8 +148,7 @@ export function CommandPalette({
         ? await request.or(`full_name.ilike.%${term}%,email.ilike.%${term}%`).order("full_name").limit(8)
         : await request.order("updated_at", { ascending: false }).limit(5);
 
-      setContacts((data ?? []) as unknown as ContactHit[]);
-      setLoading(false);
+      setFound({ query, contacts: (data ?? []) as unknown as ContactHit[] });
     }, 200);
 
     return () => clearTimeout(timeout);
@@ -164,7 +180,7 @@ export function CommandPalette({
 
   const contactItems: PaletteItem[] = useMemo(
     () =>
-      contacts.map((c) => {
+      (found?.contacts ?? []).map((c) => {
         const company = Array.isArray(c.companies) ? c.companies[0] : c.companies;
         return {
           key: `contact-${c.id}`,
@@ -174,7 +190,7 @@ export function CommandPalette({
           href: `/contacts/${c.id}`,
         };
       }),
-    [contacts]
+    [found]
   );
 
   const groups = [
@@ -187,14 +203,12 @@ export function CommandPalette({
   const indexOf = new Map(flatItems.map((item, i) => [item.key, i]));
 
   // Keep the highlight on a real row when the results change.
-  useEffect(() => {
-    if (activeIndex > flatItems.length - 1) setActiveIndex(Math.max(0, flatItems.length - 1));
-  }, [flatItems.length, activeIndex]);
+  const active = Math.min(activeIndex, Math.max(0, flatItems.length - 1));
 
   // Follow the highlight when the arrow keys move it past the visible rows.
   useEffect(() => {
-    listRef.current?.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`)?.scrollIntoView({ block: "nearest" });
-  }, [activeIndex]);
+    listRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [active]);
 
   const go = (item: PaletteItem) => {
     setOpen(false);
@@ -204,13 +218,13 @@ export function CommandPalette({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, flatItems.length - 1));
+      setActiveIndex(Math.min(active + 1, flatItems.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActiveIndex((i) => Math.max(i - 1, 0));
+      setActiveIndex(Math.max(active - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const item = flatItems[activeIndex];
+      const item = flatItems[active];
       if (item) go(item);
     }
   };
@@ -298,7 +312,7 @@ export function CommandPalette({
                 </p>
                 {group.items.map((item) => {
                   const index = indexOf.get(item.key) ?? 0;
-                  const isActive = index === activeIndex;
+                  const isActive = index === active;
                   const Icon = item.icon;
                   return (
                     <button
@@ -306,7 +320,7 @@ export function CommandPalette({
                       type="button"
                       data-index={index}
                       onClick={() => go(item)}
-                      onMouseMove={() => index !== activeIndex && setActiveIndex(index)}
+                      onMouseMove={() => index !== active && setActiveIndex(index)}
                       className={cn(
                         "flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-body-sm",
                         isActive ? "bg-secondary-50 text-secondary-800" : "text-neutral-700"

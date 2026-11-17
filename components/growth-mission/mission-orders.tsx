@@ -14,7 +14,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Check, ChevronRight, GripVertical, Paperclip, Plus, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -166,7 +166,13 @@ export function MissionOrders({
   // A local copy, so a tick or a drag lands the moment it happens rather
   // than after a server round trip.
   const [rows, setRows] = useState(orders);
-  useEffect(() => setRows(orders), [orders]);
+  const [seededFrom, setSeededFrom] = useState(orders);
+  if (seededFrom !== orders) {
+    // Re-seeded from the server's copy after a refresh. Adjusted while
+    // rendering, React's pattern for resetting state when a prop changes.
+    setSeededFrom(orders);
+    setRows(orders);
+  }
 
   const [pri, setPri] = useState<Record<TaskPriority, boolean>>(() =>
     initialPriorities
@@ -183,19 +189,20 @@ export function MissionOrders({
   const [panel, setPanel] = useState<{ task: Task | null; priority?: TaskPriority; files?: boolean } | null>(null);
   const [prompt, setPrompt] = useState<Task | null>(null);
 
-  useEffect(() => {
-    if (!openOrderId) return;
-    const t = orders.find((o) => o.id === openOrderId);
+  // An order (or a new one) asked for in the link opens its panel on
+  // arrival only: later refreshes must not reopen a panel someone closed.
+  // Adjusted while rendering when the link changes.
+  const [arrivedOrder, setArrivedOrder] = useState<string | null | undefined>(undefined);
+  if (arrivedOrder !== (openOrderId ?? null)) {
+    setArrivedOrder(openOrderId ?? null);
+    const t = openOrderId ? orders.find((o) => o.id === openOrderId) : undefined;
     if (t) setPanel({ task: t });
-    // Only on arrival: later refreshes must not reopen a panel someone closed.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openOrderId]);
-
-  useEffect(() => {
+  }
+  const [arrivedNew, setArrivedNew] = useState<boolean | undefined>(undefined);
+  if (arrivedNew !== !!openNew) {
+    setArrivedNew(!!openNew);
     if (openNew && canEdit && !overview) setPanel({ task: null });
-    // Only on arrival, as above.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openNew]);
+  }
 
   const rank = useMemo(() => rankOrders(rows), [rows]);
 
@@ -540,7 +547,7 @@ export function MissionOrders({
                       )}
                     </div>
                     {draggable ? (
-                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => void reorder(tier, e)}>
+                      <DndContext id={`mission-orders-${tier}`} sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => void reorder(tier, e)}>
                         <SortableContext items={tier.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                           {tier.map((t) => (
                             <SortableRow key={t.id} task={t} {...rowProps} />
@@ -691,7 +698,7 @@ function SortableRow(props: RowProps) {
 }
 
 function OrderRow({
-  task,
+  task: order,
   cols,
   overview,
   rank,
@@ -712,8 +719,9 @@ function OrderRow({
   dragging?: boolean;
   grip?: React.ReactNode;
 }) {
-  const folding = !!completing?.has(task.id);
-  if (folding) task = { ...task, state: "complete" };
+  const folding = !!completing?.has(order.id);
+  // A row folding away shows as complete while it goes.
+  const task = folding ? { ...order, state: "complete" as const } : order;
   const done = task.state === "complete";
   const credits = orderCredits(task);
   const due = formatDue(task.due_date);

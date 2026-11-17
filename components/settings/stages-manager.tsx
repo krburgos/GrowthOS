@@ -241,7 +241,7 @@ export function StagesManager({
         </Button>
       )}
 
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext id="opportunity-stages" sensors={sensors} onDragEnd={handleDragEnd}>
         <SortableContext items={sorted.map((s) => s.id)} strategy={verticalListSortingStrategy}>
           <ul className="flex flex-col divide-y divide-neutral-100 rounded-md border border-neutral-200">
             {sorted.map((stage) => (
