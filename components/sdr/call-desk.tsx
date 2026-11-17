@@ -41,7 +41,7 @@ import { cn } from "@/lib/utils";
 
 type Show = "today" | "new" | "tomorrow" | "all";
 
-const QUEUE_COLS = "grid grid-cols-[minmax(220px,1.5fr)_minmax(160px,1fr)_170px_130px_minmax(150px,1fr)_80px_120px] items-center gap-x-4";
+const QUEUE_COLS = "grid grid-cols-[minmax(220px,1.5fr)_minmax(160px,1fr)_190px_130px_minmax(150px,1fr)_80px_120px] items-center gap-x-4";
 const BOARD_COLS = "grid grid-cols-[minmax(160px,1fr)_minmax(180px,2fr)_90px_100px_110px] items-center gap-x-4";
 const HEAD = "text-caption font-bold uppercase tracking-wide text-primary-700";
 const LABEL = "text-[11px] font-bold uppercase leading-none tracking-wide text-primary-700";
@@ -735,7 +735,9 @@ function PhoneLines({ row, className }: { row: QueueRow; className?: string }) {
             className="flex min-h-[22px] min-w-0 items-center gap-1.5 text-secondary-700 hover:underline"
           >
             <span className="w-[52px] shrink-0 text-[10px] font-bold uppercase tracking-wide text-neutral-400">{label}</span>
-            <span className="truncate">{number}</span>
+            {/* Not truncated: the CallTools extension swaps the number for its
+                own wider call button, which a clipped box cut off. */}
+            <span className="phone-number whitespace-nowrap">{number}</span>
           </a>
         ) : (
           <span key={label} className="flex min-h-[22px] items-center gap-1.5 text-neutral-400">

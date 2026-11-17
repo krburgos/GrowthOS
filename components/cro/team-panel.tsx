@@ -82,9 +82,12 @@ export function CroTeamPanel({
               const you = m.id === currentUserId;
               const off = !!m.archived_at;
               return (
-                <tr key={m.id} className={cn(off ? "border-b border-neutral-100 opacity-60" : "border-b border-neutral-100 hover:bg-neutral-50", flashId === m.id && "animate-saved")}>
+                <tr key={m.id} className={cn("group", off ? "border-b border-neutral-100 opacity-60" : "border-b border-neutral-100 hover:bg-neutral-50", flashId === m.id && "animate-saved")}>
                   <td className="px-3 py-2.5">
-                    <PersonCell person={m} you={you} />
+                    <PersonCell person={m} you={you} onRenamed={() => {
+                      flash(m.id);
+                      router.refresh();
+                    }} />
                   </td>
                   <td className="px-3 py-2.5">
                     {you || off ? (

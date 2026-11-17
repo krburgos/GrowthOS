@@ -309,3 +309,31 @@ body {
     justify-content: flex-start;
   }
 }
+
+/**
+ * The CallTools browser extension (CRO Leader's dialer) finds phone numbers
+ * on any page and replaces each with its own green call button
+ * (`.ct-extension-phone-number-link`). Its default size, 4px x 12px padding,
+ * a 16px icon and 10px corners, is taller than a table row, so in the Call
+ * Desk it sat off-line from the DIRECT / COMPANY labels and got clipped.
+ * Keep its green, but size it like the app's own pills: one row tall, a 12px
+ * icon, fully rounded. Nothing here applies when the extension isn't
+ * installed. Scoped under `body` so it outranks the extension's own rules,
+ * which load after the app's stylesheet. Bug fix, 2026-11-17.
+ */
+body .ct-extension-phone-number.ct-extension-phone-number-link {
+  gap: calc(var(--spacing) * 1);
+  padding: 1px calc(var(--spacing) * 2);
+  border-radius: 9999px;
+  font-size: inherit;
+  line-height: 1.25rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+body .ct-extension-phone-number.ct-extension-phone-number-link:hover {
+  transform: none;
+}
+body .ct-extension-phone-number-link svg {
+  width: 12px;
+  height: 12px;
+}

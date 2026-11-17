@@ -196,9 +196,12 @@ export function AllUsersPanel({
                 {shown.map((u) => {
                   const off = !!u.archived_at;
                   return (
-                    <tr key={u.id} className={cn(off ? "border-b border-neutral-100 opacity-60" : "border-b border-neutral-100 hover:bg-neutral-50", flashId === u.id && "animate-saved")}>
+                    <tr key={u.id} className={cn("group", off ? "border-b border-neutral-100 opacity-60" : "border-b border-neutral-100 hover:bg-neutral-50", flashId === u.id && "animate-saved")}>
                       <td className="px-3 py-2.5">
-                        <PersonCell person={u} />
+                        <PersonCell person={u} onRenamed={() => {
+                      flash(u.id);
+                      router.refresh();
+                    }} />
                       </td>
                       <td className="max-w-[240px] truncate px-3 py-2.5 text-body-sm font-medium text-neutral-800" title={u.account_name ?? undefined}>
                         {u.account_name ?? "—"}

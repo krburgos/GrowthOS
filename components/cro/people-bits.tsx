@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Check, Pencil, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { InvitedBadge, ResendInviteButton } from "@/components/users/resend-invite";
@@ -11,6 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { UserRole } from "@/lib/auth/get-current-user";
 import { inviteExpiresAt } from "@/lib/auth/invite-link";
 import { ROLE_LABELS } from "@/lib/auth/role-labels";
@@ -50,17 +53,122 @@ const initials = (name: string) =>
     .join("")
     .toUpperCase();
 
-export function PersonCell({ person, you }: { person: PersonRow; you?: boolean }) {
+/**
+ * Name, email and initials. With `onRenamed`, a pencil beside the name
+ * (shown on row hover, so the row needs `group`) renames the person in
+ * place: Enter or ✓ saves, Esc or ✕ cancels, a blank name is refused.
+ * Client-confirmed 2026-11-17 (approved mockup "Rename People Mockup").
+ * Saved straight to `users` under RLS: users_update lets CRO Admin change
+ * anyone, and only CRO Admins see these sections.
+ */
+export function PersonCell({ person, you, onRenamed }: { person: PersonRow; you?: boolean; onRenamed?: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(person.full_name);
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  const start = () => {
+    setDraft(person.full_name);
+    setEditing(true);
+  };
+  const save = async () => {
+    const next = draft.trim();
+    if (!next) {
+      toast.error("A name can't be empty.");
+      return;
+    }
+    if (next === person.full_name) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    const { error } = await createClient().from("users").update({ full_name: next }).eq("id", person.id);
+    setSaving(false);
+    if (error) {
+      toast.error(getFriendlyErrorMessage(error));
+      return;
+    }
+    toast.success(`Name changed to ${next}.`);
+    setEditing(false);
+    onRenamed?.();
+  };
+
   return (
     <div className="flex items-center gap-2.5">
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-caption font-bold text-primary-700">
         {initials(person.full_name)}
       </span>
       <span className="min-w-0">
-        <span className="block truncate font-medium text-neutral-800">
-          {person.full_name}
-          {you && <span className="font-normal text-neutral-400"> (you)</span>}
-        </span>
+        {editing ? (
+          <span className="flex items-center gap-1">
+            <input
+              ref={inputRef}
+              value={draft}
+              disabled={saving}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void save();
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setEditing(false);
+                }
+              }}
+              aria-label={`Name for ${person.full_name}`}
+              className="h-8 w-56 min-w-0 rounded-md border border-secondary-400 bg-white px-2.5 text-body-sm text-neutral-800 outline-none ring-2 ring-secondary-500/25"
+            />
+            {saving ? (
+              <Spinner className="size-4" />
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void save()}
+                  aria-label="Save name"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-md text-success-700 hover:bg-success-100"
+                >
+                  <Check className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditing(false)}
+                  aria-label="Cancel renaming"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+                >
+                  <X className="size-4" />
+                </button>
+              </>
+            )}
+          </span>
+        ) : (
+          <span className="flex min-w-0 items-center gap-1">
+            <span className="truncate font-medium text-neutral-800">
+              {person.full_name}
+              {you && <span className="font-normal text-neutral-400"> (you)</span>}
+            </span>
+            {onRenamed && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={start}
+                    aria-label={`Rename ${person.full_name}`}
+                    className="flex size-6 shrink-0 items-center justify-center rounded-md text-neutral-400 opacity-0 transition-opacity hover:bg-neutral-100 hover:text-primary-700 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 group-hover:opacity-100"
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Rename</TooltipContent>
+              </Tooltip>
+            )}
+          </span>
+        )}
         <span className="block truncate text-caption text-neutral-500">{person.email}</span>
       </span>
     </div>
