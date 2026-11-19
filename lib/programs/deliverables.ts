@@ -53,7 +53,12 @@ export const STATUS_PILL: Record<DeliverableStatus, string> = {
 
 export const WAITING_LABEL: Record<WaitingOn, string> = { cro_leader: "CRO Leader", client: "Client" };
 
-/** One-click items in the editor; "Add your own" covers anything else. */
+/**
+ * The default one-click items in the editor; "Add your own" covers anything
+ * else. Since 2026-11-19 (approved mockup "Deliverable Presets Mockup") each
+ * client can have its own list (program_deliverable_presets), edited from
+ * "Edit presets"; a client without one uses this list.
+ */
 export const DELIVERABLE_PRESETS = [
   "ICP development",
   "List building",
@@ -63,6 +68,9 @@ export const DELIVERABLE_PRESETS = [
   "Campaign copy",
   "Live activity alerts setup",
 ];
+
+/** At most this many presets per client (matches the table's check). */
+export const PRESETS_MAX = 50;
 
 export const NAME_MAX = 120;
 export const NOTE_MAX = 300;

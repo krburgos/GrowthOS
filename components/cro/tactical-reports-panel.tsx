@@ -1,10 +1,11 @@
 "use client";
 
-import { Download, Plus, X } from "lucide-react";
+import { Download, Pencil, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { DeliverablePresetsDialog } from "@/components/cro/deliverable-presets-dialog";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Input } from "@/components/ui/input";
@@ -70,6 +71,7 @@ export function TacticalReportsPanel({
   clients,
   reports,
   deliverables,
+  presets,
   currentUserId,
   currentMonth,
   focusSlot,
@@ -77,6 +79,8 @@ export function TacticalReportsPanel({
   clients: TacticalClient[];
   reports: TacticalRow[];
   deliverables: DeliverableRow[];
+  /** Each client's own preset list (program_deliverable_presets); a client missing here uses DELIVERABLE_PRESETS. */
+  presets: Record<string, string[]>;
   currentUserId: string;
   currentMonth: string;
   focusSlot?: ReactNode;
@@ -84,6 +88,7 @@ export function TacticalReportsPanel({
   const router = useRouter();
   const [rows, setRows] = useState(reports);
   const [items, setItems] = useState(deliverables);
+  const [presetLists, setPresetLists] = useState(presets);
   const earliest = clients.reduce((m, c) => (c.startMonth < m ? c.startMonth : m), currentMonth);
   const months = useMemo(() => monthsBetween(earliest, currentMonth), [earliest, currentMonth]);
   const [month, setMonth] = useState(currentMonth);
@@ -165,6 +170,8 @@ export function TacticalReportsPanel({
               month={month}
               report={rowFor(selected.accountId) ?? null}
               deliverables={items.filter((d) => d.account_id === selected.accountId)}
+              presets={presetLists[selected.accountId] ?? DELIVERABLE_PRESETS}
+              onPresetsSaved={(names) => setPresetLists((p) => ({ ...p, [selected.accountId]: names }))}
               currentUserId={currentUserId}
               onSaved={(row) => {
                 setRows((rs) => [...rs.filter((r) => r.id !== row.id), row]);
@@ -219,6 +226,8 @@ function Editor({
   month,
   report,
   deliverables,
+  presets,
+  onPresetsSaved,
   currentUserId,
   onSaved,
   onDeliverablesSaved,
@@ -227,6 +236,8 @@ function Editor({
   month: string;
   report: TacticalRow | null;
   deliverables: DeliverableRow[];
+  presets: string[];
+  onPresetsSaved: (names: string[]) => void;
   currentUserId: string;
   onSaved: (row: TacticalRow) => void;
   onDeliverablesSaved: (rows: DeliverableRow[]) => void;
@@ -241,6 +252,7 @@ function Editor({
   const [live, setLive] = useState<TacticalGm | null>(null);
   const [liveFailed, setLiveFailed] = useState(false);
   const [busy, setBusy] = useState<"" | "save" | "publish" | "unpublish">("");
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const fixed = saved?.gm_numbers ?? null;
 
   // MQCs added: counted live until the first publish fixes it.
@@ -426,11 +438,22 @@ function Editor({
 
       <DeliverablesEditor
         items={items}
+        presets={presets}
+        onEditPresets={() => setPresetsOpen(true)}
         onChange={setItems}
         onRemove={(d) => {
           setItems((xs) => xs.filter((x) => x.id !== d.id));
           if (!d.isNew) setRemoved((r) => [...r, d.id]);
         }}
+      />
+      <DeliverablePresetsDialog
+        open={presetsOpen}
+        onOpenChange={setPresetsOpen}
+        accountId={client.accountId}
+        clientName={client.name}
+        presets={presets}
+        currentUserId={currentUserId}
+        onSaved={onPresetsSaved}
       />
 
       <div className="flex flex-col gap-3 border-t border-neutral-100 px-5 py-4">
@@ -508,15 +531,19 @@ const ROW_COLS = "lg:grid-cols-[minmax(160px,1.5fr)_136px_128px_150px_minmax(150
  */
 function DeliverablesEditor({
   items,
+  presets: allPresets,
+  onEditPresets,
   onChange,
   onRemove,
 }: {
   items: DraftItem[];
+  presets: string[];
+  onEditPresets: () => void;
   onChange: (next: DraftItem[]) => void;
   onRemove: (d: DraftItem) => void;
 }) {
   const used = new Set(items.map((d) => d.name.trim().toLowerCase()));
-  const presets = DELIVERABLE_PRESETS.filter((p) => !used.has(p.toLowerCase()));
+  const presets = allPresets.filter((p) => !used.has(p.toLowerCase()));
   const [focusId, setFocusId] = useState<string | null>(null);
   const set = (id: string, patch: Partial<DraftItem>) => onChange(items.map((d) => (d.id === id ? { ...d, ...patch } : d)));
   const add = (name: string) => {
@@ -631,6 +658,14 @@ function DeliverablesEditor({
         <button type="button" onClick={() => add("")} className={cn(chip, "border border-neutral-300 text-neutral-700 hover:border-primary-700 hover:text-primary-800")}>
           <Plus className="size-3.5" />
           Add your own
+        </button>
+        <button
+          type="button"
+          onClick={onEditPresets}
+          className="ml-1 inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-caption font-semibold text-secondary-700 transition-colors hover:bg-neutral-100 hover:text-secondary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40"
+        >
+          <Pencil className="size-3.5" />
+          Edit presets
         </button>
       </div>
     </fieldset>

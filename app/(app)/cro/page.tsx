@@ -247,8 +247,16 @@ export default async function CroDashboardPage() {
   let tlClients: TacticalClient[] = [];
   let tlReports: TacticalRow[] = [];
   let tlDeliverables: DeliverableRow[] = [];
+  const tlPresets: Record<string, string[]> = {};
   if (canReport) {
-    const [{ data: settingRows }, { data: reportRows }, { data: ownerRows }, { data: tacticalRows }, { data: deliverableRows }] = await Promise.all([
+    const [
+      { data: settingRows },
+      { data: reportRows },
+      { data: ownerRows },
+      { data: tacticalRows },
+      { data: deliverableRows },
+      { data: presetRows },
+    ] = await Promise.all([
       supabase.from("account_programs").select("account_id, program, start_month, active"),
       supabase
         .from("sniperleads_reports")
@@ -260,8 +268,12 @@ export default async function CroDashboardPage() {
       everyRow<DeliverableRow>(() =>
         supabase.from("program_deliverables").select(DELIVERABLE_COLUMNS).eq("program", "tactical_leads").is("archived_at", null)
       ),
+      everyRow<{ account_id: string; names: string[] }>(() =>
+        supabase.from("program_deliverable_presets").select("account_id, names").eq("program", "tactical_leads")
+      ),
     ]);
     tlDeliverables = deliverableRows;
+    for (const p of presetRows) tlPresets[p.account_id] = p.names;
     for (const r of settingRows ?? []) {
       if (!(PROGRAMS as readonly string[]).includes(r.program)) continue;
       (programSettings[r.account_id] ??= []).push({ program: r.program as Program, startMonth: r.start_month, active: r.active });
@@ -415,6 +427,7 @@ export default async function CroDashboardPage() {
                 clients={tlClients}
                 reports={tlReports}
                 deliverables={tlDeliverables}
+                presets={tlPresets}
                 currentUserId={user.id}
                 currentMonth={currentMonth}
                 focusSlot={<FocusButton view="tactical" label="TacticalLeads Reports" tone="light" />}
