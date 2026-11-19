@@ -8,6 +8,8 @@
  * Client direction: actuals only, no dollar figures.
  */
 
+import type { DeliverableSnapshot } from "@/lib/programs/deliverables";
+
 export type TacticalField =
   | "emails_sent"
   | "opens"
@@ -36,12 +38,14 @@ export type TacticalRow = Record<TacticalField, number | null> & {
   account_id: string;
   month: string; // YYYY-MM-01
   gm_numbers: TacticalGm | null;
+  /** Next Deliverables as they stood at publish; null before the first publish (and for months published before 2026-11-18). */
+  deliverables: DeliverableSnapshot[] | null;
   published_at: string | null;
   updated_at: string;
 };
 
 export const TACTICAL_COLUMNS =
-  "id, account_id, month, emails_sent, opens, clicks, real_replies, inbox_placement, delivered_rate, bounce_rate, mailboxes_warmed, alerts_sent, alerts_opened, alerts_clicked, alerts_replied, alerts_visited, linkedin_invites, linkedin_accepted, linkedin_messages, linkedin_replies, gm_numbers, published_at, updated_at";
+  "id, account_id, month, emails_sent, opens, clicks, real_replies, inbox_placement, delivered_rate, bounce_rate, mailboxes_warmed, alerts_sent, alerts_opened, alerts_clicked, alerts_replied, alerts_visited, linkedin_invites, linkedin_accepted, linkedin_messages, linkedin_replies, gm_numbers, deliverables, published_at, updated_at";
 
 export interface FieldDef {
   key: TacticalField;

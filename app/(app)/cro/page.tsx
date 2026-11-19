@@ -16,9 +16,11 @@ import { getCurrentUser, needsAccountSelection, type UserRole } from "@/lib/auth
 import { CRO_LEADER_ROLES, MSP_ROLES } from "@/lib/auth/roles";
 import { currentQuarter } from "@/lib/growth-mission/hours";
 import { rankOrders, type TaskPriority, type TaskState } from "@/lib/growth-mission/tasks";
+import { DELIVERABLE_COLUMNS, type DeliverableRow } from "@/lib/programs/deliverables";
 import { PROGRAMS, type Program, type ProgramSetting } from "@/lib/programs/programs";
 import { TACTICAL_COLUMNS, type TacticalRow } from "@/lib/programs/tactical";
 import { monthKey, type GmNumbers, type ReportRow } from "@/lib/sniperleads/report";
+import { everyRow } from "@/lib/supabase/every-row";
 import { createClient } from "@/lib/supabase/server";
 
 /** No activity in over two weeks marks an account as idle on the list and in the "Needs attention" filter. */
@@ -244,8 +246,9 @@ export default async function CroDashboardPage() {
   let slReports: ReportRow[] = [];
   let tlClients: TacticalClient[] = [];
   let tlReports: TacticalRow[] = [];
+  let tlDeliverables: DeliverableRow[] = [];
   if (canReport) {
-    const [{ data: settingRows }, { data: reportRows }, { data: ownerRows }, { data: tacticalRows }] = await Promise.all([
+    const [{ data: settingRows }, { data: reportRows }, { data: ownerRows }, { data: tacticalRows }, { data: deliverableRows }] = await Promise.all([
       supabase.from("account_programs").select("account_id, program, start_month, active"),
       supabase
         .from("sniperleads_reports")
@@ -254,7 +257,11 @@ export default async function CroDashboardPage() {
         ),
       supabase.from("users").select("account_id, full_name").eq("role", "msp_owner").is("archived_at", null).order("created_at"),
       supabase.from("tactical_reports").select(TACTICAL_COLUMNS),
+      everyRow<DeliverableRow>(() =>
+        supabase.from("program_deliverables").select(DELIVERABLE_COLUMNS).eq("program", "tactical_leads").is("archived_at", null)
+      ),
     ]);
+    tlDeliverables = deliverableRows;
     for (const r of settingRows ?? []) {
       if (!(PROGRAMS as readonly string[]).includes(r.program)) continue;
       (programSettings[r.account_id] ??= []).push({ program: r.program as Program, startMonth: r.start_month, active: r.active });
@@ -407,6 +414,7 @@ export default async function CroDashboardPage() {
               <TacticalReportsPanel
                 clients={tlClients}
                 reports={tlReports}
+                deliverables={tlDeliverables}
                 currentUserId={user.id}
                 currentMonth={currentMonth}
                 focusSlot={<FocusButton view="tactical" label="TacticalLeads Reports" tone="light" />}

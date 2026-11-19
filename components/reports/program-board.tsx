@@ -6,6 +6,16 @@ import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 import { InfoTip } from "@/components/ui/info-tip";
+import {
+  STATUS_LABEL,
+  STATUS_PILL,
+  doneLabel,
+  reportOrder,
+  shortDate,
+  summary,
+  type DeliverableSnapshot,
+  type DeliverableStatus,
+} from "@/lib/programs/deliverables";
 import type { BoardMonth, BoardRow, ProgramBoardData } from "@/lib/programs/intel";
 import { PROGRAM_LABEL, PROGRAM_TAB, previousMonth, shortMonth, type Program } from "@/lib/programs/programs";
 import { change, show } from "@/lib/programs/tactical";
@@ -192,6 +202,7 @@ export function ProgramBoard({ data, selected, tabs }: { data: ProgramBoardData;
 
       {data.program === "tactical_leads" ? (
         <>
+          {cur.deliverables && cur.deliverables.length > 0 && <NextDeliverables items={cur.deliverables} />}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card title="MQCs Added" subtitle="Contacts researched and added to your lists, by month">
               <div className="px-5 pb-4">
@@ -365,6 +376,91 @@ function Card({ title, subtitle, children }: { title: string; subtitle: string; 
         <p className="text-caption text-neutral-500">{subtitle}</p>
       </div>
       {children}
+    </section>
+  );
+}
+
+/**
+ * Next Deliverables (client-confirmed 2026-11-18, approved mockup "Next
+ * Deliverables Mockup"): the list as it stood when the month was published.
+ * Waiting-on-you items sort to the top; Done items sit last, greyed.
+ * A table from md up, stacked rows on a phone.
+ */
+function NextDeliverables({ items }: { items: DeliverableSnapshot[] }) {
+  const rows = reportOrder(items);
+  const s = summary(items);
+  const pill = (st: DeliverableStatus) => (
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-caption font-semibold ${STATUS_PILL[st]}`}>
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+      {STATUS_LABEL[st]}
+    </span>
+  );
+  const you = <span className="inline-flex items-center whitespace-nowrap rounded-full bg-warning-100 px-2 py-0.5 text-caption font-semibold text-warning-800">You</span>;
+  const waiting = (d: DeliverableSnapshot) =>
+    d.status === "done" ? <span className="text-neutral-400">—</span> : d.waiting_on === "client" ? you : <span className="text-neutral-600">CRO Leader</span>;
+  const due = (d: DeliverableSnapshot) => (d.status === "done" ? doneLabel(d.done_at) : shortDate(d.due_date));
+  const note = (d: DeliverableSnapshot) => (d.note ? d.note : <span className="text-neutral-400">—</span>);
+
+  return (
+    <section className="flex min-w-0 flex-col rounded-xl border border-primary-100 bg-white shadow-lift">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-1 pt-4">
+        <div className="min-w-0">
+          <h2 className="text-h4 text-primary-900">Next Deliverables</h2>
+          <p className="text-caption text-neutral-500">What CRO Leader is setting up next, and anything waiting on you</p>
+        </div>
+        <span className="flex flex-wrap items-center gap-2 text-caption font-semibold text-neutral-500">
+          {s.waiting > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-100 px-2 py-0.5 text-warning-800">
+              <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+              {s.waiting} waiting on you
+            </span>
+          )}
+          <span className="tabular-nums">
+            {s.done} of {s.total} done
+          </span>
+        </span>
+      </div>
+
+      <div className="px-5 pb-4 pt-2">
+        <table className="hidden w-full border-collapse text-body-sm md:table">
+          <thead>
+            <tr className="border-b border-neutral-200 text-neutral-500">
+              {["Deliverable", "Status", "Waiting on", "Due", "Note"].map((h) => (
+                <th key={h} scope="col" className="whitespace-nowrap px-3 py-2 text-left text-caption font-semibold">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((d, i) => (
+              <tr key={i} className="border-b border-neutral-100 align-top last:border-b-0">
+                <td className={`px-3 py-2.5 font-semibold ${d.status === "done" ? "text-neutral-500" : "text-primary-900"}`}>{d.name}</td>
+                <td className="px-3 py-2.5">{pill(d.status)}</td>
+                <td className="whitespace-nowrap px-3 py-2.5">{waiting(d)}</td>
+                <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-neutral-700">{due(d)}</td>
+                <td className="px-3 py-2.5 text-neutral-700">{note(d)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <ul className="flex flex-col divide-y divide-neutral-100 md:hidden">
+          {rows.map((d, i) => (
+            <li key={i} className="flex flex-col gap-1.5 py-3 text-body-sm">
+              <div className="flex items-start justify-between gap-3">
+                <span className={`min-w-0 font-semibold ${d.status === "done" ? "text-neutral-500" : "text-primary-900"}`}>{d.name}</span>
+                {pill(d.status)}
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-neutral-500">
+                {d.status !== "done" && <span className="inline-flex items-center gap-1">Waiting on {waiting(d)}</span>}
+                <span className="tabular-nums">{d.status === "done" ? due(d) : `Due ${due(d)}`}</span>
+              </div>
+              {d.note && <p className="text-caption text-neutral-700">{d.note}</p>}
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }

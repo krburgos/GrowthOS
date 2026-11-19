@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { registerPoppins } from "@/lib/pdf/poppins";
 import { renderTacticalReport } from "@/lib/pdf/tactical-report-doc";
+import type { DeliverableSnapshot } from "@/lib/programs/deliverables";
 import { previousMonth, shortMonth } from "@/lib/programs/programs";
 import { TACTICAL_COLUMNS, figures, type TacticalRow } from "@/lib/programs/tactical";
 import { monthLabel } from "@/lib/sniperleads/report";
@@ -18,8 +19,9 @@ import { createClient } from "@/lib/supabase/server";
  * account they can see (tactical_reports_select). A report they can't read
  * is simply not found.
  *
- * A draft has no saved MQC count yet, so it is counted live for the CRO
- * team's download; a published report always carries its own.
+ * A draft has no saved MQC count or Next Deliverables list yet, so both are
+ * read live for the CRO team's download; a published report always carries
+ * its own.
  *
  * Poppins and the logo are read from disk, so this route is listed under
  * `outputFileTracingIncludes` in next.config.ts.
@@ -35,7 +37,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const row = data as unknown as TacticalRow;
 
   const prevKey = previousMonth(row.month);
-  const [{ data: account }, { data: prevData }, live] = await Promise.all([
+  const [{ data: account }, { data: prevData }, live, liveList] = await Promise.all([
     supabase.from("accounts").select("name").eq("id", row.account_id).maybeSingle(),
     supabase
       .from("tactical_reports")
@@ -45,7 +47,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       .not("published_at", "is", null)
       .maybeSingle(),
     row.gm_numbers ? Promise.resolve({ data: null }) : supabase.rpc("tactical_numbers", { p_account_id: row.account_id, p_month: row.month }),
+    row.published_at ? Promise.resolve({ data: null }) : supabase.rpc("tactical_deliverables", { p_account_id: row.account_id, p_month: row.month }),
   ]);
+  const deliverables = ((row.published_at ? row.deliverables : liveList.data) ?? []) as DeliverableSnapshot[];
   if (!row.gm_numbers && live.data) row.gm_numbers = live.data as TacticalRow["gm_numbers"];
   const prev = prevData ? (prevData as unknown as TacticalRow) : null;
   const clientName = account?.name ?? "TacticalLeads client";
@@ -62,6 +66,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     prevLabel: prev ? shortMonth(prevKey) : null,
     cur: figures(row),
     prev: prev ? figures(prev) : null,
+    deliverables,
   });
 
   doc.end();

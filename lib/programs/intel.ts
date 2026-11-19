@@ -1,3 +1,4 @@
+import type { DeliverableSnapshot } from "@/lib/programs/deliverables";
 import { PROGRAMS, type Program } from "@/lib/programs/programs";
 import { TACTICAL_COLUMNS, TACTICAL_HEADLINE, TACTICAL_TABLE, HEADLINE_LABEL, figures, type TacticalRow } from "@/lib/programs/tactical";
 import type { GmNumbers, ReportRow } from "@/lib/sniperleads/report";
@@ -25,6 +26,8 @@ export interface BoardMonth {
   publishedAt: string;
   pdfHref: string;
   figures: Record<string, number | null>;
+  /** TacticalLeads only: the Next Deliverables frozen at publish; null when the month has none on record. */
+  deliverables?: DeliverableSnapshot[] | null;
 }
 
 export interface ProgramBoardData {
@@ -85,6 +88,7 @@ export async function programBoard(accountId: string, program: Program, since: s
       publishedAt: r.published_at!,
       pdfHref: `/api/program-reports/tactical/${r.id}/pdf`,
       figures: figures(r) as unknown as Record<string, number | null>,
+      deliverables: r.deliverables,
     }));
     const defs = Object.fromEntries(TACTICAL_TABLE.flatMap((g) => g.rows).map((r) => [r.key, r]));
     return {
