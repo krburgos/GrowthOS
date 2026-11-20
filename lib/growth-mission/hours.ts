@@ -25,7 +25,7 @@ export const EMPTY_HOURS: StepHours = { required: 0, committed: 0, completed: 0,
 /** Card titles are the short names ("SEO"); the detail page keeps the doc's full step title. */
 export const SHORT_TITLE: Record<string, string> = {
   seo: "SEO",
-  geo: "GEO",
+  geo: "GEO/AEO", // renamed from "GEO" (client-confirmed 2026-11-20)
   "blogging-content": "Blogging & Content",
   "social-media-marketing": "Social Media Marketing",
   "website-oversight": "Website Optimization",
