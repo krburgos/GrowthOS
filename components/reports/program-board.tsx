@@ -267,16 +267,18 @@ export function ProgramBoard({ data, selected, tabs }: { data: ProgramBoardData;
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card title="From Intent to Won" subtitle="Where your SniperLeads stand">
             <div className="flex flex-col gap-2 px-5 pb-5 pt-3">
-              {["flagged", "opportunities", "meetings", "proposals", "won"].map((k) => {
-                const top = Math.max(v("flagged") ?? 0, 1);
+              {FUNNEL.map((k, _, all) => {
+                // Scaled to the largest stage: a later stage (e.g. opportunities
+                // from earlier months) can outnumber this month's flagged.
+                const top = Math.max(...all.map((x) => v(x) ?? 0), 1);
                 const n = v(k) ?? 0;
                 return (
                   <div key={k} className="grid grid-cols-[130px_1fr_48px] items-center gap-3 text-body-sm">
                     <span className="text-neutral-700">{defs[k].label}</span>
-                    <span className="h-5 rounded-[4px] bg-neutral-100">
+                    <span className="h-5 min-w-0 overflow-hidden rounded-[4px] bg-neutral-100">
                       <span
                         className="block h-5 rounded-[4px]"
-                        style={{ width: `${n > 0 ? Math.max((n / top) * 100, 2) : 0}%`, background: k === "won" ? "var(--color-success-600)" : CUR }}
+                        style={{ width: `${n > 0 ? Math.min(Math.max((n / top) * 100, 2), 100) : 0}%`, background: k === "won" ? "var(--color-success-600)" : CUR }}
                       />
                     </span>
                     <span className="text-right font-semibold tabular-nums text-primary-900">{show(v(k))}</span>
@@ -491,6 +493,8 @@ function Legend({ items }: { items: [string, string][] }) {
  * An axis that ends on a round number with round steps (1, 2 or 5 times a
  * power of ten), at most five steps: 45 → 0/10/…/50, 296 → 0/100/200/300.
  */
+const FUNNEL = ["flagged", "opportunities", "meetings", "proposals", "won"];
+
 function niceScale(v: number) {
   const top = Math.max(v, 1);
   let p = 1;
