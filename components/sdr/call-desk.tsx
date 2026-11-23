@@ -1,6 +1,6 @@
 "use client";
 
-import { Filter, Phone, Plus, Search, Wrench, X } from "lucide-react";
+import { Check, Filter, Phone, Plus, Search, Wrench } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -17,7 +17,6 @@ import { CountUp } from "@/components/ui/count-up";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
 import { SortHeading, useTableSort } from "@/components/ui/sort-heading";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getFriendlyErrorMessage } from "@/lib/errors/friendly-message";
 import { SdrTargetEditor } from "@/components/sdr/target-editor";
 import {
   CONNECTED_OUTCOMES,
@@ -34,7 +33,6 @@ import {
   phoneLines,
   telHref,
 } from "@/lib/sdr/desk";
-import { createClient } from "@/lib/supabase/client";
 import { useFlash } from "@/lib/use-flash";
 import { useNow } from "@/lib/use-now";
 import { cn } from "@/lib/utils";
@@ -113,7 +111,10 @@ export function CallDesk({
     holders.some((h) => h.id === viewerId) || !canViewAny ? viewerId : holders[0]?.id ?? null
   );
   const [show, setShow] = useState<Show>("today");
-  const [listFilter, setListFilter] = useState("all");
+  // The Assigned lists pills select which lists the queue shows
+  // (client-confirmed, 2026-11-23, approved mockup "Call Queue List Pills"):
+  // every list starts on; a pill turns its list off in this view only.
+  const [hiddenLists, setHiddenLists] = useState<Set<string>>(() => new Set());
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -135,14 +136,27 @@ export function CallDesk({
   const sdrName = holders.find((h) => h.id === sdrId)?.full_name ?? people.find((p) => p.id === sdrId)?.full_name ?? "";
   const myAssignments = assignments.filter((a) => a.sdr_user_id === sdrId).sort((a, b) => a.list_name.localeCompare(b.list_name));
   const queue = useMemo(() => (sdrId && queues[sdrId]) || [], [sdrId, queues]);
+  const selectedAssignments = myAssignments.filter((a) => !hiddenLists.has(a.list_name));
+  const toggleList = (name: string) => {
+    setHiddenLists((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+    setPage(1);
+  };
 
   const withDue = useMemo(
     () => (now ? queue.map((r) => ({ row: r, due: dueOf(r, now) })) : []),
     [queue, now]
   );
   const live = useMemo(
-    () => withDue.filter((r) => (listFilter === "all" || r.row.lists.includes(listFilter)) && r.due !== "done"),
-    [withDue, listFilter]
+    () =>
+      withDue.filter(
+        (r) => (hiddenLists.size === 0 || r.row.lists.some((n) => !hiddenLists.has(n))) && r.due !== "done"
+      ),
+    [withDue, hiddenLists]
   );
   const count = (s: Show) => (s === "all" ? live.length : live.filter((r) => r.due === s).length);
   const rows = useMemo(() => {
@@ -182,19 +196,6 @@ export function CallDesk({
   const selected = board.find((b) => b.id === sdrId) ?? { calls: 0, connects: 0, meetings: 0 };
   const rate = (connects: number, calls: number) => (calls > 0 ? Math.round((connects / calls) * 100) : 0);
   const whose = isMe ? "Your" : sdrName ? `${sdrName.split(" ")[0]}'s` : "";
-
-  const unassign = async (a: Assignment) => {
-    const { error } = await createClient()
-      .from("sdr_list_assignments")
-      .update({ archived_at: new Date().toISOString() })
-      .eq("id", a.id);
-    if (error) {
-      toast.error(getFriendlyErrorMessage(error));
-      return;
-    }
-    toast.success(`${a.list_name} taken off ${sdrName}'s queue.`);
-    router.refresh();
-  };
 
   const afterSave = (next: boolean) => {
     const current = logging;
@@ -400,7 +401,11 @@ export function CallDesk({
             <h2 className="text-h4 text-white">Call Queue</h2>
             <p className="mt-0.5 text-body-sm tabular-nums text-secondary-300">
               {sdrId && myAssignments.length > 0
-                ? `${count("today")} due today · ${count("new")} never called · from ${myAssignments.length} assigned ${myAssignments.length === 1 ? "list" : "lists"}`
+                ? `${count("today")} due today · ${count("new")} never called · from ${
+                    selectedAssignments.length === myAssignments.length
+                      ? `${myAssignments.length} assigned ${myAssignments.length === 1 ? "list" : "lists"}`
+                      : `${selectedAssignments.length} of ${myAssignments.length} assigned lists`
+                  }`
                 : "No lists assigned yet."}
             </p>
           </div>
@@ -413,7 +418,7 @@ export function CallDesk({
                   value={sdrId ?? undefined}
                   onValueChange={(v) => {
                     setSdrId(v);
-                    setListFilter("all");
+                    setHiddenLists(new Set());
                     setPage(1);
                   }}
                 >
@@ -452,29 +457,33 @@ export function CallDesk({
                 : "None yet. CRO Leader assigns the lists you call."}
             </span>
           ) : (
-            myAssignments.map((a) => (
-              <span
-                key={a.id}
-                className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-full border border-primary-200 bg-white pl-3 text-body-sm text-primary-900",
-                  canAssign ? "pr-1" : "pr-3"
-                )}
-              >
-                <span className="font-semibold">{a.list_name}</span>
-                <span className="tabular-nums text-neutral-400">{a.contacts.toLocaleString()}</span>
-                {canAssign && (
-                  <button
-                    type="button"
-                    onClick={() => unassign(a)}
-                    title={`Take ${a.list_name} off ${sdrName}'s queue`}
-                    aria-label={`Unassign ${a.list_name}`}
-                    className="flex size-5 items-center justify-center rounded-full text-primary-700 hover:bg-error-100 hover:text-error-700"
+            myAssignments.map((a) => {
+              const on = !hiddenLists.has(a.list_name);
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggleList(a.list_name)}
+                  title={`${on ? "Hide" : "Show"} ${a.list_name} in the queue`}
+                  className={cn(
+                    "inline-flex h-7 items-center gap-1.5 rounded-full border bg-white pl-2 pr-3 text-body-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500/40 motion-reduce:transition-none",
+                    on ? "border-primary-700 text-primary-900" : "border-neutral-300 text-neutral-400 hover:text-primary-900"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-4 shrink-0 items-center justify-center rounded-full border",
+                      on ? "border-primary-700 bg-primary-700 text-white" : "border-neutral-300"
+                    )}
                   >
-                    <X className="size-3" />
-                  </button>
-                )}
-              </span>
-            ))
+                    {on && <Check className="size-2.5" strokeWidth={3} />}
+                  </span>
+                  <span className="font-semibold">{a.list_name}</span>
+                  <span className={cn("tabular-nums", on ? "text-neutral-400" : "text-neutral-300")}>{a.contacts.toLocaleString()}</span>
+                </button>
+              );
+            })
           )}
         </div>
 
@@ -494,35 +503,6 @@ export function CallDesk({
                   {pill("all", "All")}
                 </div>
               </div>
-              {myAssignments.length > 1 && (
-                <div className="flex min-w-0 flex-col gap-1">
-                  <span className={LABEL}>List</span>
-                  <Select
-                    value={listFilter}
-                    onValueChange={(v) => {
-                      setListFilter(v);
-                      setPage(1);
-                    }}
-                  >
-                    <SelectTrigger
-                      className={cn(
-                        "h-8 w-52 text-body-sm",
-                        listFilter !== "all" ? "border-primary-700 bg-primary-50 font-semibold text-primary-900" : "bg-white"
-                      )}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All assigned lists</SelectItem>
-                      {myAssignments.map((a) => (
-                        <SelectItem key={a.id} value={a.list_name}>
-                          {a.list_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
               <label className="flex min-w-0 flex-col gap-1">
                 <span className={LABEL}>Search</span>
                 <span className="flex h-8 min-w-[200px] items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 focus-within:border-secondary-500 focus-within:ring-2 focus-within:ring-secondary-500/40">
@@ -544,7 +524,10 @@ export function CallDesk({
               <p className="px-5 py-8 text-center text-body-sm text-neutral-400">Loading the queue…</p>
             ) : rows.length === 0 ? (
               <p className="px-5 py-8 text-center text-body-sm text-neutral-500">
-                {live.length === 0 ? "Everyone on these lists has been reached." : "Nothing here. Every call in this view is logged."}
+                {selectedAssignments.length === 0
+                  ? "No list selected. Pick one above to see its contacts."
+                  : live.length === 0
+                  ? "Everyone on these lists has been reached." : "Nothing here. Every call in this view is logged."}
               </p>
             ) : (
               <>
@@ -703,9 +686,10 @@ export function CallDesk({
           onAssigned={(id) => {
             setAssigning(false);
             setSdrId(id);
-            setListFilter("all");
+            setHiddenLists(new Set());
             router.refresh();
           }}
+          onRemoved={() => router.refresh()}
         />
       )}
     </>
