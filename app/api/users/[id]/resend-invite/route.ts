@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { inviteExpiresAt } from "@/lib/auth/invite-link";
-import { authorizeUserAction } from "@/lib/users/manage";
+import { authorizeUserAction, recordInvite } from "@/lib/users/manage";
 
 /**
  * POST /api/users/[id]/resend-invite (client-confirmed, 2026-10-29,
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
   const auth = await authorizeUserAction(id);
   if ("response" in auth) return auth.response;
-  const { admin, target } = auth;
+  const { admin, target, actorId } = auth;
 
   if (target.removed_at) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     redirectTo: `${new URL(request.url).origin}/auth/confirm?next=/accept-invite`,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await recordInvite(admin, id, actorId);
 
   return NextResponse.json({ success: true });
 }

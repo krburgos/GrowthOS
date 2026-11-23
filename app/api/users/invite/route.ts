@@ -5,6 +5,7 @@ import type { UserRole } from "@/lib/auth/get-current-user";
 import { ALL_ROLES, CRO_LEADER_ROLES, MSP_ROLES, PARTNER_ROLES } from "@/lib/auth/roles";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { recordInvite } from "@/lib/users/manage";
 
 /**
  * Backend Schema §10 — POST /api/users/invite. Session (Owner/Admin for
@@ -119,10 +120,11 @@ export async function POST(request: NextRequest) {
       redirectTo: `${new URL(request.url).origin}/auth/callback?next=/reset-password`,
     });
     if (linkError) return NextResponse.json({ error: linkError.message }, { status: 400 });
+    await recordInvite(admin, existing.id, user.id);
     return NextResponse.json({ success: true, restored: true });
   }
 
-  const { error } = await admin.auth.admin.inviteUserByEmail(email, {
+  const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { account_id: targetAccountId, role, full_name },
     redirectTo: `${new URL(request.url).origin}/auth/confirm?next=/accept-invite`,
   });
@@ -130,6 +132,7 @@ export async function POST(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+  if (invited.user) await recordInvite(admin, invited.user.id, user.id);
 
   return NextResponse.json({ success: true });
 }

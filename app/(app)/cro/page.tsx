@@ -167,7 +167,7 @@ export default async function CroDashboardPage() {
     const [{ data: people }, { data: logins }] = await Promise.all([
       supabase
         .from("users")
-        .select("id, full_name, email, role, archived_at, account_id, welcome_sent_at, accounts(name)")
+        .select("id, full_name, email, role, archived_at, account_id, welcome_sent_at, invited_by, invited_at, accounts(name)")
         .neq("role", "partner")
         .is("removed_at", null)
         .order("full_name"),
@@ -175,6 +175,7 @@ export default async function CroDashboardPage() {
     ]);
     type Login = { user_id: string; last_sign_in_at: string | null; invite_sent_at: string | null; email_confirmed_at: string | null };
     const loginById = new Map(((logins ?? []) as Login[]).map((r) => [r.user_id, r]));
+    const nameById = new Map((people ?? []).map((p) => [p.id as string, p.full_name as string]));
     const rows: PersonRow[] = (people ?? []).map((p) => {
       const account = Array.isArray(p.accounts) ? p.accounts[0] : p.accounts;
       return {
@@ -189,6 +190,10 @@ export default async function CroDashboardPage() {
         invite_sent_at: loginById.get(p.id)?.invite_sent_at ?? null,
         email_confirmed_at: loginById.get(p.id)?.email_confirmed_at ?? null,
         welcome_sent_at: p.welcome_sent_at,
+        // Who sent the latest invite (2026-11-23). Older invites only have
+        // auth's send time; a sender who was since removed shows as former.
+        invited_at: p.invited_at ?? loginById.get(p.id)?.invite_sent_at ?? null,
+        invited_by_name: p.invited_by ? (nameById.get(p.invited_by) ?? "a former user") : null,
       };
     });
     // Active people first, then the deactivated, each A–Z.

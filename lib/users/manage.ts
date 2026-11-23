@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function authorizeUserAction(
   targetId: string
-): Promise<{ admin: ReturnType<typeof createAdminClient>; target: { id: string; archived_at: string | null; removed_at: string | null } } | { response: NextResponse }> {
+): Promise<{ admin: ReturnType<typeof createAdminClient>; target: { id: string; archived_at: string | null; removed_at: string | null }; actorId: string } | { response: NextResponse }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -39,8 +39,22 @@ export async function authorizeUserAction(
     return { response: NextResponse.json({ error: "You are not authorized to change this user." }, { status: 403 }) };
   }
 
-  return { admin: createAdminClient(), target };
+  return { admin: createAdminClient(), target, actorId: user.id };
 }
 
 /** ~100 years: Supabase's documented pattern for an effectively permanent ban. */
 export const BLOCK_SIGN_IN = "876000h";
+
+/**
+ * Stamps who sent a person's latest invite and when (client-confirmed,
+ * 2026-11-23, approved mockup "Invite Sender Column"). Called after the
+ * invite email has gone, so a failure here is logged rather than reported:
+ * the invite itself worked.
+ */
+export async function recordInvite(admin: ReturnType<typeof createAdminClient>, userId: string, senderId: string) {
+  const { error } = await admin
+    .from("users")
+    .update({ invited_by: senderId, invited_at: new Date().toISOString() })
+    .eq("id", userId);
+  if (error) console.error("recordInvite failed", userId, error.message);
+}

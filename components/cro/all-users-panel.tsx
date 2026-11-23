@@ -16,6 +16,7 @@ import {
 } from "@/components/cro/people-bits";
 import { NAVY_GRADIENT } from "@/components/shell/hero-band";
 import { useFlash } from "@/lib/use-flash";
+import { useNow } from "@/lib/use-now";
 import { Button } from "@/components/ui/button";
 import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -179,12 +180,13 @@ export function AllUsersPanel({
       ) : (
         <>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[960px] text-body">
+            <table className="w-full min-w-[1080px] text-body">
               <thead className="bg-primary-50">
                 <tr className="border-b border-primary-200">
                   <th className={HEAD}>Name</th>
                   <th className={HEAD}>Client</th>
                   <th className={HEAD}>Role</th>
+                  <th className={HEAD}>Invited</th>
                   <th className={HEAD}>Last login</th>
                   <th className={HEAD}>Status</th>
                   <th className={HEAD}>
@@ -215,6 +217,9 @@ export function AllUsersPanel({
                         router.refresh();
                       }} />
                         )}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <InvitedCell person={u} />
                       </td>
                       <td className="px-3 py-2.5 text-body-sm text-neutral-600">{lastLoginLabel(u.last_sign_in_at)}</td>
                       <td className="px-3 py-2.5">
@@ -253,5 +258,29 @@ export function AllUsersPanel({
         onInvited={() => router.refresh()}
       />
     </section>
+  );
+}
+
+/**
+ * When the latest invite went and who sent it (client-confirmed, 2026-11-23,
+ * approved mockup "Invite Sender Column"). Stays after they accept. Invites
+ * sent before the sender was recorded say so.
+ */
+function InvitedCell({ person }: { person: PersonRow }) {
+  // The viewer's time zone, so it renders after mount (null on the server).
+  const now = useNow();
+  if (!person.invited_at) return <span className="text-body-sm text-neutral-400">—</span>;
+  const at = new Date(person.invited_at);
+  if (!now) return <span className="block h-[34px]" aria-hidden="true" />;
+  return (
+    <>
+      <span className="block whitespace-nowrap text-body-sm tabular-nums text-neutral-800">
+        {at.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} ·{" "}
+        {at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+      </span>
+      <span className={cn("block text-caption", person.invited_by_name ? "text-neutral-500" : "italic text-neutral-400")}>
+        {person.invited_by_name ? `by ${person.invited_by_name}` : "Sender not recorded"}
+      </span>
+    </>
   );
 }

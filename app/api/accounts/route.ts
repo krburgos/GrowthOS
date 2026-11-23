@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { recordInvite } from "@/lib/users/manage";
 
 /**
  * Backend Schema §10 — POST /api/accounts. Session (CRO Admin only).
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Couldn't create that account — please try again." }, { status: 500 });
   }
 
-  const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(ownerEmail, {
+  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(ownerEmail, {
     data: { account_id: account.id, role: "msp_owner", full_name: ownerFullName },
     redirectTo: `${new URL(request.url).origin}/auth/confirm?next=/accept-invite`,
   });
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
       { status: 207 }
     );
   }
+  if (invited.user) await recordInvite(admin, invited.user.id, authUser.id);
 
   return NextResponse.json({ success: true, accountId: account.id });
 }

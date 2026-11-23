@@ -40,6 +40,9 @@ export interface PersonRow {
   email_confirmed_at: string | null;
   /** Last welcome email (2026-11-02); All Users only. */
   welcome_sent_at: string | null;
+  /** Latest invite's send time and sender (2026-11-23); All Users only. Sender is null for invites sent before then. */
+  invited_at?: string | null;
+  invited_by_name?: string | null;
   account_id: string | null;
   account_name: string | null;
 }
