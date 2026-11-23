@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Minus } from "lucide-react";
+import { Check, CircleDashed, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ProgramsSettingButton } from "@/components/cro/programs-setting";
@@ -10,6 +10,8 @@ import { LocalPaginationBar } from "@/components/ui/local-pagination-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatHours, paceTone, quarterPct, type QuarterInfo } from "@/lib/growth-mission/hours";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
+import { TOTAL_QUESTION_COUNT } from "@/lib/questionnaire/questions";
+import { TOTAL_FIELD_COUNT as VISION_BOARD_TOTAL } from "@/lib/vision-board/sections";
 import { cn } from "@/lib/utils";
 
 export interface CroAccountRow {
@@ -18,6 +20,9 @@ export interface CroAccountRow {
   website: string | null;
   questionnaireComplete: boolean;
   visionBoardComplete: boolean;
+  /** Answers saved so far; above 0 and not complete reads "In progress". */
+  questionnaireAnswered: number;
+  visionBoardAnswered: number;
   committedHours: number;
   achievedHours: number;
   lastActivityAt: string | null;
@@ -36,17 +41,34 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-function DoneMark({ done, label }: { done: boolean; label: string }) {
+/**
+ * Traffic-light status for a setup document (client-confirmed, 2026-11-23,
+ * approved mockup "CRO Status Pills"): green Complete, yellow with how many
+ * answers are in, red Not started.
+ */
+function StatusPill({ done, answered, total, label }: { done: boolean; answered: number; total: number; label: string }) {
+  const state = done ? "done" : answered > 0 ? "started" : "none";
+  const title =
+    state === "done" ? `${label}: complete` : state === "started" ? `${label}: ${answered} of ${total} answered` : `${label}: not started`;
   return (
     <span
-      title={`${label}: ${done ? "complete" : "not complete"}`}
+      title={title}
       className={cn(
-        "flex size-[22px] items-center justify-center rounded-full",
-        done ? "bg-success-100 text-success-700" : "bg-neutral-100 text-neutral-400"
+        "inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full border pl-2 pr-3 text-caption font-semibold tabular-nums",
+        state === "done" && "border-success-600 bg-success-100 text-success-800",
+        state === "started" && "border-warning-400 bg-warning-100 text-warning-900",
+        state === "none" && "border-error-200 bg-error-100 text-error-700"
       )}
     >
-      {done ? <Check className="size-3" strokeWidth={2.5} /> : <Minus className="size-3" strokeWidth={2.5} />}
-      <span className="sr-only">{done ? `${label} complete` : `${label} not complete`}</span>
+      {state === "done" ? (
+        <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
+      ) : state === "started" ? (
+        <CircleDashed className="size-3.5" strokeWidth={2.5} aria-hidden="true" />
+      ) : (
+        <X className="size-3.5" strokeWidth={3} aria-hidden="true" />
+      )}
+      {state === "done" ? "Complete" : state === "started" ? `${answered} of ${total}` : "Not started"}
+      <span className="sr-only">{title}</span>
     </span>
   );
 }
@@ -174,10 +196,20 @@ export function AccountsList({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <DoneMark done={a.questionnaireComplete} label="GrowthMission Solution Questionnaire" />
+                      <StatusPill
+                        done={a.questionnaireComplete}
+                        answered={a.questionnaireAnswered}
+                        total={TOTAL_QUESTION_COUNT}
+                        label="Solution Questionnaire"
+                      />
                     </TableCell>
                     <TableCell>
-                      <DoneMark done={a.visionBoardComplete} label="GrowthMission Vision Board" />
+                      <StatusPill
+                        done={a.visionBoardComplete}
+                        answered={a.visionBoardAnswered}
+                        total={VISION_BOARD_TOTAL}
+                        label="Vision Board"
+                      />
                     </TableCell>
                     <TableCell>
                       {a.committedHours > 0 ? (

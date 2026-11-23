@@ -15,6 +15,8 @@ import { FocusButton, SectionPane, SectionSwitcher } from "@/components/growth-m
 import { getCurrentUser, needsAccountSelection, type UserRole } from "@/lib/auth/get-current-user";
 import { CRO_LEADER_ROLES, MSP_ROLES } from "@/lib/auth/roles";
 import { currentQuarter } from "@/lib/growth-mission/hours";
+import { countAnswered as countQuestionnaireAnswered } from "@/lib/questionnaire/questions";
+import { countAnswered as countVisionBoardAnswered } from "@/lib/vision-board/sections";
 import { rankOrders, type TaskPriority, type TaskState } from "@/lib/growth-mission/tasks";
 import { DELIVERABLE_COLUMNS, type DeliverableRow } from "@/lib/programs/deliverables";
 import { PROGRAMS, type Program, type ProgramSetting } from "@/lib/programs/programs";
@@ -117,6 +119,23 @@ export default async function CroDashboardPage() {
   const statsById = new Map<string, PortfolioRow>(
     ((portfolioRows ?? []) as PortfolioRow[]).map((r) => [r.account_id, r] as const)
   );
+  // Answers saved so far, so a document someone started reads "In progress"
+  // (client-confirmed, 2026-11-23, approved mockup "CRO Status Pills").
+  // Counted with the same helpers the MSP's own Headquarters uses.
+  const [{ data: questionnaireRows }, { data: visionRows }] = await Promise.all([
+    supabase.from("growth_questionnaire_responses").select("account_id, answers"),
+    supabase.from("vision_board_responses").select("account_id, answers"),
+  ]);
+  const answeredBy = (rows: { account_id: string; answers: unknown }[] | null, count: (a: Record<string, unknown>) => number) => {
+    const map = new Map<string, number>();
+    for (const r of rows ?? []) {
+      const n = count((r.answers as Record<string, unknown>) ?? {});
+      map.set(r.account_id, Math.max(map.get(r.account_id) ?? 0, n));
+    }
+    return map;
+  };
+  const questionnaireAnswered = answeredBy(questionnaireRows, countQuestionnaireAnswered);
+  const visionAnswered = answeredBy(visionRows, countVisionBoardAnswered);
   const idleBefore = idleCutoff();
 
   const accounts: CroAccountRow[] = pinnedFirst(
@@ -129,6 +148,8 @@ export default async function CroDashboardPage() {
         website: a.website,
         questionnaireComplete: stats?.questionnaire_complete ?? false,
         visionBoardComplete: stats?.vision_board_complete ?? false,
+        questionnaireAnswered: questionnaireAnswered.get(a.id) ?? 0,
+        visionBoardAnswered: visionAnswered.get(a.id) ?? 0,
         committedHours: Number(stats?.committed_hours ?? 0),
         achievedHours: Number(stats?.achieved_hours ?? 0),
         lastActivityAt,
