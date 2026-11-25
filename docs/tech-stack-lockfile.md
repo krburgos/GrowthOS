@@ -17,6 +17,7 @@ This document is a **build input for Claude Code** — not a narrative pitch. Ev
 | Node.js | **24.x** — Vercel's current default LTS for Functions (Node 20 is deprecated on Vercel October 1, 2026; Node 24 is the supported, actively-maintained line as of this document's date) |
 | Package manager | npm (version bundled with Node 24.x — no separate pin needed) |
 | package.json engines field | "node": "24.x" |
+| Vercel function region | **pdx1** (Portland), set in `vercel.json` (client-confirmed, 2026-11-25, on moving to Vercel Pro). It puts server code beside the Supabase database in us-west-2 (Oregon) rather than Vercel's default iad1 (Washington, D.C.), so each server-side query skips a cross-country round trip. Change both together if the database ever moves. |
 
 
 ## 3. Locked Dependency Reference
